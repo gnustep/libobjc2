@@ -8,10 +8,11 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <sys/types.h>
+#include "Availability.h"
 
 #ifdef ERROR_UNSUPPORTED_RUNTIME_FUNCTIONS
 #	define OBJC_GNU_RUNTIME_UNSUPPORTED(x) \
-		__attribute__((error(x " not supported by the GNU runtime")))
+		__attribute__((error(x " not supported by this runtime")))
 #else
 #	define OBJC_GNU_RUNTIME_UNSUPPORTED(x)
 #endif
@@ -292,21 +293,21 @@ struct objc_slot
 	int version;
 	/** The method pointer for this method. */
 	IMP method;
-};
+} OBJC_NONPORTABLE;
 /**
  * New ABI lookup function.  Receiver may be modified during lookup or proxy
  * forwarding and the sender may affect how lookup occurs.
  */
-struct objc_slot *objc_msg_lookup_sender(id *receiver, SEL selector, id sender);
+struct objc_slot *objc_msg_lookup_sender(id *receiver, SEL selector, id sender) OBJC_NONPORTABLE;
 /**
  * Hook provided to allow libraries to support fast proxies.
  */
-id (*objc_proxy_lookup)(id receiver, SEL op);
+id (*objc_proxy_lookup)(id receiver, SEL op) OBJC_NONPORTABLE;
 /**
  * New message lookup hook.  This returns a slot, rather than an IMP.  The
  * version should be set to 0 to disable caching.
  */
-struct objc_slot *(*objc_msg_forward3)(id receiver, SEL op);
+struct objc_slot *(*objc_msg_forward3)(id receiver, SEL op) OBJC_NONPORTABLE;
 
 // Global self so that self is a valid symbol everywhere.  Will be replaced by
 // a real self in an inner scope if there is one.
