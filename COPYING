@@ -1,0 +1,28 @@
+This document governs the GNUstep Objective-C runtime.  This is based on the
+GCC Objective-C runtime, which is governed by version 3 of the GNU General
+Public License and on the Étoilé Objective-C 2 framework and Objective-C
+runtime, which are MIT licensed.  
+
+As a result of this dual inheritance, some portions of this library are more
+permissively licensed than the whole.  When viewed in aggregate, this library
+is licensed under the GNU General Public Licence, version 3 or later (at your
+option).  You may find the relevant license texts in full in the following
+files in this distribution:
+
+COPYING3 contains the GNU general public license version 3. 
+COPYING.RUNTIME contains the GCC runtime exemption to the GNU GPL.
+
+Some individual files retain their original MIT license.  These are:
+
+blocks_runtime.m 
+lock.h
+mutation.m
+runtime.c 
+sync.m 
+objc/blocks_runtime.h 
+objc/runtime.h
+
+These files may be used for any purpose, including binary-only redistribution,
+according to the terms of the MIT license, as long as their copyright notices
+remain intact.  You may find the full text of the license for these files in
+COPYING.MIT

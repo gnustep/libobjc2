@@ -1,0 +1,158 @@
+GNUstep Objective-C Runtime
+===========================
+
+The GNUstep Objective-C runtime is based on the GCC runtime.  It supports both
+a legacy and a modern ABI, allowing code compiled with old versions of GCC to
+be supported without requiring recompilation.  The modern ABI adds the
+following features:
+
+- Non-fragile instance variables.
+- Protocol uniquing.
+- Object planes support.
+- Declared property introspection.
+
+Both ABIs support the following feature above and beyond the GNU runtime:
+
+- The modern Objective-C runtime APIs, introduced with OS X 10.5.
+- Blocks (closures).
+
+Non-Fragile Instance Variables
+------------------------------
+
+When a class is compiled to support non-fragile instance variables, the
+instance_size field in the class is set to 0 - the size of the instance
+variables declared on that class (excluding those inherited.  For example, an
+NSObject subclass declaring an int ivar would have its instance_size set to 0 -
+sizeof(int).  The offsets of each instance variable in the class's ivar_list
+field are then set to the offset from the start of the superclass's ivars.
+
+When the class is loaded, the runtime library uses the size of the superclass
+to calculate the correct size for this new class and the correct offsets.  Each
+instance variable should have two other variables exported as global symbols.
+Consider the following class:
+
+@interface NewClass : SuperClass {
+	int anIvar;
+}
+@end
+
+This would have its instance_size initialized to 0-sizeof(int), and anIvar's
+offset initialized to 0.  It should also export the following two symbols:
+
+int __objc_ivar_offset_value_NewClass.anIvar;
+int *__objc_ivar_offset_NewClass.anIvar;
+
+The latter should point to the former or to the ivar_offset field in the ivar
+metadata.  The former should be pointed to by the only element in the
+ivar_offsets array in the class structure.  
+
+In other compilation units referring to this ivar, the latter symbol should be
+exported as a weak symbol pointing to an internal symbol containing the
+compiler's guess at the ivar offset.  The ivar will then work as a fragile ivar
+when NewClass is compiled with the old ABI.  If NewClass is compiled with the
+new ABI, then the linker will replace the weak symbol with the version in the
+class's compilation unit and references which use this offset will function
+correctly.
+
+If the compiler can guarantee that NewClass is compiled with the new ABI, for
+example if it is declared in the same compilation unit, by finding the symbol
+during a link-time optimization phase, or as a result of a command-line
+argument, then it may use the __objc_ivar_offset_value_NewClass.anIvar symbol
+as the ivar offset.  This eliminates the need for one load for every ivar
+access.
+
+Protocols
+---------
+
+The runtime now provides a __ObjC_Protocol_Holder_Ugly_Hack class.  All
+protocols that are referenced but not defined should be registered as
+categories on this class.  This ensures that every protocol is registered with
+the runtime.  
+
+In the near future, the runtime will ensure that protocols can be looked up by
+name at run time and that empty protocol definitions have their fields updated
+to match the defined version.
+
+Protocols have been extended to provide space for introspection on properties
+and optional methods.  These fields only exist on protocols compiled with a
+compiler that supports Objective-C 2.  To differentiate the two, the isa
+pointer for new protocols will be set to the Protocol2 class.
+
+Fast Proxies and Cacheable Lookups
+----------------------------------
+
+The new runtime provides two mechanisms for faster lookup.  The older
+Vobjc_msg_lookup() function, which returns an IMP, is still supported, however
+it is no longer recommended.  The new lookup functions is:
+
+Slot_t objc_msg_lookup_sender(id *receiver, SEL selector, id sender)
+
+The receiver is passed by pointer, and so may be modified during the lookup
+process.  The runtime itself will never modify the receiver.  The following
+hook is provided to allow fast proxy support:
+
+id (*objc_proxy_lookup)(id receiver, SEL op);
+
+This function takes an object and selector as arguments and returns a new
+objects.  The lookup will then be re-run and the final message should be sent to
+the new object.
+
+The returned Slot_t from the new lookup function is a pointer to a structure
+which contains both an IMP and a version (among other things).  The version is
+incremented every time the method is overridden, allowing this to be cached by
+the caller.  User code wishing to perform IMP caching may use the old mechanism
+if it can guarantee that the IMP will not change between calls, or the newer
+mechanism.  Note that a modern compiler should insert caching automatically,
+ideally with the aid of run-time profiling results.  To support this, a new hook
+has been added:
+
+Slot_t objc_msg_forward3(id receiver, SEL op);
+
+This is identical to objc_msg_forward2(), but returns a pointer to a slot,
+instead of an IMP.  The slot should have its version set to 0, to prevent
+caching.
+
+Object Planes
+-------------
+
+Object planes provide interception points for messages between groups of
+related objects.  They can be thought of as similar to processes, with mediated
+inter-plane communication.  A typical use-case for an object plane is to
+automatically queue messages sent to a thread, or to record every message sent
+to model objects.  Planes can dramatically reduce the number of proxy objects
+required for this kind of activity.
+
+The GNUstep runtime adds a flag to class objects indicating that their
+instances are present in the global plane.  All constant strings, protocols,
+and classes are in the global plane, and may therefore be sent and may receive
+messages bypassing the normal plane interception mechanism.  
+
+The runtime library does not provide direct support for planes, it merely
+provides the core components required to implement support for planes in
+another framework.  Two objects are regarded as being in the same plane when
+they words immediately before their isa pointers are the same.  In this case,
+the runtime's usual dispatch mechanisms will be used.  In all other cases, the
+runtime will delegate message lookup to another library via the following hook:
+
+Slot_t (*objc_plane_lookup)(id *receiver, SEL op, id sender);
+
+From the perspective of the runtime, the plane identifier is opaque.  In
+GNUstep, it is a pointer to an NSZone structure.
+
+Threading
+---------
+
+The old threading layer is gone.  It was buggy, badly supported, and
+inadequately tested.  The library now always runs in thread-safe mode.  The
+same functions for locking the runtime mutex are still supported, but their use
+any mutex not exported by the runtime library is explicitly not supported.  The
+(private) lock.h header is now used to abstract the details of different
+threading systems sufficiently for the runtime.  This provides mechanisms for
+locking, unlocking, creating, and destroying mutex objects.  
+
+Objective-C 2 Features
+----------------------
+
+The runtime now provides implementations of the functions required for the
+@synchronized directive, for property accessors, and for fast enumeration.  The
+public runtime function interfaces now match those of OS X.
