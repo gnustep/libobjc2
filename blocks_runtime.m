@@ -71,6 +71,7 @@ struct psy_block_literal {
     	void (*copy_helper)(void *dst, void *src);
     	void (*dispose_helper)(void *src); 
     } *descriptor;
+	const char *types;
 };
 
 // Helper structure
@@ -132,7 +133,7 @@ void _Block_object_assign(void *destAddr, void *object, const int flags)
             
             *dst = Block_copy(src);
         }
-        else if((flags & BLOCK_FIELD_IS_BLOCK) == BLOCK_FIELD_IS_OBJECT)
+        else if((flags & BLOCK_FIELD_IS_OBJECT) == BLOCK_FIELD_IS_OBJECT)
         {
             id src = object;
             id *dst = destAddr;
@@ -198,7 +199,7 @@ struct StackBlockClass {
 
 // Copy a block to the heap if it's still on the stack or increments its retain count.
 // The block is considered on the stack if self->descriptor->reserved == 0.
-void *Block_copy(void *src)
+void *_Block_copy(void *src)
 {
     struct StackBlockClass *self = src;
     struct StackBlockClass *ret = self;
@@ -222,7 +223,7 @@ void *Block_copy(void *src)
 }
 
 // Release a block and frees the memory when the retain count hits zero.
-void Block_release(void *src)
+void _Block_release(void *src)
 {
     struct StackBlockClass *self = src;
     
@@ -240,4 +241,10 @@ void Block_release(void *src)
             free(self);
         }
     }
+}
+
+const char *_Block_get_types(void *blk)
+{
+	struct psy_block_literal *block = blk;
+	return block->types;
 }
