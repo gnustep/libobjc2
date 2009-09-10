@@ -198,7 +198,6 @@ struct StackBlockClass {
 
 
 // Copy a block to the heap if it's still on the stack or increments its retain count.
-// The block is considered on the stack if self->descriptor->reserved == 0.
 void *_Block_copy(void *src)
 {
     struct StackBlockClass *self = src;

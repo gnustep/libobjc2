@@ -4,6 +4,7 @@
 // If __LEGACY_GNU_MODE__ is defined then we include the old GNU runtime header
 // instead of this one
 #ifndef __OBJC_LEGACY_GNU_MODE__
+#define __GNUSTEP_RUNTIME__
 
 #include <stdint.h>
 #include <stddef.h>
@@ -255,6 +256,10 @@ objc_property_t protocol_getProperty(Protocol *p, const char *name,
 
 BOOL protocol_isEqual(Protocol *p, Protocol *other);
 
+#else
+#include "runtime-legacy.h"
+#endif // __LEGACY_GNU_MODE__
+
 /**
  * The objc_slot structure is used to permit safe IMP caching.  It is returned
  * by the new lookup APIs.  When you cache an IMP, you should store a copy of
@@ -298,7 +303,8 @@ struct objc_slot
  * New ABI lookup function.  Receiver may be modified during lookup or proxy
  * forwarding and the sender may affect how lookup occurs.
  */
-struct objc_slot *objc_msg_lookup_sender(id *receiver, SEL selector, id sender) OBJC_NONPORTABLE;
+struct objc_slot *objc_msg_lookup_sender(id *receiver, SEL selector, id sender)
+	OBJC_NONPORTABLE;
 /**
  * Hook provided to allow libraries to support fast proxies.
  */
@@ -321,9 +327,5 @@ static const id self = nil;
 })
 
 #define objc_msgSendSuper(super, op, ...) objc_msg_lookup_super(super, op)(super->receiver, op, ## __VA_ARGS__)
-
-#else
-#include "runtime-legacy.h"
-#endif // __LEGACY_GNU_MODE__
 
 #endif // __LIBOBJC_RUNTIME_H_INCLUDED__

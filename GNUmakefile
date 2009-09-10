@@ -31,6 +31,25 @@ libobjc_C_FILES = \
 	selector.c\
 	sendmsg.c\
 	thr.c
+libobjc_HEADER_FILES_DIR = objc
+libobjc_HEADER_FILES_INSTALL_DIR = objc
+libobjc_HEADER_FILES = \
+	Availability.h\
+	NXConstStr.h\
+	Object.h\
+	Protocol.h\
+	blocks_runtime.h\
+	encoding.h\
+	hash.h\
+	objc-api.h\
+	objc-decls.h\
+	objc-list.h\
+	objc.h\
+	runtime-legacy.h\
+	runtime.h\
+	sarray.h\
+	thr.h\
+	typedstream.h
 
 # Deprecated functions are only deprecated for external use, not for us because
 # we are special, precious, little flowers.

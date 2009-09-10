@@ -208,6 +208,7 @@ __objc_responds_to (id object, SEL sel)
   return (res != 0);
 }
 
+extern id (*objc_proxy_lookup)(id receiver, SEL op);
 /* This is the lookup function.  All entries in the table are either a 
    valid method *or* zero.  If zero then either the dispatch table
    needs to be installed or it doesn't exist and forwarding is attempted. */
@@ -243,6 +244,16 @@ objc_msg_lookup (id receiver, SEL op)
                                         (sidx)op->sel_id);
               if (result == 0)
                 {
+                  /* Try again after giving the code a chance to install new
+                   * methods.  This lookup mechanism doesn't support forwarding
+                   * to other objects, so only call the lookup recursively if
+                   * the receiver is not changed.
+                   */
+                  id newReceiver = objc_proxy_lookup (receiver, op);
+                  if (newReceiver == receiver)
+                    {
+                      return objc_msg_lookup(receiver, op);
+                    }
                   /* If the method still just doesn't exist for the
                      class, attempt to forward the method. */
                   result = __objc_get_forward_imp (receiver, op);
