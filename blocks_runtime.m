@@ -30,9 +30,6 @@
 #include <string.h>
 #include <limits.h>
 
-// FIXME: Before we finalise the ABI for blocks, I wish to modify clang to emit
-// type information for the block function.
-
 /* Makes the compiler happy even without Foundation */
 @interface Dummy
 - (id)retain;
@@ -194,6 +191,7 @@ struct StackBlockClass {
       void (*copy_helper)(void *dst, void *src);
       void (*dispose_helper)(void *src); 
     } *descriptor;
+	const char *types;
 };
 
 

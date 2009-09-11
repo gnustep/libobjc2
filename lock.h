@@ -13,8 +13,6 @@ typedef HANDLE mutex_t;
 #	define DESTROY_LOCK(x) CloseHandle(*x)
 #else
 
-#define _XOPEN 500
-#define __USE_UNIX98 1
 #	include <pthread.h>
 
 typedef pthread_mutex_t mutex_t;
