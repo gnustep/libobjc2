@@ -136,6 +136,7 @@ typedef struct class_node
 #include "lock.h"
 
 static class_node_ptr class_table_array[CLASS_TABLE_SIZE];
+static int __class_table_was_set_up = 0;
 
 /* The table writing mutex - we lock on writing to avoid conflicts
    between different writers, but we read without locks.  That is
@@ -162,17 +163,6 @@ static mutex_t __class_table_lock;
     }                                                        \
                                                              \
   HASH = (HASH ^ (HASH >> 10) ^ (HASH >> 20)) & CLASS_TABLE_MASK;
-
-/* Setup the table.  */
-static void
-class_table_setup (void)
-{
-  /* Start - nothing in the table.  */
-  memset (class_table_array, 0, sizeof (class_node_ptr) * CLASS_TABLE_SIZE);
-
-  /* The table writing mutex.  */
-  INIT_LOCK(__class_table_lock);
-}
 
 
 /* Insert a class in the table (used when a new class is registered).  */
@@ -428,13 +418,19 @@ __objc_init_class_tables (void)
 {
   /* Allocate the class hash table.  */
   
-  if (__class_table_lock)
+  if (__class_table_was_set_up)
     return;
   
   LOCK(__objc_runtime_mutex);
-  
-  class_table_setup ();
+  if (!__class_table_was_set_up)
+    {
+      /* Start - nothing in the table.  */
+      memset (class_table_array, 0, sizeof (class_node_ptr) * CLASS_TABLE_SIZE);
 
+      /* The table writing mutex.  */
+      INIT_LOCK(__class_table_lock);
+      __class_table_was_set_up = 1;
+    }
   UNLOCK(__objc_runtime_mutex);
 }  
 

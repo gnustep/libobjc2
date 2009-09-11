@@ -14,6 +14,7 @@ typedef HANDLE mutex_t;
 #else
 
 #define _XOPEN 500
+#define __USE_UNIX98 1
 #	include <pthread.h>
 
 typedef pthread_mutex_t mutex_t;
