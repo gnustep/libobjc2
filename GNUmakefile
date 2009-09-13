@@ -53,7 +53,7 @@ libobjc_HEADER_FILES = \
 
 # Deprecated functions are only deprecated for external use, not for us because
 # we are special, precious, little flowers.
-libobjc_CPPFLAGS += -D__OBJC_RUNTIME_INTERNAL__=1 -D_XOPEN_VERSION=500
+libobjc_CPPFLAGS += -D__OBJC_RUNTIME_INTERNAL__=1 -D_XOPEN_SOURCE=500
 # Note to Riccardo.  Please do not 'fix' C99isms in this.  The new ABI is only
 # useful on compilers that support C99 (currently only clang), so there is no
 # benefit from supporting platforms with no C99 compiler.
