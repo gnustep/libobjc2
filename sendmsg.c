@@ -28,6 +28,7 @@ see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
 #include "objc/runtime-legacy.h"
 #include "objc/sarray.h"
 #include "objc/encoding.h"
+#include "lock.h"
 
 /* This is how we hack STRUCT_VALUE to be 1 or 0.   */
 #define gen_rtx(args...) 1
@@ -46,6 +47,9 @@ see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
 /* The uninstalled dispatch table */
 struct sarray *__objc_uninstalled_dtable = 0;   /* !T:MUTEX */
 
+/* Mutex protecting the pre-initialize dtable */
+static mutex_t initialize_lock;
+
 /* Two hooks for method forwarding. If either is set, it is invoked
  * to return a function that performs the real forwarding.  If both
  * are set, the result of __objc_msg_forward2 will be preferred over
@@ -60,6 +64,18 @@ IMP (*__objc_msg_forward2) (id, SEL) = NULL;
 static void __objc_send_initialize (Class);
 
 static void __objc_install_dispatch_table_for_class (Class);
+
+typedef struct _InitializingDtable
+{
+	Class class;
+	struct sarray *dtable;
+	struct _InitializingDtable *next;
+} InitializingDtable;
+
+/** Protected by initialize_lock */
+InitializingDtable *temporary_dtables;
+
+static struct sarray *create_dtable_for_class (Class class);
 
 /* Forward declare some functions */
 static void __objc_init_install_dtable (id, SEL);
@@ -124,6 +140,44 @@ static inline IMP sarray_get_imp (struct sarray *dtable, size_t key)
     return (NULL != slot) ? slot->method : (IMP)0;
 }
 
+/**
+ * Returns the dtable for a given class.  If we are currently in an +initialize
+ * method then this will block if called from a thread other than the one
+ * running the +initialize method.  
+ */
+static inline struct sarray *dtable_for_class(Class cls)
+{
+  if (cls->dtable != __objc_uninstalled_dtable)
+    {
+      return cls->dtable;
+    }
+  LOCK(&initialize_lock);
+  if (cls->dtable != __objc_uninstalled_dtable)
+    {
+      UNLOCK(&initialize_lock);
+      return cls->dtable;
+    }
+  /* This is a linear search, and so, in theory, could be very slow.  It is
+   * O(n) where n is the number of +initialize methods on the stack.  In
+   * practice, this is a very small number.  Profiling with GNUstep showed that
+   * this peaks at 8. */
+  struct sarray *dtable = __objc_uninstalled_dtable;
+  InitializingDtable *buffer = temporary_dtables;
+  while (NULL != buffer)
+  {
+      if (buffer->class == cls)
+      {
+          dtable = buffer->dtable;
+          break;
+      }
+      buffer = buffer->next;
+  }
+  UNLOCK(&initialize_lock);
+  if (dtable == 0)
+    dtable = __objc_uninstalled_dtable;
+  return dtable;
+}
+
 /* Given a class and selector, return the selector's implementation.  */
 inline
 IMP
@@ -140,8 +194,10 @@ get_imp (Class class, SEL sel)
   IMP res = sarray_get_imp (class->dtable, (size_t) sel->sel_id);
   if (res == 0)
     {
+      /* This will block if calling +initialize from another thread. */
+      struct sarray *dtable = dtable_for_class(class);
       /* Not a valid method */
-      if (class->dtable == __objc_uninstalled_dtable)
+      if (dtable == __objc_uninstalled_dtable)
         {
           /* The dispatch table needs to be installed. */
           objc_mutex_lock (__objc_runtime_mutex);
@@ -150,7 +206,7 @@ get_imp (Class class, SEL sel)
               __objc_uninstalled_dtable again in case another thread
               installed the dtable while we were waiting for the lock
               to be released.  */
-         if (class->dtable == __objc_uninstalled_dtable)
+         if (dtable_for_class(class) == __objc_uninstalled_dtable)
            {
              __objc_install_dispatch_table_for_class (class);
            }
@@ -169,7 +225,7 @@ get_imp (Class class, SEL sel)
             after we invoked sarray_get_safe, but before we checked
             class->dtable == __objc_uninstalled_dtable).
          */
-          res = sarray_get_imp (class->dtable, (size_t) sel->sel_id);
+          res = sarray_get_imp (dtable, (size_t) sel->sel_id);
           if (res == 0)
             {
               /* The dispatch table has been installed, and the method
@@ -196,7 +252,7 @@ __objc_responds_to (id object, SEL sel)
   if (object->class_pointer->dtable == __objc_uninstalled_dtable)
     {
       objc_mutex_lock (__objc_runtime_mutex);
-      if (object->class_pointer->dtable == __objc_uninstalled_dtable)
+      if (dtable_for_class(object->class_pointer) == __objc_uninstalled_dtable)
         {
           __objc_install_dispatch_table_for_class (object->class_pointer);
         }
@@ -223,8 +279,12 @@ objc_msg_lookup (id receiver, SEL op)
                                 (sidx)op->sel_id);
       if (result == 0)
         {
+          /** Get the dtable that we should be using for lookup.  This will
+           * block if we are in the middle of running +initialize in another
+           * thread. */
+          struct sarray *dtable = dtable_for_class(receiver->class_pointer);
           /* Not a valid method */
-          if (receiver->class_pointer->dtable == __objc_uninstalled_dtable)
+          if (dtable == __objc_uninstalled_dtable)
             {
               /* The dispatch table needs to be installed.
                  This happens on the very first method call to the class. */
@@ -240,8 +300,7 @@ objc_msg_lookup (id receiver, SEL op)
                  has been installed by another thread after we did the
                  previous check that the method exists).
               */
-              result = sarray_get_imp (receiver->class_pointer->dtable,
-                                        (sidx)op->sel_id);
+              result = sarray_get_imp (dtable, (sidx)op->sel_id);
               if (result == 0)
                 {
                   /* Try again after giving the code a chance to install new
@@ -291,6 +350,7 @@ objc_msg_sendv (id object, SEL op, arglist_t arg_frame)
 void
 __objc_init_dispatch_tables ()
 {
+  INIT_LOCK(initialize_lock);
   __objc_uninstalled_dtable = sarray_new (200, 0);
 }
 
@@ -304,7 +364,7 @@ __objc_init_install_dtable (id receiver, SEL op __attribute__ ((__unused__)))
   
   /* This may happen, if the programmer has taken the address of a 
      method before the dtable was initialized... too bad for him! */
-  if (receiver->class_pointer->dtable != __objc_uninstalled_dtable)
+  if (dtable_for_class(receiver->class_pointer) != __objc_uninstalled_dtable)
     {
       objc_mutex_unlock (__objc_runtime_mutex);
       return;
@@ -315,9 +375,6 @@ __objc_init_install_dtable (id receiver, SEL op __attribute__ ((__unused__)))
       /* receiver is an ordinary object */
       assert (CLS_ISCLASS (receiver->class_pointer));
 
-      /* install instance methods table */
-      __objc_install_dispatch_table_for_class (receiver->class_pointer);
-
       /* call +initialize -- this will in turn install the factory 
          dispatch table if not already done :-) */
       __objc_send_initialize (receiver->class_pointer);
@@ -327,10 +384,6 @@ __objc_init_install_dtable (id receiver, SEL op __attribute__ ((__unused__)))
       /* receiver is a class object */
       assert (CLS_ISCLASS ((Class)receiver));
       assert (CLS_ISMETA (receiver->class_pointer));
-
-      /* Install real dtable for factory methods */
-      __objc_install_dispatch_table_for_class (receiver->class_pointer);
-
       __objc_send_initialize ((Class)receiver);
     }
   objc_mutex_unlock (__objc_runtime_mutex);
@@ -355,14 +408,30 @@ __objc_send_initialize (Class class)
 
   if (! CLS_ISINITIALIZED (class))
     {
+      /* This is always called with the runtime lock, which guarantees
+       * atomicity, but we also need to make sure that the initialize lock is
+       * held so that we can create the premature dtable. */
+      LOCK(&initialize_lock);
+      if (! CLS_ISRESOLV (class))
+        __objc_resolve_class_links ();
       CLS_SETINITIALIZED (class);
       CLS_SETINITIALIZED (class->class_pointer);
+
 
       /* Create the garbage collector type memory description */
       __objc_generate_gc_type_description (class);
 
       if (class->super_class)
         __objc_send_initialize (class->super_class);
+      /* Create the dtable, but don't install it on the class quite yet. */
+
+      struct sarray *dtable = create_dtable_for_class(class);
+      /* Taking a pointer to an on-stack object and storing it in a global is
+       * usually a silly idea.  It is safe here, because we invert this
+       * transform before we return, and we use initialize_lock to make sure no
+       * other threads have access to this pointer. */
+      InitializingDtable buffer = { class, dtable, temporary_dtables };
+      temporary_dtables = &buffer;
 
       {
         SEL              op = sel_register_name ("initialize");
@@ -392,6 +461,22 @@ __objc_send_initialize (Class class)
             (*imp) ((id) class, op);
                 
       }
+      class->dtable = dtable;
+      /* Note: We don't free the cache entry; it was allocated on the stack. */
+      if (temporary_dtables == &buffer)
+      {
+          temporary_dtables = temporary_dtables->next;
+      }
+      else
+      {
+        InitializingDtable *prev = temporary_dtables;
+        while (prev->next->class != class)
+        {
+            prev = prev->next;
+        }
+        prev->next = buffer.next;
+      }
+      UNLOCK(&initialize_lock);
     }
 }
 /* Walk on the methods list of class and install the methods in the reverse
@@ -401,7 +486,8 @@ __objc_send_initialize (Class class)
    method nothing is guaranteed about what method will be used.
    Assumes that __objc_runtime_mutex is locked down. */
 static void
-__objc_install_methods_in_dtable (Class class, MethodList_t method_list)
+__objc_install_methods_in_dtable (Class class, MethodList_t method_list, 
+        struct sarray *dtable)
 {
   int i;
 
@@ -409,14 +495,14 @@ __objc_install_methods_in_dtable (Class class, MethodList_t method_list)
     return;
 
   if (method_list->method_next)
-    __objc_install_methods_in_dtable (class, method_list->method_next);
+    __objc_install_methods_in_dtable (class, method_list->method_next, dtable);
 
   for (i = 0; i < method_list->method_count; i++)
     {
       Method_t method = &(method_list->method_list[i]);
       size_t sel_id = (size_t)method->method_name->sel_id;
       /* If there is an existing slot with this value, just update it. */
-      struct objc_slot *slot = sarray_get_safe(class->dtable, sel_id);
+      struct objc_slot *slot = sarray_get_safe(dtable, sel_id);
       if (NULL != slot && slot->owner == class)
         {
           slot->method = method->method_imp;
@@ -431,10 +517,10 @@ __objc_install_methods_in_dtable (Class class, MethodList_t method_list)
           slot->types = method->method_types;
           slot->method = method->method_imp;
           slot->version = 1;
-          sarray_at_put_safe (class->dtable, sel_id, slot);
+          sarray_at_put_safe (dtable, sel_id, slot);
           /* Invalidate the superclass's slot, if it has one. */
           slot = (NULL != class->super_class) ? 
-              sarray_get_safe(class->super_class->dtable, sel_id) : NULL;
+              sarray_get_safe(dtable_for_class(class->super_class), sel_id) : NULL;
           if (NULL != slot)
             {
               slot->version++;
@@ -443,11 +529,13 @@ __objc_install_methods_in_dtable (Class class, MethodList_t method_list)
     }
 }
 
-/* Assumes that __objc_runtime_mutex is locked down. */
-static void
-__objc_install_dispatch_table_for_class (Class class)
+/** Returns the dispatch table for the given class, but does not install it.
+ */
+static struct sarray *create_dtable_for_class (Class class)
 {
   Class super;
+  struct sarray *dtable = dtable_for_class(class);
+  if (dtable != __objc_uninstalled_dtable) return dtable;
 
   /* If the class has not yet had its class links resolved, we must 
      re-compute all class links */
@@ -456,21 +544,30 @@ __objc_install_dispatch_table_for_class (Class class)
 
   super = class->super_class;
 
-  if (super != 0 && (super->dtable == __objc_uninstalled_dtable))
+  if (super != 0 && (dtable_for_class(super) == __objc_uninstalled_dtable))
     __objc_install_dispatch_table_for_class (super);
 
   /* Allocate dtable if necessary */
   if (super == 0)
     {
-      objc_mutex_lock (__objc_runtime_mutex);
-      class->dtable = sarray_new (__objc_selector_max_index, 0);
-      objc_mutex_unlock (__objc_runtime_mutex);
+      dtable = sarray_new (__objc_selector_max_index, 0);
     }
   else
-    class->dtable = sarray_lazy_copy (super->dtable);
+    {
+      dtable = sarray_lazy_copy (dtable_for_class(super));
+    }
 
-  __objc_install_methods_in_dtable (class, class->methods);
+  __objc_install_methods_in_dtable (class, class->methods, dtable);
+  return dtable;
 }
+
+/* Assumes that __objc_runtime_mutex is locked down. */
+static void
+__objc_install_dispatch_table_for_class(Class class)
+{
+  class->dtable = create_dtable_for_class(class);
+}
+
 
 static void merge_methods_from_superclass (Class class)
 {
@@ -520,7 +617,7 @@ __objc_update_dispatch_table_for_class (Class class)
   if (class->dtable == __objc_uninstalled_dtable) 
     return;
 
-  __objc_install_methods_in_dtable (class, class->methods);
+  __objc_install_methods_in_dtable (class, class->methods, class->dtable);
   objc_mutex_lock (__objc_runtime_mutex);
 
   if (class->subclass_list)        /* Traverse subclasses */
