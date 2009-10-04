@@ -24,7 +24,7 @@ see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
 
 #include <stdlib.h>
 #include "objc/objc-api.h"
-#include <unwind.h>
+//#include <unwind.h>
 #include "unwind-pe.h"
 
 
@@ -457,7 +457,7 @@ PERSONALITY_FUNCTION (int version,
     }
   
   _Unwind_SetGR (context, __builtin_eh_return_data_regno (0),
-		 __builtin_extend_pointer (saw_cleanup ? xh : return_object));
+		 (intptr_t)(saw_cleanup ? xh : return_object));
   _Unwind_SetGR (context, __builtin_eh_return_data_regno (1),
 		 handler_switch_value);
   _Unwind_SetIP (context, landing_pad);
@@ -478,7 +478,8 @@ objc_exception_throw (id value)
   
   memcpy (&header->base.exception_class, &__objc_exception_class,
 	  sizeof (__objc_exception_class));
-  header->base.exception_cleanup = __objc_exception_cleanup;
+  header->base.exception_cleanup = 
+	  (_Unwind_Exception_Cleanup_Fn)__objc_exception_cleanup;
   header->value = value;
 
 #ifdef SJLJ_EXCEPTIONS

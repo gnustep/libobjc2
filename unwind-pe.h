@@ -64,6 +64,44 @@
 
 typedef intptr_t _sleb128_t;
 typedef uintptr_t _uleb128_t;
+typedef uintptr_t _Unwind_Ptr;
+typedef uintptr_t _Unwind_Internal_Ptr;
+typedef uint64_t _Unwind_Exception_Class;
+
+typedef enum {
+	_URC_NO_REASON = 0,
+	_URC_FOREIGN_EXCEPTION_CAUGHT = 1,
+	_URC_FATAL_PHASE2_ERROR = 2,
+	_URC_FATAL_PHASE1_ERROR = 3,
+	_URC_NORMAL_STOP = 4,
+	_URC_END_OF_STACK = 5,
+	_URC_HANDLER_FOUND = 6,
+	_URC_INSTALL_CONTEXT = 7,
+	_URC_CONTINUE_UNWIND = 8
+} _Unwind_Reason_Code;
+
+typedef unsigned _Unwind_Word __attribute__((__mode__(__word__)));
+typedef signed _Unwind_Sword __attribute__((__mode__(__word__)));
+
+typedef void (*_Unwind_Exception_Cleanup_Fn)(_Unwind_Reason_Code reason,
+		void *exc);
+
+
+struct _Unwind_Exception {
+	uint64_t                     exception_class;
+	_Unwind_Exception_Cleanup_Fn exception_cleanup;
+	uint64_t                     private_1;
+	uint64_t                     private_2;
+};
+
+#define _UA_SEARCH_PHASE    1
+#define _UA_CLEANUP_PHASE   2
+#define _UA_HANDLER_FRAME   4
+#define _UA_FORCE_UNWIND    8
+#define _UA_END_OF_STACK    16
+
+typedef int _Unwind_Action;
+
 
 
 /* Given an encoding, return the number of bytes the format occupies.
@@ -96,6 +134,8 @@ size_of_encoded_value (unsigned char encoding)
 #endif
 
 #ifndef NO_BASE_OF_ENCODED_VALUE
+
+struct _Unwind_Context;
 
 /* Given an encoding and an _Unwind_Context, return the base to which
    the encoding is relative.  This base may then be passed to
