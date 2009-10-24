@@ -249,7 +249,7 @@ __objc_responds_to (id object, SEL sel)
   void *res;
 
   /* Install dispatch table if need be */
-  if (object->class_pointer->dtable == __objc_uninstalled_dtable)
+  if (dtable_for_class(object->class_pointer) == __objc_uninstalled_dtable)
     {
       objc_mutex_lock (__objc_runtime_mutex);
       if (dtable_for_class(object->class_pointer) == __objc_uninstalled_dtable)
@@ -260,7 +260,8 @@ __objc_responds_to (id object, SEL sel)
     }
 
   /* Get the method from the dispatch table */
-  res = sarray_get_safe (object->class_pointer->dtable, (size_t) sel->sel_id);
+  res = sarray_get_safe (dtable_for_class(object->class_pointer), 
+		  (size_t) sel->sel_id);
   return (res != 0);
 }
 
@@ -585,17 +586,17 @@ static void merge_methods_from_superclass (Class class)
               Method_t method = &method_list->method_list[i];
               size_t sel_id = (size_t)method->method_name->sel_id;
               struct objc_slot *slot = 
-                  sarray_get_safe(class->dtable, sel_id);
+                  sarray_get_safe(dtable_for_class(class), sel_id);
               // If the slot already exists in this dtable, we have either
               // overridden it in the subclass, or it is already pointing to
               // the same slot as the superclass.  If not, then we just install
               // the slot pointer into this dtable.
               if (NULL == slot)
                 {
-                  slot = sarray_get_safe(super->dtable, sel_id);
+                  slot = sarray_get_safe(dtable_for_class(super), sel_id);
                   // If slot is NULL here, something has gone badly wrong with
                   // the superclass already.
-                  sarray_at_put_safe (class->dtable, sel_id, slot);
+                  sarray_at_put_safe (dtable_for_class(class), sel_id, slot);
                 }
             }
           method_list = method_list->method_next;
@@ -614,10 +615,11 @@ __objc_update_dispatch_table_for_class (Class class)
   struct sarray *arr;
 
   /* not yet installed -- skip it */
-  if (class->dtable == __objc_uninstalled_dtable) 
+  if (dtable_for_class(class) == __objc_uninstalled_dtable) 
     return;
 
-  __objc_install_methods_in_dtable (class, class->methods, class->dtable);
+  __objc_install_methods_in_dtable (class, class->methods,
+      dtable_for_class(class));
   objc_mutex_lock (__objc_runtime_mutex);
 
   if (class->subclass_list)        /* Traverse subclasses */
