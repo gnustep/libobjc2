@@ -498,6 +498,7 @@ __objc_install_methods_in_dtable (Class class, MethodList_t method_list,
   if (method_list->method_next)
     __objc_install_methods_in_dtable (class, method_list->method_next, dtable);
 
+
   for (i = 0; i < method_list->method_count; i++)
     {
       Method_t method = &(method_list->method_list[i]);
@@ -572,7 +573,10 @@ __objc_install_dispatch_table_for_class(Class class)
 
 static void merge_methods_from_superclass (Class class)
 {
+  struct sarray *dtable = dtable_for_class(class);
   Class super = class->super_class;
+  // Don't merge things into the uninitialised dtable.  That would be very bad.
+  if (dtable == __objc_uninstalled_dtable) { return; }
   do
     {
       MethodList_t method_list = class->methods;
@@ -585,8 +589,7 @@ static void merge_methods_from_superclass (Class class)
             {
               Method_t method = &method_list->method_list[i];
               size_t sel_id = (size_t)method->method_name->sel_id;
-              struct objc_slot *slot = 
-                  sarray_get_safe(dtable_for_class(class), sel_id);
+              struct objc_slot *slot = sarray_get_safe(dtable, sel_id);
               // If the slot already exists in this dtable, we have either
               // overridden it in the subclass, or it is already pointing to
               // the same slot as the superclass.  If not, then we just install
@@ -596,7 +599,7 @@ static void merge_methods_from_superclass (Class class)
                   slot = sarray_get_safe(dtable_for_class(super), sel_id);
                   // If slot is NULL here, something has gone badly wrong with
                   // the superclass already.
-                  sarray_at_put_safe (dtable_for_class(class), sel_id, slot);
+                  sarray_at_put_safe (dtable, sel_id, slot);
                 }
             }
           method_list = method_list->method_next;
