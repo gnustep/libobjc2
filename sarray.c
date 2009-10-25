@@ -309,7 +309,7 @@ sarray_realloc (struct sarray *array, int newsize)
   if (rounded_size <= array->capacity)
     return;
 
-  assert (array->ref_count == 1);	/* stop if lazy copied... */
+//  assert (array->ref_count == 1);	/* stop if lazy copied... */
 
   /* We are asked to extend the array -- allocate new bucket table, */
   /* and insert empty_bucket in newly allocated places. */
