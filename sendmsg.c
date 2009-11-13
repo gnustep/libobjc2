@@ -579,12 +579,13 @@ static void merge_methods_from_superclass (Class class)
   if (dtable == __objc_uninstalled_dtable) { return; }
   do
     {
-      MethodList_t method_list = class->methods;
+      MethodList_t method_list = super->methods;
       while (method_list)
         {
           int i;
+          struct sarray *super_dtable = dtable_for_class(super);
 
-      /* Search the method list.  */
+          /* Search the method list.  */
           for (i = 0; i < method_list->method_count; ++i)
             {
               Method_t method = &method_list->method_list[i];
@@ -596,7 +597,7 @@ static void merge_methods_from_superclass (Class class)
               // the slot pointer into this dtable.
               if (NULL == slot)
                 {
-                  slot = sarray_get_safe(dtable_for_class(super), sel_id);
+                  slot = sarray_get_safe(super_dtable, sel_id);
                   // If slot is NULL here, something has gone badly wrong with
                   // the superclass already.
                   sarray_at_put_safe (dtable, sel_id, slot);
