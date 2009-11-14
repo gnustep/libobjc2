@@ -12,7 +12,7 @@ Slot_t objc_msg_lookup_sender(id *receiver, SEL selector, id sender);
 
 // Default implementations of the two new hooks.  Return NULL.
 static id objc_proxy_lookup_null(id receiver, SEL op) { return nil; }
-static Slot_t objc_msg_forward3_null(id receiver, SEL op) { return NULL; }
+static Slot_t objc_msg_forward3_null(id receiver, SEL op) { return &nil_slot; }
 
 id (*objc_proxy_lookup)(id receiver, SEL op) = objc_proxy_lookup_null;
 Slot_t (*objc_msg_forward3)(id receiver, SEL op) = objc_msg_forward3_null;
@@ -24,14 +24,24 @@ Slot_t objc_msg_lookup_internal(id *receiver, SEL selector, id sender)
 			(sidx)selector->sel_id);
 	if (0 == result)
 	{
+		Class class = (*receiver)->class_pointer;
 		/* Install the dtable if it hasn't already been initialized. */
-		if ((*receiver)->class_pointer->dtable == __objc_uninstalled_dtable)
+		if (dtable_for_class(class) == __objc_uninstalled_dtable)
 		{
-			objc_mutex_lock(__objc_runtime_mutex);
 			__objc_init_install_dtable (*receiver, selector);
-			objc_mutex_unlock(__objc_runtime_mutex);
-			struct sarray *dtable = dtable_for_class((*receiver)->class_pointer);
+			struct sarray *dtable = dtable_for_class(class);
 			result = sarray_get_safe(dtable, (sidx)selector->sel_id);
+			if (0 == result)
+			{
+				objc_mutex_lock(__objc_runtime_mutex);
+				if (dtable_for_class(class) == __objc_uninstalled_dtable)
+				{
+					__objc_install_dispatch_table_for_class(class);
+					dtable = dtable_for_class(class);
+				}
+				objc_mutex_unlock(__objc_runtime_mutex);
+				result = sarray_get_safe(class->dtable, (sidx)selector->sel_id);
+			}
 		}
 		else
 		{

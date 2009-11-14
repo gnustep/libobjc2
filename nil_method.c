@@ -50,5 +50,5 @@ see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
 id
 nil_method (id receiver, SEL op __attribute__ ((__unused__)))
 {
-  return receiver;
+  return 0;
 }

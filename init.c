@@ -745,7 +745,7 @@ __objc_compute_ivar_offsets (Class class)
            */
           if (CLS_ISNEW_ABI(class))
             {
-              //*(class->ivar_offsets[i]) = ivar->ivar_offset;
+              *(class->ivar_offsets[i]) = ivar->ivar_offset;
             }
         }
     }
