@@ -83,6 +83,16 @@ typedef enum {
 typedef unsigned _Unwind_Word __attribute__((__mode__(__word__)));
 typedef signed _Unwind_Sword __attribute__((__mode__(__word__)));
 
+struct _Unwind_Context;
+
+uintptr_t _Unwind_GetIP(struct _Unwind_Context *context);
+void _Unwind_SetIP(struct _Unwind_Context *context, uintptr_t);
+uintptr_t _Unwind_GetLanguageSpecificData(struct _Unwind_Context *context);
+uintptr_t _Unwind_GetRegionStart(struct _Unwind_Context *context);
+
+
+
+
 typedef void (*_Unwind_Exception_Cleanup_Fn)(_Unwind_Reason_Code reason,
 		void *exc);
 
@@ -93,6 +103,11 @@ struct _Unwind_Exception {
 	uint64_t                     private_1;
 	uint64_t                     private_2;
 };
+_Unwind_Reason_Code _Unwind_RaiseException
+      ( struct _Unwind_Exception *exception_object );
+void _Unwind_DeleteException(struct _Unwind_Exception *object);
+void _Unwind_SetGR(struct _Unwind_Context *context, int index, unsigned value);
+
 
 #define _UA_SEARCH_PHASE    1
 #define _UA_CLEANUP_PHASE   2
@@ -135,7 +150,10 @@ size_of_encoded_value (unsigned char encoding)
 
 #ifndef NO_BASE_OF_ENCODED_VALUE
 
-struct _Unwind_Context;
+
+_Unwind_Ptr _Unwind_GetTextRelBase(struct _Unwind_Context *context);
+_Unwind_Ptr _Unwind_GetDataRelBase(struct _Unwind_Context *context);
+_Unwind_Ptr _Unwind_GetRegionStart(struct _Unwind_Context *context);
 
 /* Given an encoding and an _Unwind_Context, return the base to which
    the encoding is relative.  This base may then be passed to
