@@ -24,7 +24,9 @@ a copy of the GCC Runtime Library Exception along with this program;
 see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
 <http://www.gnu.org/licenses/>.  */
 
+#include <stdlib.h>
 #include "objc/runtime-legacy.h"
+#include "objc/encoding.h"
 #include "lock.h"
 
 /* The version number of this runtime.  This must match the number 
@@ -746,6 +748,33 @@ __objc_compute_ivar_offsets (Class class)
           if (CLS_ISNEW_ABI(class))
             {
               *(class->ivar_offsets[i]) = ivar->ivar_offset;
+            }
+        }
+    }
+  else
+    {
+      if (class->ivars != 0)
+        {
+          Class super = class_superclass_of_class(class);
+          int start = class->ivars->ivar_list[0].ivar_offset;
+          /* Quick and dirty test */
+          if (Nil != super && start != super->instance_size)
+            {
+              while (NULL == super->ivars) 
+                {
+                  super = class_superclass_of_class(super);
+                }
+              struct objc_ivar *ivar = 
+                &super->ivars->ivar_list[super->ivars->ivar_count-1];
+              if (start != (ivar->ivar_offset + objc_sizeof_type(ivar->ivar_type)))
+                {
+                  /* Panic if this class has an instance variable that overlaps the
+                   * superclass. */
+                  fprintf(stderr, "Error: Instance variables in %s overlap superclass %s",
+                      class->name, super->name);
+                  fprintf(stderr, "This probably means that you are subclassing a class from a library, which has changed in a binary-incompatible way.\n");
+                  abort();
+                }
             }
         }
     }
