@@ -606,7 +606,7 @@ static void merge_methods_from_superclass (Class class)
           method_list = method_list->method_next;
         }
     } 
-  while (super = super->super_class);
+  while ((super = super->super_class));
   if (class->subclass_list)        /* Traverse subclasses */
     for (Class next = class->subclass_list; next; next = next->sibling_class)
       merge_methods_from_superclass (next);

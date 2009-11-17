@@ -27,6 +27,10 @@ see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
 //#include <unwind.h>
 #include "unwind-pe.h"
 
+void (*__objc_unhandled_exception)(id) = 0;
+
+__attribute__((weak)) int main(void);
+
 
 #ifdef __ARM_EABI_UNWINDER__
 
@@ -451,6 +455,13 @@ PERSONALITY_FUNCTION (int version,
  install_context:
   if (saw_cleanup == 0)
     {
+      if (_Unwind_GetRegionStart(context) == (int)main)
+        {
+          if (__objc_unhandled_exception)
+            {
+              __objc_unhandled_exception(xh->value);
+            }
+        }
       return_object = xh->value;
       if (!(actions & _UA_SEARCH_PHASE))
 	_Unwind_DeleteException(&xh->base);

@@ -315,6 +315,12 @@ id (*objc_proxy_lookup)(id receiver, SEL op) OBJC_NONPORTABLE;
  */
 struct objc_slot *(*objc_msg_forward3)(id receiver, SEL op) OBJC_NONPORTABLE;
 
+/**
+ * Runtime hook for unhandled exceptions.  This is called if an exception is
+ * not caught.
+ */
+void (*__objc_unhandled_exception)(id);
+
 // Global self so that self is a valid symbol everywhere.  Will be replaced by
 // a real self in an inner scope if there is one.
 static const id self = nil;

@@ -5,12 +5,14 @@ LIBRARY_NAME = libobjc
 libobjc_VERSION = 4
 
 libobjc_OBJC_FILES = \
-	blocks_runtime.m\
-	linking.m\
-	mutation.m\
+	NSBlocks.m\
 	NXConstStr.m\
 	Object.m\
 	Protocol.m\
+	blocks_runtime.m\
+	linking.m\
+	mutation.m\
+	properties.m\
 	sync.m
 
 
@@ -31,6 +33,7 @@ libobjc_C_FILES = \
 	selector.c\
 	sendmsg.c\
 	thr.c
+
 libobjc_HEADER_FILES_DIR = objc
 libobjc_HEADER_FILES_INSTALL_DIR = objc
 libobjc_HEADER_FILES = \
