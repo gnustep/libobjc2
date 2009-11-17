@@ -738,16 +738,19 @@ __objc_compute_ivar_offsets (Class class)
        * functionality, provide an alternative @interface with all variables
        * declared @public.
        */
-      for (i = 0 ; i < class->ivars->ivar_count ; i++)
+      if (class->ivars)
         {
-          struct objc_ivar *ivar = &class->ivars->ivar_list[i];
-          ivar->ivar_offset += ivar_start;
-          /* If we're using the new ABI then we also set up the faster ivar
-           * offset variables.
-           */
-          if (CLS_ISNEW_ABI(class))
+          for (i = 0 ; i < class->ivars->ivar_count ; i++)
             {
-              *(class->ivar_offsets[i]) = ivar->ivar_offset;
+              struct objc_ivar *ivar = &class->ivars->ivar_list[i];
+              ivar->ivar_offset += ivar_start;
+              /* If we're using the new ABI then we also set up the faster ivar
+               * offset variables.
+               */
+              if (CLS_ISNEW_ABI(class))
+                {
+                  *(class->ivar_offsets[i]) = ivar->ivar_offset;
+                }
             }
         }
     }
