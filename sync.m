@@ -4,6 +4,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+int snprintf(char *restrict s, size_t n, const char *restrict format, ...);
+
+
 @interface Fake
 + (void)dealloc;
 @end
