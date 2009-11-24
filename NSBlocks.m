@@ -11,9 +11,8 @@ struct objc_class _NSConcreteStackBlock;
 void __objc_update_dispatch_table_for_class(Class);
 extern struct sarray *__objc_uninstalled_dtable;
 extern objc_mutex_t __objc_runtime_mutex;
-static void createNSBlockSubclass(Class newClass, char *name)
+static void createNSBlockSubclass(Class superclass, Class newClass, char *name)
 {
-	Class superclass = [NSBlock class];
 	// Create the metaclass
 	Class metaClass = calloc(1, sizeof(struct objc_class));
 
@@ -49,8 +48,8 @@ static void createNSBlockSubclass(Class newClass, char *name)
 @implementation NSBlock
 + (void)load
 {
-	createNSBlockSubclass(&_NSConcreteGlobalBlock, "_NSConcreteGlobalBlockPrivate");
-	createNSBlockSubclass(&_NSConcreteStackBlock, "_NSConcreteStackBlockPrivate");
+	createNSBlockSubclass(self, &_NSConcreteGlobalBlock, "_NSConcreteGlobalBlockPrivate");
+	createNSBlockSubclass(self, &_NSConcreteStackBlock, "_NSConcreteStackBlockPrivate");
 }
 @end
 
