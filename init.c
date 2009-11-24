@@ -542,10 +542,10 @@ __objc_exec_class (Module_t module)
   if (! previous_constructors)
     {
 	/* Initialize thread-safe system */
+      INIT_LOCK(objc_runtime_mutex);
       __objc_init_thread_system ();
       __objc_sync_init();
       __objc_runtime_threads_alive = 1;
-      INIT_LOCK(objc_runtime_mutex);
 
       __objc_init_selector_tables ();
       __objc_init_protocol_table ();
