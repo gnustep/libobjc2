@@ -415,8 +415,6 @@ __objc_send_initialize (Class class)
       LOCK(&initialize_lock);
       if (! CLS_ISRESOLV (class))
         __objc_resolve_class_links ();
-      CLS_SETINITIALIZED (class);
-      CLS_SETINITIALIZED (class->class_pointer);
 
 
       /* Create the garbage collector type memory description */
@@ -424,6 +422,16 @@ __objc_send_initialize (Class class)
 
       if (class->super_class)
         __objc_send_initialize (class->super_class);
+      // Superclass +initialize might possibly send a message to this class, in
+      // which case this method would be called again.  See NSObject and
+      // NSAutoreleasePool +initialize interaction in GNUstep.
+      if (CLS_ISINITIALIZED (class))
+        {
+          UNLOCK(&initialize_lock);
+          return;
+        }
+      CLS_SETINITIALIZED (class);
+      CLS_SETINITIALIZED (class->class_pointer);
       /* Create the dtable, but don't install it on the class quite yet. */
 
       struct sarray *dtable = create_dtable_for_class(class);
