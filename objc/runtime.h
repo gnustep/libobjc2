@@ -256,6 +256,14 @@ objc_property_t protocol_getProperty(Protocol *p, const char *name,
 
 BOOL protocol_isEqual(Protocol *p, Protocol *other);
 
+const char *sel_getName(SEL sel);
+
+SEL sel_getUid(const char *selName);
+
+BOOL sel_isEqual(SEL sel1, SEL sel2);
+
+SEL sel_registerName(const char *selName);
+
 #else
 #include "runtime-legacy.h"
 #endif // __LEGACY_GNU_MODE__

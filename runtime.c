@@ -112,7 +112,7 @@ static Method class_getInstanceMethodNonrecursive(Class aClass, SEL aSelector)
 static void objc_updateDtableForClassContainingMethod(Method m)
 {
 	Class nextClass = Nil;
-	void *state;
+	void *state = NULL;
 	SEL sel = method_getName(m);
 	while (Nil != (nextClass = objc_next_class(&state)))
 	{
@@ -845,4 +845,24 @@ BOOL protocol_isEqual(Protocol *p, Protocol *other)
 		return YES;
 	}
 	return NO;
+}
+
+const char *sel_getName(SEL sel)
+{
+	return sel_get_name(sel);
+}
+
+SEL sel_getUid(const char *selName)
+{
+	return sel_get_uid(selName);
+}
+
+BOOL sel_isEqual(SEL sel1, SEL sel2)
+{
+	return sel_eq(sel1, sel2);
+}
+
+SEL sel_registerName(const char *selName)
+{
+	return sel_register_name(selName);
 }
