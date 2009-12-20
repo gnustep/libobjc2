@@ -6,19 +6,24 @@
 struct objc_class _NSConcreteGlobalBlock;
 struct objc_class _NSConcreteStackBlock;
 
+static struct objc_class _NSConcreteGlobalBlockMeta;
+static struct objc_class _NSConcreteStackBlockMeta;
+
+static struct objc_class _NSBlock;
+static struct objc_class _NSBlockMeta;
+
 @interface NSBlock : NSObject @end
 
 void __objc_update_dispatch_table_for_class(Class);
 extern struct sarray *__objc_uninstalled_dtable;
 extern objc_mutex_t __objc_runtime_mutex;
-static void createNSBlockSubclass(Class superclass, Class newClass, char *name)
-{
-	// Create the metaclass
-	Class metaClass = calloc(1, sizeof(struct objc_class));
 
+static void createNSBlockSubclass(Class superclass, Class newClass, 
+		Class metaClass, char *name)
+{
 	// Initialize the metaclass
 	metaClass->class_pointer = superclass->class_pointer;
-	metaClass->super_class = superclass->class_pointer->super_class;
+	metaClass->super_class = superclass->class_pointer;
 	metaClass->info = _CLS_META;
 	metaClass->dtable = __objc_uninstalled_dtable;
 
@@ -45,11 +50,14 @@ static void createNSBlockSubclass(Class superclass, Class newClass, char *name)
 	objc_mutex_unlock(__objc_runtime_mutex);
 }
 
-@implementation NSBlock
-+ (void)load
-{
-	createNSBlockSubclass(self, &_NSConcreteGlobalBlock, "_NSConcreteGlobalBlockPrivate");
-	createNSBlockSubclass(self, &_NSConcreteStackBlock, "_NSConcreteStackBlockPrivate");
-}
-@end
+#define NEW_CLASS(super, sub) \
+	createNSBlockSubclass(super, &sub, &sub ## Meta, #sub)
 
+BOOL objc_create_block_classes_as_subclasses_of(Class super)
+{
+	if (_NSBlock.super_class != NULL) { return NO; }
+
+	NEW_CLASS(super, _NSBlock);
+	NEW_CLASS(&_NSBlock, _NSConcreteStackBlock);
+	NEW_CLASS(&_NSBlock, _NSConcreteGlobalBlock);
+}
