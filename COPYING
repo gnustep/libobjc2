@@ -21,6 +21,7 @@ runtime.c
 sync.m 
 objc/blocks_runtime.h 
 objc/runtime.h
+NSBlocks.m
 
 These files may be used for any purpose, including binary-only redistribution,
 according to the terms of the MIT license, as long as their copyright notices
