@@ -225,6 +225,7 @@ void *object_getIndexedIvars(id obj);
 id object_dispose(id obj);
 
 Class object_getClass(id obj);
+Class object_setClass(id obj, Class cls);
 
 const char *object_getClassName(id obj);
 

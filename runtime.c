@@ -765,6 +765,17 @@ Class object_getClass(id obj)
 	return Nil;
 }
 
+Class object_setClass(id obj, Class cls)
+{
+	if (nil != obj)
+	{
+		Class oldClass =  obj->isa;
+		obj->isa = cls;
+		return oldClass;
+	}
+	return Nil;
+}
+
 const char *object_getClassName(id obj)
 {
 	return class_getName(object_getClass(obj));
