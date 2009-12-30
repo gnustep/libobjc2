@@ -54,6 +54,8 @@ libobjc_HEADER_FILES = \
 	thr.h\
 	typedstream.h
 
+libobjc_LIBRARIES_DEPEND_UPON += -lpthread
+
 # Deprecated functions are only deprecated for external use, not for us because
 # we are special, precious, little flowers.
 libobjc_CPPFLAGS += -D__OBJC_RUNTIME_INTERNAL__=1 -D_XOPEN_SOURCE=500
