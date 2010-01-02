@@ -312,23 +312,23 @@ struct objc_slot
  * New ABI lookup function.  Receiver may be modified during lookup or proxy
  * forwarding and the sender may affect how lookup occurs.
  */
-struct objc_slot *objc_msg_lookup_sender(id *receiver, SEL selector, id sender)
+extern struct objc_slot *objc_msg_lookup_sender(id *receiver, SEL selector, id sender)
 	OBJC_NONPORTABLE;
 /**
  * Hook provided to allow libraries to support fast proxies.
  */
-id (*objc_proxy_lookup)(id receiver, SEL op) OBJC_NONPORTABLE;
+extern id (*objc_proxy_lookup)(id receiver, SEL op) OBJC_NONPORTABLE;
 /**
  * New message lookup hook.  This returns a slot, rather than an IMP.  The
  * version should be set to 0 to disable caching.
  */
-struct objc_slot *(*objc_msg_forward3)(id receiver, SEL op) OBJC_NONPORTABLE;
+extern struct objc_slot *(*objc_msg_forward3)(id receiver, SEL op) OBJC_NONPORTABLE;
 
 /**
  * Runtime hook for unhandled exceptions.  This is called if an exception is
  * not caught.
  */
-void (*__objc_unhandled_exception)(id);
+extern void (*__objc_unhandled_exception)(id);
 
 // Global self so that self is a valid symbol everywhere.  Will be replaced by
 // a real self in an inner scope if there is one.
