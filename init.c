@@ -773,8 +773,16 @@ __objc_compute_ivar_offsets (Class class)
                 {
                   /* Panic if this class has an instance variable that overlaps the
                    * superclass. */
-                  fprintf(stderr, "Error: Instance variables in %s overlap superclass %s",
-                      class->name, super->name);
+                  fprintf(stderr, 
+                     "Error: Instance variables in %s overlap superclass %s",
+                     class->name, super->name);
+                  fprintf(stderr, 
+                     "Offset of first instance variable, %s, is %d",
+                     class->ivars->ivar_list[0].ivar_name, start);
+                  fprintf(stderr, 
+                     "Last instance variable in superclass, %s, ends at offset %d",
+                     ivar->ivar_name, 
+                     ivar->ivar_offset + objc_sizeof_type(ivar->ivar_type));
                   fprintf(stderr, "This probably means that you are subclassing a class from a library, which has changed in a binary-incompatible way.\n");
                   abort();
                 }
