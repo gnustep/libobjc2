@@ -60,4 +60,5 @@ BOOL objc_create_block_classes_as_subclasses_of(Class super)
 	NEW_CLASS(super, _NSBlock);
 	NEW_CLASS(&_NSBlock, _NSConcreteStackBlock);
 	NEW_CLASS(&_NSBlock, _NSConcreteGlobalBlock);
+	return YES;
 }
