@@ -565,7 +565,7 @@ unsigned method_getNumberOfArguments(Method method)
 {
 	const char *types = method->method_types;
 	unsigned int count = 0;
-	while('\0' == *types)
+	while('\0' != *types)
 	{
 		types = objc_skip_argspec(types);
 		count++;
