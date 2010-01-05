@@ -790,6 +790,8 @@ const char *object_getClassName(id obj)
 	return class_getName(object_getClass(obj));
 }
 
+void __objc_add_class_to_hash(Class cls);
+
 void objc_registerClassPair(Class cls)
 {
 	Class metaClass = cls->class_pointer;
@@ -805,6 +807,7 @@ void objc_registerClassPair(Class cls)
 	metaClass->sibling_class = metaClass->super_class->subclass_list;
 	metaClass->super_class->subclass_list = metaClass;
 	objc_mutex_unlock(__objc_runtime_mutex);
+	__objc_add_class_to_hash(cls);
 }
 
 static id objectNew(id cls)
