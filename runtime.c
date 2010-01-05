@@ -140,10 +140,18 @@ BOOL class_addIvar(Class cls,
 
 	if (class_getInstanceVariable(cls, name) != NULL) { return NO; }
 
-	ivarlist->ivar_count++;
-	// objc_ivar_list contains one ivar.  Others follow it.
-	cls->ivars = objc_realloc(ivarlist, sizeof(struct objc_ivar_list) 
-			+ (ivarlist->ivar_count - 1) * sizeof(struct objc_ivar));
+	if (NULL == ivarlist)
+	{
+		cls->ivars = objc_malloc(sizeof(struct objc_ivar_list));
+		cls->ivars->ivar_count = 1;
+	}
+	else
+	{
+		ivarlist->ivar_count++;
+		// objc_ivar_list contains one ivar.  Others follow it.
+		cls->ivars = objc_realloc(ivarlist, sizeof(struct objc_ivar_list) 
+				+ (ivarlist->ivar_count - 1) * sizeof(struct objc_ivar));
+	}
 
 	Ivar ivar = &cls->ivars->ivar_list[cls->ivars->ivar_count - 1];
 	ivar->ivar_name = strdup(name);
@@ -176,7 +184,7 @@ BOOL class_addMethod(Class cls, SEL name, IMP imp, const char *types)
 	cls->methods = methods;
 
 	methods->method_count = 1;
-	methods->method_list[0].method_name = sel_get_typed_uid(methodName, types);
+	methods->method_list[0].method_name = sel_register_typed_name(methodName, types);
 	methods->method_list[0].method_types = strdup(types);
 	methods->method_list[0].method_imp = (objc_imp_gnu)imp;
 
@@ -349,6 +357,7 @@ size_t class_getInstanceSize(Class cls)
 Ivar class_getInstanceVariable(Class cls, const char* name)
 {
 	struct objc_ivar_list *ivarlist = cls->ivars;
+	if (NULL == ivarlist) { return NULL; }
 
 	for (int i=0 ; i<ivarlist->ivar_count ; i++)
 	{
