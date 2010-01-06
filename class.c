@@ -251,27 +251,10 @@ class_table_get_safe (const char *class_name)
           if (node->length == length)
             {
               /* Compare the class names.  */
-              int i;
-
 	      if (strcmp(node->name, class_name) == 0)
 	      {
 		  return node->pointer;
 	      }
-#if 0
-              for (i = 0; i < length; i++)
-                {
-                  if ((node->name)[i] != class_name[i]) 
-                    {
-                      break;
-                    }
-                }
-              
-              if (i == length)
-                {
-                  /* They are equal!  */
-                  return node->pointer;
-                }
-#endif
             }
         }
       while ((node = node->next) != NULL);

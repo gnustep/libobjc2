@@ -624,7 +624,6 @@ void
 __objc_update_dispatch_table_for_class (Class class)
 {
   Class next;
-  struct sarray *arr;
 
   /* not yet installed -- skip it */
   if (dtable_for_class(class) == __objc_uninstalled_dtable) 

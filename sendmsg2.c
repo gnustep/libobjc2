@@ -104,6 +104,7 @@ Slot_t objc_msg_lookup_sender(id *receiver, SEL selector, id sender)
 	return objc_plane_lookup(receiver, selector, sender);
 }
 
+#ifdef PROFILE
 /**
  * When profiling, the runtime writes out two files, one containing tuples of
  * call sites and associated information, the other containing symbolic
@@ -133,7 +134,6 @@ char *(*objc_profile_resolve_symbol)(void *addr) =
 
 
 // Don't enable profiling in the default build (yet)
-#ifdef PROFILE
 struct profile_info 
 {
 	const char *module;
