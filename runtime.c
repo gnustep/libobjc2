@@ -397,10 +397,6 @@ const char * class_getName(Class cls)
 void __objc_resolve_class_links(void);
 Class class_getSuperclass(Class cls)
 {
-	if (!CLS_ISRESOLV(cls))
-	{
-		__objc_resolve_class_links();
-	}
 	return class_get_super_class(cls);
 }
 
