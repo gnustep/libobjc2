@@ -551,15 +551,11 @@ static inline Class
 class_get_super_class(Class _class)
 {
 	void __objc_resolve_class_links(void);
-	if CLS_ISCLASS(_class)
+	if (!CLS_ISRESOLV(_class))
 	{
-		if (!CLS_ISRESOLV(_class))
-		{
-			__objc_resolve_class_links();
-		}
-		return _class->super_class;
+		__objc_resolve_class_links();
 	}
-	return Nil;
+	return _class->super_class;
 }
 
 static inline int

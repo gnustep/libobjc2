@@ -394,7 +394,6 @@ const char * class_getName(Class cls)
 	return class_get_class_name(cls);
 }
 
-void __objc_resolve_class_links(void);
 Class class_getSuperclass(Class cls)
 {
 	return class_get_super_class(cls);
@@ -742,10 +741,11 @@ Class objc_allocateClassPair(Class superclass, const char *name, size_t extraByt
 	Class metaClass = calloc(1, sizeof(struct objc_class));
 
 	// Initialize the metaclass
-	metaClass->class_pointer = superclass->class_pointer;
-	metaClass->super_class = superclass->class_pointer->super_class;
+	metaClass->class_pointer = superclass->class_pointer->class_pointer;
+	metaClass->super_class = superclass->class_pointer;
 	metaClass->info = _CLS_META | _CLS_RUNTIME | _CLS_NEW_ABI;
 	metaClass->dtable = __objc_uninstalled_dtable;
+	metaClass->instance_size = sizeof(struct objc_class);
 
 	// Set up the new class
 	newClass->class_pointer = metaClass;
@@ -753,6 +753,7 @@ Class objc_allocateClassPair(Class superclass, const char *name, size_t extraByt
 	newClass->name = strdup(name);
 	newClass->info = _CLS_CLASS | _CLS_RUNTIME | _CLS_NEW_ABI;
 	newClass->dtable = __objc_uninstalled_dtable;
+	newClass->instance_size = superclass->instance_size;
 
 	return newClass;
 }
@@ -792,6 +793,7 @@ const char *object_getClassName(id obj)
 }
 
 void __objc_add_class_to_hash(Class cls);
+void __objc_resolve_class_links(void);
 
 void objc_registerClassPair(Class cls)
 {
@@ -799,16 +801,9 @@ void objc_registerClassPair(Class cls)
 	// Initialize the dispatch table for the class and metaclass.
 	__objc_update_dispatch_table_for_class(metaClass);
 	__objc_update_dispatch_table_for_class(cls);
-	CLS_SETINITIALIZED(metaClass);
-	CLS_SETINITIALIZED(cls);
-	// Add pointer from super class
-	objc_mutex_lock(__objc_runtime_mutex);
-	cls->sibling_class = cls->super_class->subclass_list;
-	cls->super_class->subclass_list = cls;
-	metaClass->sibling_class = metaClass->super_class->subclass_list;
-	metaClass->super_class->subclass_list = metaClass;
-	objc_mutex_unlock(__objc_runtime_mutex);
 	__objc_add_class_to_hash(cls);
+	// Add pointer from super class
+	__objc_resolve_class_links();
 }
 
 static id objectNew(id cls)
