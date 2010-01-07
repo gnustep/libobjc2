@@ -351,7 +351,7 @@ Ivar class_getClassVariable(Class cls, const char* name)
 
 size_t class_getInstanceSize(Class cls)
 {
-	return class_get_instance_size(cls);
+	return cls->instance_size;
 }
 
 Ivar class_getInstanceVariable(Class cls, const char* name)
