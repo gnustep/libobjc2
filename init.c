@@ -938,6 +938,7 @@ init_check_module_version (Module_t module)
     }
 }
 
+struct objc_protocol *__objc_unique_protocol(struct objc_protocol*);
 static void
 __objc_init_protocols (struct objc_protocol_list *protos)
 {
@@ -955,7 +956,8 @@ __objc_init_protocols (struct objc_protocol_list *protos)
   if (! proto_class2)
     proto_class2 = objc_lookup_class ("Protocol2");
 
-  if (! proto_class)
+  /* Protocol2 will always exist if Protocol exists */
+  if (! proto_class2)
     {
       unclaimed_proto_list = list_cons (protos, unclaimed_proto_list);
       UNLOCK(__objc_runtime_mutex);
@@ -988,7 +990,7 @@ __objc_init_protocols (struct objc_protocol_list *protos)
 	      aProto->class_pointer = proto_class2;
 	      /* init super protocols */
 	      __objc_init_protocols (aProto->protocol_list);
-	      //__objc_unique_protocol (aProto);
+	      protos->list[i] = __objc_unique_protocol (aProto);
 	    }
 	  default:
 	    {
