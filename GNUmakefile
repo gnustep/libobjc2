@@ -19,6 +19,7 @@ libobjc_OBJC_FILES = \
 libobjc_C_FILES = \
 	archive.c\
 	class.c\
+	class_table.c\
 	encoding.c\
 	exception.c\
 	gc.c\
@@ -62,7 +63,7 @@ libobjc_CPPFLAGS += -D__OBJC_RUNTIME_INTERNAL__=1 -D_XOPEN_SOURCE=500
 # Note to Riccardo.  Please do not 'fix' C99isms in this.  The new ABI is only
 # useful on compilers that support C99 (currently only clang), so there is no
 # benefit from supporting platforms with no C99 compiler.
-libobjc_CFLAGS += -Werror -std=c99 -g -fexceptions
+libobjc_CFLAGS += -Werror -std=c99 -g -fexceptions #-fno-inline
 libobjc_OBJCFLAGS += -g -std=c99
 libobjc_LDFLAGS += -g
 

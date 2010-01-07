@@ -15,9 +15,12 @@ COPYING.RUNTIME contains the GCC runtime exemption to the GNU GPL.
 Some individual files retain their original MIT license.  These are:
 
 blocks_runtime.m 
+class_table.c
+hash_table.h
 lock.h
 mutation.m
 runtime.c 
+string_hash.c
 sync.m 
 objc/blocks_runtime.h 
 objc/runtime.h

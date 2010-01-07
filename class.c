@@ -92,7 +92,10 @@ see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
 
 #include "objc/objc.h"
 #include "objc/objc-api.h"
-#include "objc/thr.h"
+
+#include "lock.h"
+
+#include <stdlib.h>
 
 /* We use a table which maps a class name to the corresponding class
  * pointer.  The first part of this file defines this table, and
@@ -101,321 +104,26 @@ see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
  * classes by using the functions provided in the first part to manage
  * the table. */
 
-/**
- ** Class Table Internals
- **/
-
-/* A node holding a class */
-typedef struct class_node
-{
-  struct class_node *next;      /* Pointer to next entry on the list.
-                                   NULL indicates end of list. */
-  
-  const char *name;             /* The class name string */
-  int length;                   /* The class name string length */
-  Class pointer;                /* The Class pointer */
-  
-} *class_node_ptr;
-
-/* A table containing classes is a class_node_ptr (pointing to the
-   first entry in the table - if it is NULL, then the table is
-   empty). */
-
-/* We have 1024 tables.  Each table contains all class names which
-   have the same hash (which is a number between 0 and 1023).  To look
-   up a class_name, we compute its hash, and get the corresponding
-   table.  Once we have the table, we simply compare strings directly
-   till we find the one which we want (using the length first).  The
-   number of tables is quite big on purpose (a normal big application
-   has less than 1000 classes), so that you shouldn't normally get any
-   collisions, and get away with a single comparison (which we can't
-   avoid since we need to know that you have got the right thing).  */
-#define CLASS_TABLE_SIZE 1024
-#define CLASS_TABLE_MASK 1023
-
-#include "lock.h"
-
-static class_node_ptr class_table_array[CLASS_TABLE_SIZE];
-static int __class_table_was_set_up = 0;
-
-/* The table writing mutex - we lock on writing to avoid conflicts
-   between different writers, but we read without locks.  That is
-   possible because we assume pointer assignment to be an atomic
-   operation.  */
-static mutex_t __class_table_lock;
-
-/* CLASS_TABLE_HASH is how we compute the hash of a class name.  It is
-   a macro - *not* a function - arguments *are* modified directly.  
-
-   INDEX should be a variable holding an int;
-   HASH should be a variable holding an int;
-   CLASS_NAME should be a variable holding a (char *) to the class_name.  
-
-   After the macro is executed, INDEX contains the length of the
-   string, and HASH the computed hash of the string; CLASS_NAME is
-   untouched.  */
-
-#define CLASS_TABLE_HASH(INDEX, HASH, CLASS_NAME)          \
-  HASH = 0;                                                  \
-  for (INDEX = 0; CLASS_NAME[INDEX] != '\0'; INDEX++)        \
-    {                                                        \
-      HASH = (HASH << 4) ^ (HASH >> 28) ^ CLASS_NAME[INDEX]; \
-    }                                                        \
-                                                             \
-  HASH = (HASH ^ (HASH >> 10) ^ (HASH >> 20)) & CLASS_TABLE_MASK;
-
-
 /* Insert a class in the table (used when a new class is registered).  */
-static void 
-class_table_insert (const char *class_name, Class class_pointer)
-{
-  int hash, length;
-  class_node_ptr new_node;
-
-  /* Find out the class name's hash and length.  */
-  CLASS_TABLE_HASH (length, hash, class_name);
-  
-  /* Prepare the new node holding the class.  */
-  new_node = objc_malloc (sizeof (struct class_node));
-  new_node->name = class_name;
-  new_node->length = length;
-  new_node->pointer = class_pointer;
-
-  /* Lock the table for modifications.  */
-  LOCK(&__class_table_lock);
-  
-  /* Insert the new node in the table at the beginning of the table at
-     class_table_array[hash].  */
-  new_node->next = class_table_array[hash];
-  class_table_array[hash] = new_node;
-  
-  UNLOCK(&__class_table_lock);
-}
-
-/* Replace a class in the table (used only by poseAs:).  */
-static void 
-class_table_replace (Class old_class_pointer, Class new_class_pointer)
-{
-  int hash;
-  class_node_ptr node;
-
-  LOCK(&__class_table_lock);
-  
-  hash = 0;
-  node = class_table_array[hash];
-  
-  while (hash < CLASS_TABLE_SIZE)
-    {
-      if (node == NULL)
-        {
-          hash++;
-          if (hash < CLASS_TABLE_SIZE)
-            {
-              node = class_table_array[hash];
-            }
-        }
-      else
-        {
-          Class class1 = node->pointer;
-
-          if (class1 == old_class_pointer)
-            {
-              node->pointer = new_class_pointer;
-            }
-          node = node->next;
-        }
-    }
-
-  UNLOCK(&__class_table_lock);
-}
-
+void class_table_insert (Class class_pointer);
 
 /* Get a class from the table.  This does not need mutex protection.
    Currently, this function is called each time you call a static
    method, this is why it must be very fast.  */
-static inline Class 
-class_table_get_safe (const char *class_name)
-{
-  class_node_ptr node;  
-  int length, hash;
-
-  /* Compute length and hash.  */
-  CLASS_TABLE_HASH (length, hash, class_name);
-  
-  node = class_table_array[hash];
-  
-  if (node != NULL)
-    {
-      do
-        {
-          if (node->length == length)
-            {
-              /* Compare the class names.  */
-	      if (strcmp(node->name, class_name) == 0)
-	      {
-		  return node->pointer;
-	      }
-            }
-        }
-      while ((node = node->next) != NULL);
-    }
-
-  return Nil;
-}
 
 /* Enumerate over the class table.  */
-struct class_table_enumerator
-{
-  int hash;
-  class_node_ptr node;
-};
-
-
-static Class
-class_table_next (struct class_table_enumerator **e)
-{
-  struct class_table_enumerator *enumerator = *e;
-  class_node_ptr next;
-  
-  if (enumerator == NULL)
-    {
-       *e = objc_malloc (sizeof (struct class_table_enumerator));
-      enumerator = *e;
-      enumerator->hash = 0;
-      enumerator->node = NULL;
-
-      next = class_table_array[enumerator->hash];
-    }
-  else
-    {
-      next = enumerator->node->next;
-    }
-  
-  if (next != NULL)
-    {
-      enumerator->node = next;
-      return enumerator->node->pointer;
-    }
-  else 
-    {
-      enumerator->hash++;
-     
-      while (enumerator->hash < CLASS_TABLE_SIZE)
-        {
-          next = class_table_array[enumerator->hash];
-          if (next != NULL)
-            {
-              enumerator->node = next;
-              return enumerator->node->pointer;
-            }
-          enumerator->hash++;
-        }
-      
-      /* Ok - table finished - done.  */
-      objc_free (enumerator);
-      return Nil;
-    }
-}
-
-#if 0 /* DEBUGGING FUNCTIONS */
-/* Debugging function - print the class table.  */
-void
-class_table_print (void)
-{
-  int i;
-  
-  for (i = 0; i < CLASS_TABLE_SIZE; i++)
-    {
-      class_node_ptr node;
-      
-      printf ("%d:\n", i);
-      node = class_table_array[i];
-      
-      while (node != NULL)
-        {
-          printf ("\t%s\n", node->name);
-          node = node->next;
-        }
-    }
-}
-
-/* Debugging function - print an histogram of number of classes in
-   function of hash key values.  Useful to evaluate the hash function
-   in real cases.  */
-void
-class_table_print_histogram (void)
-{
-  int i, j;
-  int counter = 0;
-  
-  for (i = 0; i < CLASS_TABLE_SIZE; i++)
-    {
-      class_node_ptr node;
-      
-      node = class_table_array[i];
-      
-      while (node != NULL)
-        {
-          counter++;
-          node = node->next;
-        }
-      if (((i + 1) % 50) == 0)
-        {
-          printf ("%4d:", i + 1);
-          for (j = 0; j < counter; j++)
-            {
-              printf ("X");
-            }
-          printf ("\n");
-          counter = 0;
-        }
-    }
-  printf ("%4d:", i + 1);
-  for (j = 0; j < counter; j++)
-    {
-      printf ("X");
-    }
-  printf ("\n");
-}
-#endif /* DEBUGGING FUNCTIONS */
+Class class_table_next (void **e);
 
 /**
  ** Objective-C runtime functions
  **/
-
-/* From now on, the only access to the class table data structure
-   should be via the class_table_* functions.  */
 
 /* This is a hook which is called by objc_get_class and
    objc_lookup_class if the runtime is not able to find the class.  
    This may e.g. try to load in the class using dynamic loading.  */
 Class (*_objc_lookup_class) (const char *name) = 0;      /* !T:SAFE */
 
-
-/* True when class links has been resolved.  */     
-BOOL __objc_class_links_resolved = NO;                  /* !T:UNUSED */
-
-
-void
-__objc_init_class_tables (void)
-{
-  /* Allocate the class hash table.  */
-  
-  if (__class_table_was_set_up)
-    return;
-  
-  LOCK(__objc_runtime_mutex);
-  if (!__class_table_was_set_up)
-    {
-      /* Start - nothing in the table.  */
-      memset (class_table_array, 0, sizeof (class_node_ptr) * CLASS_TABLE_SIZE);
-
-      /* The table writing mutex.  */
-      INIT_LOCK(__class_table_lock);
-      __class_table_was_set_up = 1;
-    }
-  UNLOCK(__objc_runtime_mutex);
-}  
+Class class_table_get_safe(const char*);
 
 /* This function adds a class to the class hash table, and assigns the
    class a number, unless it's already known.  */
@@ -425,9 +133,6 @@ __objc_add_class_to_hash (Class class)
   Class h_class;
 
   LOCK(__objc_runtime_mutex);
-
-  /* Make sure the table is there.  */
-  //assert (__class_table_lock);
 
   /* Make sure it's not a meta class.  */
   assert (CLS_ISCLASS (class));
@@ -444,7 +149,7 @@ __objc_add_class_to_hash (Class class)
       CLS_SETNUMBER (class->class_pointer, class_number);
 
       ++class_number;
-      class_table_insert (class->name, class);
+      class_table_insert (class);
     }
 
   UNLOCK(__objc_runtime_mutex);
@@ -513,14 +218,7 @@ objc_next_class (void **enum_state)
 {
   Class class;
 
-  LOCK(__objc_runtime_mutex);
-  
-  /* Make sure the table is there.  */
-  //assert (__class_table_lock);
-
-  class = class_table_next ((struct class_table_enumerator **) enum_state);
-
-  UNLOCK(__objc_runtime_mutex);
+  class = class_table_next ( enum_state);
   
   return class;
 }
@@ -531,7 +229,7 @@ objc_next_class (void **enum_state)
 void
 __objc_resolve_class_links (void)
 {
-  struct class_table_enumerator *es = NULL;
+  void *es = NULL;
   Class object_class = objc_get_class ("Object");
   Class class1;
 
@@ -605,85 +303,10 @@ __objc_resolve_class_links (void)
   UNLOCK(__objc_runtime_mutex);
 }
 
-
-
-#define CLASSOF(c) ((c)->class_pointer)
-
 Class
 class_pose_as (Class impostor, Class super_class)
 {
-  if (! CLS_ISRESOLV (impostor))
-    __objc_resolve_class_links ();
-
-  /* Preconditions */
-  assert (impostor);
-  assert (super_class);
-  assert (impostor->super_class == super_class);
-  assert (CLS_ISCLASS (impostor));
-  assert (CLS_ISCLASS (super_class));
-  assert (impostor->instance_size == super_class->instance_size);
-
-  {
-    Class *subclass = &(super_class->subclass_list);
-
-    /* Move subclasses of super_class to impostor.  */
-    while (*subclass)
-      {
-        Class nextSub = (*subclass)->sibling_class;
-
-        if (*subclass != impostor)
-          {
-            Class sub = *subclass;
-
-            /* Classes */
-            sub->sibling_class = impostor->subclass_list;
-            sub->super_class = impostor;
-            impostor->subclass_list = sub;
-
-            /* It will happen that SUB is not a class object if it is
-               the top of the meta class hierarchy chain (root
-               meta-class objects inherit their class object).  If
-               that is the case... don't mess with the meta-meta
-               class.  */
-            if (CLS_ISCLASS (sub))
-              {
-                /* Meta classes */
-                CLASSOF (sub)->sibling_class = 
-                  CLASSOF (impostor)->subclass_list;
-                CLASSOF (sub)->super_class = CLASSOF (impostor);
-                CLASSOF (impostor)->subclass_list = CLASSOF (sub);
-              }
-          }
-
-        *subclass = nextSub;
-      }
-
-    /* Set subclasses of superclass to be impostor only.  */
-    super_class->subclass_list = impostor;
-    CLASSOF (super_class)->subclass_list = CLASSOF (impostor);
-    
-    /* Set impostor to have no sibling classes.  */
-    impostor->sibling_class = 0;
-    CLASSOF (impostor)->sibling_class = 0;
-  }
-  
-  /* Check relationship of impostor and super_class is kept.  */
-  assert (impostor->super_class == super_class);
-  assert (CLASSOF (impostor)->super_class == CLASSOF (super_class));
-
-  /* This is how to update the lookup table.  Regardless of what the
-     keys of the hashtable is, change all values that are superclass
-     into impostor.  */
-
-  LOCK(__objc_runtime_mutex);
-
-  class_table_replace (super_class, impostor);
-
-  UNLOCK(__objc_runtime_mutex);
-
-  /* Next, we update the dispatch tables...  */
-  __objc_update_dispatch_table_for_class (CLASSOF (impostor));
-  __objc_update_dispatch_table_for_class (impostor);
-
-  return impostor;
+	fprintf(stderr, "Class posing is no longer supported.\n");
+	fprintf(stderr, "Please use class_replaceMethod() instead.\n");
+	abort();
 }
