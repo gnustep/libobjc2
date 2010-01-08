@@ -743,6 +743,7 @@ Class objc_allocateClassPair(Class superclass, const char *name, size_t extraByt
 	// Initialize the metaclass
 	metaClass->class_pointer = superclass->class_pointer->class_pointer;
 	metaClass->super_class = superclass->class_pointer;
+	metaClass->name = strdup(name);
 	metaClass->info = _CLS_META | _CLS_RUNTIME | _CLS_NEW_ABI;
 	metaClass->dtable = __objc_uninstalled_dtable;
 	metaClass->instance_size = sizeof(struct objc_class);
@@ -817,14 +818,6 @@ static id objectNew(id cls)
 	}
 	IMP newIMP = (IMP)objc_msg_lookup((void*)cls, newSel);
 	return newIMP((id)cls, newSel);
-}
-
-Protocol *objc_getProtocol(const char *name)
-{
-	// Protocols are not centrally registered in the GNU runtime.
-	Protocol *protocol = (Protocol*)(objectNew(objc_getClass("Protocol")));
-	protocol->protocol_name = (char*)name;
-	return protocol;
 }
 
 BOOL protocol_conformsToProtocol(Protocol *p, Protocol *other)
