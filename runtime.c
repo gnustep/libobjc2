@@ -425,6 +425,12 @@ IMP class_replaceMethod(Class cls, SEL name, IMP imp, const char *types)
 	}
 	IMP old = (IMP)method->method_imp;
 	method->method_imp = (objc_imp_gnu)imp;
+
+	if (CLS_ISRESOLV(cls))
+	{
+		__objc_update_dispatch_table_for_class(cls);
+	}
+
 	return old;
 }
 
@@ -819,6 +825,14 @@ static id objectNew(id cls)
 	IMP newIMP = (IMP)objc_msg_lookup((void*)cls, newSel);
 	return newIMP((id)cls, newSel);
 }
+
+Protocol *objc_getProtocol(const char *name) 	 
+{ 	 
+	// Protocols are not centrally registered in the GNU runtime. 	 
+	Protocol *protocol = (Protocol*)(objectNew(objc_getClass("Protocol"))); 	 
+	protocol->protocol_name = (char*)name; 	 
+	return protocol; 	 
+} 	 
 
 BOOL protocol_conformsToProtocol(Protocol *p, Protocol *other)
 {
