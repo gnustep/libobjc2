@@ -1,5 +1,4 @@
-#import <Foundation/NSObject.h>
-#import "objc/runtime.h"
+#import "objc/objc-api.h"
 #import "objc/blocks_runtime.h"
 #include <assert.h>
 
@@ -11,8 +10,6 @@ static struct objc_class _NSConcreteStackBlockMeta;
 
 static struct objc_class _NSBlock;
 static struct objc_class _NSBlockMeta;
-
-@interface NSBlock : NSObject @end
 
 void __objc_update_dispatch_table_for_class(Class);
 extern struct sarray *__objc_uninstalled_dtable;
