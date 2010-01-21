@@ -67,16 +67,6 @@ libobjc_CFLAGS += -Werror -std=c99 -g -fexceptions #-fno-inline
 libobjc_OBJCFLAGS += -g -std=c99
 libobjc_LDFLAGS += -g
 
-ifeq ($(findstring no, $(debug)),)
-before-all::
-	@echo
-	@echo
-	@echo WARNING: You are building in debug mode.  This will generate a LOT of console \
-	output for every Objective-C program you run.  If this is not what you \
-	want, please compile with $(MAKE) debug=no
-	@echo
-	@echo
-endif
 
 ifneq ($(findstring gcc, $(CC)),)
 libobjc_CFLAGS += -fgnu89-inline 
@@ -87,3 +77,14 @@ libobjc_C_FILES += libobjc_entry.c
 endif
 
 include $(GNUSTEP_MAKEFILES)/library.make
+
+ifeq ($(findstring no, $(debug)),)
+before-all::
+	@echo
+	@echo
+	@echo WARNING: You are building in debug mode.  This will generate a LOT of console \
+	output for every Objective-C program you run.  If this is not what you \
+	want, please compile with $(MAKE) debug=no
+	@echo
+	@echo
+endif
