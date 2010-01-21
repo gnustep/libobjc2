@@ -162,7 +162,7 @@ static int PREFIX(_insert)(PREFIX(_table) *table,
 	return 0;
 }
 
-static void *PREFIX(_table_get)(PREFIX(_table) *table, const void *key)
+static void *PREFIX(_table_get_cell)(PREFIX(_table) *table, const void *key)
 {
 	uint32_t hash = MAP_TABLE_HASH_KEY(key);
 	PREFIX(_table_cell) cell = PREFIX(_table_lookup)(table, hash);
@@ -173,7 +173,7 @@ static void *PREFIX(_table_get)(PREFIX(_table) *table, const void *key)
 	}
 	if (MAP_TABLE_COMPARE_FUNCTION(key, cell->value))
 	{
-		return cell->value;
+		return cell;
 	}
 	uint32_t jump = cell->secondMaps;
 	// Look at each offset defined by the jump table to find the displaced location.
@@ -182,12 +182,32 @@ static void *PREFIX(_table_get)(PREFIX(_table) *table, const void *key)
 		PREFIX(_table_cell) hopCell = PREFIX(_table_lookup)(table, hash+hop);
 		if (MAP_TABLE_COMPARE_FUNCTION(key, hopCell->value))
 		{
-			return hopCell->value;
+			return hopCell;
 		}
 		// Clear the most significant bit and try again.
 		jump &= ~(1 << (hop-1));
 	}
 	return NULL;
+}
+
+static void *PREFIX(_table_get)(PREFIX(_table) *table, const void *key)
+{
+	PREFIX(_table_cell) cell = PREFIX(_table_get_cell)(table, key);
+	if (NULL == cell)
+	{
+		return NULL;
+	}
+	return cell->value;
+}
+static void PREFIX(_table_set)(PREFIX(_table) *table, const void *key,
+		void *value)
+{
+	PREFIX(_table_cell) cell = PREFIX(_table_get_cell)(table, key);
+	if (NULL == cell)
+	{
+		PREFIX(_insert)(table, key, value);
+	}
+	cell->value = value;
 }
 
 void *PREFIX(_next)(PREFIX(_table) *table,
