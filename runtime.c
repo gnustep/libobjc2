@@ -391,7 +391,7 @@ IMP class_getMethodImplementation_stret(Class cls, SEL name)
 
 const char * class_getName(Class cls)
 {
-	return class_get_class_name(cls);
+	return cls->name;
 }
 
 Class class_getSuperclass(Class cls)
@@ -825,14 +825,6 @@ static id objectNew(id cls)
 	IMP newIMP = (IMP)objc_msg_lookup((void*)cls, newSel);
 	return newIMP((id)cls, newSel);
 }
-
-Protocol *objc_getProtocol(const char *name) 	 
-{ 	 
-	// Protocols are not centrally registered in the GNU runtime. 	 
-	Protocol *protocol = (Protocol*)(objectNew(objc_getClass("Protocol"))); 	 
-	protocol->protocol_name = (char*)name; 	 
-	return protocol; 	 
-} 	 
 
 BOOL protocol_conformsToProtocol(Protocol *p, Protocol *other)
 {

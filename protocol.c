@@ -133,3 +133,10 @@ struct objc_protocol2 *__objc_unique_protocol(struct objc_protocol2 *aProto)
 		}
 	}
 }
+
+
+// Public functions:
+Protocol *objc_getProtocol(const char *name)
+{
+	return (Protocol*)protocol_for_name(name);
+}
