@@ -462,6 +462,14 @@ objc_init_statics (void)
 	{
 	  struct objc_static_instances *statics = *statics_in_module;
 	  Class class = objc_lookup_class (statics->class_name);
+	  if (strcmp(statics->class_name, "NXConstantString") == 0)
+	  {
+		  Class constStr = objc_lookup_class(CONSTANT_STRING_CLASS);
+		  if (constStr)
+		  {
+			  class = constStr;
+		  }
+	  }
 
 	  if (! class)
 	    module_initialized = 0;
