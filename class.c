@@ -232,7 +232,6 @@ __objc_resolve_class_links (void)
 {
   void *es = NULL;
   Class object_class = objc_get_class (ROOT_OBJECT_CLASS_NAME);
-  fprintf(stderr, "Using root class: %s\n", ROOT_OBJECT_CLASS_NAME);
   Class class1;
 
   assert (object_class);
