@@ -28,6 +28,7 @@ see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
 #include "objc/runtime-legacy.h"
 #include "objc/encoding.h"
 #include "lock.h"
+#include "magic_objects.h"
 
 /* The version number of this runtime.  This must match the number 
    defined in gcc (objc-act.c).  */
@@ -837,8 +838,8 @@ objc_send_load (void)
   /* Special check to allow creating and sending messages to constant
      strings in +load methods. If these classes are not yet known,
      even if all the other classes are known, delay sending of +load.  */
-  if (! objc_lookup_class ("NXConstantString") ||
-      ! objc_lookup_class ("Object"))
+  if (! objc_lookup_class (CONSTANT_STRING_CLASS) ||
+      ! objc_lookup_class (ROOT_OBJECT_CLASS_NAME))
     return;
 
   /* Iterate over all modules in the __objc_module_list and call on

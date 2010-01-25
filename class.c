@@ -94,6 +94,7 @@ see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
 #include "objc/objc-api.h"
 
 #include "lock.h"
+#include "magic_objects.h"
 
 #include <stdlib.h>
 
@@ -230,12 +231,14 @@ void
 __objc_resolve_class_links (void)
 {
   void *es = NULL;
-  Class object_class = objc_get_class ("Object");
+  Class object_class = objc_get_class (ROOT_OBJECT_CLASS_NAME);
+  fprintf(stderr, "Using root class: %s\n", ROOT_OBJECT_CLASS_NAME);
   Class class1;
 
   assert (object_class);
 
   LOCK(__objc_runtime_mutex);
+
 
   /* Assign subclass links.  */
   while ((class1 = class_table_next (&es)))
