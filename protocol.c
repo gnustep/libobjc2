@@ -48,9 +48,13 @@ static Class ObjC2ProtocolClass = 0;
 
 static int isEmptyProtocol(struct objc_protocol2 *aProto)
 {
-	int isEmpty = (aProto->instance_methods->count == 0) &&
-		(aProto->class_methods->count == 0) &&
-		(aProto->protocol_list->count == 0);
+	int isEmpty = 
+		((aProto->instance_methods == NULL) || 
+			(aProto->instance_methods->count == 0)) &&
+		((aProto->class_methods == NULL) || 
+			(aProto->class_methods->count == 0)) &&
+		((aProto->protocol_list == NULL) ||
+		  (aProto->protocol_list->count == 0));
 	if (aProto->class_pointer == ObjC2ProtocolClass)
 	{
 		struct objc_protocol2 *p2 = (struct objc_protocol2*)aProto;
@@ -132,3 +136,47 @@ Protocol *objc_getProtocol(const char *name)
 {
 	return (Protocol*)protocol_for_name(name);
 }
+
+BOOL protocol_conformsToProtocol(Protocol *p, Protocol *other)
+{
+
+	return NO;
+}
+
+struct objc_method_description *protocol_copyMethodDescriptionList(Protocol *p,
+	BOOL isRequiredMethod, BOOL isInstanceMethod, unsigned int *count)
+{
+	*count = 0;
+	return NULL;
+}
+
+Protocol **protocol_copyProtocolList(Protocol *p, unsigned int *count)
+{
+	*count = 0;
+	return NULL;
+}
+
+const char *protocol_getName(Protocol *p)
+{
+	if (NULL != p)
+	{
+		return p->protocol_name;
+	}
+	return NULL;
+}
+
+BOOL protocol_isEqual(Protocol *p, Protocol *other)
+{
+	if (NULL == p || NULL == other)
+	{
+		return NO;
+	}
+	if (p == other || 
+		p->protocol_name == other->protocol_name ||
+		0 == strcmp(p->protocol_name, other->protocol_name))
+	{
+		return YES;
+	}
+	return NO;
+}
+
