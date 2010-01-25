@@ -19,7 +19,6 @@ libobjc_OBJC_FILES = \
 
 
 libobjc_C_FILES = \
-	archive.c\
 	class.c\
 	class_table.c\
 	encoding.c\
