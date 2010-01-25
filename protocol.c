@@ -19,31 +19,23 @@ static int protocol_hash(const struct objc_protocol2 *protocol)
 #define MAP_TABLE_COMPARE_FUNCTION protocol_compare
 #define MAP_TABLE_HASH_KEY string_hash
 #define MAP_TABLE_HASH_VALUE protocol_hash
-// This defines the maximum number of classes that the runtime supports.
-#define MAP_TABLE_STATIC_SIZE 2048
 #include "hash_table.h"
 
-static protocol_table known_protocol_table;
-
-static mutex_t protocol_table_lock;
+static protocol_table *known_protocol_table;
 
 void __objc_init_protocol_table(void)
 {
-	LOCK(__objc_runtime_mutex);
-	INIT_LOCK(protocol_table_lock);
-	UNLOCK(__objc_runtime_mutex);
+	known_protocol_table = protocol_create(128);
 }  
 
 static void protocol_table_insert(const struct objc_protocol2 *protocol)
 {
-	LOCK(&protocol_table_lock);
-	protocol_insert(&known_protocol_table, protocol->protocol_name, (void*)protocol);
-	UNLOCK(&protocol_table_lock);
+	protocol_insert(known_protocol_table, (void*)protocol);
 }
 
 struct objc_protocol2 *protocol_for_name(const char *protocol_name)
 {
-	return protocol_table_get(&known_protocol_table, protocol_name);
+	return protocol_table_get(known_protocol_table, protocol_name);
 }
 
 struct objc_method_description_list

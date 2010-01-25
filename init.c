@@ -989,6 +989,7 @@ __objc_init_protocols (struct objc_protocol_list *protos)
 
 	      /* init super protocols */
 	      __objc_init_protocols (aProto->protocol_list);
+	      protos->list[i] = __objc_unique_protocol (aProto);
 		  break;
 	    }
 	    // FIXME: Initialize empty protocol by updating fields to reflect

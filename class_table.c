@@ -18,33 +18,32 @@ static int class_hash(const Class class)
 #define MAP_TABLE_HASH_KEY string_hash
 #define MAP_TABLE_HASH_VALUE class_hash
 // This defines the maximum number of classes that the runtime supports.
+/*
 #define MAP_TABLE_STATIC_SIZE 2048
+#define MAP_TABLE_STATIC_NAME class_table
+*/
 #include "hash_table.h"
 
-static class_table_internal_table class_table;
-
-static mutex_t class_table_lock;
+static class_table_internal_table *class_table;
 
 void class_table_insert(Class class)
 {
-	class_table_internal_insert(&class_table, class->name, class);
+	class_table_internal_insert(class_table, class);
 }
 
 Class class_table_get_safe(const char *class_name)
 {
-	return class_table_internal_table_get(&class_table, class_name);
+	return class_table_internal_table_get(class_table, class_name);
 }
 
 Class
 class_table_next (void **e)
 {
-	return class_table_internal_next(&class_table, 
+	return class_table_internal_next(class_table, 
 			(struct class_table_internal_table_enumerator**)e);
 }
 
 void __objc_init_class_tables(void)
 {
-	LOCK(__objc_runtime_mutex);
-	INIT_LOCK(class_table_lock);
-	UNLOCK(__objc_runtime_mutex);
+	class_table = class_table_internal_create(16);
 }

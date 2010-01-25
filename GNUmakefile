@@ -22,6 +22,7 @@ libobjc_C_FILES = \
 	class.c\
 	class_table.c\
 	encoding.c\
+	hash_table.c\
 	exception.c\
 	gc.c\
 	hash.c\
@@ -64,9 +65,9 @@ libobjc_CPPFLAGS += -D__OBJC_RUNTIME_INTERNAL__=1 -D_XOPEN_SOURCE=500
 # Note to Riccardo.  Please do not 'fix' C99isms in this.  The new ABI is only
 # useful on compilers that support C99 (currently only clang), so there is no
 # benefit from supporting platforms with no C99 compiler.
-libobjc_CFLAGS += -Werror -std=c99 -g -fexceptions #-fno-inline
+libobjc_CFLAGS += -Werror -std=c99 -g -march=native -fexceptions #-fno-inline
 libobjc_OBJCFLAGS += -g -std=c99
-libobjc_LDFLAGS += -g
+libobjc_LDFLAGS += -g -ltoydispatch
 
 
 ifneq ($(findstring gcc, $(CC)),)

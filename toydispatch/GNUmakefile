@@ -13,6 +13,6 @@ toydispatch_HEADER_FILES = \
 
 toydispatch_LIBRARIES_DEPEND_UPON += -lpthread
 
-toydispatch_CFLAGS += -Werror -std=c99
+toydispatch_CFLAGS += -Werror -std=c99 -march=native
 
 include $(GNUSTEP_MAKEFILES)/library.make
