@@ -116,12 +116,6 @@ extern "C" {
         /* Archiving */
 + (int)version;
 + setVersion:(int)aVersion;
-+ (int)streamVersion: (TypedStream*)aStream;
-
-- read: (TypedStream*)aStream;
-- write: (TypedStream*)aStream;
-- awake;
-
 @end
 
 #ifdef __cplusplus
