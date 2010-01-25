@@ -2,6 +2,8 @@ include $(GNUSTEP_MAKEFILES)/common.make
 
 LIBRARY_NAME = libobjc 
 
+SUBPROJECTS = toydispatch
+
 libobjc_VERSION = 4
 
 libobjc_OBJC_FILES = \
@@ -77,6 +79,7 @@ libobjc_C_FILES += libobjc_entry.c
 endif
 
 include $(GNUSTEP_MAKEFILES)/library.make
+include $(GNUSTEP_MAKEFILES)/aggregate.make
 
 ifeq ($(findstring no, $(debug)),)
 before-all::
@@ -88,3 +91,4 @@ before-all::
 	@echo
 	@echo
 endif
+
