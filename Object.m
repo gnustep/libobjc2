@@ -353,3 +353,8 @@ see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
 }
 
 @end
+
+long objc_get_stream_class_version (TypedStream* stream, Class class)
+{
+	return class_get_version(class);
+}
