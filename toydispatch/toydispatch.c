@@ -183,7 +183,7 @@ static inline void read_from_queue(dispatch_queue_t queue,
 	unsigned int idx = MASK(queue->consumer);
 	*function = queue->ring_buffer[idx].function;
 	*data = queue->ring_buffer[idx].data;
-	__sync_fetch_and_add(&queue->consumer, 2);
+	__sync_fetch_and_add(&queue->consumer, 1);
 }
 
 static void *runloop(void *q)
