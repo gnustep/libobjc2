@@ -151,7 +151,9 @@ get_ttype_entry (struct lsda_header_info *info, _Unwind_Word i)
 
   /* NULL ptr means catch-all.  */
   if (ptr)
+  {
     return objc_get_class ((const char *) ptr);
+  }
   else
     return 0;
 }

@@ -19,6 +19,7 @@
  */
 #include "lock.h"
 #include <unistd.h>
+#include <string.h>
 
 #ifndef MAP_TABLE_NAME
 #	error You must define MAP_TABLE_NAME.
@@ -42,10 +43,33 @@
  */
 #define PREFIX(x) PREFIX_SUFFIX(MAP_TABLE_NAME, x)
 
+
+/**
+ * Map tables are protected by a lock by default.  Defining MAP_TABLE_NO_LOCK
+ * will prevent this and make you responsible for synchronization.
+ */
+#ifdef MAP_TABLE_NO_LOCK
+#	define MAP_LOCK()
+#	define MAP_UNLOCK()
+#else
+#	define MAP_LOCK() (LOCK(&table->lock))
+#	define MAP_UNLOCK() (ULOCK(&table->lock))
+#endif
+#ifndef MAP_TABLE_VALUE_TYPE
+#	define MAP_TABLE_VALUE_TYPE void*
+static BOOL PREFIX(_is_null)(void *value)
+{
+	return value == NULL;
+}
+#	define MAP_TABLE_VALUE_NULL PREFIX(_is_null)
+#	define MAP_TABLE_VALUE_PLACEHOLDER NULL
+#else
+#	define MAP_TABLE_ACCESS_BY_REFERENCE
+#endif
 typedef struct PREFIX(_table_cell_struct)
 {
 	uint32_t secondMaps;
-	void *value;
+	MAP_TABLE_VALUE_TYPE value;
 } *PREFIX(_table_cell);
 
 #ifdef MAP_TABLE_STATIC_SIZE
@@ -57,10 +81,12 @@ typedef struct
 	struct PREFIX(_table_cell_struct) table[MAP_TABLE_STATIC_SIZE];
 } PREFIX(_table);
 static PREFIX(_table) MAP_TABLE_STATIC_NAME;
+#	ifndef MAP_TABLE_NO_LOCK
 __attribute__((constructor)) void static PREFIX(_table_initializer)(void)
 {
 	INIT_LOCK(MAP_TABLE_STATIC_NAME.lock);
 }
+#	endif
 #	define TABLE_SIZE(x) MAP_TABLE_STATIC_SIZE
 #else
 typedef struct PREFIX(_table_struct)
@@ -76,7 +102,9 @@ typedef struct PREFIX(_table_struct)
 PREFIX(_table) *PREFIX(_create)(uint32_t capacity)
 {
 	PREFIX(_table) *table = calloc(1, sizeof(PREFIX(_table)));
+#	ifndef MAP_TABLE_NO_LOCK
 	INIT_LOCK(table->lock);
+#	endif
 	table->table = calloc(capacity, sizeof(struct PREFIX(_table_cell_struct)));
 	table->table_size = capacity;
 	return table;
@@ -94,6 +122,7 @@ static int PREFIX(_table_resize)(PREFIX(_table) *table)
 }
 #else
 
+#	ifndef MAP_TABLE_SINGLE_THREAD
 /**
  * Free the memory from an old table.  By the time that this is reached, there
  * are no heap pointers pointing to this table.  There may be iterators, in
@@ -115,8 +144,8 @@ static void PREFIX(_table_collect_garbage)(void *t)
 	}
 	for (uint32_t i=0 ; i<table->table_size ; i++)
 	{
-		void *value = table->table[i].value;
-		if (NULL != value)
+		MAP_TABLE_VALUE_TYPE value = table->table[i].value;
+		if (!MAP_TABLE_VALUE_NULL(value))
 		{
 			MAP_TABLE_HASH_VALUE(value);
 		}
@@ -124,8 +153,9 @@ static void PREFIX(_table_collect_garbage)(void *t)
 	free(table->table);
 	free(table);
 }
+#	endif
 
-static int PREFIX(_insert)(PREFIX(_table) *table, void *value);
+static int PREFIX(_insert)(PREFIX(_table) *table, MAP_TABLE_VALUE_TYPE value);
 
 static int PREFIX(_table_resize)(PREFIX(_table) *table)
 {
@@ -151,14 +181,18 @@ static int PREFIX(_table_resize)(PREFIX(_table) *table)
 	// we can do the updates safely without worrying about read contention.
 	for (uint32_t i=0 ; i<copy->table_size ; i++)
 	{
-		void *value = copy->table[i].value;
-		if (NULL != value)
+		MAP_TABLE_VALUE_TYPE value = copy->table[i].value;
+		if (MAP_TABLE_VALUE_NULL(value))
 		{
 			PREFIX(_insert)(table, value);
 		}
 	}
 	table->old = NULL;
+#	ifdef MAP_TABLE_SINGLE_THREAD
+	free(copy);
+#	else
 	objc_collect_garbage_data(PREFIX(_table_collect_garbage), copy);
+#	endif
 	return 1;
 }
 #endif
@@ -189,7 +223,7 @@ static int PREFIX(_table_move_gap)(PREFIX(_table) *table, uint32_t fromHash,
 		{
 			emptyCell->value = cell->value;
 			cell->secondMaps |= (1 << ((fromHash - hash) - 1));
-			cell->value = NULL;
+			cell->value = MAP_TABLE_VALUE_PLACEHOLDER;
 			if (hash - toHash < 32)
 			{
 				return 1;
@@ -205,7 +239,7 @@ static int PREFIX(_table_move_gap)(PREFIX(_table) *table, uint32_t fromHash,
 			cell->secondMaps |= (1 << ((fromHash - hash) - 1));
 			// Clear the hop bit in the original cell
 			cell->secondMaps &= ~(1 << (hop - 1));
-			hopCell->value = NULL;
+			hopCell->value = MAP_TABLE_VALUE_PLACEHOLDER;
 			if (hash - toHash < 32)
 			{
 				return 1;
@@ -220,7 +254,7 @@ static int PREFIX(_table_rebalance)(PREFIX(_table) *table, uint32_t hash)
 	for (unsigned i=32 ; i<TABLE_SIZE(table) ; i++)
 	{
 		PREFIX(_table_cell) cell = PREFIX(_table_lookup)(table, hash + i);
-		if (NULL == cell->value)
+		if (MAP_TABLE_VALUE_NULL(cell->value))
 		{
 			// We've found a free space, try to move it up.
 			return PREFIX(_table_move_gap)(table, hash + i, hash, cell);
@@ -231,12 +265,12 @@ static int PREFIX(_table_rebalance)(PREFIX(_table) *table, uint32_t hash)
 
 __attribute__((unused))
 static int PREFIX(_insert)(PREFIX(_table) *table, 
-                                 void *value)
+                                 MAP_TABLE_VALUE_TYPE value)
 {
-	LOCK(&table->lock);
+	MAP_LOCK();
 	uint32_t hash = MAP_TABLE_HASH_VALUE(value);
 	PREFIX(_table_cell) cell = PREFIX(_table_lookup)(table, hash);
-	if (NULL == cell->value)
+	if (MAP_TABLE_VALUE_NULL(cell->value))
 	{
 		cell->value = value;
 		table->table_used++;
@@ -247,12 +281,12 @@ static int PREFIX(_insert)(PREFIX(_table) *table,
 	{
 		PREFIX(_table_cell) second = 
 			PREFIX(_table_lookup)(table, hash+i);
-		if (NULL == second->value)
+		if (MAP_TABLE_VALUE_NULL(second->value))
 		{
 			cell->secondMaps |= (1 << (i-1));
 			second->value = value;
 			table->table_used++;
-			UNLOCK(&table->lock);
+			MAP_UNLOCK();
 			return 1;
 		}
 	}
@@ -265,14 +299,14 @@ static int PREFIX(_insert)(PREFIX(_table) *table,
 	if (table->table_used > (0.8 * TABLE_SIZE(table)))
 	{
 		PREFIX(_table_resize)(table);
-		UNLOCK(&table->lock);
+		MAP_UNLOCK();
 		return PREFIX(_insert)(table, value);
 	}
 	/* If this virtual cell is full, rebalance the hash from this point and
 	 * try again. */
 	if (PREFIX(_table_rebalance)(table, hash))
 	{
-		UNLOCK(&table->lock);
+		MAP_UNLOCK();
 		return PREFIX(_insert)(table, value);
 	}
 	/** If rebalancing failed, resize even if we are <80% full.  This can
@@ -280,19 +314,19 @@ static int PREFIX(_insert)(PREFIX(_table) *table,
 	 * get a better hash function. */
 	if (PREFIX(_table_resize)(table))
 	{
-		UNLOCK(&table->lock);
+		MAP_UNLOCK();
 		return PREFIX(_insert)(table, value);
 	}
 	return 0;
 }
 
 __attribute__((unused))
-static void *PREFIX(_table_get_cell)(PREFIX(_table) *table, const void *key)
+static void *PREFIX(_table_get_cell)(PREFIX(_table) *table, void *key)
 {
 	uint32_t hash = MAP_TABLE_HASH_KEY(key);
 	PREFIX(_table_cell) cell = PREFIX(_table_lookup)(table, hash);
 	// Value does not exist.
-	if (NULL != cell->value)
+	if (!MAP_TABLE_VALUE_NULL(cell->value))
 	{
 		if (MAP_TABLE_COMPARE_FUNCTION(key, cell->value))
 		{
@@ -321,18 +355,45 @@ static void *PREFIX(_table_get_cell)(PREFIX(_table) *table, const void *key)
 }
 
 __attribute__((unused))
-static void *PREFIX(_table_get)(PREFIX(_table) *table, const void *key)
+static void PREFIX(_remove)(PREFIX(_table) *table, void *key)
+{
+	uint32_t hash = MAP_TABLE_HASH_KEY((void*)key);
+	PREFIX(_table_cell) cell = PREFIX(_table_get_cell)(table, key);
+	cell->value = MAP_TABLE_VALUE_PLACEHOLDER;
+	if (NULL == cell) { return; }
+	// If the cell contains a value, set it to the placeholder and shuffle up
+	// everything
+	PREFIX(_table_move_gap)(table, hash + 32, hash, cell);
+	table->table_used--;
+}
+
+__attribute__((unused))
+#ifdef MAP_TABLE_ACCESS_BY_REFERENCE
+static MAP_TABLE_VALUE_TYPE* 
+#else
+static MAP_TABLE_VALUE_TYPE 
+#endif
+	PREFIX(_table_get)(PREFIX(_table) *table,
+		void *key)
 {
 	PREFIX(_table_cell) cell = PREFIX(_table_get_cell)(table, key);
 	if (NULL == cell)
 	{
+#ifdef MAP_TABLE_ACCESS_BY_REFERENCE
 		return NULL;
+#else
+		return MAP_TABLE_VALUE_PLACEHOLDER;
+#endif
 	}
+#ifdef MAP_TABLE_ACCESS_BY_REFERENCE
+	return &cell->value;
+#else
 	return cell->value;
+#endif
 }
 __attribute__((unused))
-static void PREFIX(_table_set)(PREFIX(_table) *table, const void *key,
-		void *value)
+static void PREFIX(_table_set)(PREFIX(_table) *table, void *key,
+		MAP_TABLE_VALUE_TYPE value)
 {
 	PREFIX(_table_cell) cell = PREFIX(_table_get_cell)(table, key);
 	if (NULL == cell)
@@ -343,7 +404,12 @@ static void PREFIX(_table_set)(PREFIX(_table) *table, const void *key,
 }
 
 __attribute__((unused))
-static void *PREFIX(_next)(PREFIX(_table) *table,
+#ifdef MAP_TABLE_ACCESS_BY_REFERENCE
+static MAP_TABLE_VALUE_TYPE* 
+#else
+static MAP_TABLE_VALUE_TYPE 
+#endif
+PREFIX(_next)(PREFIX(_table) *table,
                     struct PREFIX(_table_enumerator) **state)
 {
 	if (NULL == *state)
@@ -351,32 +417,44 @@ static void *PREFIX(_next)(PREFIX(_table) *table,
 		*state = calloc(1, sizeof(struct PREFIX(_table_enumerator)));
 		// Make sure that we are not reallocating the table when we start
 		// enumerating
-		LOCK(&table->lock);
+		MAP_LOCK();
 		(*state)->table = table;
 		__sync_fetch_and_add(&table->enumerator_count, 1);
-		UNLOCK(&table->lock);
+		MAP_UNLOCK();
 	}
 	if ((*state)->seen >= (*state)->table->table_used)
 	{
-		LOCK(&table->lock);
+		MAP_LOCK();
 		__sync_fetch_and_sub(&table->enumerator_count, 1);
-		UNLOCK(&table->lock);
+		MAP_UNLOCK();
 		free(*state);
+#ifdef MAP_TABLE_ACCESS_BY_REFERENCE
 		return NULL;
+#else
+		return MAP_TABLE_VALUE_PLACEHOLDER;
+#endif
 	}
 	while ((++((*state)->index)) < TABLE_SIZE((*state)->table))
 	{
-		if ((*state)->table->table[(*state)->index].value != NULL)
+		if (!MAP_TABLE_VALUE_NULL((*state)->table->table[(*state)->index].value))
 		{
+#ifdef MAP_TABLE_ACCESS_BY_REFERENCE
+			return &(*state)->table->table[(*state)->index].value;
+#else
 			return (*state)->table->table[(*state)->index].value;
+#endif
 		}
 	}
 	// Should not be reached, but may be if the table is unsafely modified.
-	LOCK(&table->lock);
+	MAP_LOCK();
 	table->enumerator_count--;
-	UNLOCK(&table->lock);
+	MAP_UNLOCK();
 	free(*state);
+#ifdef MAP_TABLE_ACCESS_BY_REFERENCE
 	return NULL;
+#else
+	return MAP_TABLE_VALUE_PLACEHOLDER;
+#endif
 }
 
 #undef TABLE_SIZE
@@ -388,6 +466,27 @@ static void *PREFIX(_next)(PREFIX(_table) *table,
 #undef MAP_TABLE_COMPARE_FUNCTION
 #undef MAP_TABLE_HASH_KEY
 #undef MAP_TABLE_HASH_VALUE
+
 #ifdef MAP_TABLE_STATIC_SIZE
 #	undef MAP_TABLE_STATIC_SIZE
+#endif
+
+#undef MAP_TABLE_VALUE_TYPE
+
+#ifndef MAP_TABLE_NO_LOCK
+#	undef MAP_LOCK
+#	undef MAP_UNLOCK
+#else
+#	undef MAP_TABLE_NO_LOCK
+#endif
+
+#ifdef MAP_TABLE_SINGLE_THREAD
+#	undef MAP_TABLE_SINGLE_THREAD
+#endif
+
+#undef MAP_TABLE_VALUE_NULL
+#undef MAP_TABLE_VALUE_PLACEHOLDER
+
+#ifdef MAP_TABLE_ACCESS_BY_REFERENCE
+#	undef MAP_TABLE_ACCESS_BY_REFERENCE
 #endif
