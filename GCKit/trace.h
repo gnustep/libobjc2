@@ -15,3 +15,4 @@ void GCTraceStackSynchronous(GCThread *thr);
 
 extern volatile int GCGeneration;
 void GCCollect();
+id objc_assign_strongCast(id obj, id *ptr);

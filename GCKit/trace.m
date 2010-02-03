@@ -541,6 +541,7 @@ void GCRunTracer(void)
 			object->visitClearedGeneration < threadGeneration)
 		{
 			GCFreeObjectUnsafe(object->pointer);
+			traced_object_remove(traced_objects, object->pointer);
 		}
 	}
 }
@@ -631,10 +632,13 @@ id objc_assign_strongCast(id obj, id *ptr)
 {
 	// This object is definitely stored somewhere, so mark it as visited
 	// for now.  
-	GCSetFlag(obj, GCFlagVisited);
+	if (obj)
+	{
+		GCSetFlag(obj, GCFlagVisited);
+	}
 	pthread_rwlock_wrlock(&traced_objects_lock);
 	GCTracedPointer *old = traced_object_table_get(traced_objects, *ptr);
-	if (old->pointer)
+	if (old)
 	{
 		// If the value that we are overwriting is a traced pointer and this is
 		// the pointer to it that we are tracking then mark it as not visited.
@@ -649,14 +653,14 @@ id objc_assign_strongCast(id obj, id *ptr)
 		}
 	}
 	GCTracedPointer *new = traced_object_table_get(traced_objects, obj);
-	if (new->pointer)
+	if (new)
 	{
 		new->heapAddress = ptr;
 	}
 	pthread_rwlock_unlock(&traced_objects_lock);
 	// Tracing semantics do not apply to objects with CF semantics, so skip the
 	// next bits if the CF flag is set.
-	if (!GCTestFlag(obj, GCFlagCFObject))
+	if (obj && !GCTestFlag(obj, GCFlagCFObject))
 	{
 		// Don't free this just after scanning the stack. 
 		GCSetFlag(obj, GCFlagEscaped);

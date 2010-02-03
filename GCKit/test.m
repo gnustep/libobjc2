@@ -137,6 +137,24 @@ void doRefCountStuff(void)
 	makeRefCountedObject();
 }
 
+static id *buffer;
+
+void putObjectInBuffer(void)
+{
+	buffer = GCAllocateBufferWithZone(NULL, sizeof(id), YES);
+	buffer[0] = objc_assign_strongCast([SimpleObject new], buffer);
+	[*buffer log];
+	GCDrain(YES);
+	GCDrain(YES);
+	sleep(1);
+}
+
+void testTracedMemory(void)
+{
+	putObjectInBuffer();
+	GCDrain(YES);
+}
+
 int main(void)
 {
 	// Not required on main thread:
@@ -147,4 +165,7 @@ int main(void)
 	doRefCountStuff();
 	GCDrain(YES);
 	sleep(2);
+	testTracedMemory();
+	buffer[0] = objc_assign_strongCast(nil, buffer);
+	GCDrain(YES);
 }

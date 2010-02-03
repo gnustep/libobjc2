@@ -7,6 +7,7 @@
 #import "visit.h"
 #import "workqueue.h"
 #include <stdlib.h>
+#include <stdio.h>
 
 @interface GCObject
 - (void)finalize;
@@ -135,6 +136,7 @@ void GCFreeObjectUnsafe(id object)
 		// finalize it.
 		if (!GCTestFlag(object, GCFlagNotObject))
 		{
+		fprintf(stderr, "Finalizing object %x\n", (int)(object));
 			GCVisitChildren(object, releaseObjects, NULL, YES);
 			[object finalize];
 			region.end += class_getInstanceSize(object->isa);
@@ -148,6 +150,7 @@ void GCFreeObjectUnsafe(id object)
 	}
 	if (GCGetWeakRefCount(object) == 0)
 	{
+		fprintf(stderr, "Freeing object %x\n", (int)(object));
 		gc_free_with_zone(GCHeaderForObject(object)->zone, object);
 	}
 }
