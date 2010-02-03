@@ -359,8 +359,8 @@ static void PREFIX(_remove)(PREFIX(_table) *table, void *key)
 {
 	uint32_t hash = MAP_TABLE_HASH_KEY((void*)key);
 	PREFIX(_table_cell) cell = PREFIX(_table_get_cell)(table, key);
-	cell->value = MAP_TABLE_VALUE_PLACEHOLDER;
 	if (NULL == cell) { return; }
+	cell->value = MAP_TABLE_VALUE_PLACEHOLDER;
 	// If the cell contains a value, set it to the placeholder and shuffle up
 	// everything
 	PREFIX(_table_move_gap)(table, hash + 32, hash, cell);
