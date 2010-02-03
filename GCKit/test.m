@@ -82,6 +82,14 @@ int main(int argc, char **argv, char **env)
 #include <stdio.h>
 #include <unistd.h>
 
+@interface NSConstantString
+{
+	id isa;
+	char *c_str;
+	unsigned len;
+}
+@end
+
 @interface SimpleObject
 {
 	Class isa;
@@ -92,11 +100,12 @@ int main(int argc, char **argv, char **env)
 @implementation SimpleObject
 + (id)new
 {
-	return GCAllocateObjectWithZone(self, NULL, 0);
+	id obj = GCAllocateObjectWithZone(self, NULL, 0);
+	return obj;
 }
 - (void)log
 {
-	fprintf(stderr, "Simple object is still alive\n");
+	fprintf(stderr, "Simple object %x is still alive\n", (int)self);
 }
 - (void)finalize
 {
@@ -107,7 +116,6 @@ int main(int argc, char **argv, char **env)
 void makeObject(void)
 {
 	SimpleObject *foo = [SimpleObject new];
-	fprintf(stderr, "foo (%x) is at stack address %x\n", (int)foo, (int)&foo);
 	[foo log];
 	GCDrain(YES);
 	GCDrain(YES);
@@ -141,7 +149,7 @@ static id *buffer;
 
 void putObjectInBuffer(void)
 {
-	buffer = GCAllocateBufferWithZone(NULL, sizeof(id), YES);
+	buffer = (id*)GCRetain((id)GCAllocateBufferWithZone(NULL, sizeof(id), YES));
 	buffer[0] = objc_assign_strongCast([SimpleObject new], buffer);
 	[*buffer log];
 	GCDrain(YES);

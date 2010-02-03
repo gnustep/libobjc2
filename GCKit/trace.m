@@ -7,11 +7,13 @@
 #include <sys/limits.h>
 #include <assert.h>
 #include <stdio.h>
+#include <dlfcn.h>
 #include "../objc/runtime.h"
 #import "object.h"
 #import "thread.h"
 #import "trace.h"
 #import "malloc.h"
+#import "static.h"
 
 /**
  * Structure storing pointers that are currently being traced.
@@ -506,11 +508,18 @@ void GCTraceStackSynchronous(GCThread *thr)
 	id ptr;
 	while ((ptr = unescaped_object_next(thr->unescapedObjects, &e)))
 	{
-		if (!GCTestFlag(ptr, GCFlagVisited))
+		id oldPtr;
+		// Repeat on the current enumerator spot while we are are deleting things.
+		do
 		{
-			unescaped_object_remove(thr->unescapedObjects, ptr);
-			GCFreeObject(ptr);
-		}
+			oldPtr = ptr;
+			if (!GCTestFlag(ptr, GCFlagVisited))
+			{
+				GCFreeObject(ptr);
+				unescaped_object_remove(thr->unescapedObjects, ptr);
+			}
+		} while ((oldPtr != (ptr = unescaped_object_current(thr->unescapedObjects, &e)))
+				&& ptr);
 	}
 	thr->scannedInGeneration = generation;
 }
@@ -534,15 +543,22 @@ void GCRunTracer(void)
 	GCTracedPointer *object;
 	while ((object = traced_object_next(traced_objects, &e)))
 	{
-		// If an object hasn't been visited and we have scanned everywhere
-		// since we cleared its visited flag, delete it.  This works because
-		// the heap write barrier sets the visited flag.
-		if(!GCTestFlag(object->pointer, GCFlagVisited) &&
-			object->visitClearedGeneration < threadGeneration)
+		GCTracedPointer *oldPtr;
+		// Repeat on the current enumerator spot while we are are deleting things.
+		do
 		{
-			GCFreeObjectUnsafe(object->pointer);
-			traced_object_remove(traced_objects, object->pointer);
-		}
+			oldPtr = object;
+			// If an object hasn't been visited and we have scanned everywhere
+			// since we cleared its visited flag, delete it.  This works
+			// because the heap write barrier sets the visited flag.
+			if (!GCTestFlag(object->pointer, GCFlagVisited) &&
+				object->visitClearedGeneration < threadGeneration)
+			{
+				GCFreeObjectUnsafe(object->pointer);
+				traced_object_remove(traced_objects, object->pointer);
+			}
+		} while (oldPtr != ((object = traced_object_current(traced_objects, &e)))
+				&& object);
 	}
 }
 
@@ -603,6 +619,10 @@ void GCAddObjectsForTracing(GCThread *thr)
 	for (unsigned int i=0 ; i<count ; i++)
 	{
 		id object = buffer[i];
+		if (!GCObjectIsDynamic(object))
+		{
+			continue;
+		}
 		// Skip objects that have a strong retain count > 0.  They are
 		// definitely still referenced.
 		if (GCGetRetainCount(object) > 0)
@@ -615,12 +635,20 @@ void GCAddObjectsForTracing(GCThread *thr)
 			// if it is, but do update its generation.  It was seen by
 			// something in this thread, so it might still be on the stack
 			// here, or have been moved to the heap.
-			GCTracedPointer obj = {object, 0, 0, 0};
-			traced_object_insert(traced_objects, obj);
+			if (!traced_object_table_get(traced_objects, object))
+			{
+				GCTracedPointer obj = {object, 0, 0, 0};
+				traced_object_insert(traced_objects, obj);
+				// Make sure that this object is not in the thread's list as well.
+				unescaped_object_remove(unescaped, object);
+			}
 		}
 		else
 		{
-			unescaped_object_insert(unescaped, object);
+			if (!unescaped_object_table_get(unescaped, object))
+			{
+				unescaped_object_insert(unescaped, object);
+			}
 		}
 	}
 	pthread_rwlock_unlock(&traced_objects_lock);
@@ -630,11 +658,19 @@ void GCAddObjectsForTracing(GCThread *thr)
 // locking once.
 id objc_assign_strongCast(id obj, id *ptr)
 {
+	BOOL objIsDynamic = GCObjectIsDynamic(obj);
 	// This object is definitely stored somewhere, so mark it as visited
 	// for now.  
-	if (obj)
+	if (objIsDynamic && obj)
 	{
 		GCSetFlag(obj, GCFlagVisited);
+		// Tracing semantics do not apply to objects with CF semantics, so skip the
+		// next bits if the CF flag is set.
+		if (obj && !GCTestFlag(obj, GCFlagCFObject))
+		{
+			// Don't free this just after scanning the stack. 
+			GCSetFlag(obj, GCFlagEscaped);
+		}
 	}
 	pthread_rwlock_wrlock(&traced_objects_lock);
 	GCTracedPointer *old = traced_object_table_get(traced_objects, *ptr);
@@ -652,18 +688,15 @@ id objc_assign_strongCast(id obj, id *ptr)
 			GCClearFlag(*ptr, GCFlagVisited);
 		}
 	}
-	GCTracedPointer *new = traced_object_table_get(traced_objects, obj);
-	if (new)
+	if (objIsDynamic && obj)
 	{
-		new->heapAddress = ptr;
+		GCTracedPointer *new = traced_object_table_get(traced_objects, obj);
+		if (new)
+		{
+			new->heapAddress = ptr;
+		}
 	}
 	pthread_rwlock_unlock(&traced_objects_lock);
-	// Tracing semantics do not apply to objects with CF semantics, so skip the
-	// next bits if the CF flag is set.
-	if (obj && !GCTestFlag(obj, GCFlagCFObject))
-	{
-		// Don't free this just after scanning the stack. 
-		GCSetFlag(obj, GCFlagEscaped);
-	}
+	*ptr = obj;
 	return obj;
 }

@@ -6,8 +6,27 @@
 #import "cycle.h"
 #import "visit.h"
 #import "workqueue.h"
+#import "static.h"
 #include <stdlib.h>
 #include <stdio.h>
+
+/**
+ * Pointer comparison.  Needed for the hash table.
+ */
+static int pointer_compare(const id a, const id b)
+{
+	return a == b;
+}
+static int pointer_hash(const void *obj)
+{
+	intptr_t ptr = (intptr_t)obj;
+	return (ptr >> 8) | (ptr << 8);
+}
+#define MAP_TABLE_NAME known_object 
+#define MAP_TABLE_COMPARE_FUNCTION pointer_compare
+#define MAP_TABLE_HASH_KEY pointer_hash
+#define MAP_TABLE_HASH_VALUE pointer_hash
+#include "../hash_table.h"
 
 @interface GCObject
 - (void)finalize;
@@ -91,6 +110,7 @@ void *GCAllocateBufferWithZone(void *zone, size_t size, BOOL scan)
 
 void GCWeakRelease(id anObject)
 {
+	if (!GCObjectIsDynamic(anObject)) { return; }
 	long count = GCDecrementWeakCount(anObject);
 	// If the object has been finalized and this is the last weak ref, free it.
 	if (count == 0 && GCColourOfObject(anObject) == GCColourOrange)
@@ -100,6 +120,7 @@ void GCWeakRelease(id anObject)
 }
 id GCWeakRetain(id anObject)
 {
+	if (!GCObjectIsDynamic(anObject)) { return anObject; }
 	// If this object has already been finalized, return nil.
 	if (GCColourOfObject(anObject) == GCColourOrange)
 	{
@@ -129,6 +150,7 @@ static void releaseObjects(id object, void *context, BOOL isWeak)
  */
 void GCFreeObjectUnsafe(id object)
 {
+	if (!GCObjectIsDynamic(object)) { return; }
 	if (GCColourOrange != GCSetColourOfObject(object, GCColourOrange))
 	{
 		GCTracedRegion region = {object, object};
@@ -136,7 +158,6 @@ void GCFreeObjectUnsafe(id object)
 		// finalize it.
 		if (!GCTestFlag(object, GCFlagNotObject))
 		{
-		fprintf(stderr, "Finalizing object %x\n", (int)(object));
 			GCVisitChildren(object, releaseObjects, NULL, YES);
 			[object finalize];
 			region.end += class_getInstanceSize(object->isa);
@@ -150,7 +171,7 @@ void GCFreeObjectUnsafe(id object)
 	}
 	if (GCGetWeakRefCount(object) == 0)
 	{
-		fprintf(stderr, "Freeing object %x\n", (int)(object));
+		//fprintf(stderr, "Freeing object %x\n", (int)(object));
 		gc_free_with_zone(GCHeaderForObject(object)->zone, object);
 	}
 }

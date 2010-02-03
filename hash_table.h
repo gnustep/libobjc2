@@ -53,7 +53,7 @@
 #	define MAP_UNLOCK()
 #else
 #	define MAP_LOCK() (LOCK(&table->lock))
-#	define MAP_UNLOCK() (ULOCK(&table->lock))
+#	define MAP_UNLOCK() (UNLOCK(&table->lock))
 #endif
 #ifndef MAP_TABLE_VALUE_TYPE
 #	define MAP_TABLE_VALUE_TYPE void*
@@ -272,6 +272,7 @@ static int PREFIX(_insert)(PREFIX(_table) *table,
 	PREFIX(_table_cell) cell = PREFIX(_table_lookup)(table, hash);
 	if (MAP_TABLE_VALUE_NULL(cell->value))
 	{
+		cell->secondMaps = 0;
 		cell->value = value;
 		table->table_used++;
 		return 1;
@@ -320,7 +321,6 @@ static int PREFIX(_insert)(PREFIX(_table) *table,
 	return 0;
 }
 
-__attribute__((unused))
 static void *PREFIX(_table_get_cell)(PREFIX(_table) *table, void *key)
 {
 	uint32_t hash = MAP_TABLE_HASH_KEY(key);
@@ -355,16 +355,43 @@ static void *PREFIX(_table_get_cell)(PREFIX(_table) *table, void *key)
 }
 
 __attribute__((unused))
+static void PREFIX(_table_move_second)(PREFIX(_table) *table, 
+		PREFIX(_table_cell) emptyCell)
+{
+	uint32_t jump = emptyCell->secondMaps;
+	// Look at each offset defined by the jump table to find the displaced location.
+	int hop = __builtin_ffs(jump);
+	PREFIX(_table_cell) hopCell = 
+		PREFIX(_table_lookup)(table, MAP_TABLE_HASH_VALUE(emptyCell->value) + hop);
+	emptyCell->value = hopCell->value;
+	emptyCell->secondMaps &= ~(1 << (hop-1));
+	if (0 == hopCell->secondMaps)
+	{
+		hopCell->value = MAP_TABLE_VALUE_PLACEHOLDER;
+	}
+	else
+	{
+		PREFIX(_table_move_second)(table, hopCell);
+	}
+}
+__attribute__((unused))
 static void PREFIX(_remove)(PREFIX(_table) *table, void *key)
 {
-	uint32_t hash = MAP_TABLE_HASH_KEY((void*)key);
+	MAP_LOCK();
 	PREFIX(_table_cell) cell = PREFIX(_table_get_cell)(table, key);
 	if (NULL == cell) { return; }
-	cell->value = MAP_TABLE_VALUE_PLACEHOLDER;
 	// If the cell contains a value, set it to the placeholder and shuffle up
 	// everything
-	PREFIX(_table_move_gap)(table, hash + 32, hash, cell);
+	if (0 == cell->secondMaps)
+	{
+		cell->value = MAP_TABLE_VALUE_PLACEHOLDER;
+	}
+	else
+	{
+		PREFIX(_table_move_second)(table, cell);
+	}
 	table->table_used--;
+	MAP_UNLOCK();
 }
 
 __attribute__((unused))
@@ -454,6 +481,26 @@ PREFIX(_next)(PREFIX(_table) *table,
 	return NULL;
 #else
 	return MAP_TABLE_VALUE_PLACEHOLDER;
+#endif
+}
+/**
+ * Returns the current value for an enumerator.  This is used when you remove
+ * objects during enumeration.  It may cause others to be shuffled up the
+ * table.
+ */
+__attribute__((unused))
+#ifdef MAP_TABLE_ACCESS_BY_REFERENCE
+static MAP_TABLE_VALUE_TYPE* 
+#else
+static MAP_TABLE_VALUE_TYPE 
+#endif
+PREFIX(_current)(PREFIX(_table) *table,
+                    struct PREFIX(_table_enumerator) **state)
+{
+#ifdef MAP_TABLE_ACCESS_BY_REFERENCE
+	return &(*state)->table->table[(*state)->index].value;
+#else
+	return (*state)->table->table[(*state)->index].value;
 #endif
 }
 
