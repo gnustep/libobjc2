@@ -75,7 +75,10 @@ typedef enum
 	/** Potential root of a cycle. */
 	GCColourPurple = 4,
 	/** Object currently being freed. */
-	GCColourOrange = 5
+	GCColourOrange = 5,
+	/** Object is a member of a cycle to be freed when the last traced
+	 * reference is removed, or resurrected if retained. */
+	GCColourRed = 6
 } GCColour;
 
 typedef enum
@@ -106,6 +109,7 @@ inline static const char *GCStringFromColour(GCColour aColour)
 		case GCColourPurple: return "purple";
 		case GCColourGreen: return "green";
 		case GCColourOrange: return "orange";
+		case GCColourRed: return "red";
 	}
 	return "unknown";
 }

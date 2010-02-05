@@ -132,10 +132,7 @@ void GCVisitChildren(id object, visit_function_t function, void *argument,
 			if (child != nil)
 			{
 				BOOL isWeak = (intptr_t)child & 1;
-				if (isWeak)
-				{
-					function(object, argument, isWeak);
-				}
+				function(object, argument, isWeak);
 			}
 		}
 		if (NULL != info->extraChildren)

@@ -13,7 +13,7 @@
 /**
  * Pointer comparison.  Needed for the hash table.
  */
-static int pointer_compare(const id a, const id b)
+static int pointer_compare(const void *a, const void *b)
 {
 	return a == b;
 }
@@ -92,20 +92,34 @@ void *GCAllocateBufferWithZone(void *zone, size_t size, BOOL scan)
 	char *buffer = ((char*)region) + headerSize(gc_buffer_header);
 	if (scan)
 	{
-		GCTracedRegion region;
-		region.start = buffer;
-		region.end = buffer + size;
 		// FIXME: Implement
 		//GCTraceRegion(region);
 	}
 	// Reference count is 0, so set visited to prevent it from being collected
 	// immediately
 	GCSetFlag((id)buffer, GCFlagVisited);
+	GCSetFlag((id)buffer, GCFlagNotObject);
 	// Mark as free or in use.
 	GCSetColourOfObject((id)buffer, GCColourBlack);
 	// Add to traced map later, if it hasn't been retained
 	GCAddObject((id)buffer);
 	return buffer;
+}
+
+static void freeObject(id object)
+{
+	void * addr;
+	if (GCTestFlag(object, GCFlagNotObject))
+	{
+		fprintf(stderr, "Freeing bufer %x\n", (int)object);
+		addr = GCHeaderForBuffer(object);
+	}
+	else
+	{
+		addr = GCHeaderForObject(object);
+	}
+	fprintf(stderr, "Freeing %x\n", (int)object);
+	gc_free_with_zone(GCHeaderForObject(object)->zone, addr);
 }
 
 void GCWeakRelease(id anObject)
@@ -115,7 +129,7 @@ void GCWeakRelease(id anObject)
 	// If the object has been finalized and this is the last weak ref, free it.
 	if (count == 0 && GCColourOfObject(anObject) == GCColourOrange)
 	{
-		gc_free_with_zone(GCHeaderForObject(anObject)->zone, anObject);
+		freeObject(anObject);
 	}
 }
 id GCWeakRetain(id anObject)
@@ -131,15 +145,37 @@ id GCWeakRetain(id anObject)
 }
 // NOTE: Weak read should add the object for tracing.
 
+void GCAddObjectForTracing(id object);
+
+static BOOL foundRedObjects;
+
 static void releaseObjects(id object, void *context, BOOL isWeak)
 {
+	//fprintf(stderr, "Releasing %x\n", (int)object);
 	if (isWeak)
 	{
 		GCWeakRelease(object);
 	}
 	else
 	{
-		GCRelease(object);
+		GCColour colour = GCColourOfObject(object);
+		// If we're freeing a cycle, mark this object as orange, finalize it,
+		// then tell the tracing code to really delete it later
+		if (colour == GCColourRed)
+		{
+			foundRedObjects = YES;
+			GCSetColourOfObject(object, GCColourOrange);
+			[object finalize];
+		}
+		else if (colour != GCColourOrange)
+		{
+			GCRelease(object);
+		}
+		//fprintf(stderr, "Object has refcount %d\n", (int)GCGetRetainCount(object));
+		if (GCGetRetainCount(object) <= 0)
+		{
+			GCAddObjectForTracing(object);
+		}
 	}
 }
 
@@ -151,20 +187,19 @@ static void releaseObjects(id object, void *context, BOOL isWeak)
 void GCFreeObjectUnsafe(id object)
 {
 	if (!GCObjectIsDynamic(object)) { return; }
+
+	//fprintf(stderr, "Going to Free object %x\n", (int)(object));
+
+	foundRedObjects = NO;
 	if (GCColourOrange != GCSetColourOfObject(object, GCColourOrange))
 	{
-		GCTracedRegion region = {object, object};
 		// If this is really an object, kill all of its references and then
 		// finalize it.
 		if (!GCTestFlag(object, GCFlagNotObject))
 		{
+			if (0)
 			GCVisitChildren(object, releaseObjects, NULL, YES);
 			[object finalize];
-			region.end += class_getInstanceSize(object->isa);
-		}
-		else
-		{
-			region.end += GCHeaderForBuffer(object)->size;
 		}
 		// FIXME: Implement this.
 		//GCRemoveRegionFromTracingUnsafe(region);
@@ -172,7 +207,11 @@ void GCFreeObjectUnsafe(id object)
 	if (GCGetWeakRefCount(object) == 0)
 	{
 		//fprintf(stderr, "Freeing object %x\n", (int)(object));
-		gc_free_with_zone(GCHeaderForObject(object)->zone, object);
+		freeObject(object);
+	}
+	if (foundRedObjects)
+	{
+		GCRunTracerIfNeeded(NO);
 	}
 }
 

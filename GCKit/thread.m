@@ -11,6 +11,8 @@
 #include <assert.h>
 #include <stdio.h>
 
+#include <sys/mman.h>
+#include <unistd.h>
 /**
  * Size of the buffers used in each thread before passing stuff over to the GC
  * thread.  Once either BUFFER_SIZE objects are queued waiting for tracing or
@@ -129,7 +131,6 @@ void GCRegisterThread(void)
 
 	thr->cycleBuffer = calloc(BUFFER_SIZE, sizeof(void*));
 	thr->freeBuffer = calloc(BUFFER_SIZE, sizeof(void*));
-	fprintf(stderr, "Stack starts at %x\n", (unsigned)thr->stackTop);
 	GCPerform(GCAddThread, thr);
 }
 void GCAddObject(id anObject)
@@ -178,13 +179,16 @@ static void traceTrampoline(void *c)
 	GCTraceContext *context = c;
 
 	// Scan for any new garbage cycles.
-	GCScanForCycles(context->cycleBuffer, context->cycleBufferSize);
+	if (context->cycleBufferSize)
+	{
+		GCScanForCycles(context->cycleBuffer, context->cycleBufferSize);
+		free(context->cycleBuffer);
+	}
 	// Now add the objects that might be garbage to the collector.
 	// These won't actually be freed until after this 
 	GCRunTracerIfNeeded(context->forceTrace);
 
-	free(context->cycleBuffer);
-	free(c);
+	//free(c);
 }
 
 /**
@@ -203,13 +207,20 @@ static void GCDrainThread(GCThread *thread, BOOL forceCollect)
 	// Mark all objects on this thread's stack as visited.
 	GCTraceStackSynchronous(thread);
 
-	GCTraceContext *context = malloc(sizeof(GCTraceContext));
-	context->cycleBuffer = thread->cycleBuffer;
-	context->cycleBufferSize = thread->cycleBufferInsert;
+	GCTraceContext *context = calloc(sizeof(GCTraceContext), 1);
+	void *
+		     valloc(size_t size);
+	//GCTraceContext *context = valloc(4096);
+	if (thread->cycleBufferInsert)
+	{
+		context->cycleBuffer = thread->cycleBuffer;
+		context->cycleBufferSize = thread->cycleBufferInsert;
+		thread->cycleBuffer = calloc(BUFFER_SIZE, sizeof(void*));
+		thread->cycleBufferInsert = 0;
+	}
 	context->forceTrace = forceCollect;
+	//mprotect(context, 4096, PROT_READ);
 	GCPerform(traceTrampoline, context);
-	thread->cycleBuffer = calloc(BUFFER_SIZE, sizeof(void*));
-	thread->cycleBufferInsert = 0;
 	thread->freeBufferInsert = 0;
 }
 void GCDrain(BOOL forceCollect)

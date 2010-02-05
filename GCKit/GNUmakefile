@@ -22,7 +22,7 @@ GCKit_HEADER_FILES = \
 
 GCKit_LIBRARIES_DEPEND_UPON += -lpthread
 
-GCKit_OBJCFLAGS += -Werror -std=c99 -march=native
+GCKit_OBJCFLAGS += -Werror -std=c99 -march=native -fno-inline
 
 include $(GNUSTEP_MAKEFILES)/library.make
 include $(GNUSTEP_MAKEFILES)/tool.make

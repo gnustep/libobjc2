@@ -12,6 +12,7 @@
 #import "object.h"
 #import "thread.h"
 #import "trace.h"
+#import "cycle.h"
 #import "malloc.h"
 #import "static.h"
 
@@ -59,12 +60,12 @@ static int traced_pointer_compare(const void *a, const GCTracedPointer b)
 static int traced_pointer_hash(const GCTracedPointer obj)
 {
 	intptr_t ptr = (intptr_t)obj.pointer;
-	return (ptr >> 8) | (ptr << 8);
+	return (ptr >> 4) | (ptr << 4);
 }
 static int traced_pointer_key_hash(const void *obj)
 {
 	intptr_t ptr = (intptr_t)obj;
-	return (ptr >> 8) | (ptr << 8);
+	return (ptr >> 4) | (ptr << 4);
 }
 static int traced_pointer_is_null(const GCTracedPointer obj)
 {
@@ -83,7 +84,7 @@ static int traced_pointer_is_null(const GCTracedPointer obj)
 /**
  * Pointer comparison.  Needed for the hash table.
  */
-static int pointer_compare(const id a, const id b)
+static int pointer_compare(const void *a, const void *b)
 {
 	return a == b;
 }
@@ -105,8 +106,6 @@ static traced_object_table *traced_objects;
  * objects, other threads may modify them.
  */
 static pthread_rwlock_t traced_objects_lock;
-
-
 
 typedef struct _GCTracedRegionTreeNode
 {
@@ -450,6 +449,7 @@ static void GCTraceRegion(GCTracedRegion region, void *c)
  */
 void GCTraceStackSynchronous(GCThread *thr)
 {
+	//fprintf(stderr, "Scanning the stack...\n");
 	int generation = GCGeneration;
 	pthread_rwlock_rdlock(&traced_objects_lock);
 	if (NULL == thr->unescapedObjects)
@@ -474,6 +474,7 @@ void GCTraceStackSynchronous(GCThread *thr)
 			// is guaranteed, at this point, not to be referenced by another
 			// thread.
 			GCSetFlag(*object, GCFlagVisited);
+			//fprintf(stderr, "Tracing found %x\n", (int)*object);
 		}
 		GCTracedPointer *foundObject =
 			traced_object_table_get(traced_objects, *object);
@@ -548,6 +549,7 @@ void GCRunTracer(void)
 		do
 		{
 			oldPtr = object;
+			//fprintf(stderr, "Thinking of freeing %x. Visited: %d, clear gen: %d, thread gen: %d\n", (int)object->pointer, GCTestFlag(object->pointer, GCFlagVisited), object->visitClearedGeneration , threadGeneration);
 			// If an object hasn't been visited and we have scanned everywhere
 			// since we cleared its visited flag, delete it.  This works
 			// because the heap write barrier sets the visited flag.
@@ -571,12 +573,14 @@ void GCRunTracerIfNeeded(BOOL forceCollect)
 	{
 		id object = ptr->pointer;
 		// Throw away any objects that are referenced by the heap
-		if (GCGetRetainCount(object) > 0)
+		if (GCGetRetainCount(object) > 0 &&
+			GCColourOfObject(object) != GCColourRed)
 		{
 			// Make sure that the retain count is still > 0.  If not then it
 			// may have been released but not added to the tracing list
 			// (because it was marked for tracing already)
-			if (GCGetRetainCount(object) > 0)
+			if (GCGetRetainCount(object) > 0 && 
+				GCColourOfObject(object) != GCColourRed)
 			{
 				pthread_rwlock_wrlock(&traced_objects_lock);
 				traced_object_remove(traced_objects, object);
@@ -586,10 +590,12 @@ void GCRunTracerIfNeeded(BOOL forceCollect)
 		}
 		if (GCTestFlag(object, GCFlagVisited))
 		{
+			//fprintf(stderr, "Clearing visited flag for %x\n", (int)object);
 			GCClearFlag(object, GCFlagVisited);
 			ptr->visitClearedGeneration = GCGeneration;
 		}
 	}
+	//fprintf(stderr, "Incrementing generation\n");
 	// Invalidate all stack scans.
 	GCGeneration++;
 	// Only actually run the tracer if we have more than a few objects that
@@ -601,6 +607,18 @@ void GCRunTracerIfNeeded(BOOL forceCollect)
 	}
 }
 
+/**
+ * Adds an object for tracing that the cycle detector has decided needs freeing.
+ */
+void GCAddObjectForTracing(id object)
+{
+	if (!traced_object_table_get(traced_objects, object))
+	{
+		//fprintf(stderr, "Cycle detector nominated %x for tracing\n", (int)object);
+		GCTracedPointer obj = {object, 0, 0, 0};
+		traced_object_insert(traced_objects, obj);
+	}
+}
 
 void GCAddObjectsForTracing(GCThread *thr)
 {
@@ -621,12 +639,17 @@ void GCAddObjectsForTracing(GCThread *thr)
 		id object = buffer[i];
 		if (!GCObjectIsDynamic(object))
 		{
-			continue;
+			return;
 		}
 		// Skip objects that have a strong retain count > 0.  They are
-		// definitely still referenced.
-		if (GCGetRetainCount(object) > 0)
+		// definitely still referenced...
+		if (GCGetRetainCount(object) > 0 &&
+			GCColourOfObject(object) != GCColourRed)
 		{
+			// ...but they might have become part of a cycle
+			GCSetFlag(object, GCFlagBuffered);
+			GCSetColourOfObject(object, GCColourPurple);
+			GCScanForCycles(&object, 1);
 			continue;
 		}
 		if (GCTestFlag(object, GCFlagEscaped))
@@ -685,6 +708,7 @@ id objc_assign_strongCast(id obj, id *ptr)
 		if (old->heapAddress == ptr)
 		{
 			old->heapAddress = 0;
+			old->visitClearedGeneration = GCGeneration + 1;
 			GCClearFlag(*ptr, GCFlagVisited);
 		}
 	}

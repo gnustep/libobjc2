@@ -81,6 +81,7 @@ int main(int argc, char **argv, char **env)
 #import "cycle.h"
 #include <stdio.h>
 #include <unistd.h>
+#include <pthread.h>
 
 @interface NSConstantString
 {
@@ -105,13 +106,21 @@ int main(int argc, char **argv, char **env)
 }
 - (void)log
 {
-	fprintf(stderr, "Simple object %x is still alive\n", (int)self);
+	printf("Simple object %x is still alive\n", (int)self);
 }
 - (void)finalize
 {
-	fprintf(stderr, "Simple object finalised\n");
+	printf("%s %x finalised\n", class_getName(isa), (int)self);
 }
 @end
+// The test program calls GCDrain() repeatedly to force the GC to run.  In real
+// code, this will be triggered automatically as a result of object allocations
+// and reference count changes.  In this code, however, it is not.  The test
+// case will exit before the GC would run in normal use.  This is not a bug;
+// there's no point spending CPU time collecting objects a few milliseconds
+// before the process exits and the OS reclaims them all at once.  The point of
+// a garbage collector is to reclaim memory for reuse, and if no reuse is going
+// to take place, there is no point reclaiming it.
 
 void makeObject(void)
 {
@@ -119,7 +128,6 @@ void makeObject(void)
 	[foo log];
 	GCDrain(YES);
 	GCDrain(YES);
-	sleep(1);
 	[foo log];
 	foo = nil;
 	[foo log];
@@ -154,7 +162,6 @@ void putObjectInBuffer(void)
 	[*buffer log];
 	GCDrain(YES);
 	GCDrain(YES);
-	sleep(1);
 }
 
 void testTracedMemory(void)
@@ -162,18 +169,73 @@ void testTracedMemory(void)
 	putObjectInBuffer();
 	GCDrain(YES);
 }
+@interface Pair : SimpleObject
+{
+@public
+	Pair *a, *b;
+}
+@end
+@implementation Pair @end
+
+void makeObjectCycle(void)
+{
+	Pair *obj = [Pair new];
+	obj->a = GCRetain([Pair new]);
+	obj->b = GCRetain([Pair new]);
+	obj->a->a = GCRetain(obj->b);
+	obj->b->b = GCRetain(obj->a);
+	obj->a->b = GCRetain(obj);
+	obj->b->a = GCRetain(obj);
+	[obj log];
+	GCRelease(GCRetain(obj));
+	GCDrain(YES);
+}
+
+void testCycle(void)
+{
+	makeObjectCycle();
+	GCDrain(YES);
+	GCDrain(YES);
+}
+
+void makeTracedCycle(void)
+{
+	// These two buffers are pointing to each other
+	id *b1 = GCAllocateBufferWithZone(NULL, sizeof(id), YES);
+	Pair *p = [Pair new];
+	id *b2 = GCAllocateBufferWithZone(NULL, sizeof(id), YES);
+	fprintf(stderr, "Expected to leak %x and %x\n", (int)b1, (int)b2);
+	//objc_assign_strongCast((id)b2, b1);
+	objc_assign_strongCast(p, b1);
+	objc_assign_strongCast((id)b1, b2);
+	p->a = (id)b2;
+}
+
+void testTracedCycle(void)
+{
+	makeTracedCycle();
+}
 
 int main(void)
 {
+	testTracedCycle();
 	// Not required on main thread:
 	//GCRegisterThread();
 	doStuff();
 	GCDrain(YES);
-	sleep(2);
 	doRefCountStuff();
 	GCDrain(YES);
-	sleep(2);
 	testTracedMemory();
 	buffer[0] = objc_assign_strongCast(nil, buffer);
 	GCDrain(YES);
+
+	testCycle();
+	GCDrain(YES);
+	GCDrain(YES);
+	GCDrain(YES);
+	sched_yield();
+	GCDrain(YES);
+	GCDrain(YES);
+	printf("Waiting to make sure the GC thread has caught up before the test exits\n");
+	sleep(1);
 }

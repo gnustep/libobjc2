@@ -3,6 +3,7 @@
  */
 typedef struct
 {
+	struct gc_buffer_header *buffer;
 	void *start;
 	void *end;
 } GCTracedRegion;

@@ -3,6 +3,7 @@
 #import "malloc.h"
 #import "thread.h"
 #import "visit.h"
+#include <stdio.h>
 
 id GCRetain(id anObject)
 {
@@ -47,6 +48,7 @@ void GCRelease(id anObject)
 	}
 }
 
+void GCAddObjectForTracing(id object);
 
 /**
  * Scan children turning them black and incrementing the reference count.  Used
@@ -72,6 +74,7 @@ static void GCScan(id anObject, void* unused, BOOL isWeak)
 	// If the object is not grey, then we've visited it already.
 	if (colour == GCColourGrey)
 	{
+//fprintf(stderr, "%x has retain count of %d\n", (int)anObject, (int)GCGetRetainCount(anObject));
 		// If the retain count is still > 0, we didn't account for all of the
 		// references with cycle detection, so mark it as black and reset the
 		// retain count of every object that it references.
@@ -79,6 +82,9 @@ static void GCScan(id anObject, void* unused, BOOL isWeak)
 		// If it did reach 0, then this is part of a garbage cycle so colour it
 		// accordingly.  Any objects reachable from this object do not get
 		// their reference counts restored.
+		//
+		// FIXME: We need to be able to resurrect objects if they are
+		// GCRetain()'d when they are white
 		if (GCGetRetainCount(anObject) > 0)
 		{
 			GCSetColourOfObject(anObject, GCColourBlack);
@@ -103,12 +109,12 @@ static void GCScan(id anObject, void* unused, BOOL isWeak)
 static void GCCollectWhite(id anObject, void *ignored, BOOL isWeak)
 {
 	//fprintf(stderr, "Looking at object %x with colour %s\n", (unsigned) anObject, [GCStringFromColour(GCColourOfObject(anObject)) UTF8String]);
-	if ((GCColourOfObject(anObject) == GCColourWhite)
-	   &&
-	   YES)
-	   //!isObjectBuffered(anObject))
+	if ((GCColourOfObject(anObject) == GCColourWhite))
 	{
-		GCAddObject(anObject);
+		GCSetColourOfObject(anObject, GCColourRed);
+		//fprintf(stderr, "%x marked red.  Red's dead, baby!\n", (int)anObject);
+		//fprintf(stderr, " has refcount %d!\n", (int)GCGetRetainCount(anObject));
+		GCAddObjectForTracing(anObject);
 		GCVisitChildren(anObject, GCCollectWhite, NULL, NO);
 	}
 }
@@ -124,6 +130,7 @@ static void GCCollectWhite(id anObject, void *ignored, BOOL isWeak)
  */
 void GCMarkGreyChildren(id anObject, void *ignored, BOOL isWeak)
 {
+	//fprintf(stderr, "Marking %x as grey\n", (int)anObject);
 	// FIXME: This should probably check if the colour is green.  Green objects
 	// can't be parts of cycles, and we need to restore the green colour after
 	// scanning anyway.
@@ -143,8 +150,10 @@ void GCScanForCycles(id *loopBuffer, unsigned count)
 	for (unsigned i=0 ; i<count ; i++)
 	{
 		next = loopBuffer[i];
+		//fprintf(stderr, "Looking at %x\n", (int)next);
 		// Check that this object is still eligible for cycle detection
 		if (nil == next) continue;
+		if (GCTestFlag(next, GCFlagNotObject)) continue;
 		if (!GCTestFlag(next, GCFlagBuffered))
 		{
 			loopBuffer[i] = nil;
@@ -156,6 +165,7 @@ void GCScanForCycles(id *loopBuffer, unsigned count)
 		if (colour == GCColourPurple)
 		{
 			// Mark it, and all of its children, as grey.
+			//fprintf(stderr, "Marking grey: %d...\n", colour);
 			GCSetColourOfObject(next, GCColourGrey);
 			GCVisitChildren(next, GCMarkGreyChildren, nil, NO);
 		}
@@ -166,7 +176,7 @@ void GCScanForCycles(id *loopBuffer, unsigned count)
 			// tracer can't find them.
 			if ((colour == GCColourBlack) && (GCGetRetainCount(next) <= 0))
 			{
-				GCAddObject(next);
+				GCAddObjectForTracing(next);
 			}
 			loopBuffer[i] = nil;
 		}
@@ -186,6 +196,8 @@ void GCScanForCycles(id *loopBuffer, unsigned count)
 		if (nil == next) continue;
 		GCCollectWhite(next, NULL, NO);
 	}
+	void GCRunTracerIfNeeded(BOOL);
+	GCRunTracerIfNeeded(YES);
 }
 
 #if 0
