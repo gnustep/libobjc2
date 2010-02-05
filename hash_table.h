@@ -321,7 +321,7 @@ static int PREFIX(_insert)(PREFIX(_table) *table,
 	return 0;
 }
 
-static void *PREFIX(_table_get_cell)(PREFIX(_table) *table, void *key)
+static void *PREFIX(_table_get_cell)(PREFIX(_table) *table, const void *key)
 {
 	uint32_t hash = MAP_TABLE_HASH_KEY(key);
 	PREFIX(_table_cell) cell = PREFIX(_table_lookup)(table, hash);
@@ -401,7 +401,7 @@ static MAP_TABLE_VALUE_TYPE*
 static MAP_TABLE_VALUE_TYPE 
 #endif
 	PREFIX(_table_get)(PREFIX(_table) *table,
-		void *key)
+		const void *key)
 {
 	PREFIX(_table_cell) cell = PREFIX(_table_get_cell)(table, key);
 	if (NULL == cell)
