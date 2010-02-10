@@ -182,7 +182,7 @@ static int PREFIX(_table_resize)(PREFIX(_table) *table)
 	for (uint32_t i=0 ; i<copy->table_size ; i++)
 	{
 		MAP_TABLE_VALUE_TYPE value = copy->table[i].value;
-		if (MAP_TABLE_VALUE_NULL(value))
+		if (!MAP_TABLE_VALUE_NULL(value))
 		{
 			PREFIX(_insert)(table, value);
 		}
