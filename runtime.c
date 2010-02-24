@@ -435,9 +435,13 @@ IMP class_replaceMethod(Class cls, SEL name, IMP imp, const char *types)
 }
 
 
-BOOL class_respondsToSelector(Class cls, SEL sel)
+BOOL
+class_respondsToSelector(Class cls, SEL sel)
 {
-	return __objc_responds_to(cls, sel);
+  /* Warning the __objc_responds_to() function expects an id argument and
+   * dereferences the initial ivar (the 'isa' pointer) to fidn the class.
+   */
+  return __objc_responds_to((Class)&cls, sel);
 }
 
 void class_setIvarLayout(Class cls, const char *layout)
