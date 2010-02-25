@@ -25,11 +25,12 @@ Slot_t objc_msg_lookup_internal(id *receiver, SEL selector, id sender)
 	if (0 == result)
 	{
 		Class class = (*receiver)->class_pointer;
+		struct sarray *dtable = dtable_for_class(class);
 		/* Install the dtable if it hasn't already been initialized. */
-		if (dtable_for_class(class) == __objc_uninstalled_dtable)
+		if (dtable == __objc_uninstalled_dtable)
 		{
 			__objc_init_install_dtable (*receiver, selector);
-			struct sarray *dtable = dtable_for_class(class);
+			dtable = dtable_for_class(class);
 			result = sarray_get_safe(dtable, (sidx)selector->sel_id);
 			if (0 == result)
 			{
@@ -47,9 +48,7 @@ Slot_t objc_msg_lookup_internal(id *receiver, SEL selector, id sender)
 		{
 			// Check again incase another thread updated the dtable while we
 			// weren't looking
-			result =
-				sarray_get_safe(dtable_for_class((*receiver)->class_pointer),
-						(sidx)selector->sel_id);
+			result = sarray_get_safe(dtable, (sidx)selector->sel_id);
 		}
 		if (0 == result)
 		{
