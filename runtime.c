@@ -65,10 +65,10 @@
  */
 void __objc_update_dispatch_table_for_class(Class);
 /**
- * Private runtime function for determining whether a class responds to a
+ * Private runtime function for determining whether an object responds to a
  * selector.
  */
-BOOL __objc_responds_to(Class, SEL);
+BOOL __objc_responds_to(id, SEL);
 /**
  *  Runtime library constant for uninitialized dispatch table.
  */
@@ -441,7 +441,7 @@ class_respondsToSelector(Class cls, SEL sel)
   /* Warning the __objc_responds_to() function expects an id argument and
    * dereferences the initial ivar (the 'isa' pointer) to fidn the class.
    */
-  return __objc_responds_to((Class)&cls, sel);
+  return __objc_responds_to((id)&cls, sel);
 }
 
 void class_setIvarLayout(Class cls, const char *layout)
