@@ -733,12 +733,12 @@ __objc_compute_ivar_offsets (Class class)
   if (class->instance_size <= 0)
     {
       Class super = class_superclass_of_class(class);
-      if (Nil == super) { return; }
-      if (super->instance_size <= 0)
+      long ivar_start = 0;
+      if (Nil != super && super->instance_size <= 0)
         {
           __objc_compute_ivar_offsets(super);
+          ivar_start = super->instance_size;
         }
-      long ivar_start = super->instance_size;
       class->instance_size = ivar_start - class->instance_size;
       /* For each instance variable, we add the offset if required (it will be zero
        * if this class is compiled with a static ivar layout).  We then set the
