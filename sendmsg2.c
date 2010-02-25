@@ -35,13 +35,14 @@ Slot_t objc_msg_lookup_internal(id *receiver, SEL selector, id sender)
 			if (0 == result)
 			{
 				objc_mutex_lock(__objc_runtime_mutex);
-				if (dtable_for_class(class) == __objc_uninstalled_dtable)
+				dtable = dtable_for_class(class);
+				if (dtable == __objc_uninstalled_dtable)
 				{
 					__objc_install_dispatch_table_for_class(class);
 					dtable = dtable_for_class(class);
 				}
 				objc_mutex_unlock(__objc_runtime_mutex);
-				result = sarray_get_safe(class->dtable, (sidx)selector->sel_id);
+				result = sarray_get_safe(dtable, (sidx)selector->sel_id);
 			}
 		}
 		else
