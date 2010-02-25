@@ -439,7 +439,7 @@ BOOL
 class_respondsToSelector(Class cls, SEL sel)
 {
   /* Warning the __objc_responds_to() function expects an id argument and
-   * dereferences the initial ivar (the 'isa' pointer) to fidn the class.
+   * dereferences the initial ivar (the 'isa' pointer) to find the class.
    */
   return __objc_responds_to((id)&cls, sel);
 }

@@ -47,8 +47,9 @@ Slot_t objc_msg_lookup_internal(id *receiver, SEL selector, id sender)
 		{
 			// Check again incase another thread updated the dtable while we
 			// weren't looking
-			result = sarray_get_safe((*receiver)->class_pointer->dtable,
-					(sidx)selector->sel_id);
+			result =
+				sarray_get_safe(dtable_for_class((*receiver)->class_pointer),
+						(sidx)selector->sel_id);
 		}
 		if (0 == result)
 		{
