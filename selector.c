@@ -295,6 +295,7 @@ const char *sel_get_name (SEL selector)
 {
   const char *ret;
 
+  if (selector == 0) return "<null selector>";
   objc_mutex_lock (__objc_runtime_mutex);
   if ((soffset_decode ((sidx)selector->sel_id) > 0)
       && (soffset_decode ((sidx)selector->sel_id) <= __objc_selector_max_index))
@@ -370,6 +371,7 @@ __sel_register_typed_name (const char *name, const char *types,
   // FIXME: The linker is now going to be uniquing most of our selectors for
   // us, so we want to eliminate this hash calculation except as a fallback
 
+  if (name == 0) return 0;
   i = (sidx) objc_hash_value_for_key (__objc_selector_hash, name);
   if (soffset_decode (i) != 0)
     {
