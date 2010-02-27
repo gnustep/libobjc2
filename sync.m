@@ -6,7 +6,6 @@
 
 int snprintf(char *restrict s, size_t n, const char *restrict format, ...);
 
-
 @interface Fake
 + (void)dealloc;
 @end
@@ -49,16 +48,27 @@ static inline Class findLockClass(id obj)
 
 static inline Class initLockObject(id obj)
 {
-	char nameBuffer[40];
-	snprintf(nameBuffer, 39, "hiddenlockClass%lld", lockClassId++);
-	Class lockClass = objc_allocateClassPair(obj->isa, nameBuffer,
-			sizeof(mutex_t));
+	Class lockClass; 
+	if (class_isMetaClass(obj->isa))
+	{
+		lockClass = objc_allocateMetaClass(obj, sizeof(mutex_t));
+	}
+	else
+	{
+		char nameBuffer[40];
+		snprintf(nameBuffer, 39, "hiddenlockClass%lld", lockClassId++);
+		lockClass = objc_allocateClassPair(obj->isa, nameBuffer,
+				sizeof(mutex_t));
+	}
 	const char *types =
 		method_getTypeEncoding(class_getInstanceMethod(obj->isa,
 					@selector(dealloc)));
 	class_addMethod(lockClass, @selector(dealloc), (IMP)deallocLockClass,
 			types);
-	objc_registerClassPair(lockClass);
+	if (!class_isMetaClass(obj->isa))
+	{
+		objc_registerClassPair(lockClass);
+	}
 
 	mutex_t *lock = object_getIndexedIvars(lockClass);
 	INIT_LOCK(*lock);
@@ -100,6 +110,7 @@ void objc_sync_enter(id obj)
 	mutex_t *lock = object_getIndexedIvars(lockClass);
 	LOCK(lock);
 }
+
 void objc_sync_exit(id obj)
 {
 	Class lockClass = findLockClass(obj);

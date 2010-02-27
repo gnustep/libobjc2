@@ -771,6 +771,22 @@ Class objc_allocateClassPair(Class superclass, const char *name, size_t extraByt
 	return newClass;
 }
 
+Class objc_allocateMetaClass(Class superclass, size_t extraBytes)
+{
+	Class metaClass = calloc(1, sizeof(struct objc_class) + extraBytes);
+
+	// Initialize the metaclass
+	metaClass->class_pointer = superclass->class_pointer->class_pointer;
+	metaClass->super_class = superclass->class_pointer;
+	metaClass->name = strdup(superclass->name);
+	metaClass->info = _CLS_META | _CLS_RUNTIME | _CLS_NEW_ABI;
+	metaClass->dtable = __objc_uninstalled_dtable;
+	metaClass->instance_size = sizeof(struct objc_class);
+
+	return metaClass;
+}
+
+
 void *object_getIndexedIvars(id obj)
 {
 	if (class_isMetaClass(obj->isa))
