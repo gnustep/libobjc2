@@ -115,5 +115,5 @@ void objc_sync_exit(id obj)
 {
 	Class lockClass = findLockClass(obj);
 	mutex_t *lock = object_getIndexedIvars(lockClass);
-	LOCK(lock);
+	UNLOCK(lock);
 }
