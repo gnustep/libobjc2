@@ -354,20 +354,33 @@ size_t class_getInstanceSize(Class cls)
 	return cls->instance_size;
 }
 
-Ivar class_getInstanceVariable(Class cls, const char* name)
+Ivar
+class_getInstanceVariable(Class cls, const char* name)
 {
-	struct objc_ivar_list *ivarlist = cls->ivars;
-	if (NULL == ivarlist) { return NULL; }
-
-	for (int i=0 ; i<ivarlist->ivar_count ; i++)
+  if (name != NULL)
+    {
+      while (cls != Nil)
 	{
-		Ivar ivar = &ivarlist->ivar_list[i];
-		if (strcmp(ivar->ivar_name, name) == 0)
+	  struct objc_ivar_list *ivarlist = cls->ivars;
+	  int i;
+
+	  if (NULL == ivarlist)
+	    {
+	      return NULL;
+	    }
+	  for (i = 0; i < ivarlist->ivar_count; i++)
+	    {
+	      Ivar ivar = &ivarlist->ivar_list[i];
+
+	      if (strcmp(ivar->ivar_name, name) == 0)
 		{
-			return ivar;
+		  return ivar;
 		}
+	    }
+	  cls = class_getSuperclass(cls);
 	}
-	return NULL;
+    }
+  return NULL;
 }
 
 // The format of the char* is undocumented.  This function is only ever used in

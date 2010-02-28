@@ -135,6 +135,10 @@ Method class_getInstanceMethod(Class aClass, SEL aSelector);
 
 size_t class_getInstanceSize(Class cls);
 
+/** Look up the named instance variable in the class (and its superclasses)
+ * returning a pointer to the instance variable definition or a null
+ * pointer if no instance variable of that name was found.
+ */
 Ivar class_getInstanceVariable(Class cls, const char* name);
 
 const char *class_getIvarLayout(Class cls);
