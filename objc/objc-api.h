@@ -550,12 +550,17 @@ class_get_meta_class(Class _class)
 static inline Class
 class_get_super_class(Class _class)
 {
-	void __objc_resolve_class_links(void);
-	if (!CLS_ISRESOLV(_class))
-	{
-		__objc_resolve_class_links();
-	}
-	return _class->super_class;
+  if (!CLS_ISRESOLV(cls))
+    {
+      /* This class is not yet resolved ... so lookup superclass by name.
+       * We need to allow for this case because we might doing a lookup in
+       * a class which has not yet been registered with the runtime and
+       * which might have ivars or methods added after this call (so we
+       * mustn't resolve this class now).
+       */
+      return (Class)objc_getClass((const char*)cls->super_class);
+    }
+  return cls->super_class;
 }
 
 static inline int

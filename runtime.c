@@ -124,43 +124,51 @@ static void objc_updateDtableForClassContainingMethod(Method m)
 	}
 }
 
-
-BOOL class_addIvar(Class cls,
-                   const char *name,
-                   size_t size,
-                   uint8_t alignment,
-                   const char *types)
+BOOL
+class_addIvar(Class cls, const char *name,
+  size_t size, uint8_t alignment, const char *types)
 {
-	if (CLS_ISRESOLV(cls) || CLS_ISMETA(cls))
-	{
-		return NO;
-	}
+  struct objc_ivar_list *ivarlist;
+  unsigned off;
+  Ivar ivar;
 
-	struct objc_ivar_list *ivarlist = cls->ivars;
+  if (CLS_ISRESOLV(cls) || CLS_ISMETA(cls))
+    {
+      return NO;
+    }
 
-	if (class_getInstanceVariable(cls, name) != NULL) { return NO; }
+  if (class_getInstanceVariable(cls, name) != NULL)
+    {
+      return NO;
+    }
 
-	if (NULL == ivarlist)
-	{
-		cls->ivars = objc_malloc(sizeof(struct objc_ivar_list));
-		cls->ivars->ivar_count = 1;
-	}
-	else
-	{
-		ivarlist->ivar_count++;
-		// objc_ivar_list contains one ivar.  Others follow it.
-		cls->ivars = objc_realloc(ivarlist, sizeof(struct objc_ivar_list) 
-				+ (ivarlist->ivar_count - 1) * sizeof(struct objc_ivar));
-	}
+  ivarlist = cls->ivars;
 
-	Ivar ivar = &cls->ivars->ivar_list[cls->ivars->ivar_count - 1];
-	ivar->ivar_name = strdup(name);
-	ivar->ivar_type = strdup(types);
-	// Round up the offset of the ivar so it is correctly aligned.
-	ivar->ivar_offset = cls->instance_size + (cls->instance_size % alignment);
-	// Increase the instance size to make space for this.
-	cls->instance_size = ivar->ivar_offset + size;
-	return YES;
+  if (NULL == ivarlist)
+    {
+      cls->ivars = objc_malloc(sizeof(struct objc_ivar_list));
+      cls->ivars->ivar_count = 1;
+    }
+  else
+    {
+      ivarlist->ivar_count++;
+      // objc_ivar_list contains one ivar.  Others follow it.
+      cls->ivars = objc_realloc(ivarlist, sizeof(struct objc_ivar_list)
+				+ (ivarlist->ivar_count -
+				   1) * sizeof(struct objc_ivar));
+    }
+
+  ivar = &cls->ivars->ivar_list[cls->ivars->ivar_count - 1];
+  ivar->ivar_name = strdup(name);
+  ivar->ivar_type = strdup(types);
+  // Round up the offset of the ivar so it is correctly aligned.
+  off = cls->instance_size >> alignment;
+  if (off << alignment != cls->instance_size)
+    off = (off + 1) << alignment;
+  ivar->ivar_offset = off;
+  // Increase the instance size to make space for this.
+  cls->instance_size = ivar->ivar_offset + size;
+  return YES;
 }
 
 BOOL class_addMethod(Class cls, SEL name, IMP imp, const char *types)
