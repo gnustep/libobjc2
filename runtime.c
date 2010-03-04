@@ -235,92 +235,96 @@ BOOL class_conformsToProtocol(Class cls, Protocol *protocol)
 	return NO;
 }
 
-Ivar * class_copyIvarList(Class cls, unsigned int *outCount)
+Ivar *
+class_copyIvarList(Class cls, unsigned int *outCount)
 {
-	struct objc_ivar_list *ivarlist = cls->ivars;
-	unsigned int count = 0;
-	if (ivarlist != NULL)
-	{
-		count = ivarlist->ivar_count;
-	}
-	if (outCount != NULL)
-	{
-		*outCount = count;
-	}
-	if (count == 0)
-	{
-		return NULL;
-	}
+  struct objc_ivar_list *ivarlist = cls->ivars;
+  unsigned int count = 0;
+  Ivar *list;
 
-	Ivar *list = malloc(count * sizeof(struct objc_ivar *));
-	for (unsigned int i=0; i<ivarlist->ivar_count; i++)
-	{
-		list[i] = &(ivarlist->ivar_list[i]);
-	}
-	return list;
+  if (ivarlist != NULL)
+    {
+      count = ivarlist->ivar_count;
+    }
+  if (outCount != NULL)
+    {
+      *outCount = count;
+    }
+  if (count == 0)
+    {
+      return NULL;
+    }
+
+  list = malloc((count + 1) * sizeof(struct objc_ivar *));
+  list[count] = NULL;
+  memcpy(list, ivarlist->ivar_list,
+    ivarlist->ivar_count * sizeof(struct objc_ivar *));
+  return list;
 }
 
-Method * class_copyMethodList(Class cls, unsigned int *outCount)
+Method *
+class_copyMethodList(Class cls, unsigned int *outCount)
 {
-	unsigned int count = 0;
-	for (struct objc_method_list *methods = cls->methods;
-		methods != NULL ; methods = methods->method_next)
-	{
-		count += methods->method_count;
-	}
-	if (outCount != NULL)
-	{
-		*outCount = count;
-	}
-	if (count == 0)
-	{
-		return NULL;
-	}
+  unsigned int count = 0;
+  Method *list;
+  struct objc_method_list *methods;
 
-	Method *list = malloc(count * sizeof(struct objc_method *));
-	Method *copyDest = list;
+  for (methods = cls->methods; methods != NULL; methods = methods->method_next)
+    {
+      count += methods->method_count;
+    }
+  if (outCount != NULL)
+    {
+      *outCount = count;
+    }
+  if (count == 0)
+    {
+      return NULL;
+    }
 
-	for (struct objc_method_list *methods = cls->methods;
-		methods != NULL ; methods = methods->method_next)
-	{
-		for (unsigned int i=0; i<methods->method_count; i++)
-		{
-			copyDest[i] = &(methods->method_list[i]);
-		}
-		copyDest += methods->method_count;
-	}
+  list = malloc((count + 1) * sizeof(struct objc_method *));
+  list[count] = NULL;
+  count = 0;
+  for (methods = cls->methods; methods != NULL; methods = methods->method_next)
+    {
+      memcpy(&list[count], methods->method_list,
+	methods->method_count * sizeof(struct objc_method *));
+      count += methods->method_count;
+    }
 
-	return list;
+  return list;
 }
 
-Protocol ** class_copyProtocolList(Class cls, unsigned int *outCount)
+Protocol **
+class_copyProtocolList(Class cls, unsigned int *outCount)
 {
-	struct objc_protocol_list *protocolList = cls->protocols;
-	int listSize = 0;
-	for (struct objc_protocol_list *list = protocolList ; 
-		list != NULL ; 
-		list = list->next)
-	{
-		listSize += list->count;
-	}
-	if (listSize == 0)
-	{
-		*outCount = 0;
-		return NULL;
-	}
-	
-	Protocol **protocols = calloc(listSize, sizeof(Protocol*) + 1);
-	int index = 0;
-	for (struct objc_protocol_list *list = protocolList ; 
-		list != NULL ; 
-		list = list->next)
-	{
-		memcpy(&protocols[index], list->list, list->count * sizeof(Protocol*));
-		index += list->count;
-	}
-	protocols[listSize] = NULL;
-	*outCount  = listSize + 1;
-	return protocols;
+  struct objc_protocol_list *protocolList = cls->protocols;
+  struct objc_protocol_list *list;
+  unsigned int count = 0;
+  Protocol **protocols;
+
+  for (list = protocolList; list != NULL; list = list->next)
+    {
+      count += list->count;
+    }
+  if (outCount != NULL)
+    {
+      *outCount = count;
+    }
+  if (count == 0)
+    {
+      return NULL;
+    }
+
+  protocols = malloc((count + 1) * sizeof(Protocol *));
+  protocols[count] = NULL;
+  count = 0;
+  for (list = protocolList; list != NULL; list = list->next)
+    {
+      memcpy(&protocols[count], list->list, list->count * sizeof(Protocol *));
+      count += list->count;
+    }
+  return protocols;
 }
 
 id class_createInstance(Class cls, size_t extraBytes)
