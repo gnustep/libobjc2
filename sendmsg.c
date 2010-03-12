@@ -30,19 +30,7 @@ see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
 #include "objc/encoding.h"
 #include "lock.h"
 
-/* This is how we hack STRUCT_VALUE to be 1 or 0.   */
-#define gen_rtx(args...) 1
-#define gen_rtx_MEM(args...) 1
-#define gen_rtx_REG(args...) 1
-/* Alread defined in gcc/coretypes.h. So prevent double definition warning.  */
-#undef rtx
-#define rtx int
-
-#if ! defined (STRUCT_VALUE) || STRUCT_VALUE == 0
-#define INVISIBLE_STRUCT_RETURN 1
-#else
-#define INVISIBLE_STRUCT_RETURN 0
-#endif
+void objc_resolve_class(Class);
 
 /* The uninstalled dispatch table */
 struct sarray *__objc_uninstalled_dtable = 0;   /* !T:MUTEX */
@@ -414,7 +402,7 @@ __objc_send_initialize (Class class)
        * held so that we can create the premature dtable. */
       LOCK(&initialize_lock);
       if (! CLS_ISRESOLV (class))
-        __objc_resolve_class_links ();
+        objc_resolve_class(class);
 
 
       /* Create the garbage collector type memory description */
@@ -555,7 +543,7 @@ static struct sarray *create_dtable_for_class (Class class)
   /* If the class has not yet had its class links resolved, we must 
      re-compute all class links */
   if (! CLS_ISRESOLV (class))
-    __objc_resolve_class_links ();
+    objc_resolve_class(class);
 
   super = class->super_class;
 

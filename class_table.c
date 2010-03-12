@@ -66,7 +66,7 @@ void __objc_init_class_tables(void)
 	class_table = class_table_internal_create(16);
 }
 
-static void objc_resolve_class(Class cls)
+void objc_resolve_class(Class cls)
 {
 	// Skip this if the class is already resolved.
 	if (CLS_ISRESOLV(cls)) { return; }

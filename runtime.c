@@ -856,7 +856,7 @@ const char *object_getClassName(id obj)
 }
 
 void __objc_add_class_to_hash(Class cls);
-void __objc_resolve_class_links(void);
+void objc_resolve_class(Class cls);
 
 void objc_registerClassPair(Class cls)
 {
@@ -865,8 +865,8 @@ void objc_registerClassPair(Class cls)
 	__objc_update_dispatch_table_for_class(metaClass);
 	__objc_update_dispatch_table_for_class(cls);
 	__objc_add_class_to_hash(cls);
-	// Add pointer from super class
-	__objc_resolve_class_links();
+	objc_resolve_class(cls);
+
 }
 
 static id objectNew(id cls)
