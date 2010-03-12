@@ -66,7 +66,7 @@ libobjc_CPPFLAGS += -D__OBJC_RUNTIME_INTERNAL__=1 -D_XOPEN_SOURCE=500
 # useful on compilers that support C99 (currently only clang), so there is no
 # benefit from supporting platforms with no C99 compiler.
 libobjc_CFLAGS += -Werror -std=c99 -g -march=native -fexceptions #-fno-inline
-libobjc_OBJCFLAGS += -g -std=c99
+libobjc_OBJCFLAGS += -g -std=c99 -march=native
 libobjc_LDFLAGS += -g -ltoydispatch
 libobjc_LIB_DIRS += -L toydispatch/obj
 

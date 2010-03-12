@@ -175,15 +175,19 @@ static int PREFIX(_table_resize)(PREFIX(_table) *table)
 	// Now we make the original table structure point to the new (empty) array.
 	table->table = newArray;
 	table->table_size *= 2;
+	// The table currently has no entries; the copy has them all.
+	table->table_used = 0;
 
 	// Finally, copy everything into the new table
 	// Note: we should really do this in a background thread.  At this stage,
 	// we can do the updates safely without worrying about read contention.
+	int copied = 0;
 	for (uint32_t i=0 ; i<copy->table_size ; i++)
 	{
 		MAP_TABLE_VALUE_TYPE value = copy->table[i].value;
 		if (!MAP_TABLE_VALUE_NULL(value))
 		{
+			copied++;
 			PREFIX(_insert)(table, value);
 		}
 	}
@@ -318,6 +322,7 @@ static int PREFIX(_insert)(PREFIX(_table) *table,
 		MAP_UNLOCK();
 		return PREFIX(_insert)(table, value);
 	}
+	fprintf(stderr, "Insert failed\n");
 	return 0;
 }
 
@@ -446,6 +451,7 @@ PREFIX(_next)(PREFIX(_table) *table,
 		// enumerating
 		MAP_LOCK();
 		(*state)->table = table;
+		(*state)->index = -1;
 		__sync_fetch_and_add(&table->enumerator_count, 1);
 		MAP_UNLOCK();
 	}
@@ -465,6 +471,7 @@ PREFIX(_next)(PREFIX(_table) *table,
 	{
 		if (!MAP_TABLE_VALUE_NULL((*state)->table->table[(*state)->index].value))
 		{
+			(*state)->seen++;
 #ifdef MAP_TABLE_ACCESS_BY_REFERENCE
 			return &(*state)->table->table[(*state)->index].value;
 #else
