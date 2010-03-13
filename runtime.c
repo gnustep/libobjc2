@@ -846,17 +846,6 @@ void objc_registerClassPair(Class cls)
 
 }
 
-static id objectNew(id cls)
-{
-	static SEL newSel = NULL;
-	if (NULL == newSel)
-	{
-		newSel = sel_get_uid("new");
-	}
-	IMP newIMP = (IMP)objc_msg_lookup((void*)cls, newSel);
-	return newIMP((id)cls, newSel);
-}
-
 const char *sel_getName(SEL sel)
 {
 	return sel_get_name(sel);
