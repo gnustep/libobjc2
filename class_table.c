@@ -117,12 +117,16 @@ void objc_resolve_class(Class cls)
 		cls->super_class = super;
 		cls->class_pointer->super_class = super->class_pointer;
 	}
-	// Set up the class links 
-	cls->sibling_class = super->subclass_list;
-	super->subclass_list = cls;
-	// Set up the metaclass links
-	cls->class_pointer->sibling_class = superMeta->subclass_list;
-	superMeta->subclass_list = cls->class_pointer;
+	// Don't make the root class a subclass of itself
+	if (cls != super)
+	{
+		// Set up the class links 
+		cls->sibling_class = super->subclass_list;
+		super->subclass_list = cls;
+		// Set up the metaclass links
+		cls->class_pointer->sibling_class = superMeta->subclass_list;
+		superMeta->subclass_list = cls->class_pointer;
+	}
 	// Mark this class (and its metaclass) as resolved
 	CLS_SETRESOLV(cls);
 	CLS_SETRESOLV(cls->class_pointer);
