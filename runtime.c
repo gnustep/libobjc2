@@ -650,31 +650,6 @@ id objc_getClass(const char *name)
 	return (id)objc_get_class(name);
 }
 
-int objc_getClassList(Class *buffer, int bufferLen)
-{
-	int count = 0;
-	if (buffer == NULL)
-	{
-		void *state = NULL;
-		while(Nil != objc_next_class(&state))
-		{
-			count++;
-		}
-	}
-	else
-	{
-		Class nextClass;
-		void *state = NULL;
-		while (Nil != (nextClass = objc_next_class(&state)) && bufferLen > 0)
-		{
-			count++;
-			bufferLen--;
-			*(buffer++) = nextClass;
-		}
-	}
-	return count;
-}
-
 id objc_getMetaClass(const char *name)
 {
 	Class cls = (Class)objc_getClass(name);

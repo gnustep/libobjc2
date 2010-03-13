@@ -136,4 +136,23 @@ void __objc_resolve_class_links(void)
 	{
 		objc_resolve_class(class);
 	}
+	UNLOCK(__objc_runtime_mutex);
 }
+
+int objc_getClassList(Class *buffer, int bufferLen)
+{
+	if (buffer == NULL)
+	{
+		return class_table->table_used;
+	}
+	int count = 0;
+	struct class_table_internal_table_enumerator *e;
+	Class next;
+	while (count < bufferLen &&
+		(next = class_table_internal_next(class_table, &e)))
+	{
+		buffer[count++] = next;
+	}
+	return count;
+}
+
