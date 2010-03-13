@@ -88,9 +88,13 @@ Slot_t objc_msg_lookup_sender(id *receiver, SEL selector, id sender)
 		return &nil_slot;
 	}
 
+	/*
+	 * The self pointer is invalid in some code.  This test is disabled until
+	 * we can guarantee that it is not (e.g. with GCKit)
 	if (__builtin_expect(sender == nil
 		||
 		(sender->class_pointer->info & (*receiver)->class_pointer->info & _CLS_PLANE_AWARE),1))
+	*/
 	{
 		return objc_msg_lookup_internal(receiver, selector, sender);
 	}
