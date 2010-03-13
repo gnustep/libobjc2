@@ -424,6 +424,7 @@ IMP class_getMethodImplementation_stret(Class cls, SEL name)
 
 const char * class_getName(Class cls)
 {
+	if (Nil == cls) { return "nil"; }
 	return cls->name;
 }
 
@@ -827,6 +828,7 @@ Class object_setClass(id obj, Class cls)
 
 const char *object_getClassName(id obj)
 {
+	if (nil == obj) { return "nil"; }
 	return class_getName(object_getClass(obj));
 }
 
