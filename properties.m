@@ -58,7 +58,7 @@ inline static void lock_spinlock(int *spinlock)
 	}
 }
 
-id objc_getProperty(id obj, SEL _cmd, ptrdiff_t offset, BOOL isAtomic)
+id objc_getProperty(id obj, SEL _cmd, int offset, BOOL isAtomic)
 {
 	char *addr = (char*)obj;
 	addr += offset;
@@ -79,7 +79,7 @@ id objc_getProperty(id obj, SEL _cmd, ptrdiff_t offset, BOOL isAtomic)
 	return [ret autorelease];
 }
 
-void objc_setProperty(id obj, SEL _cmd, ptrdiff_t offset, id arg, BOOL isAtomic, BOOL isCopy)
+void objc_setProperty(id obj, SEL _cmd, int offset, id arg, BOOL isAtomic, BOOL isCopy)
 {
 	if (isCopy)
 	{
