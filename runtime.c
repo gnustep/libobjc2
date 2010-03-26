@@ -785,7 +785,7 @@ Class objc_allocateMetaClass(Class superclass, size_t extraBytes)
 	Class metaClass = calloc(1, sizeof(struct objc_class) + extraBytes);
 
 	// Initialize the metaclass
-	metaClass->class_pointer = superclass->class_pointer->class_pointer;
+	metaClass->class_pointer = superclass->class_pointer;
 	metaClass->super_class = superclass->class_pointer;
 	metaClass->name = "hidden class"; //strdup(superclass->name);
 	metaClass->info = _CLS_RESOLV | _CLS_INITIALIZED | _CLS_META |
