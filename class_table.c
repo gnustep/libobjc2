@@ -150,7 +150,7 @@ int objc_getClassList(Class *buffer, int bufferLen)
 		return class_table->table_used;
 	}
 	int count = 0;
-	struct class_table_internal_table_enumerator *e;
+	struct class_table_internal_table_enumerator *e = NULL;
 	Class next;
 	while (count < bufferLen &&
 		(next = class_table_internal_next(class_table, &e)))
