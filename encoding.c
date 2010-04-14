@@ -684,8 +684,8 @@ objc_skip_offset (const char *type)
 {
   if (*type == '+')
     type++;
-  while (isdigit ((unsigned char) *++type))
-    ;
+  while (isdigit ((unsigned char) *type))
+    type++;
   return type;
 }
 
