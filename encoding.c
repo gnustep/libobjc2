@@ -678,14 +678,16 @@ objc_skip_typespec (const char *type)
 /*
   Skip an offset as part of a method encoding.  This is prepended by a
   '+' if the argument is passed in registers.
+  For historical reasons this is buggy and actually skips an extra byte
+  whether there is an offset or not.
 */
 inline const char *
 objc_skip_offset (const char *type)
 {
   if (*type == '+')
     type++;
-  while (isdigit ((unsigned char) *type))
-    type++;
+  while (isdigit ((unsigned char) *++type))
+    ;
   return type;
 }
 
