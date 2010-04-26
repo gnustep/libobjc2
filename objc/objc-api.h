@@ -558,6 +558,7 @@ class_get_super_class(Class _class)
        * which might have ivars or methods added after this call (so we
        * mustn't resolve this class now).
        */
+      if (NULL == _class->super_class) { return NULL; }
       return (Class)objc_get_class((const char*)_class->super_class);
     }
   return _class->super_class;
