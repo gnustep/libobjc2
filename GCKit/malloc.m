@@ -92,8 +92,7 @@ void *GCAllocateBufferWithZone(void *zone, size_t size, BOOL scan)
 	char *buffer = ((char*)region) + headerSize(gc_buffer_header);
 	if (scan)
 	{
-		// FIXME: Implement
-		//GCTraceRegion(region);
+		GCAddBufferForTracing(region);
 	}
 	// Reference count is 0, so set visited to prevent it from being collected
 	// immediately

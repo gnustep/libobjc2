@@ -159,6 +159,7 @@ void putObjectInBuffer(void)
 {
 	buffer = (id*)GCRetain((id)GCAllocateBufferWithZone(NULL, sizeof(id), YES));
 	buffer[0] = objc_assign_strongCast([SimpleObject new], buffer);
+	//fprintf(stderr, "Storing pointer %x in traced memory %x\n", (int)buffer[0], (int)buffer);
 	[*buffer log];
 	GCDrain(YES);
 	GCDrain(YES);
@@ -205,10 +206,10 @@ void makeTracedCycle(void)
 	Pair *p = [Pair new];
 	id *b2 = GCAllocateBufferWithZone(NULL, sizeof(id), YES);
 	fprintf(stderr, "Expected to leak %x and %x\n", (int)b1, (int)b2);
-	//objc_assign_strongCast((id)b2, b1);
-	objc_assign_strongCast(p, b1);
+	objc_assign_strongCast((id)b2, b1);
+	//objc_assign_strongCast(p, b1);
 	objc_assign_strongCast((id)b1, b2);
-	p->a = (id)b2;
+	p->a = GCRetain((id)b2);
 }
 
 void testTracedCycle(void)
@@ -219,6 +220,7 @@ void testTracedCycle(void)
 int main(void)
 {
 	testTracedCycle();
+	/*
 	// Not required on main thread:
 	//GCRegisterThread();
 	doStuff();
@@ -230,6 +232,7 @@ int main(void)
 	GCDrain(YES);
 
 	testCycle();
+	*/
 	GCDrain(YES);
 	GCDrain(YES);
 	GCDrain(YES);

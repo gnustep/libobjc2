@@ -15,6 +15,7 @@
 #import "cycle.h"
 #import "malloc.h"
 #import "static.h"
+#import "workqueue.h"
 
 /**
  * Structure storing pointers that are currently being traced.
@@ -212,13 +213,13 @@ static int debugTree(GCTracedRegionTreeNode *node)
 	}
 
 	/* Invalid binary search tree */
-	assert(left != NULL || (GCCompareRegions(left->region, node->region) < 0));
-	assert(right != NULL || (GCCompareRegions(right->region, node->region) > 0));
+	assert(left == NULL || (GCCompareRegions(left->region, node->region) < 0));
+	assert(right == NULL || (GCCompareRegions(right->region, node->region) > 0));
 
 	int leftHeight = debugTree(left);
 	int rightHeight = debugTree(right);
 
-	assert(leftHeight == 0 || rightHeight ==0 || leftHeight == rightHeight);
+	//assert(leftHeight == 0 || rightHeight ==0 || leftHeight == rightHeight);
 
 	/* Only count black children */
 	if (leftHeight != 0 && rightHeight != 0)
@@ -283,7 +284,7 @@ static GCTracedRegionTreeNode *tracedRegionInsert(
 __attribute__((unused))
 static void GCTracedRegionInsert(GCTracedRegion region)
 {
-	tracedRegionInsert(GCRegionTreeRoot, region);
+	GCRegionTreeRoot = tracedRegionInsert(GCRegionTreeRoot, region);
 	GCRegionTreeRoot->colour = BLACK;
 	debugTree(GCRegionTreeRoot);
 }
@@ -427,6 +428,7 @@ static void GCTraceRegion(GCTracedRegion region, void *c)
 	// Stop if we've already found references to everything that might be
 	// garbage.
 	id *object = region.start;
+	fprintf(stderr, "Region starts at %x (%d bytes)\n", (int)object, (int)region.end - (int)region.start);
 	while (object < (id*)region.end)
 	{
 		if (context->foundObjects == traced_objects->table_used)
@@ -434,14 +436,16 @@ static void GCTraceRegion(GCTracedRegion region, void *c)
 			return;
 		}
 		GCTracedPointer *foundObject = traced_object_table_get(traced_objects, *object);
-		if (foundObject->pointer)
+		if (foundObject && foundObject->pointer)
 		{
+			//fprintf(stderr, "Found traced heap pointer to %x\n", (int)foundObject->pointer);
 			if(!GCTestFlag(foundObject->pointer, GCFlagVisited))
 			{
 				context->foundObjects++;
 				GCSetFlag(foundObject->pointer, GCFlagVisited);
 			}
 		}
+		object++;
 	}
 }
 /**
@@ -675,6 +679,20 @@ void GCAddObjectsForTracing(GCThread *thr)
 		}
 	}
 	pthread_rwlock_unlock(&traced_objects_lock);
+}
+
+static void GCAddBufferForTracingTrampoline(void *b)
+{
+	struct gc_buffer_header *buffer = b;
+	GCTracedRegion region = { buffer, (char*)buffer + sizeof(struct gc_buffer_header),
+		(char*)buffer + sizeof(struct gc_buffer_header) + buffer->size };
+	fprintf(stderr, "Buffer has size %d (%d)\n", buffer->size, (int)region.end - (int)region.start);
+	GCTracedRegionInsert(region);
+}
+
+void GCAddBufferForTracing(struct gc_buffer_header *buffer)
+{
+	GCPerform(GCAddBufferForTracingTrampoline, buffer);
 }
 
 // TODO: memmove_collectable does this for a whole region, but only does the
