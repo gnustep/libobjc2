@@ -60,7 +60,7 @@ namespace
       int ivarCount = cast<ConstantInt>(IvarStruct->getOperand(0))->getSExtValue();
       Constant *ivars = IvarStruct->getOperand(1);
       for (int i=0 ; i<ivarCount ; i++) {
-        Constant *ivar = ivars->getOperand(i);
+        Constant *ivar = cast<Constant>(ivars->getOperand(i));
         GlobalVariable *name =
           cast<GlobalVariable>(ivar->getOperand(0)->getOperand(0));
         std::string ivarNameStr = 
