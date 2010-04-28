@@ -1,12 +1,8 @@
 #include "llvm/Pass.h"
 #include "llvm/Function.h"
-#include "llvm/Module.h"
 #include "llvm/Instructions.h"
-#include "llvm/GlobalAlias.h"
-#include "llvm/GlobalVariable.h"
 #include "llvm/Constants.h"
 #include "llvm/Support/IRBuilder.h"
-#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "IMPCacher.h"
 
@@ -83,4 +79,3 @@ void GNUstep::IMPCacher::CacheLookup(CallInst *lookup, Value *slot, Value
   B.CreateStore(cls, B.CreateStructGEP(lookup, 1));
   B.CreateBr(afterLookupBB);
 }
-
