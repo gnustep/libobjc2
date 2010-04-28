@@ -1,6 +1,9 @@
 namespace llvm
 {
+  class BasicBlock;
   class CallInst;
+  class Function;
+  class Instruction;
   class IntegerType;
   class LLVMContext;
   class MDNode;
@@ -26,5 +29,8 @@ namespace GNUstep
     public:
       IMPCacher(LLVMContext &C, Pass *owner);
       void CacheLookup(CallInst *lookup, Value *slot, Value *version);
+      void SpeculativelyInline(Instruction *call, Function *function);
   };
+
+  void removeTerminator(BasicBlock *BB);
 }

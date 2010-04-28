@@ -1,12 +1,15 @@
 #include "IMPCacher.h"
 #include "llvm/Pass.h"
 #include "llvm/Function.h"
+#include "llvm/Module.h"
 #include "llvm/Instructions.h"
 #include "llvm/Constants.h"
 #include "llvm/LLVMContext.h"
 #include "llvm/Metadata.h"
 #include "llvm/Support/IRBuilder.h"
+#include "llvm/Support/CallSite.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Cloning.h"
 
 GNUstep::IMPCacher::IMPCacher(LLVMContext &C, Pass *owner) : Context(C),
   Owner(owner) {
@@ -27,13 +30,14 @@ void GNUstep::IMPCacher::CacheLookup(CallInst *lookup, Value *slot, Value
   if (lookup->getMetadata(IMPCacheFlagKind)) { return; }
 
   lookup->setMetadata(IMPCacheFlagKind, AlreadyCachedFlag);
+
   BasicBlock *beforeLookupBB = lookup->getParent();
   BasicBlock *lookupBB = SplitBlock(beforeLookupBB, lookup, Owner);
   BasicBlock::iterator iter = lookup;
   iter++;
   BasicBlock *afterLookupBB = SplitBlock(iter->getParent(), iter, Owner);
 
-  beforeLookupBB->getTerminator()->removeFromParent();
+  removeTerminator(beforeLookupBB);
 
   IRBuilder<> B = IRBuilder<>(beforeLookupBB);
   // Load the slot and check that neither it nor the version is 0.
@@ -77,7 +81,7 @@ void GNUstep::IMPCacher::CacheLookup(CallInst *lookup, Value *slot, Value
   lookup->replaceAllUsesWith(B.CreateLoad(slot));
 
   // Perform the real lookup and cache the result
-  lookupBB->getTerminator()->removeFromParent();
+  removeTerminator(lookupBB);
   B.SetInsertPoint(lookupBB);
   Value * newReceiver = B.CreateLoad(receiverPtr);
   BasicBlock *storeCacheBB = BasicBlock::Create(Context, "cache_store",
@@ -96,4 +100,71 @@ void GNUstep::IMPCacher::CacheLookup(CallInst *lookup, Value *slot, Value
   cls = B.CreateLoad(B.CreateBitCast(receiver, IdTy));
   B.CreateStore(cls, B.CreateStructGEP(lookup, 1));
   B.CreateBr(afterLookupBB);
+}
+
+
+void GNUstep::IMPCacher::SpeculativelyInline(Instruction *call, Function
+    *function) {
+  BasicBlock *beforeCallBB = call->getParent();
+  BasicBlock *callBB = SplitBlock(beforeCallBB, call, Owner);
+  BasicBlock *inlineBB = BasicBlock::Create(Context, "inline",
+      callBB->getParent());
+
+
+  BasicBlock::iterator iter = call;
+  iter++;
+
+  BasicBlock *afterCallBB = SplitBlock(iter->getParent(), iter, Owner);
+
+  removeTerminator(beforeCallBB);
+
+  // Put a branch before the call, testing whether the callee really is the
+  // function
+  IRBuilder<> B = IRBuilder<>(beforeCallBB);
+  Value *callee = call->getOperand(0);
+  if (callee->getType() != function->getType()) {
+    callee = B.CreateBitCast(callee, function->getType());
+  }
+  Value *isInlineValid = B.CreateICmpEQ(callee, function);
+  B.CreateCondBr(isInlineValid, inlineBB, callBB);
+
+  // In the inline BB, add a copy of the call, but this time calling the real
+  // version.
+  Instruction *inlineCall = call->clone();
+  inlineBB->getInstList().push_back(inlineCall);
+  inlineCall->setOperand(0, function);
+
+  B.SetInsertPoint(inlineBB);
+  B.CreateBr(afterCallBB);
+
+  // Unify the return values
+  if (call->getType() != Type::getVoidTy(Context)) {
+    B.SetInsertPoint(afterCallBB, afterCallBB->begin());
+    PHINode *phi = B.CreatePHI(call->getType());
+    call->replaceAllUsesWith(phi);
+    phi->addIncoming(call, callBB);
+    phi->addIncoming(inlineCall, inlineBB);
+  }
+
+  // Really do the real inlining
+  InlineFunctionInfo IFI(0, 0);
+  if (CallInst *c = dyn_cast<CallInst>(inlineCall)) {
+    InlineFunction(c, IFI);
+  } else if (InvokeInst *c = dyn_cast<InvokeInst>(inlineCall)) {
+    InlineFunction(c, IFI);
+  }
+}
+
+// Cleanly removes a terminator instruction.
+void GNUstep::removeTerminator(BasicBlock *BB) {
+  TerminatorInst *BBTerm = BB->getTerminator();
+
+  // Remove the BB as a predecessor from all of  successors
+  for (unsigned i = 0, e = BBTerm->getNumSuccessors(); i != e; ++i) {
+    BBTerm->getSuccessor(i)->removePredecessor(BB);
+  }
+
+  BBTerm->replaceAllUsesWith(UndefValue::get(BBTerm->getType()));
+  // Remove the terminator instruction itself.
+  BBTerm->eraseFromParent();
 }

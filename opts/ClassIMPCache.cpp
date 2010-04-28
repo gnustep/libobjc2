@@ -61,10 +61,6 @@ namespace
                     Value *lookupVal = classLookup->getCalledValue()->stripPointerCasts();
                     if (Function *lookupFunc = dyn_cast<Function>(lookupVal)) {
                       if (lookupFunc->getName() == "objc_lookup_class") {
-                        GlobalVariable *classNameVar = cast<GlobalVariable>(
-                            classLookup->getOperand(1)->stripPointerCasts());
-                        string className = cast<ConstantArray>(
-                            classNameVar->getInitializer() )->getAsString();
                         modified = true;
                         Lookups.push_back(call);
                       }
