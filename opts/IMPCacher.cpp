@@ -25,7 +25,8 @@ void GNUstep::IMPCacher::CacheLookup(CallInst *lookup, Value *slot, Value
   // Load the slot and check that neither it nor the version is 0.
   Value *slotValue = B.CreateLoad(slot);
   Value *versionValue = B.CreateLoad(version);
-  Value *receiver = lookup->getOperand(1);
+  Value *receiverPtr = lookup->getOperand(1);
+  Value *receiver = B.CreateLoad(receiverPtr);
 
   Value *isCacheEmpty = 
         B.CreateOr(versionValue, B.CreatePtrToInt(slotValue, IntTy));
@@ -64,6 +65,15 @@ void GNUstep::IMPCacher::CacheLookup(CallInst *lookup, Value *slot, Value
   // Perform the real lookup and cache the result
   lookupBB->getTerminator()->removeFromParent();
   B.SetInsertPoint(lookupBB);
+  Value * newReceiver = B.CreateLoad(receiverPtr);
+  BasicBlock *storeCacheBB = BasicBlock::Create(Context, "cache_store",
+      lookupBB->getParent());
+
+  // Don't store the cached lookup if we are doing forwarding tricks.
+  B.CreateCondBr(B.CreateICmpEQ(receiver, newReceiver), storeCacheBB,
+      afterLookupBB);
+  B.SetInsertPoint(storeCacheBB);
+
   // Store it even if the version is 0, because we always check that the
   // version is not 0 at the start and an occasional redundant store is
   // probably better than a branch every time.
