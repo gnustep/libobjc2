@@ -1,14 +1,32 @@
+#include "IMPCacher.h"
 #include "llvm/Pass.h"
 #include "llvm/Function.h"
 #include "llvm/Instructions.h"
 #include "llvm/Constants.h"
+#include "llvm/LLVMContext.h"
+#include "llvm/Metadata.h"
 #include "llvm/Support/IRBuilder.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include "IMPCacher.h"
+
+GNUstep::IMPCacher::IMPCacher(LLVMContext &C, Pass *owner) : Context(C),
+  Owner(owner) {
+
+  PtrTy = Type::getInt8PtrTy(Context);
+  // FIXME: 64-bit.
+  IntTy = Type::getInt32Ty(Context);
+  IdTy = PointerType::getUnqual(PtrTy);
+  Value *AlreadyCachedFlagValue = MDString::get(C, "IMPCached");
+  AlreadyCachedFlag = MDNode::get(C, &AlreadyCachedFlagValue, 1);
+  IMPCacheFlagKind = Context.getMDKindID("IMPCache");
+}
 
 void GNUstep::IMPCacher::CacheLookup(CallInst *lookup, Value *slot, Value
     *version) {
 
+  // If this IMP is already cached, don't cache it again.
+  if (lookup->getMetadata(IMPCacheFlagKind)) { return; }
+
+  lookup->setMetadata(IMPCacheFlagKind, AlreadyCachedFlag);
   BasicBlock *beforeLookupBB = lookup->getParent();
   BasicBlock *lookupBB = SplitBlock(beforeLookupBB, lookup, Owner);
   BasicBlock::iterator iter = lookup;

@@ -1,10 +1,12 @@
 namespace llvm
 {
+  class CallInst;
+  class IntegerType;
   class LLVMContext;
+  class MDNode;
   class Pass;
   class PointerType;
-  class IntegerType;
-  class CallInst;
+  class Value;
 }
 
 using namespace llvm;
@@ -15,17 +17,14 @@ namespace GNUstep
   {
     private:
       LLVMContext &Context;
+      MDNode *AlreadyCachedFlag;
+      unsigned IMPCacheFlagKind;
       Pass *Owner;
       const PointerType *PtrTy;
       const PointerType *IdTy;
       const IntegerType *IntTy;
     public:
-      IMPCacher(LLVMContext &C, Pass *owner) : Context(C), Owner(owner) {
-        PtrTy = Type::getInt8PtrTy(Context);
-        // FIXME: 64-bit.
-        IntTy = Type::getInt32Ty(Context);
-        IdTy = PointerType::getUnqual(PtrTy);
-      }
+      IMPCacher(LLVMContext &C, Pass *owner);
       void CacheLookup(CallInst *lookup, Value *slot, Value *version);
   };
 }
