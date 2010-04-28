@@ -61,7 +61,6 @@ namespace
       for (SmallVectorImpl<ClassLookup>::iterator i=Lookups.begin(), 
           e=Lookups.end() ; e!=i ; i++) {
         Value *global = M->getGlobalVariable(("_OBJC_CLASS_" + i->second).c_str(), true);
-        fprintf(stderr, "%s\n", ("_OBJC_CLASS_" + i->second).c_str());
         if (global) {
           Value *cls = new BitCastInst(global, i->first->getType(), "class", i->first);
           i->first->replaceAllUsesWith(cls);
