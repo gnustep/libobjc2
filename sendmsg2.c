@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <dlfcn.h>
 
+#define PROFILE
 __thread id objc_msg_sender;
 
 static struct objc_slot nil_slot = { Nil, Nil, "", 1, (IMP)nil_method };
@@ -80,6 +81,7 @@ Slot_t (*objc_plane_lookup)(id *receiver, SEL op, id sender) =
  */
 Slot_t objc_msg_lookup_sender(id *receiver, SEL selector, id sender)
 {
+	//fprintf(stderr, "Looking up slot %s\n", sel_get_name(selector));
 	// Returning a nil slot allows the caller to cache the lookup for nil too,
 	// although this is not particularly useful because the nil method can be
 	// inlined trivially.
@@ -111,12 +113,6 @@ Slot_t objc_msg_lookup_sender(id *receiver, SEL selector, id sender)
 
 #ifdef PROFILE
 /**
- * When profiling, the runtime writes out two files, one containing tuples of
- * call sites and associated information, the other containing symbolic
- * information for resolving these.  The loggedValues sparse array is used to prevent duplication of 
- */
-static struct sarray *loggedValues;
-/**
  * Mutex used to protect non-thread-safe parts of the profiling subsystem.
  */
 static mutex_t profileLock;
@@ -129,35 +125,46 @@ FILE *profileSymbols;
  */
 FILE *profileData;
 
-static char *objc_profile_resolve_symbol_null(void *addr) { return NULL; }
-/**
- * Hook allowing JIT'd functions to be resolved.  Takes an address as an
- * argument and returns the symbol name.
- */
-char *(*objc_profile_resolve_symbol)(void *addr) =
-	objc_profile_resolve_symbol_null;
-
-
-// Don't enable profiling in the default build (yet)
 struct profile_info 
 {
 	const char *module;
 	int32_t callsite;
 	IMP method;
-	Class cls; 
 };
 
 static void __objc_profile_init(void)
 {
 	INIT_LOCK(profileLock);
-	loggedValues = sarray_new(128, 0);
 	profileSymbols = fopen("objc_profile.symbols", "a");
 	profileData = fopen("objc_profile.data", "a");
 	// Write markers indicating a new run.  
 	fprintf(profileSymbols, "=== NEW TRACE ===\n");
-	struct profile_info profile_data = { 0, 0, 0, 0};
+	struct profile_info profile_data = { 0, 0, 0 };
 	fwrite(&profile_data, sizeof(profile_data), 1, profileData);
 }
+
+void objc_profile_write_symbols(char **symbols)
+{
+	if (NULL == profileData)
+	{
+		LOCK(__objc_runtime_mutex);
+		if (NULL == profileData)
+		{
+			__objc_profile_init();
+		}
+		UNLOCK(__objc_runtime_mutex);
+	}
+	LOCK(&profileLock);
+	while(*symbols)
+	{
+		char *address = *(symbols++);
+		char *symbol = *(symbols++);
+		fprintf(profileSymbols, "%zx %s\n", (size_t)address, symbol);
+	}
+	UNLOCK(&profileLock);
+	fflush(profileSymbols);
+}
+
 /**
  * Profiling version of the slot lookup.  This takes a unique ID for the module
  * and the callsite as extra arguments.  The type of the receiver and the
@@ -170,60 +177,19 @@ Slot_t objc_msg_lookup_profile(id *receiver, SEL selector, id sender,
 {
 	// Initialize the logging lazily.  This prevents us from wasting any memory
 	// when we are not profiling.
-	if (NULL == loggedValues)
+	if (NULL == profileData)
 	{
 		LOCK(__objc_runtime_mutex);
-		if (NULL == loggedValues)
+		if (NULL == profileData)
 		{
 			__objc_profile_init();
 		}
 		UNLOCK(__objc_runtime_mutex);
 	}
 	// Look up the class if the receiver is not nil
-	Class cls = Nil;
-	if (nil != *receiver)
-	{
-		cls = (*receiver)->class_pointer;
-		if (!sarray_get_safe(loggedValues, (size_t)cls))
-		{
-			LOCK(&profileLock);
-			if (!sarray_get_safe(loggedValues, (size_t)cls))
-			{
-				fprintf(profileSymbols, "%zx %s\n", (size_t)cls, cls->name);
-			}
-			UNLOCK(&profileLock);
-		}
-	}
 	Slot_t slot = objc_msg_lookup_sender(receiver, selector, sender);
-	IMP method = (IMP)0;
-	if (0 != slot->version)
-	{
-		method = slot->method;
-		if (!sarray_get_safe(loggedValues, (size_t)method))
-		{
-			Dl_info info;
-			const char *symbolName;
-			if (dladdr((void*)method, &info))
-			{
-				symbolName = info.dli_sname;
-			}
-			else
-			{
-				symbolName = objc_profile_resolve_symbol((void*)method);
-			}
-			if (NULL != symbolName)
-			{
-				LOCK(&profileLock);
-				if (!sarray_get_safe(loggedValues, (size_t)method))
-				{
-					fprintf(profileSymbols, "%zx %s\n", (size_t)method, symbolName);
-				}
-				UNLOCK(&profileLock);
-				sarray_at_put_safe(loggedValues, (size_t)method, (void*)1);
-			}
-		}
-	}
-	struct profile_info profile_data = { module, callsite, method, cls };
+	IMP method = slot->method;
+	struct profile_info profile_data = { module, callsite, method };
 	fwrite(&profile_data, sizeof(profile_data), 1, profileData);
 	return slot;
 }
