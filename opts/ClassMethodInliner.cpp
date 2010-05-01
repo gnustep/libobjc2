@@ -8,6 +8,7 @@
 #include "llvm/GlobalVariable.h"
 #include "llvm/Support/IRBuilder.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/InlineCost.h"
 #include "IMPCacher.h"
 #include <string>
 
@@ -39,6 +40,8 @@ namespace
 
     virtual bool runOnModule(Module &M) {
       unsigned MessageSendMDKind = M.getContext().getMDKindID("GNUObjCMessageSend");
+      InlineCostAnalyzer CA;
+      SmallPtrSet<const Function *, 16> NeverInline;
 
       GNUstep::IMPCacher cacher = GNUstep::IMPCacher(M.getContext(), this);
       // FIXME: ILP64
@@ -79,7 +82,13 @@ namespace
 
           if (0 == method || method->isDeclaration()) { continue; }
 
-          cacher.SpeculativelyInline((*i).getInstruction(), method);
+          InlineCost IC = CA.getInlineCost((*i), method, NeverInline);
+          // FIXME: 200 is a random number.  Pick a better one!
+          if (IC.isAlways() || (IC.isVariable() && IC.getValue() < 200)) {
+            cacher.SpeculativelyInline((*i).getInstruction(), method);
+            i->getInstruction()->setMetadata(MessageSendMDKind, 0);
+            modified = true;
+          }
         }
       }
       return modified;
