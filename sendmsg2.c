@@ -111,6 +111,27 @@ Slot_t objc_msg_lookup_sender(id *receiver, SEL selector, id sender)
 	return objc_plane_lookup(receiver, selector, sender);
 }
 
+Slot_t objc_slot_lookup_super(Super_t super, SEL selector)
+{
+	id receiver = super->self;
+	if (receiver)
+	{
+		Class class = super->class;
+		Slot_t result = sarray_get_safe(class->dtable, (sidx)selector->sel_id);
+		if (0 == result)
+		{
+			// Dtable should always be installed in the superclass
+			assert(dtable_for_class(class) != __objc_uninstalled_dtable);
+			result = &nil_slot;
+		}
+		return result;
+	}
+	else
+	{
+		return &nil_slot;
+	}
+}
+
 #ifdef PROFILE
 /**
  * Mutex used to protect non-thread-safe parts of the profiling subsystem.
@@ -119,11 +140,11 @@ static mutex_t profileLock;
 /**
  * File used for writing the profiling symbol table.
  */
-FILE *profileSymbols;
+static FILE *profileSymbols;
 /**
  * File used for writing the profiling data.
  */
-FILE *profileData;
+static FILE *profileData;
 
 struct profile_info 
 {
