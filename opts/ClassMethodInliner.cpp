@@ -60,7 +60,7 @@ namespace
           for (BasicBlock::iterator b=i->begin(), last=i->end() ;
               b != last ; ++b) {
             CallSite call = CallSite::get(b);
-            if (call.getInstruction()) {
+            if (call.getInstruction() && !call.getCalledFunction()) {
               MDNode *messageType = call->getMetadata(MessageSendMDKind);
               if (0 == messageType) { continue; }
               messages.push_back(call);
@@ -97,7 +97,7 @@ namespace
 
   char ClassMethodInliner::ID = 0;
   RegisterPass<ClassMethodInliner> X("gnu-class-method-inline", 
-          "Inline class methods");
+          "Inline class methods and message sends to super");
 }
 
 ModulePass *createClassMethodInliner(void)

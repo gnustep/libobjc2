@@ -158,7 +158,12 @@ void GNUstep::IMPCacher::SpeculativelyInline(Instruction *call, Function
       }
     }
     if (FTy->getReturnType() != calleeTy->getReturnType()) {
-      inlineResult = new BitCastInst(inlineCall, calleeTy->getReturnType(), "", inlineBB);
+      if (FTy->getReturnType() == Type::getVoidTy(Context)) {
+        inlineResult = Constant::getNullValue(calleeTy->getReturnType());
+      } else {
+        inlineResult = 
+          new BitCastInst(inlineCall, calleeTy->getReturnType(), "", inlineBB);
+      }
     }
   }
 

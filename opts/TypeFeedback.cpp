@@ -3,6 +3,7 @@
 #include "llvm/Module.h"
 #include "llvm/Function.h"
 #include "llvm/Instructions.h"
+#include "llvm/Support/CallSite.h"
 #include "llvm/Support/IRBuilder.h"
 #include "llvm/Linker.h"
 #include <vector>
@@ -23,36 +24,22 @@ namespace {
       for (Function::iterator i=F.begin(), e=F.end() ;
                       i != e ; ++i) {
 
+        Module *M = F.getParent();
         replacementVector replacements;
         for (BasicBlock::iterator b=i->begin(), last=i->end() ;
             b != last ; ++b) {
 
-          Module *M = F.getParent();
-          if (CallInst *call = dyn_cast<CallInst>(b)) { 
-            if (Function *callee = call->getCalledFunction()) {
-              if (callee->getName() == "objc_msg_lookup_sender") {
-
-                llvm::Value *args[] = { call->getOperand(1),
-                  call->getOperand(2), call->getOperand(3),
-                  ModuleID, ConstantInt::get(Int32Ty,
-                      callsiteCount++) };
-                Function *profile = cast<Function>(
-                    M->getOrInsertFunction("objc_msg_lookup_profile",
-                      callee->getFunctionType()->getReturnType(),
-                      args[0]->getType(), args[1]->getType(),
-                      args[2]->getType(),
-                      ModuleID->getType(), Int32Ty, NULL));
-                llvm::CallInst *profileCall = 
-                  CallInst::Create(profile, args, args+5, "", call);
-                replacements.push_back(callPair(call, profileCall));
-              }
-            }
+          CallSite call = CallSite::get(b);
+          if (call.getInstruction() && !call.getCalledFunction()) {
+            llvm::Value *args[] = { call->getOperand(1), call->getOperand(0),
+              ModuleID, ConstantInt::get(Int32Ty, callsiteCount++) };
+            Constant *profile = 
+                M->getOrInsertFunction("objc_msg_profile",
+                  Type::getVoidTy(M->getContext()),
+                  args[0]->getType(), args[1]->getType(),
+                  args[2]->getType(), args[3]->getType(), NULL);
+            CallInst::Create(profile, args, args+4, "", call.getInstruction());
           }
-        }
-        for (replacementVector::iterator r=replacements.begin(), 
-            e=replacements.end() ; e!=r ; r++) {
-          r->first->replaceAllUsesWith(r->second);
-          r->second->getParent()->getInstList().erase(r->first);
         }
       }
     }
