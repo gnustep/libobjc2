@@ -193,8 +193,8 @@ void objc_profile_write_symbols(char **symbols)
  * be used to determine whether adding slot caching is worthwhile, and whether
  * any of the resulting methods should be speculatively inlined.
  */
-Slot_t objc_msg_lookup_profile(id *receiver, SEL selector, id sender, 
-                               const char *module, int32_t callsite)
+void objc_msg_profile(id receiver, IMP method,
+                      const char *module, int32_t callsite)
 {
 	// Initialize the logging lazily.  This prevents us from wasting any memory
 	// when we are not profiling.
@@ -207,11 +207,7 @@ Slot_t objc_msg_lookup_profile(id *receiver, SEL selector, id sender,
 		}
 		UNLOCK(__objc_runtime_mutex);
 	}
-	// Look up the class if the receiver is not nil
-	Slot_t slot = objc_msg_lookup_sender(receiver, selector, sender);
-	IMP method = slot->method;
 	struct profile_info profile_data = { module, callsite, method };
 	fwrite(&profile_data, sizeof(profile_data), 1, profileData);
-	return slot;
 }
 #endif
