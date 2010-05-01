@@ -28,7 +28,8 @@ namespace GNUstep
       const IntegerType *IntTy;
     public:
       IMPCacher(LLVMContext &C, Pass *owner);
-      void CacheLookup(CallInst *lookup, Value *slot, Value *version);
+      void CacheLookup(Instruction *lookup, Value *slot, Value *version, bool
+          isSuperMessage=false);
       void SpeculativelyInline(Instruction *call, Function *function);
   };
 

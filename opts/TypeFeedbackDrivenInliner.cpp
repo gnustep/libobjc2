@@ -10,14 +10,14 @@
 using namespace llvm;
 
 namespace {
-  struct GNUObjCTypeFeedback : public ModulePass {
+  struct GNUObjCTypeFeedbackDrivenInliner : public ModulePass {
       
     typedef std::pair<CallInst*,CallInst*> callPair;
     typedef std::vector<callPair > replacementVector;
       static char ID;
     uint32_t callsiteCount;
     const IntegerType *Int32Ty;
-      GNUObjCTypeFeedback() : ModulePass(&ID), callsiteCount(0) {}
+      GNUObjCTypeFeedbackDrivenInliner() : ModulePass(&ID), callsiteCount(0) {}
 
     void profileFunction(Function &F, Constant *ModuleID) {
       for (Function::iterator i=F.begin(), e=F.end() ;
@@ -31,7 +31,6 @@ namespace {
           if (CallInst *call = dyn_cast<CallInst>(b)) { 
             if (Function *callee = call->getCalledFunction()) {
               if (callee->getName() == "objc_msg_lookup_sender") {
-
                 llvm::Value *args[] = { call->getOperand(1),
                   call->getOperand(2), call->getOperand(3),
                   ModuleID, ConstantInt::get(Int32Ty,
@@ -143,8 +142,9 @@ namespace {
 
   };
   
-  char GNUObjCTypeFeedback::ID = 0;
-  RegisterPass<GNUObjCTypeFeedback> X("gnu-objc-type-feedback", 
-      "Objective-C type feedback for the GNU runtime.", false, true);
+  char GNUObjCTypeFeedbackDrivenInliner::ID = 0;
+  RegisterPass<GNUObjCTypeFeedbackDrivenInliner> X("gnu-objc-feedback-driven-inline", 
+      "Objective-C type feedback-driven inliner for the GNU runtime.", false,
+      true);
 }
 

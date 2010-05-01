@@ -2,6 +2,7 @@
 #include "llvm/Function.h"
 #include "llvm/Module.h"
 #include "llvm/Instructions.h"
+#include "llvm/Support/CallSite.h"
 #include "llvm/Constants.h"
 #include "llvm/LLVMContext.h"
 #include "llvm/GlobalVariable.h"
@@ -47,41 +48,38 @@ namespace
       for (Module::iterator F=M.begin(), fend=M.end() ;
           F != fend ; ++F) {
 
-        SmallVector<CallInst*, 16> messages;
+        SmallVector<CallSite, 16> messages;
 
         if (F->isDeclaration()) { continue; }
-
-        SmallVector<CallInst*, 16> Lookups;
 
         for (Function::iterator i=F->begin(), end=F->end() ;
             i != end ; ++i) {
           for (BasicBlock::iterator b=i->begin(), last=i->end() ;
               b != last ; ++b) {
-            // FIXME: InvokeInst
-            if (CallInst *call = dyn_cast<CallInst>(b)) {
-              Instruction *callee = 
-                dyn_cast<Instruction>(call->getCalledValue()->stripPointerCasts());
-              if (0 == callee) { continue; }
-              MDNode *messageType = callee->getMetadata(MessageSendMDKind);
+            CallSite call = CallSite::get(b);
+            if (call.getInstruction()) {
+              MDNode *messageType = call->getMetadata(MessageSendMDKind);
               if (0 == messageType) { continue; }
               messages.push_back(call);
             }
           }
         }
-        for (SmallVectorImpl<CallInst*>::iterator i=messages.begin(), 
+        for (SmallVectorImpl<CallSite>::iterator i=messages.begin(), 
             e=messages.end() ; e!=i ; i++) {
 
-          Instruction *callee = 
-            dyn_cast<Instruction>((*i)->getCalledValue()->stripPointerCasts());
-          MDNode *messageType = callee->getMetadata(MessageSendMDKind);
-          StringRef sel = cast<MDString>(messageType->getOperand(0))->getString();
-          StringRef cls = cast<MDString>(messageType->getOperand(1))->getString();
-          StringRef functionName = SymbolNameForMethod(cls, "", sel, true);
+          MDNode *messageType = (*i)->getMetadata(MessageSendMDKind);
+          StringRef sel = 
+                cast<MDString>(messageType->getOperand(0))->getString();
+          StringRef cls = 
+                cast<MDString>(messageType->getOperand(1))->getString();
+          bool isClassMethod = 
+                cast<ConstantInt>(messageType->getOperand(2))->isOne();
+          StringRef functionName = SymbolNameForMethod(cls, "", sel, isClassMethod);
           Function *method = M.getFunction(functionName);
 
           if (0 == method || method->isDeclaration()) { continue; }
 
-          cacher.SpeculativelyInline(*i, method);
+          cacher.SpeculativelyInline((*i).getInstruction(), method);
         }
       }
       return modified;

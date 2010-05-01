@@ -23,8 +23,8 @@ GNUstep::IMPCacher::IMPCacher(LLVMContext &C, Pass *owner) : Context(C),
   IMPCacheFlagKind = Context.getMDKindID("IMPCache");
 }
 
-void GNUstep::IMPCacher::CacheLookup(CallInst *lookup, Value *slot, Value
-    *version) {
+void GNUstep::IMPCacher::CacheLookup(Instruction *lookup, Value *slot, Value
+    *version, bool isSuperMessage) {
 
   // If this IMP is already cached, don't cache it again.
   if (lookup->getMetadata(IMPCacheFlagKind)) { return; }
@@ -44,7 +44,10 @@ void GNUstep::IMPCacher::CacheLookup(CallInst *lookup, Value *slot, Value
   Value *slotValue = B.CreateLoad(slot);
   Value *versionValue = B.CreateLoad(version);
   Value *receiverPtr = lookup->getOperand(1);
-  Value *receiver = B.CreateLoad(receiverPtr);
+  Value *receiver = receiverPtr;
+  if (!isSuperMessage) {
+    receiver = B.CreateLoad(receiverPtr);
+  }
 
   Value *isCacheEmpty = 
         B.CreateOr(versionValue, B.CreatePtrToInt(slotValue, IntTy));
@@ -83,7 +86,10 @@ void GNUstep::IMPCacher::CacheLookup(CallInst *lookup, Value *slot, Value
   // Perform the real lookup and cache the result
   removeTerminator(lookupBB);
   B.SetInsertPoint(lookupBB);
-  Value * newReceiver = B.CreateLoad(receiverPtr);
+  Value * newReceiver = receiver;
+  if (!isSuperMessage) {
+    newReceiver = B.CreateLoad(receiverPtr);
+  }
   BasicBlock *storeCacheBB = BasicBlock::Create(Context, "cache_store",
       lookupBB->getParent());
 
@@ -122,19 +128,40 @@ void GNUstep::IMPCacher::SpeculativelyInline(Instruction *call, Function
   // function
   IRBuilder<> B = IRBuilder<>(beforeCallBB);
   Value *callee = call->getOperand(0);
-  if (callee->getType() != function->getType()) {
+
+  const FunctionType *FTy = function->getFunctionType();
+  const FunctionType *calleeTy = cast<FunctionType>(
+      cast<PointerType>(callee->getType())->getElementType());
+  if (calleeTy != FTy) {
     callee = B.CreateBitCast(callee, function->getType());
   }
+
   Value *isInlineValid = B.CreateICmpEQ(callee, function);
   B.CreateCondBr(isInlineValid, inlineBB, callBB);
 
   // In the inline BB, add a copy of the call, but this time calling the real
   // version.
   Instruction *inlineCall = call->clone();
+  Value *inlineResult= inlineCall;
   inlineBB->getInstList().push_back(inlineCall);
   inlineCall->setOperand(0, function);
 
   B.SetInsertPoint(inlineBB);
+
+  if (calleeTy != FTy) {
+    for (unsigned i=0 ; i<FTy->getNumParams() ; i++) {
+      const Type *callType = calleeTy->getParamType(i);
+      const Type *argType = FTy->getParamType(i);
+      if (callType != argType) {
+        inlineCall->setOperand(i+1, new
+            BitCastInst(inlineCall->getOperand(i+1), argType, "", inlineCall));
+      }
+    }
+    if (FTy->getReturnType() != calleeTy->getReturnType()) {
+      inlineResult = new BitCastInst(inlineCall, calleeTy->getReturnType(), "", inlineBB);
+    }
+  }
+
   B.CreateBr(afterCallBB);
 
   // Unify the return values
@@ -143,7 +170,7 @@ void GNUstep::IMPCacher::SpeculativelyInline(Instruction *call, Function
     PHINode *phi = B.CreatePHI(call->getType());
     call->replaceAllUsesWith(phi);
     phi->addIncoming(call, callBB);
-    phi->addIncoming(inlineCall, inlineBB);
+    phi->addIncoming(inlineResult, inlineBB);
   }
 
   // Really do the real inlining
