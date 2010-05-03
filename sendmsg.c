@@ -593,11 +593,15 @@ static void merge_method_list_to_class (Class class,
   // If we've already got the methods from this method list, we also have all
   // of the methods from all of the ones further along the chain, so don't
   // bother adding them again.
+  /*
+   * FIXME: This doesn't take into account the lazy copying stuff in the sarray.
   if (NULL != firstslot &&
+      firstslot->owner == class &&
       firstslot->method == method_list->method_list[0].method_imp)
     {
       return;
     }
+	*/
   // If we haven't already visited this method list, then we might not have
   // already visited the one after it either...
   if (method_list->method_next)
@@ -616,7 +620,7 @@ static void merge_method_list_to_class (Class class,
         struct objc_slot *slot = sarray_get_safe(dtable, sel_id);
         struct objc_slot *superslot = sarray_get_safe(super_dtable, sel_id);
 
-        // If there is no existing slot, then just use the superclass's one
+        // If there is no existing slot, then just use the superclass's one.
         if (NULL == slot)
           {
             sarray_at_put_safe (dtable, sel_id, superslot);
