@@ -588,8 +588,8 @@ static void merge_method_list_to_class (Class class,
         }
       return;
     }
-  struct objc_slot *firstslot = 
-      sarray_get_safe(dtable, (size_t)method_list->method_list[0].method_name->sel_id);
+  //struct objc_slot *firstslot = 
+  //    sarray_get_safe(dtable, (size_t)method_list->method_list[0].method_name->sel_id);
   // If we've already got the methods from this method list, we also have all
   // of the methods from all of the ones further along the chain, so don't
   // bother adding them again.
