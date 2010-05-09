@@ -1,5 +1,5 @@
 LEVEL = ../../../
-LIBRARYNAME = GNUObjCRuntime
+LIBRARYNAME = libGNUObjCRuntime
 LOADABLE_MODULE = 1
 USEDLIBS =
 
