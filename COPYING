@@ -17,6 +17,7 @@ Some individual files retain their original MIT license.  These are:
 blocks_runtime.m 
 class_table.c
 hash_table.h
+ivar.c
 lock.h
 mutation.m
 pool.h
@@ -26,6 +27,9 @@ sync.m
 objc/blocks_runtime.h 
 objc/runtime.h
 NSBlocks.m
+
+All of the private headers (those not in the objc/ directory) are also covered
+by the MIT license, in as far as they are covered by copyright law.
 
 These files may be used for any purpose, including binary-only redistribution,
 according to the terms of the MIT license, as long as their copyright notices

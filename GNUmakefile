@@ -26,6 +26,7 @@ libobjc_C_FILES = \
 	exception.c\
 	gc.c\
 	hash.c\
+	ivar.c\
 	init.c\
 	misc.c\
 	nil_method.c\

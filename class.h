@@ -24,7 +24,9 @@ struct objc_class
 	 */
 	long                version;
 	/**
-	 * A bitfield containing various flags.  
+	 * A bitfield containing various flags.  See the objc_class_flags
+	 * enumerated type for possible values.  The top half of this value
+	 * contains the class number.
 	 */
 	unsigned long       info;
 	/**
@@ -107,3 +109,56 @@ struct objc_class
 	*/
 	struct objc_property_list *properties;
 };
+
+/**
+ * An enumerated type describing all of the valid flags that may be used in the
+ * info field of a class.
+ */
+enum objc_class_flags
+{
+	/** This class structure represents a class. */
+	objc_class_flag_class = (1<<0),
+	/** This class structure represents a metaclass. */
+	objc_class_flag_meta = (1<<1),
+	/**
+	 * This class has been sent a +initalize message.  This message is sent
+	 * exactly once to every class that is sent a message by the runtime, just
+	 * before the first other message is sent.
+	 */
+	objc_class_flag_initialized = (1<<2),
+	/** 
+	 * The class has been initialized by the runtime.  Its super_class pointer
+	 * should now point to a class, rather than a C string containing the class
+	 * name, and its subclass and sibling class links will have been assigned,
+	 * if applicable.
+	 */
+	objc_class_flag_resolved = (1<<3),
+	/** 
+	 * The class uses the new, Objective-C 2, runtime ABI.  This ABI defines an
+	 * ABI version field inside the class, and so will be used for all
+	 * subsequent versions that retain some degree of compatibility.
+	 */
+	objc_class_flag_new_abi = (1<<4),
+	/**
+	 * This class was created at run time and may be freed.
+	 */
+	objc_class_flag_user_created = (1<<5),
+	/** 
+	 * Instances of this class have a reference count and plane ID prepended to
+	 * them.  The default for this is set for classes, unset for metaclasses.
+	 * It should be cleared by protocols, constant strings, and objects not
+	 * allocated by NSAllocateObject().
+	 */
+	objc_class_flag_plane_aware = (1<<6)
+};
+
+static inline void objc_set_class_flag(struct objc_class *aClass,
+                                       enum objc_class_flags flag)
+{
+	aClass->info |= (long)flag;
+}
+static inline BOOL objc_test_class_flag(struct objc_class *aClass,
+                                        enum objc_class_flags flag)
+{
+	return aClass->info & (long)flag;
+}
