@@ -26,9 +26,13 @@ see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
 
 #include <stdlib.h>
 #include "objc/runtime-legacy.h"
+#include "objc/slot.h"
 #include "objc/sarray.h"
 #include "objc/encoding.h"
 #include "lock.h"
+#define POOL_NAME slot
+#define POOL_TYPE struct objc_slot
+#include "pool.h"
 
 void objc_resolve_class(Class);
 
@@ -96,31 +100,6 @@ __objc_get_forward_imp (id rcv, SEL sel)
   abort();
 }
 
-struct objc_slot
-{
-        Class owner;
-        Class cachedFor;
-        const char *types;
-        int version;
-        IMP method;
-};
-
-// Malloc slots a page at a time.
-#define SLOT_POOL_SIZE ((4096) / sizeof(struct objc_slot))
-static struct objc_slot *slot_pool;
-static int slot_pool_left;
-
-static struct objc_slot *
-pool_alloc_slot(void)
-{
-  if (!slot_pool_left)
-    {
-      slot_pool = objc_malloc (sizeof (struct objc_slot)
-                                   * SLOT_POOL_SIZE);
-      slot_pool_left = SLOT_POOL_SIZE;
-    }
-  return &slot_pool[--slot_pool_left];
-}
 
 static inline IMP sarray_get_imp (struct sarray *dtable, size_t key)
 {
@@ -478,7 +457,7 @@ __objc_send_initialize (Class class)
 }
 static struct objc_slot *new_slot_for_method_in_class(Method *method, Class class)
 {
-  struct objc_slot *slot = pool_alloc_slot();
+  struct objc_slot *slot = slot_pool_alloc();
   slot->owner = class;
   slot->types = method->method_types;
   slot->method = method->method_imp;
@@ -588,12 +567,12 @@ static void merge_method_list_to_class (Class class,
         }
       return;
     }
-  //struct objc_slot *firstslot = 
+  /*
+  struct objc_slot *firstslot = 
   //    sarray_get_safe(dtable, (size_t)method_list->method_list[0].method_name->sel_id);
   // If we've already got the methods from this method list, we also have all
   // of the methods from all of the ones further along the chain, so don't
   // bother adding them again.
-  /*
    * FIXME: This doesn't take into account the lazy copying stuff in the sarray.
   if (NULL != firstslot &&
       firstslot->owner == class &&
@@ -840,6 +819,12 @@ struct sarray *
 objc_get_uninstalled_dtable ()
 {
   return __objc_uninstalled_dtable;
+}
+
+void objc_resize_uninstalled_dtable(void)
+{
+	assert(__objc_uninstalled_dtable != NULL);
+	sarray_realloc (__objc_uninstalled_dtable, __objc_selector_max_index + 1);
 }
 
 // This is an ugly hack to make sure that the compiler can do inlining into

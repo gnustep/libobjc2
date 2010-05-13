@@ -63,9 +63,8 @@ static BOOL PREFIX(_is_null)(void *value)
 }
 #	define MAP_TABLE_VALUE_NULL PREFIX(_is_null)
 #	define MAP_TABLE_VALUE_PLACEHOLDER NULL
-#else
-#	define MAP_TABLE_ACCESS_BY_REFERENCE
 #endif
+
 typedef struct PREFIX(_table_cell_struct)
 {
 	uint32_t secondMaps;

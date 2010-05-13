@@ -19,6 +19,7 @@ class_table.c
 hash_table.h
 lock.h
 mutation.m
+pool.h
 runtime.c 
 string_hash.c
 sync.m 

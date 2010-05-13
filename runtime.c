@@ -602,7 +602,7 @@ IMP method_getImplementation(Method method)
 
 SEL method_getName(Method method)
 {
-	return method->method_name;
+	return (SEL)method->method_name;
 }
 
 unsigned method_getNumberOfArguments(Method method)
@@ -844,24 +844,4 @@ void objc_registerClassPair(Class cls)
 	__objc_add_class_to_hash(cls);
 	objc_resolve_class(cls);
 
-}
-
-const char *sel_getName(SEL sel)
-{
-	return sel_get_name(sel);
-}
-
-SEL sel_getUid(const char *selName)
-{
-	return sel_get_uid(selName);
-}
-
-BOOL sel_isEqual(SEL sel1, SEL sel2)
-{
-	return sel_eq(sel1, sel2);
-}
-
-SEL sel_registerName(const char *selName)
-{
-	return sel_register_name(selName);
 }

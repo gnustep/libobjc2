@@ -73,9 +73,7 @@ void (*_objc_load_callback) (Class class, Category *category); /* !T:SAFE */
 /* Is all categories/classes resolved?  */
 BOOL __objc_dangling_categories = NO;           /* !T:UNUSED */
 
-extern SEL
-__sel_register_typed_name (const char *name, const char *types, 
-			   struct objc_selector *orig, BOOL is_const);
+void __objc_register_selector_array(SEL selectors, unsigned long count);
 
 /* Sends +load to all classes and categories in certain situations.  */
 static void objc_send_load (void);
@@ -535,9 +533,6 @@ __objc_exec_class (Module_t module)
   /* Entry used to traverse hash lists */
   struct objc_list **cell;
 
-  /* The table of selector references for this module */
-  SEL selectors = symtab->refs; 
-
   /* dummy counter */
   int i;
 
@@ -572,19 +567,9 @@ __objc_exec_class (Module_t module)
   __objc_module_list = list_cons (module, __objc_module_list);
 
   /* Replace referenced selectors from names to SEL's.  */
-  if (selectors)
+  if (symtab->refs)
     {
-      for (i = 0; selectors[i].sel_id; ++i)
-	{
-	  const char *name, *type;
-	  name = (char *) selectors[i].sel_id;
-	  type = (char *) selectors[i].sel_types;
-	  /* Constructors are constant static data so we can safely store
-	     pointers to them in the runtime structures. is_const == YES */
-	  __sel_register_typed_name (name, type, 
-				     (struct objc_selector *) &(selectors[i]),
-				     YES);
-	}
+      __objc_register_selector_array(symtab->refs, symtab->sel_ref_cnt);
     }
 
   /* Parse the classes in the load module and gather selector information.  */

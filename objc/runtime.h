@@ -36,7 +36,7 @@ typedef struct objc_ivar* Ivar;
 
 // Don't redefine these types if the old GNU header was included first.
 #ifndef __objc_INCLUDE_GNU
-typedef const struct objc_selector *SEL;
+typedef struct objc_selector *SEL;
 
 typedef struct objc_class *Class;
 
@@ -272,49 +272,28 @@ BOOL sel_isEqual(SEL sel1, SEL sel2);
 
 SEL sel_registerName(const char *selName);
 
+/**
+ * Register a typed selector.
+ */
+SEL sel_registerTypedName_np(const char *selName, const char *types);
+
+/**
+ * Returns the type encoding associated with a selector, or the empty string is
+ * there is no such type.
+ */
+const char *sel_getType_np(SEL aSel);
+
+/**
+ * Copies all of the type encodings associated with a given selector name into
+ * types, returning the number of types.
+ */
+unsigned sel_copyTypes(const char *selName, const char **types, unsigned count);
+
 #else
 #include "runtime-legacy.h"
 #endif // __LEGACY_GNU_MODE__
+#include "slot.h"
 
-/**
- * The objc_slot structure is used to permit safe IMP caching.  It is returned
- * by the new lookup APIs.  When you cache an IMP, you should store a copy of
- * the version field and a pointer to the slot. 
- *
- * The slot version is guaranteed never to be 0.  When updating a cache, you
- * should use code of the following form:
- *
- * 1) version = 0;
- * 2) slot->cachedFor = receiver->isa;
- * 3) slot_cache = slot;
- * 4) version = slot->version;
- *
- * The runtime guarantees that the version in any cachable slot will never be
- * 0.  This should ensure that, if the version and cache pointer mismatch, the
- * next access will cause a cache miss.  
- *
- * When using a cached slot, you should compare the owner pointer to the isa
- * pointer of the receiver and the message and the version of the slot to your
- * cached version.
- */
-struct objc_slot
-{
-	/** The class to which this slot is attached (used internally).  */
-	Class owner;
-	/** The class for which this slot was cached.  Note that this can be
-	 * modified by different cache owners, in different threads.  Doing so may
-	 * cause some cache misses, but if different methods are sending messages
-	 * to the same object and sharing a cached slot then it may also improve
-	 * cache hits.  Profiling is probably required here. */
-	Class cachedFor;
-	/** The type encoding for the method identified by this slot. */
-	char *types;
-	/** The current version.  This changes if the method changes or if a
-	 * subclass overrides this method, potentially invalidating this cache. */
-	int version;
-	/** The method pointer for this method. */
-	IMP method;
-} OBJC_NONPORTABLE;
 /**
  * New ABI lookup function.  Receiver may be modified during lookup or proxy
  * forwarding and the sender may affect how lookup occurs.
