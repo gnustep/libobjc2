@@ -57,6 +57,7 @@ libobjc_HEADER_FILES = \
 	runtime-legacy.h\
 	runtime.h\
 	sarray.h\
+	slot.h\
 	thr.h\
 	typedstream.h
 
