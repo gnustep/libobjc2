@@ -40,4 +40,14 @@ static inline void init_recursive_mutex(pthread_mutex_t *x)
 #	define DESTROY_LOCK(x) pthread_mutex_destroy(x)
 #endif
 
+__attribute__((unused)) static void objc_release_lock(void *x)
+{
+	mutex_t *lock = *(mutex_t**)x;
+	UNLOCK(lock);
+}
+#define LOCK_UNTIL_RETURN(lock) \
+	__attribute__((cleanup(objc_release_lock)))\
+	__attribute__((unused)) mutex_t *lock_pointer = lock;\
+	LOCK(lock)
+
 #endif // __LIBOBJC_LOCK_H_INCLUDED__

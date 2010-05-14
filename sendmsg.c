@@ -55,7 +55,7 @@ static void __objc_install_dispatch_table_for_class (Class);
 typedef struct _InitializingDtable
 {
 	Class class;
-	struct sarray *dtable;
+	void *dtable;
 	struct _InitializingDtable *next;
 } InitializingDtable;
 
@@ -63,6 +63,7 @@ typedef struct _InitializingDtable
 InitializingDtable *temporary_dtables;
 
 #include "dtable_legacy.c"
+//#include "dtable.c"
 
 /* Forward declare some functions */
 static void __objc_init_install_dtable (id, SEL);
@@ -96,7 +97,7 @@ __objc_get_forward_imp (id rcv, SEL sel)
 }
 
 
-static inline IMP sarray_get_imp (struct sarray *dtable, size_t key)
+static inline IMP sarray_get_imp (void *dtable, size_t key)
 {
     struct objc_slot *slot = sarray_get_safe (dtable, key);
     return (NULL != slot) ? slot->method : (IMP)0;
@@ -120,7 +121,7 @@ get_imp (Class class, SEL sel)
   if (res == 0)
     {
       /* This will block if calling +initialize from another thread. */
-      struct sarray *dtable = dtable_for_class(class);
+      void *dtable = dtable_for_class(class);
       /* Not a valid method */
       if (dtable == __objc_uninstalled_dtable)
         {
@@ -208,7 +209,7 @@ objc_msg_lookup (id receiver, SEL op)
           /** Get the dtable that we should be using for lookup.  This will
            * block if we are in the middle of running +initialize in another
            * thread. */
-          struct sarray *dtable = dtable_for_class(receiver->class_pointer);
+          void *dtable = dtable_for_class(receiver->class_pointer);
           /* Not a valid method */
           if (dtable == __objc_uninstalled_dtable)
             {
@@ -309,7 +310,7 @@ __objc_send_initialize (Class class)
       CLS_SETINITIALIZED (class->class_pointer);
       /* Create the dtable, but don't install it on the class quite yet. */
 
-      struct sarray *dtable = create_dtable_for_class(class);
+      void *dtable = create_dtable_for_class(class);
       /* Taking a pointer to an on-stack object and storing it in a global is
        * usually a silly idea.  It is safe here, because we invert this
        * transform before we return, and we use initialize_lock to make sure no
@@ -494,13 +495,7 @@ inline
 struct sarray *
 objc_get_uninstalled_dtable ()
 {
-  return __objc_uninstalled_dtable;
-}
-
-void objc_resize_uninstalled_dtable(void)
-{
-	assert(__objc_uninstalled_dtable != NULL);
-	sarray_realloc (__objc_uninstalled_dtable, __objc_selector_max_index + 1);
+  return (void*)__objc_uninstalled_dtable;
 }
 
 // This is an ugly hack to make sure that the compiler can do inlining into

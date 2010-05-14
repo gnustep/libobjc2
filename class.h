@@ -1,4 +1,5 @@
 
+#ifndef __objc_runtime_INCLUDE_GNU
 struct objc_class
 {
 	/**
@@ -109,6 +110,7 @@ struct objc_class
 	*/
 	struct objc_property_list *properties;
 };
+#endif
 
 /**
  * An enumerated type describing all of the valid flags that may be used in the

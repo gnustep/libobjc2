@@ -343,3 +343,9 @@ __objc_update_dispatch_table_for_class (Class class)
   objc_mutex_unlock (__objc_runtime_mutex);
 }
 
+void objc_resize_uninstalled_dtable(void)
+{
+	assert(__objc_uninstalled_dtable != NULL);
+	sarray_realloc (__objc_uninstalled_dtable, __objc_selector_max_index + 1);
+}
+

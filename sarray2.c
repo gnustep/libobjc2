@@ -1,19 +1,27 @@
 #include <stdlib.h>
-#ifdef BUILD_TESTS
+#include <string.h>
 #include <stdio.h>
-#endif
 
 #include "sarray2.h"
 
 static void *EmptyArrayData[256];
-static SparseArray EmptyArray = { 0, 0xff, (void**)&EmptyArrayData};
+static SparseArray EmptyArray = { 0xff, 0, 0, (void**)&EmptyArrayData};
+
+#define MAX_INDEX(sarray) (sarray->mask >> sarray->shift)
+#define DATA_SIZE(sarray) ((sarray->mask >> sarray->shift) + 1)
+
+#define fprintf(...)
+// Tweak this value to trade speed for memory usage.  Bigger values use more
+// memory, but give faster lookups.  
+#define base_shift 8
+#define base_mask ((1<<base_shift) - 1)
 
 static void init_pointers(SparseArray * sarray)
 {
-	sarray->data = calloc(256, sizeof(void*));
+	sarray->data = calloc(DATA_SIZE(sarray), sizeof(void*));
 	if(sarray->shift != 0)
 	{
-		for(unsigned i=0 ; i<256 ; i++)
+		for(unsigned i=0 ; i<=MAX_INDEX(sarray) ; i++)
 		{
 			sarray->data[i] = &EmptyArray;
 		}
@@ -23,8 +31,9 @@ static void init_pointers(SparseArray * sarray)
 SparseArray * SparseArrayNew()
 {
 	SparseArray * sarray = calloc(1, sizeof(SparseArray));
-	sarray->shift = 24;
-	sarray->mask = 0xff000000;
+	sarray->refCount = 1;
+	sarray->shift = 32-base_shift;
+	sarray->mask = base_mask << sarray->shift;
 	init_pointers(sarray);
 	return sarray;
 }
@@ -33,7 +42,7 @@ SparseArray * SparseArrayNew()
 void * SparseArrayNext(SparseArray * sarray, uint32_t * index)
 {
 	uint32_t j = MASK_INDEX((*index));
-	uint32_t max = (sarray->mask >> sarray->shift) + 1;
+	uint32_t max = MAX_INDEX(sarray);
 	if(sarray->shift == 0)
 	{
 		while(j<max)
@@ -48,7 +57,7 @@ void * SparseArrayNext(SparseArray * sarray, uint32_t * index)
 	}
 	else while(j<max)
 	{
-		uint32_t zeromask = ~(sarray->mask >> 8);
+		uint32_t zeromask = ~(sarray->mask >> base_shift);
 		while(j<max)
 		{
 			//Look in child nodes
@@ -71,26 +80,80 @@ void * SparseArrayNext(SparseArray * sarray, uint32_t * index)
 	return SARRAY_EMPTY;
 }
 
-void SparseArrayInsert(SparseArray * sarray, uint32_t index, void * value)
+void SparseArrayInsert(SparseArray * sarray, uint32_t index, void *value)
 {
-	while(sarray->shift > 0)
+	fprintf(stderr, "Inserting in : %p\n", sarray);
+	if (sarray->shift > 0)
 	{
 		uint32_t i = MASK_INDEX(index);
-		if(sarray->data[i] == &EmptyArray)
+		SparseArray *child = sarray->data[i];
+		fprintf(stderr, "Child: %p\n", child);
+		if(&EmptyArray == child)
 		{
+			// Insert missing nodes
 			SparseArray * newsarray = calloc(1, sizeof(SparseArray));
-			newsarray->shift = sarray->shift - 8;
-			newsarray->mask = sarray->mask >> 8;
+			newsarray->refCount = 1;
+			if (base_shift >= sarray->shift)
+			{
+				newsarray->shift = 0;
+			}
+			else
+			{
+				newsarray->shift = sarray->shift - base_shift;
+			}
+			newsarray->mask = sarray->mask >> base_shift;
 			init_pointers(newsarray);
 			sarray->data[i] = newsarray;
+			child = newsarray;
+			fprintf(stderr, "Created child: %p\n", child);
 		}
-		sarray = sarray->data[i];
+		else if (child->refCount > 1)
+		{
+			// Copy the copy-on-write part of the tree
+			sarray->data[i] = SparseArrayCopy(child);
+			SparseArrayDestroy(child);
+			child = sarray->data[i];
+		}
+		fprintf(stderr, "Recursing in insert\n");
+		SparseArrayInsert(child, index, value);
 	}
-	sarray->data[index & sarray->mask] = value;
+	else
+	{
+		sarray->data[index & sarray->mask] = value;
+	}
+}
+
+SparseArray *SparseArrayCopy(SparseArray * sarray)
+{
+	SparseArray *copy = calloc(1, sizeof(SparseArray));
+	copy->refCount = 1;
+	copy->shift = sarray->shift;
+	copy->mask = sarray->mask;
+	copy->data = malloc(sizeof(void*) * DATA_SIZE(sarray));
+	memcpy(copy->data, sarray->data, sizeof(void*) * DATA_SIZE(sarray));
+	// If the sarray has children, increase their refcounts and link them
+	if (sarray->shift > 0)
+	{
+		for (unsigned int i = 0 ; i<=MAX_INDEX(sarray); i++)
+		{
+			SparseArray *child = copy->data[i];
+			__sync_fetch_and_add(&child->refCount, 1);
+			// Non-lazy copy.  Uncomment if debugging 
+			// copy->data[i] = SparseArrayCopy(copy->data[i]);
+		}
+	}
+	return copy;
 }
 
 void SparseArrayDestroy(SparseArray * sarray)
 {
+	// Don't really delete this sarray if its ref count is > 0
+	if (sarray == &EmptyArray || 
+		(__sync_sub_and_fetch(&sarray->refCount, 1) > 0))
+ 	{
+		return;
+	}
+
 	if(sarray->shift > 0)
 	{
 		uint32_t max = (sarray->mask >> sarray->shift) + 1;

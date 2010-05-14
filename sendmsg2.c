@@ -26,7 +26,7 @@ Slot_t objc_msg_lookup_internal(id *receiver, SEL selector, id sender)
 	if (0 == result)
 	{
 		Class class = (*receiver)->class_pointer;
-		struct sarray *dtable = dtable_for_class(class);
+		void *dtable = dtable_for_class(class);
 		/* Install the dtable if it hasn't already been initialized. */
 		if (dtable == __objc_uninstalled_dtable)
 		{

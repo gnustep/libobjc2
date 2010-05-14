@@ -74,6 +74,7 @@ libobjc_OBJCFLAGS += -g -std=c99 -march=native
 libobjc_LDFLAGS += -g -ltoydispatch
 libobjc_LIB_DIRS += -L toydispatch/obj
 
+libobjc_CFLAGS +=  -O3
 
 ifneq ($(findstring gcc, $(CC)),)
 libobjc_CFLAGS += -fgnu89-inline 

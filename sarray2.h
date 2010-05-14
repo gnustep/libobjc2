@@ -26,6 +26,7 @@ typedef struct
 {
 	uint32_t mask;
 	uint32_t shift;
+	uint32_t refCount;
 	void ** data;
 } SparseArray;
 
@@ -72,5 +73,10 @@ void SparseArrayDestroy(SparseArray * sarray);
  * value at 10 and set index to 11.
  */
 void * SparseArrayNext(SparseArray * sarray, uint32_t * index);
+
+/**
+ * Creates a copy of the sparse array.
+ */
+SparseArray *SparseArrayCopy(SparseArray * sarray);
 
 #endif //_SARRAY_H_INCLUDED_
