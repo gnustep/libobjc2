@@ -4,6 +4,7 @@
 /**
  * Efficient string hash function.
  */
+__attribute__((unused))
 static uint32_t string_hash(const char *str)
 {
 	uint32_t hash = 0;
@@ -18,6 +19,7 @@ static uint32_t string_hash(const char *str)
 /**
  * Test two strings for equality.
  */
+__attribute__((unused))
 static int string_compare(const char *str1, const char *str2)
 {
 	if (str1 == str2)
