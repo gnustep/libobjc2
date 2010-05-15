@@ -44,6 +44,32 @@ typedef struct
  */
 static inline void* SparseArrayLookup(SparseArray * sarray, uint32_t index)
 {
+	// This unrolled version of the commented-out segment below only works with
+	// sarrays that use one-byte leaves.  It's really ugly, but seems to be faster.
+	// With this version, we get the same performance as the old GNU code, but
+	// with about half the memory usage.
+	uint32_t i = index;
+	switch (sarray->shift)
+	{
+		default: assert(0 && "broken sarray");
+		case 0:
+			return sarray->data[i & 0xff];
+		case 8:
+			return 
+				((SparseArray*)sarray->data[(i & 0xff00)>>8])->data[(i & 0xff)];
+		case 16:
+			return 
+				((SparseArray*)((SparseArray*)
+					sarray->data[(i & 0xff0000)>>16])->
+						data[(i & 0xff00)>>8])->data[(i & 0xff)];
+		case 24:
+			return 
+				((SparseArray*)((SparseArray*)((SparseArray*)
+					sarray->data[(i & 0xff000000)>>24])->
+						data[(i & 0xff0000)>>16])->
+						data[(i & 0xff00)>>8])->data[(i & 0xff)];
+	}
+	/*
 	while(sarray->shift > 0)
 	{
 		uint32_t i = MASK_INDEX(index);
@@ -51,11 +77,23 @@ static inline void* SparseArrayLookup(SparseArray * sarray, uint32_t index)
 	}
 	uint32_t i = index & sarray->mask;
 	return sarray->data[i];
+	*/
 }
 /**
  * Create a new sparse array.
  */
-SparseArray * SparseArrayNew();
+SparseArray *SparseArrayNew();
+/**
+ * Creates a new sparse array with the specified capacity.  The depth indicates
+ * the number of bits to use for the key.  Must be a value between 8 and 32 and
+ * should ideally be a multiple of base_shift.
+ */
+SparseArray *SparseArrayNewWithDepth(uint32_t depth);
+/**
+ * Returns a new sparse array created by adding this one as the first child
+ * node in an expanded one.
+ */
+SparseArray *SparseArrayExpandingArray(SparseArray *sarray);
 /**
  * Insert a value at the specified index.
  */

@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <assert.h>
 
 #include "sarray2.h"
 
@@ -27,15 +28,44 @@ static void init_pointers(SparseArray * sarray)
 		}
 	}
 }
-
-SparseArray * SparseArrayNew()
+SparseArray * SparseArrayNewWithDepth(uint32_t depth)
 {
 	SparseArray * sarray = calloc(1, sizeof(SparseArray));
 	sarray->refCount = 1;
-	sarray->shift = 32-base_shift;
+	sarray->shift = depth-base_shift;
 	sarray->mask = base_mask << sarray->shift;
 	init_pointers(sarray);
 	return sarray;
+}
+
+SparseArray *SparseArrayNew()
+{
+	return SparseArrayNewWithDepth(32);
+}
+SparseArray *SparseArrayExpandingArray(SparseArray *sarray)
+{
+	// Expanding a child sarray has undefined results.
+	assert(sarray->refCount == 1);
+	SparseArray *new = calloc(1, sizeof(SparseArray));
+	new->refCount = 1;
+	new->shift = sarray->shift;
+	new->mask = sarray->mask;
+	void **newData = malloc(DATA_SIZE(sarray) * sizeof(void*));
+	for(unsigned i=0 ; i<=MAX_INDEX(sarray) ; i++)
+	{
+		newData[i] = &EmptyArray;
+	}
+	new->data = sarray->data;
+	// new is now an exact copy of sarray.
+	newData[0] = new;
+	sarray->data = newData;
+	// Now, any lookup in sarray for any value less than its capacity will have
+	// all non-zero values shifted away, resulting in 0.  All lookups will
+	// therefore go to the new sarray.
+	sarray->shift += base_shift;
+	// Finally, set the mask to the correct value.  Now all lookups should work.
+	sarray->mask <<= base_shift;
+	return new;
 }
 
 
@@ -106,7 +136,7 @@ void SparseArrayInsert(SparseArray * sarray, uint32_t index, void *value)
 			sarray->data[i] = newsarray;
 			child = newsarray;
 			fprintf(stderr, "Created child: %p\n", child);
-		}
+		}// FIXME: Concurrency (don't CoW twice)
 		else if (child->refCount > 1)
 		{
 			// Copy the copy-on-write part of the tree
