@@ -24,7 +24,6 @@ see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
 
 
 #include "objc/runtime-legacy.h"
-#include "objc/sarray.h"
 #include "objc/encoding.h"
 
 /* Register instance methods as class methods for root classes */

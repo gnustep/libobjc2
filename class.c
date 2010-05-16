@@ -88,7 +88,6 @@ see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
   structures is freeing data when is removed from the structures.  */
 
 #include "objc/runtime-legacy.h"            /* the kitchen sink */
-#include "objc/sarray.h"
 
 #include "objc/objc.h"
 #include "objc/objc-api.h"

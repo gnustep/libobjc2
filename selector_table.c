@@ -33,7 +33,7 @@
  * registered, its name field is replaced with its index in the selector_list
  * array.  
  */
-uint32_t __objc_selector_max_index;
+static uint32_t selector_count = 1;
 /**
  * Mapping from selector numbers to selector names.
  */
@@ -44,7 +44,7 @@ static SparseArray *selector_list  = NULL;
 
 inline static BOOL isSelRegistered(SEL sel)
 {
-	if ((uintptr_t)sel->name < (uintptr_t)__objc_selector_max_index)
+	if ((uintptr_t)sel->name < (uintptr_t)selector_count)
 	{
 		return YES;
 	}
@@ -112,9 +112,10 @@ mutex_t selector_table_lock;
 
 
 /**
- * Hack to make the uninstalled dtable the right size.  Won't be needed with sarray2.
+ * Resizes the dtables to ensure that they can store as many selectors as
+ * exist.
  */
-void objc_resize_uninstalled_dtable(void);
+void objc_resize_dtables(uint32_t);
 
 /**
  * Create data structures to store selectors.
@@ -149,11 +150,11 @@ static inline void add_selector_to_table(SEL aSel, int32_t uid, uint32_t idx)
  */
 static inline void register_selector_locked(SEL aSel)
 {
-	uintptr_t idx = __objc_selector_max_index++;
+	uintptr_t idx = selector_count++;
 	if (NULL == aSel->types)
 	{
 		add_selector_to_table(aSel, idx, idx);
-		objc_resize_uninstalled_dtable();
+		objc_resize_dtables(selector_count);
 		return;
 	}
 	SEL untyped = selector_lookup(aSel->name, 0);
@@ -166,7 +167,7 @@ static inline void register_selector_locked(SEL aSel)
 		add_selector_to_table(untyped, idx, idx);
 		// If we are in type dependent dispatch mode, the uid for the typed
 		// and untyped versions will be different
-		idx++; __objc_selector_max_index++;
+		idx++; selector_count++;
 	}
 	uintptr_t uid = (uintptr_t)untyped->name;
 	TDD(uid = idx);
@@ -182,7 +183,7 @@ static inline void register_selector_locked(SEL aSel)
 	typeList->value = aSel->types;
 	typeList->next = typeListHead->next;
 	typeListHead->next = typeList;
-	objc_resize_uninstalled_dtable();
+	objc_resize_dtables(selector_count);
 }
 /**
  * Registers a selector.  This assumes that the argument is never deallocated.
@@ -326,7 +327,9 @@ void __objc_register_selectors_from_class(Class class)
 }
 void __objc_register_selector_array(SEL selectors, unsigned long count)
 {
-	for (unsigned long i=0 ; (i<count) && (NULL != selectors[i].name) ; i++)
+	// GCC is broken and always sets the count to 0, so we ignore count until
+	// we can throw stupid and buggy compilers in the bin.
+	for (unsigned long i=0 ;  (NULL != selectors[i].name) ; i++)
 	{
 		objc_register_selector(&selectors[i]);
 	}
@@ -346,6 +349,8 @@ void __objc_register_instance_methods_to_class (Class class);
 SEL sel_get_typed_uid (const char *name, const char *types)
 {
 	SEL sel = selector_lookup(name, types);
+	if (NULL == sel) { return sel_registerTypedName_np(name, types); }
+
 	struct sel_type_list *l =
 		SparseArrayLookup(selector_list, (uint32_t)(uintptr_t)sel->name);
 	// Skip the head, which just contains the name, not the types.
@@ -359,7 +364,18 @@ SEL sel_get_typed_uid (const char *name, const char *types)
 
 SEL sel_get_any_typed_uid (const char *name)
 {
-	return selector_lookup(name, 0);
+	SEL sel = selector_lookup(name, 0);
+	if (NULL == sel) { return sel_registerName(name); }
+
+	struct sel_type_list *l =
+		SparseArrayLookup(selector_list, (uint32_t)(uintptr_t)sel->name);
+	// Skip the head, which just contains the name, not the types.
+	l = l->next;
+	if (NULL != l)
+	{
+		sel = selector_lookup(name, l->value);
+	}
+	return sel;
 }
 
 SEL sel_get_any_uid (const char *name)
@@ -405,13 +421,14 @@ static void logSelector(SEL sel)
 {                                                        
 	fprintf(stderr, "%s = {%p, %s}\n", sel_getName(sel), sel->name, sel_getType_np(sel));
 }
-void objc_resize_uninstalled_dtable(void) {}
+void objc_resize_dtables(uint32_t ignored) {}
 
 int main(void)
 {
 	__objc_init_selector_tables();
 	SEL a = sel_registerTypedName_np("foo:", "1234");
 	logSelector(a);
+	a = sel_registerName("bar:");
 	a = sel_registerName("foo:");
 	logSelector(a);
 	logSelector(sel_get_any_typed_uid("foo:"));
@@ -426,6 +443,12 @@ int main(void)
 	for (unsigned i=0 ; i<count ; i++)
 	{
 		fprintf(stderr, "Found type %s\n", types[i]);
+	}
+	uint32_t idx=0;
+	struct sel_type_list *type;
+	while ((type= SparseArrayNext(selector_list, &idx)))
+	{
+		fprintf(stderr, "Idx: %d, sel: %s (%s)\n", idx, type->value, ((struct sel_type_list *)SparseArrayLookup(selector_list, idx))->value);
 	}
 	fprintf(stderr, "Number of types: %d\n", count);
 	SEL sel;

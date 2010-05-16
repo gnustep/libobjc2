@@ -33,7 +33,6 @@ libobjc_C_FILES = \
 	objects.c\
 	protocol.c\
 	runtime.c\
-	sarray.c\
 	sarray2.c\
 	selector.c\
 	selector_table.c\
@@ -42,7 +41,7 @@ libobjc_C_FILES = \
 
 libobjc_HEADER_FILES_DIR = objc
 libobjc_HEADER_FILES_INSTALL_DIR = objc
-libobjc_HEADER_FILES = \
+#libobjc_HEADER_FILES = \
 	Availability.h\
 	NXConstStr.h\
 	Object.h\

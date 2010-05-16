@@ -27,7 +27,6 @@ see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
 #include <stdlib.h>
 #include "objc/runtime-legacy.h"
 #include "objc/slot.h"
-#include "objc/sarray.h"
 #include "objc/encoding.h"
 #include "lock.h"
 #include "slot_pool.h"
@@ -36,6 +35,8 @@ see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
 static mutex_t initialize_lock;
 
 void objc_resolve_class(Class);
+
+#define sidx uint32_t
 
 /* Two hooks for method forwarding. If either is set, it is invoked
  * to return a function that performs the real forwarding.  If both
@@ -52,18 +53,8 @@ static void __objc_send_initialize (Class);
 
 static void __objc_install_dispatch_table_for_class (Class);
 
-typedef struct _InitializingDtable
-{
-	Class class;
-	void *dtable;
-	struct _InitializingDtable *next;
-} InitializingDtable;
 
-/** Protected by initialize_lock */
-InitializingDtable *temporary_dtables;
-
-#include "dtable_legacy.c"
-//#include "dtable.c"
+#include "dtable.c"
 
 /* Forward declare some functions */
 static void __objc_init_install_dtable (id, SEL);
@@ -365,6 +356,41 @@ __objc_send_initialize (Class class)
     }
 }
 
+/* This function is called by objc_msg_lookup when the
+   dispatch table needs to be installed; thus it is called once
+   for each class, namely when the very first message is sent to it. */
+static void
+__objc_init_install_dtable (id receiver, SEL op __attribute__ ((__unused__)))
+{
+  objc_mutex_lock (__objc_runtime_mutex);
+  
+  /* This may happen, if the programmer has taken the address of a 
+     method before the dtable was initialized... too bad for him! */
+  if (dtable_for_class(receiver->class_pointer) != __objc_uninstalled_dtable)
+    {
+      objc_mutex_unlock (__objc_runtime_mutex);
+      return;
+    }
+  
+  if (CLS_ISCLASS (receiver->class_pointer))
+    {
+      /* receiver is an ordinary object */
+      assert (CLS_ISCLASS (receiver->class_pointer));
+
+      /* call +initialize -- this will in turn install the factory 
+         dispatch table if not already done :-) */
+      __objc_send_initialize (receiver->class_pointer);
+    }
+  else
+    {
+      /* receiver is a class object */
+      assert (CLS_ISCLASS ((Class)receiver));
+      assert (CLS_ISMETA (receiver->class_pointer));
+      __objc_send_initialize ((Class)receiver);
+    }
+  objc_mutex_unlock (__objc_runtime_mutex);
+}
+
 /* This function adds a method list to a class.  This function is
    typically called by another function specific to the run-time.  As
    such this function does not worry about thread safe issues.
@@ -456,36 +482,6 @@ search_for_method_in_list (MethodList_t list, SEL op)
     }
 
   return NULL;
-}
-
-void
-__objc_print_dtable_stats ()
-{
-  int total = 0;
-
-  objc_mutex_lock (__objc_runtime_mutex);
-
-#ifdef OBJC_SPARSE2
-  printf ("memory usage: (%s)\n", "2-level sparse arrays");
-#else
-  printf ("memory usage: (%s)\n", "3-level sparse arrays");
-#endif
-
-  printf ("arrays: %d = %ld bytes\n", narrays, 
-          (long) ((size_t) narrays * sizeof (struct sarray)));
-  total += narrays * sizeof (struct sarray);
-  printf ("buckets: %d = %ld bytes\n", nbuckets, 
-          (long) ((size_t) nbuckets * sizeof (struct sbucket)));
-  total += nbuckets * sizeof (struct sbucket);
-
-  printf ("idxtables: %d = %ld bytes\n",
-          idxsize, (long) ((size_t) idxsize * sizeof (void *)));
-  total += idxsize * sizeof (void *);
-  printf ("-----------------------------------\n");
-  printf ("total: %d bytes\n", total);
-  printf ("===================================\n");
-
-  objc_mutex_unlock (__objc_runtime_mutex);
 }
 
 /* Returns the uninstalled dispatch table indicator.

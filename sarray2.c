@@ -68,33 +68,32 @@ SparseArray *SparseArrayExpandingArray(SparseArray *sarray)
 	return new;
 }
 
-
-void * SparseArrayNext(SparseArray * sarray, uint32_t * index)
+static void *SparseArrayFind(SparseArray * sarray, uint32_t * index)
 {
 	uint32_t j = MASK_INDEX((*index));
 	uint32_t max = MAX_INDEX(sarray);
-	if(sarray->shift == 0)
+	if (sarray->shift == 0)
 	{
-		while(j<max)
+		while (j<max)
 		{
-			(*index)++;
-			if(sarray->data[j] != SARRAY_EMPTY)
+			if (sarray->data[j] != SARRAY_EMPTY)
 			{
 				return sarray->data[j];
 			}
+			(*index)++;
 			j++;
 		}
 	}
-	else while(j<max)
+	else while (j<max)
 	{
 		uint32_t zeromask = ~(sarray->mask >> base_shift);
-		while(j<max)
+		while (j<max)
 		{
 			//Look in child nodes
-			if(sarray->data[j] != SARRAY_EMPTY)
+			if (sarray->data[j] != SARRAY_EMPTY)
 			{
-				void * ret = SparseArrayNext(sarray->data[j], index);
-				if(ret != SARRAY_EMPTY)
+				void * ret = SparseArrayFind(sarray->data[j], index);
+				if (ret != SARRAY_EMPTY)
 				{
 					return ret;
 				}
@@ -108,6 +107,12 @@ void * SparseArrayNext(SparseArray * sarray, uint32_t * index)
 		}
 	}
 	return SARRAY_EMPTY;
+}
+
+void *SparseArrayNext(SparseArray * sarray, uint32_t * idx)
+{
+	(*idx)++;
+	return SparseArrayFind(sarray, idx);
 }
 
 void SparseArrayInsert(SparseArray * sarray, uint32_t index, void *value)

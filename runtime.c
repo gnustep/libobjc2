@@ -84,25 +84,15 @@ extern objc_mutex_t __objc_runtime_mutex;
  */
 static Method class_getInstanceMethodNonrecursive(Class aClass, SEL aSelector)
 {
-	const char *name = sel_get_name(aSelector);
-	const char *types = sel_get_type(aSelector);
-
 	for (struct objc_method_list *methods = aClass->methods;
 		methods != NULL ; methods = methods->method_next)
 	{
 		for (int i=0 ; i<methods->method_count ; i++)
 		{
 			Method_t method = &methods->method_list[i];
-			if (strcmp(sel_get_name(method->method_name), name) == 0)
+			if (method->method_name->sel_id == aSelector->sel_id)
 			{
-				if (NULL == types || 
-					strcmp(types, method->method_types) == 0)
-				{
-					return method;
-				}
-				// Return NULL if the method exists with this name but has the 
-				// wrong types
-				return NULL;
+				return method;
 			}
 		}
 	}

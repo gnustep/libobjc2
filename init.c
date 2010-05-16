@@ -92,6 +92,8 @@ static void __objc_call_callback (Module_t module);
    installed in the runtime.  */
 static BOOL class_is_subclass_of_class (Class class, Class superclass);
 
+extern void *__objc_uninstalled_dtable;
+
 typedef struct objc_class_tree {
   Class class;
   struct objc_list *subclasses; /* `head' is pointer to an objc_class_tree */
@@ -596,8 +598,8 @@ __objc_exec_class (Module_t module)
       __objc_register_selectors_from_class ((Class) class->class_pointer);
 
       /* Install the fake dispatch tables */
-      __objc_install_premature_dtable (class);
-      __objc_install_premature_dtable (class->class_pointer);
+      class->dtable = __objc_uninstalled_dtable;
+      class->class_pointer->dtable = __objc_uninstalled_dtable;
 
       /* Register the instance methods as class methods, this is
 	 only done for root classes.  */

@@ -67,7 +67,7 @@ static inline void* SparseArrayLookup(SparseArray * sarray, uint32_t index)
 				((SparseArray*)((SparseArray*)((SparseArray*)
 					sarray->data[(i & 0xff000000)>>24])->
 						data[(i & 0xff0000)>>16])->
-						data[(i & 0xff00)>>8])->data[(i & 0xff)];
+							data[(i & 0xff00)>>8])->data[(i & 0xff)];
 	}
 	/*
 	while(sarray->shift > 0)

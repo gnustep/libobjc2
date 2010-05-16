@@ -117,7 +117,7 @@ Slot_t objc_slot_lookup_super(Super_t super, SEL selector)
 	if (receiver)
 	{
 		Class class = super->class;
-		Slot_t result = sarray_get_safe(class->dtable, (sidx)selector->sel_id);
+		Slot_t result = sarray_get_safe(dtable_for_class(class), (sidx)selector->sel_id);
 		if (0 == result)
 		{
 			// Dtable should always be installed in the superclass
