@@ -96,7 +96,7 @@ void __objc_compute_ivar_offsets(Class class)
 		fprintf(stderr, 
 			"Last instance variable in superclass, %s, ends at offset %d.  ",
 			ivar->name, ivar->offset +
-			objc_sizeof_type(ivar->type));
+			(int)objc_sizeof_type(ivar->type));
 		fprintf(stderr, "This probably means that you are subclassing a"
 			"class from a library, which has changed in a binary-incompatible"
 			"way.\n");
