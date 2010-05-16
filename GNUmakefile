@@ -41,7 +41,7 @@ libobjc_C_FILES = \
 
 libobjc_HEADER_FILES_DIR = objc
 libobjc_HEADER_FILES_INSTALL_DIR = objc
-#libobjc_HEADER_FILES = \
+libobjc_HEADER_FILES = \
 	Availability.h\
 	NXConstStr.h\
 	Object.h\
@@ -55,7 +55,6 @@ libobjc_HEADER_FILES_INSTALL_DIR = objc
 	objc.h\
 	runtime-legacy.h\
 	runtime.h\
-	sarray.h\
 	slot.h\
 	thr.h\
 	typedstream.h
