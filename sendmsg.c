@@ -36,8 +36,6 @@ static mutex_t initialize_lock;
 
 void objc_resolve_class(Class);
 
-#define sidx uint32_t
-
 /* Two hooks for method forwarding. If either is set, it is invoked
  * to return a function that performs the real forwarding.  If both
  * are set, the result of __objc_msg_forward2 will be preferred over
@@ -194,7 +192,7 @@ objc_msg_lookup (id receiver, SEL op)
   if (receiver)
     {
       result = sarray_get_imp (receiver->class_pointer->dtable, 
-                                (sidx)op->sel_id);
+                                PTR_TO_IDX(op->sel_id));
       if (result == 0)
         {
           /** Get the dtable that we should be using for lookup.  This will
@@ -218,7 +216,7 @@ objc_msg_lookup (id receiver, SEL op)
                  has been installed by another thread after we did the
                  previous check that the method exists).
               */
-              result = sarray_get_imp (dtable, (sidx)op->sel_id);
+              result = sarray_get_imp (dtable, PTR_TO_IDX(op->sel_id));
               if (result == 0)
                 {
                   /* Try again after giving the code a chance to install new

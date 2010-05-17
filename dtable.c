@@ -88,7 +88,7 @@ static void collectMethodsForMethodListToSparseArray(
 	}
 	for (unsigned i=0 ; i<list->count ; i++)
 	{
-		SparseArrayInsert(sarray, (uint32_t)list->methods[i].selector->sel_id,
+		SparseArrayInsert(sarray, PTR_TO_IDX(list->methods[i].selector->sel_id),
 				(void*)&list->methods[i]);
 	}
 }
@@ -99,7 +99,7 @@ static BOOL installMethodInDtable(Class class,
                                   BOOL replaceExisting)
 {
 	assert(__objc_uninstalled_dtable != dtable);
-	uint32_t sel_id = (uint32_t)method->selector->sel_id;
+	uint32_t sel_id = PTR_TO_IDX(method->selector->sel_id);
 	struct objc_slot *slot = SparseArrayLookup(dtable, sel_id);
 	if (NULL != slot && slot->owner == class)
 	{

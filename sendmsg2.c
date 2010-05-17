@@ -22,7 +22,7 @@ static inline
 Slot_t objc_msg_lookup_internal(id *receiver, SEL selector, id sender)
 {
 	Slot_t result = sarray_get_safe((*receiver)->class_pointer->dtable,
-			(sidx)selector->sel_id);
+			PTR_TO_IDX(selector->sel_id));
 	if (0 == result)
 	{
 		Class class = (*receiver)->class_pointer;
@@ -32,7 +32,7 @@ Slot_t objc_msg_lookup_internal(id *receiver, SEL selector, id sender)
 		{
 			__objc_init_install_dtable (*receiver, selector);
 			dtable = dtable_for_class(class);
-			result = sarray_get_safe(dtable, (sidx)selector->sel_id);
+			result = sarray_get_safe(dtable, PTR_TO_IDX(selector->sel_id));
 			if (0 == result)
 			{
 				objc_mutex_lock(__objc_runtime_mutex);
@@ -43,14 +43,14 @@ Slot_t objc_msg_lookup_internal(id *receiver, SEL selector, id sender)
 					dtable = dtable_for_class(class);
 				}
 				objc_mutex_unlock(__objc_runtime_mutex);
-				result = sarray_get_safe(dtable, (sidx)selector->sel_id);
+				result = sarray_get_safe(dtable, PTR_TO_IDX(selector->sel_id));
 			}
 		}
 		else
 		{
 			// Check again incase another thread updated the dtable while we
 			// weren't looking
-			result = sarray_get_safe(dtable, (sidx)selector->sel_id);
+			result = sarray_get_safe(dtable, PTR_TO_IDX(selector->sel_id));
 		}
 		if (0 == result)
 		{
@@ -117,7 +117,8 @@ Slot_t objc_slot_lookup_super(Super_t super, SEL selector)
 	if (receiver)
 	{
 		Class class = super->class;
-		Slot_t result = sarray_get_safe(dtable_for_class(class), (sidx)selector->sel_id);
+		Slot_t result = sarray_get_safe(dtable_for_class(class),
+				PTR_TO_IDX(selector->sel_id));
 		if (0 == result)
 		{
 			// Dtable should always be installed in the superclass

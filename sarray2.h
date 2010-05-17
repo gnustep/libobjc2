@@ -117,4 +117,6 @@ void * SparseArrayNext(SparseArray * sarray, uint32_t * index);
  */
 SparseArray *SparseArrayCopy(SparseArray * sarray);
 
+#define PTR_TO_IDX(x) ((uint32_t)(uintptr_t)x)
+
 #endif //_SARRAY_H_INCLUDED_
