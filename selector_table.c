@@ -143,7 +143,7 @@ static inline void add_selector_to_table(SEL aSel, int32_t uid, uint32_t idx)
 	// Store the selector.
 	selector_insert(sel_table, aSel);
 	// Set the selector's name to the uid.
-	aSel->name = (const char*)uid;
+	aSel->name = (const char*)(uintptr_t)uid;
 }
 /**
  * Really registers a selector.  Must be called with the selector table locked.
