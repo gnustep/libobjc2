@@ -90,3 +90,6 @@ namespace {
       true);
 }
 
+ModulePass *createTypeFeedbackDrivenInlinerPass(void) {
+  return new GNUObjCTypeFeedbackDrivenInliner();
+}

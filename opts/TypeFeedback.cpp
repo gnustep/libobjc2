@@ -135,3 +135,6 @@ namespace {
       "Objective-C type feedback for the GNU runtime.", false, true);
 }
 
+ModulePass *createTypeFeedbackPass(void) {
+  return new GNUObjCTypeFeedback();
+}
