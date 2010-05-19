@@ -110,8 +110,8 @@ static BOOL installMethodInDtable(Class class,
 	struct objc_slot *slot = SparseArrayLookup(dtable, sel_id);
 	if (NULL != slot && slot->owner == class)
 	{
-		if (slot->method == method->imp || replaceExisting) { return NO; }
-		//fprintf(stderr, "Installing method %p %s in %s\n", method->imp, sel_get_name(method->selector), class->name);
+		if ((slot->method == method->imp) || !replaceExisting) { return NO; }
+		//fprintf(stderr, "Replacing method %p %s in %s with %x\n", slot->method, sel_get_name(method->selector), class->name, method->imp);
 		slot->method = method->imp;
 		slot->version++;
 	}
