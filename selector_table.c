@@ -273,7 +273,7 @@ SEL sel_registerTypedName_np(const char *selName, const char *types)
 
 const char *sel_getType_np(SEL aSel)
 {
-	return (NULL == aSel->types) ? "" : aSel->types;
+	return aSel->types;
 }
 
 

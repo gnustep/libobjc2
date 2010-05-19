@@ -8,17 +8,24 @@
 
 SparseArray *__objc_uninstalled_dtable;
 
+/**
+ * Structure for maintaining a linked list of temporary dtables.  When sending
+ * an +initialize message to a class, we create a temporary dtables and store
+ * it in a linked list.  This is then used when sending other messages to
+ * instances of classes in the middle of initialisation.
+ */
 typedef struct _InitializingDtable
 {
+	/** The class that owns the dtable. */
 	Class class;
+	/** The dtable for this class. */
 	void *dtable;
+	/** The next uninstalled dtable in the list. */
 	struct _InitializingDtable *next;
 } InitializingDtable;
 
-/** Protected by initialize_lock */
+/** Head of the list of temporary dtables.  Protected by initialize_lock. */
 InitializingDtable *temporary_dtables;
-
-static SparseArray *create_dtable_for_class (Class class);
 
 static uint32_t dtable_depth = 8;
 
@@ -235,7 +242,7 @@ static SparseArray *create_dtable_for_class(Class class)
 
 static void __objc_install_dispatch_table_for_class(Class class)
 {
-  class->dtable = (void*)create_dtable_for_class(class);
+	class->dtable = (void*)create_dtable_for_class(class);
 }
 
 Class class_table_next(void **e);
