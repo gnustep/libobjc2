@@ -25,7 +25,7 @@ static void deallocLockClass(id obj, SEL _cmd);
 static inline Class findLockClass(id obj)
 {
 	struct objc_object object = { obj->isa };
-	SEL dealloc = @selector(dealloc);
+	SEL dealloc = (SEL)@selector(dealloc);
 	// Find the first class where this lookup is correct
 	if (objc_msg_lookup((id)&object, dealloc) != (IMP)deallocLockClass)
 	{
@@ -62,8 +62,8 @@ static inline Class initLockObject(id obj)
 	}
 	const char *types =
 		method_getTypeEncoding(class_getInstanceMethod(obj->isa,
-					@selector(dealloc)));
-	class_addMethod(lockClass, @selector(dealloc), (IMP)deallocLockClass,
+					(SEL)@selector(dealloc)));
+	class_addMethod(lockClass, (SEL)@selector(dealloc), (IMP)deallocLockClass,
 			types);
 	if (!class_isMetaClass(obj->isa))
 	{
