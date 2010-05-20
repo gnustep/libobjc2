@@ -327,6 +327,6 @@ static const id self = nil;
 	objc_msg_lookup_sender(&__receiver, op, self)(__receiver, op, ## __VA_ARGS__);\
 })
 
-#define objc_msgSendSuper(super, op, ...) objc_msg_lookup_super(super, op)(super->receiver, op, ## __VA_ARGS__)
+#define objc_msgSendSuper(super, op, ...) objc_msg_lookup_super(super, op)((super)->receiver, op, ## __VA_ARGS__)
 
 #endif // __LIBOBJC_RUNTIME_H_INCLUDED__

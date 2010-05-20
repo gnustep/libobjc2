@@ -25,7 +25,7 @@ static void deallocLockClass(id obj, SEL _cmd);
 static inline Class findLockClass(id obj)
 {
 	struct objc_object object = { obj->isa };
-	SEL dealloc = (SEL)@selector(dealloc);
+	SEL dealloc = @selector(dealloc);
 	// Find the first class where this lookup is correct
 	if (objc_msg_lookup((id)&object, dealloc) != (IMP)deallocLockClass)
 	{
@@ -62,8 +62,8 @@ static inline Class initLockObject(id obj)
 	}
 	const char *types =
 		method_getTypeEncoding(class_getInstanceMethod(obj->isa,
-					(SEL)@selector(dealloc)));
-	class_addMethod(lockClass, (SEL)@selector(dealloc), (IMP)deallocLockClass,
+					@selector(dealloc)));
+	class_addMethod(lockClass, @selector(dealloc), (IMP)deallocLockClass,
 			types);
 	if (!class_isMetaClass(obj->isa))
 	{
@@ -81,14 +81,15 @@ static void deallocLockClass(id obj, SEL _cmd)
 {
 	Class lockClass = findLockClass(obj);
 	Class realClass = class_getSuperclass(lockClass);
+	// Call the real -dealloc method
+	struct objc_super super = {obj, realClass };
+	objc_msgSendSuper(&super, @selector(dealloc));
+	// After calling [super dealloc], the object will no longer exist.
 	// Free the lock
 	mutex_t *lock = object_getIndexedIvars(lockClass);
 	DESTROY_LOCK(lock);
 	// Free the class
 	objc_disposeClassPair(lockClass);
-	// Reset the class then call the real -dealloc
-	obj->isa = realClass;
-	[obj dealloc];
 }
 
 // TODO: This should probably have a special case for classes conforming to the
