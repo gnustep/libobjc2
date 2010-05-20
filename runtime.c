@@ -402,13 +402,13 @@ const char *class_getIvarLayout(Class cls)
 
 IMP class_getMethodImplementation(Class cls, SEL name)
 {
-	struct objc_object_gnu obj = { cls };
+	struct objc_object obj = { cls };
 	return (IMP)objc_msg_lookup((id)&obj, name);
 }
 
 IMP class_getMethodImplementation_stret(Class cls, SEL name)
 {
-	struct objc_object_gnu obj = { cls };
+	struct objc_object obj = { cls };
 	return (IMP)objc_msg_lookup((id)&obj, name);
 }
 
