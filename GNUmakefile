@@ -41,6 +41,7 @@ libobjc_C_FILES = \
 
 libobjc_HEADER_FILES_DIR = objc
 libobjc_HEADER_FILES_INSTALL_DIR = objc
+ifeq ($(install_headers), yes)
 libobjc_HEADER_FILES = \
 	Availability.h\
 	NXConstStr.h\
@@ -59,6 +60,7 @@ libobjc_HEADER_FILES = \
 	slot.h\
 	thr.h\
 	typedstream.h
+endif
 
 libobjc_LIBRARIES_DEPEND_UPON += -lpthread
 

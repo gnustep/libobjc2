@@ -101,6 +101,7 @@ static void collectMethodsForMethodListToSparseArray(
 }
 
 static BOOL installMethodInDtable(Class class,
+                                  Class owner,
                                   SparseArray *dtable,
                                   struct objc_method *method,
                                   BOOL replaceExisting)
@@ -108,32 +109,35 @@ static BOOL installMethodInDtable(Class class,
 	assert(__objc_uninstalled_dtable != dtable);
 	uint32_t sel_id = PTR_TO_IDX(method->selector->sel_id);
 	struct objc_slot *slot = SparseArrayLookup(dtable, sel_id);
-	if (NULL != slot && slot->owner == class)
+	if (NULL != slot)
 	{
-		if ((slot->method == method->imp) || !replaceExisting) { return NO; }
-		//fprintf(stderr, "Replacing method %p %s in %s with %x\n", slot->method, sel_get_name(method->selector), class->name, method->imp);
-		slot->method = method->imp;
-		slot->version++;
-	}
-	else
-	{
-		//fprintf(stderr, "Installing method %p %s in %s\n", method->imp, sel_get_name(method->selector), class->name);
-		slot = new_slot_for_method_in_class((void*)method, class);
-		SparseArrayInsert(dtable, sel_id, slot);
-		// Invalidate the superclass's slot, if it has one.
-		if (NULL != class->super_class)
+		// If this method is the one already installed, pretend to install it again.
+		if (slot->method == method->imp) { return NO; }
+
+		if (slot->owner == class)
 		{
-			if (NULL != (slot = 
-				SparseArrayLookup(dtable_for_class(class->super_class), sel_id)))
-			{
-				slot->version++;
-			}
+			if (!replaceExisting) { return NO; }
+			//fprintf(stderr, "Replacing method %p %s in %s with %x\n", slot->method, sel_get_name(method->selector), class->name, method->imp);
+			slot->method = method->imp;
+			slot->version++;
+			return YES;
 		}
+	}
+	struct objc_slot *oldSlot = slot;
+	//fprintf(stderr, "Installing method %p %s in %s\n", method->imp, sel_get_name(method->selector), class->name);
+	slot = new_slot_for_method_in_class((void*)method, owner);
+	SparseArrayInsert(dtable, sel_id, slot);
+	// Invalidate the old slot, if there is one.
+	if (NULL != oldSlot)
+	{
+		//fprintf(stderr, "Overriding method %p %s from %s in %s with %x\n", slot->method, sel_get_name(method->selector), oldSlot->owner->name, class->name, method->imp);
+		oldSlot->version++;
 	}
 	return YES;
 }
 
 static void installMethodsInClass(Class cls,
+                                  Class owner,
                                   SparseArray *methods,
                                   BOOL replaceExisting)
 {
@@ -144,7 +148,7 @@ static void installMethodsInClass(Class cls,
 	struct objc_method *m;
 	while ((m = SparseArrayNext(methods, &idx)))
 	{
-		if (!installMethodInDtable(cls, dtable, m, replaceExisting))
+		if (!installMethodInDtable(cls, owner, dtable, m, replaceExisting))
 		{
 			// Remove this method from the list, if it wasn't actually installed
 			SparseArrayInsert(methods, idx, 0);
@@ -152,23 +156,23 @@ static void installMethodsInClass(Class cls,
 	}
 }
 
-static void mergeMethodsFromSuperclass(Class cls, SparseArray *methods)
+static void mergeMethodsFromSuperclass(Class super, Class cls, SparseArray *methods)
 {
 	for (struct objc_class *subclass=cls->subclass_list ; 
 		Nil != subclass ; subclass = subclass->sibling_class)
 	{
 		// Don't bother updating dtables for subclasses that haven't been
 		// initialized yet
-		if (!classHasDtable(subclass)) { return; }
+		if (!classHasDtable(subclass)) { continue; }
 
 		// Create a new (copy-on-write) array to pass down to children
 		SparseArray *newMethods = SparseArrayCopy(methods);
 		// Install all of these methods except ones that are overridden in the
 		// subclass.  All of the methods that we are updating were added in a
 		// superclass, so we don't replace versions registered to the subclass.
-		installMethodsInClass(subclass, newMethods, NO);
+		installMethodsInClass(subclass, super, newMethods, YES);
 		// Recursively add the methods to the subclass's subclasses.
-		mergeMethodsFromSuperclass(subclass, newMethods);
+		mergeMethodsFromSuperclass(super, subclass, newMethods);
 		SparseArrayDestroy(newMethods);
 	}
 }
@@ -184,9 +188,9 @@ void __objc_update_dispatch_table_for_class(Class cls)
 
 	SparseArray *methods = SparseArrayNewWithDepth(dtable_depth);
 	collectMethodsForMethodListToSparseArray((void*)cls->methods, methods);
-	installMethodsInClass(cls, methods, YES);
+	installMethodsInClass(cls, cls, methods, YES);
 	// Methods now contains only the new methods for this class.
-	mergeMethodsFromSuperclass(cls, methods);
+	mergeMethodsFromSuperclass(cls, cls, methods);
 	SparseArrayDestroy(methods);
 }
 
@@ -232,7 +236,7 @@ static SparseArray *create_dtable_for_class(Class class)
 	{
 		for (unsigned i=0 ; i<list->count ; i++)
 		{
-			installMethodInDtable(class, dtable, &list->methods[i], NO);
+			installMethodInDtable(class, class, dtable, &list->methods[i], NO);
 		}
 		list = list->next;
 	}
