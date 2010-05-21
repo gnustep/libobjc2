@@ -114,17 +114,34 @@ static BOOL installMethodInDtable(Class class,
 		// If this method is the one already installed, pretend to install it again.
 		if (slot->method == method->imp) { return NO; }
 
-		if (slot->owner == class)
+		// If the existing slot is for this class, we can just replace the
+		// implementation.  We don't need to bump the version; this operation
+		// updates cached slots, it doesn't invalidate them.  
+		if (slot->owner == owner)
 		{
+			// Don't replace methods if we're not meant to (if they're from
+			// later in a method list, for example)
 			if (!replaceExisting) { return NO; }
 			//fprintf(stderr, "Replacing method %p %s in %s with %x\n", slot->method, sel_get_name(method->selector), class->name, method->imp);
 			slot->method = method->imp;
-			slot->version++;
 			return YES;
+		}
+
+		Class installedFor = slot->owner;
+		// Check whether the owner of this method is a subclass of the one that
+		// owns this method.  If it is, then we don't want to install this
+		// method irrespective of other cases, because it has been overridden.
+		for (Class installedFor = slot->owner ;
+				Nil != installedFor ;
+				installedFor = installedFor->super_class)
+		{
+			if (installedFor == owner) { 
+		//fprintf(stderr, "Not installing %s from %s in %s - already overridden from %s\n", sel_get_name(method->selector), owner->name, class->name, slot->owner->name);
+				return NO; }
 		}
 	}
 	struct objc_slot *oldSlot = slot;
-	//fprintf(stderr, "Installing method %p %s in %s\n", method->imp, sel_get_name(method->selector), class->name);
+	//fprintf(stderr, "Installing method %p (%d) %s in %s (previous slot owned by %s)\n", method->imp, sel_id, sel_get_name(method->selector), class->name, slot? oldSlot->owner->name: "");
 	slot = new_slot_for_method_in_class((void*)method, owner);
 	SparseArrayInsert(dtable, sel_id, slot);
 	// Invalidate the old slot, if there is one.
@@ -183,6 +200,7 @@ void __objc_update_dispatch_table_for_class(Class cls)
 {
 	// Only update real dtables
 	if (!classHasDtable(cls)) { return; }
+	//fprintf(stderr, "Updating dtable for %s\n", cls->name);
 
 	LOCK_UNTIL_RETURN(__objc_runtime_mutex);
 
