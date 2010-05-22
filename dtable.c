@@ -127,7 +127,6 @@ static BOOL installMethodInDtable(Class class,
 			return YES;
 		}
 
-		Class installedFor = slot->owner;
 		// Check whether the owner of this method is a subclass of the one that
 		// owns this method.  If it is, then we don't want to install this
 		// method irrespective of other cases, because it has been overridden.
