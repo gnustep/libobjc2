@@ -41,7 +41,7 @@ libobjc_C_FILES = \
 
 libobjc_HEADER_FILES_DIR = objc
 libobjc_HEADER_FILES_INSTALL_DIR = objc
-ifeq ($(install_headers), yes)
+ifneq ($(install_headers), no)
 libobjc_HEADER_FILES = \
 	Availability.h\
 	NXConstStr.h\
