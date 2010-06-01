@@ -23,7 +23,6 @@ libobjc_C_FILES = \
 	encoding.c\
 	hash_table.c\
 	exception.c\
-	hash.c\
 	hooks.c\
 	ivar.c\
 	init.c\
