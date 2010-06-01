@@ -1,5 +1,7 @@
 #include "magic_objects.h"
-#include "objc/objc-api.h"
+#include "objc/runtime.h"
+#include "objc/hooks.h"
+#include "class.h"
 #include "lock.h"
 #include <stdlib.h>
 #include <assert.h>
@@ -38,7 +40,7 @@ static Class unresolved_class_list;
 
 void class_table_insert(Class class)
 {
-	if (!CLS_ISRESOLV(class))
+	if (!objc_test_class_flag(class, objc_class_flag_resolved))
 	{
 		if (Nil != unresolved_class_list)
 		{
@@ -69,7 +71,7 @@ void __objc_init_class_tables(void)
 void objc_resolve_class(Class cls)
 {
 	// Skip this if the class is already resolved.
-	if (CLS_ISRESOLV(cls)) { return; }
+	if (objc_test_class_flag(cls, objc_class_flag_resolved)) { return; }
 	// Remove the class from the unresolved class list
 	if (Nil == cls->unresolved_class_prev)
 	{
@@ -91,8 +93,8 @@ void objc_resolve_class(Class cls)
 	static Class root_class = Nil;
 	if (Nil == root_class)
 	{
-		root_class = objc_get_class(ROOT_OBJECT_CLASS_NAME);
-		if (!CLS_ISRESOLV(root_class))
+		root_class = (Class)objc_getClass(ROOT_OBJECT_CLASS_NAME);
+		if (!objc_test_class_flag(root_class, objc_class_flag_resolved))
 		{
 			objc_resolve_class(root_class);
 		}
@@ -107,15 +109,15 @@ void objc_resolve_class(Class cls)
 	if (NULL != cls->super_class)
 	{
 		// Resolve the superclass if it isn't already resolved
-		super = objc_get_class((char*)cls->super_class);
-		if (!CLS_ISRESOLV(super))
+		super = (Class)objc_getClass((char*)cls->super_class);
+		if (!objc_test_class_flag(super, objc_class_flag_resolved))
 		{
 			objc_resolve_class(super);
 		}
-		superMeta = super->class_pointer;
+		superMeta = super->isa;
 		// Set the superclass pointer for the class and the superclass
 		cls->super_class = super;
-		cls->class_pointer->super_class = super->class_pointer;
+		cls->isa->super_class = super->isa;
 	}
 	// Don't make the root class a subclass of itself
 	if (cls != super)
@@ -124,24 +126,25 @@ void objc_resolve_class(Class cls)
 		cls->sibling_class = super->subclass_list;
 		super->subclass_list = cls;
 		// Set up the metaclass links
-		cls->class_pointer->sibling_class = superMeta->subclass_list;
-		superMeta->subclass_list = cls->class_pointer;
+		cls->isa->sibling_class = superMeta->subclass_list;
+		superMeta->subclass_list = cls->isa;
 	}
 	// Mark this class (and its metaclass) as resolved
-	CLS_SETRESOLV(cls);
-	CLS_SETRESOLV(cls->class_pointer);
+	objc_set_class_flag(cls, objc_class_flag_resolved);
+	objc_set_class_flag(cls->isa, objc_class_flag_resolved);
 }
 
 void __objc_resolve_class_links(void)
 {
-	LOCK(__objc_runtime_mutex);
+	LOCK_UNTIL_RETURN(__objc_runtime_mutex);
 	Class class;
 	while ((class = unresolved_class_list))
 	{
 		objc_resolve_class(class);
 	}
-	UNLOCK(__objc_runtime_mutex);
 }
+
+// Public API
 
 int objc_getClassList(Class *buffer, int bufferLen)
 {
@@ -160,3 +163,57 @@ int objc_getClassList(Class *buffer, int bufferLen)
 	return count;
 }
 
+id objc_getClass(const char *name)
+{
+	id class = (id)class_table_get_safe(name);
+
+	if (nil != class) { return class; }
+
+	if (0 != _objc_lookup_class)
+	{
+		class = (id)_objc_lookup_class(name);
+	}
+
+	return class;
+}
+
+id objc_lookUpClass(const char *name)
+{
+	return (id)class_table_get_safe(name);
+}
+
+
+id objc_getMetaClass(const char *name)
+{
+	Class cls = (Class)objc_getClass(name);
+	return cls == Nil ? nil : (id)cls->isa;
+}
+
+// Legacy interface compatibility
+
+id objc_get_class(const char *name)
+{
+	return objc_getClass(name);
+}
+
+id objc_lookup_class(const char *name)
+{
+	return objc_getClass(name);
+}
+
+id objc_get_meta_class(const char *name)
+{
+	return objc_getMetaClass(name);
+}
+
+Class objc_next_class(void **enum_state)
+{
+  return class_table_next ( enum_state);
+}
+
+Class class_pose_as(Class impostor, Class super_class)
+{
+	fprintf(stderr, "Class posing is no longer supported.\n");
+	fprintf(stderr, "Please use class_replaceMethod() instead.\n");
+	abort();
+}

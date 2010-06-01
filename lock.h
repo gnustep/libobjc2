@@ -45,9 +45,18 @@ __attribute__((unused)) static void objc_release_lock(void *x)
 	mutex_t *lock = *(mutex_t**)x;
 	UNLOCK(lock);
 }
+/**
+ * Acquires the lock and automatically releases it at the end of the current
+ * scope.
+ */
 #define LOCK_UNTIL_RETURN(lock) \
 	__attribute__((cleanup(objc_release_lock)))\
 	__attribute__((unused)) mutex_t *lock_pointer = lock;\
 	LOCK(lock)
+
+/**
+ * The global runtime mutex.
+ */
+extern void *__objc_runtime_mutex;
 
 #endif // __LIBOBJC_LOCK_H_INCLUDED__

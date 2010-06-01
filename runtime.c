@@ -636,17 +636,6 @@ IMP method_setImplementation(Method method, IMP imp)
 	return old;
 }
 
-id objc_getClass(const char *name)
-{
-	return (id)objc_get_class(name);
-}
-
-id objc_getMetaClass(const char *name)
-{
-	Class cls = (Class)objc_getClass(name);
-	return cls == Nil ? nil : (id)cls->class_pointer;
-}
-
 id objc_getRequiredClass(const char *name)
 {
 	id cls = objc_getClass(name);
@@ -655,12 +644,6 @@ id objc_getRequiredClass(const char *name)
 		abort();
 	}
 	return cls;
-}
-
-id objc_lookUpClass(const char *name)
-{
-	// TODO: Check these are the right way around.
-	return (id)objc_lookup_class(name);
 }
 
 static void freeMethodLists(Class aClass)

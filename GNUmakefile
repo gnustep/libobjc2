@@ -24,20 +24,25 @@ libobjc_C_FILES = \
 	encoding.c\
 	hash_table.c\
 	exception.c\
-	gc.c\
 	hash.c\
+	hooks.c\
 	ivar.c\
 	init.c\
 	misc.c\
 	nil_method.c\
-	objects.c\
 	protocol.c\
 	runtime.c\
 	sarray2.c\
 	selector.c\
 	selector_table.c\
-	sendmsg.c\
+	sendmsg.c
+
+ifneq ($(enable_legacy), no)
+libobjc_C_FILES += \
+	gc.c\
+	objects.c\
 	thr.c
+endif
 
 libobjc_HEADER_FILES_DIR = objc
 libobjc_HEADER_FILES_INSTALL_DIR = objc

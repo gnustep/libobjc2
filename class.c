@@ -118,11 +118,6 @@ Class class_table_next (void **e);
  ** Objective-C runtime functions
  **/
 
-/* This is a hook which is called by objc_get_class and
-   objc_lookup_class if the runtime is not able to find the class.  
-   This may e.g. try to load in the class using dynamic loading.  */
-Class (*_objc_lookup_class) (const char *name) = 0;      /* !T:SAFE */
-
 Class class_table_get_safe(const char*);
 
 /* This function adds a class to the class hash table, and assigns the
@@ -153,80 +148,4 @@ __objc_add_class_to_hash (Class class)
     }
 
   UNLOCK(__objc_runtime_mutex);
-}
-
-/* Get the class object for the class named NAME.  If NAME does not
-   identify a known class, the hook _objc_lookup_class is called.  If
-   this fails, nil is returned.  */
-Class
-objc_lookup_class (const char *name)
-{
-  Class class;
-
-  class = class_table_get_safe (name);
-
-  if (class)
-    return class;
-
-  if (_objc_lookup_class)
-    return (*_objc_lookup_class) (name);
-  else
-    return 0;
-}
-
-/* Get the class object for the class named NAME.  If NAME does not
-   identify a known class, the hook _objc_lookup_class is called.  If
-   this fails, an error message is issued and the system aborts.  */
-Class
-objc_get_class (const char *name)
-{
-  Class class;
-
-  class = class_table_get_safe (name);
-
-  if (class)
-    return class;
-
-  if (_objc_lookup_class)
-    class = (*_objc_lookup_class) (name);
-
-  if (class)
-    return class;
-  
-  objc_error (nil, OBJC_ERR_BAD_CLASS, 
-              "objc runtime: cannot find class %s\n", name);
-  return 0;
-}
-
-MetaClass
-objc_get_meta_class (const char *name)
-{
-  return objc_get_class (name)->class_pointer;
-}
-
-/* This function provides a way to enumerate all the classes in the
-   executable.  Pass *ENUM_STATE == NULL to start the enumeration.  The
-   function will return 0 when there are no more classes.  
-   For example: 
-       id class; 
-       void *es = NULL;
-       while ((class = objc_next_class (&es)))
-         ... do something with class; 
-*/
-Class
-objc_next_class (void **enum_state)
-{
-  Class class;
-
-  class = class_table_next ( enum_state);
-  
-  return class;
-}
-
-Class
-class_pose_as (Class impostor, Class super_class)
-{
-	fprintf(stderr, "Class posing is no longer supported.\n");
-	fprintf(stderr, "Please use class_replaceMethod() instead.\n");
-	abort();
 }
