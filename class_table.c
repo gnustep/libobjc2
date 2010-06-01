@@ -144,6 +144,18 @@ void __objc_resolve_class_links(void)
 	}
 }
 
+void __objc_add_class_to_hash(Class class)
+{
+	Class old_class = class_table_get_safe(class->name);
+	// If this class is already in the class table, we don't need to do anything.
+	if (Nil != old_class) { return; }
+
+	LOCK_UNTIL_RETURN(__objc_runtime_mutex);
+	// Note: The old runtime set the class number here.  Nothing ever used the
+	// class number though, so we don't bother.
+	class_table_insert (class);
+}
+
 // Public API
 
 int objc_getClassList(Class *buffer, int bufferLen)

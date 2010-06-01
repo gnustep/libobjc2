@@ -19,7 +19,6 @@ libobjc_OBJC_FILES = \
 
 
 libobjc_C_FILES = \
-	class.c\
 	class_table.c\
 	encoding.c\
 	hash_table.c\
