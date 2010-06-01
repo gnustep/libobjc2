@@ -31,7 +31,6 @@ libobjc_C_FILES = \
 	protocol.c\
 	runtime.c\
 	sarray2.c\
-	selector.c\
 	selector_table.c\
 	sendmsg.c
 

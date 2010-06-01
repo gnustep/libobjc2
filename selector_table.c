@@ -335,9 +335,6 @@ void __objc_register_selector_array(SEL selectors, unsigned long count)
 	}
 }
 
-// FIXME: This is a stupid idea.  We should be inserting root class instance
-// methods into the dtable, not duplicating the metadata stuff.  Yuck!
-void __objc_register_instance_methods_to_class (Class class);
 
 /**
  * Legacy GNU runtime compatibility.

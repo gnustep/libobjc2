@@ -242,10 +242,6 @@ __objc_exec_class (Module_t module)
 	      __objc_init_protocols (category->protocols);
 	      __objc_class_add_protocols (class, category->protocols);
 	    }
-
-          /* Register the instance methods as class methods, this is
-             only done for root classes.  */
-          __objc_register_instance_methods_to_class (class);
 	}
       else
 	{
@@ -286,10 +282,6 @@ __objc_exec_class (Module_t module)
 	      __objc_init_protocols (category->protocols);
 	      __objc_class_add_protocols (class, category->protocols);
 	    }
-
-          /* Register the instance methods as class methods, this is
-             only done for root classes.  */
-          __objc_register_instance_methods_to_class (class);
 	}
       else
 	cell = &(*cell)->tail;
