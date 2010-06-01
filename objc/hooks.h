@@ -7,7 +7,7 @@
 #ifndef OBJC_HOOK
 #define OBJC_HOOK extern
 #endif
-
+struct objc_category;
 /**
  * Class lookup hook.  Set this to provide a mechanism for resolving classes
  * that have not been registered with the runtime.  This can be used for lazy
@@ -18,3 +18,7 @@
  * for lazy loading of categories.
  */
 OBJC_HOOK Class (*_objc_lookup_class)(const char *name);
+/**
+ * Class load callback.  
+ */
+OBJC_HOOK void (*_objc_load_callback)(Class class, struct objc_category *category);

@@ -7,29 +7,28 @@ struct objc_class
 	 * methods use when a message is sent to the class, rather than an
 	 * instance.
 	 */
-	struct objc_class *isa;
+	struct objc_class         *isa;
 	/**
 	 * Pointer to the superclass.  The compiler will set this to the name of
 	 * the superclass, the runtime will initialize it to point to the real
 	 * class.
 	 */
-	struct objc_class *super_class;
+	struct objc_class         *super_class;
 	/**
 	 * The name of this class.  Set to the same value for both the class and
 	 * its associated metaclass.
 	 */
-	const char*         name;
+	const char                *name;
 	/**
 	 * The version of this class.  This is not used by the language, but may be
 	 * set explicitly at class load time.
 	 */
-	long                version;
+	long                       version;
 	/**
 	 * A bitfield containing various flags.  See the objc_class_flags
-	 * enumerated type for possible values.  The top half of this value
-	 * contains the class number.
+	 * enumerated type for possible values.  
 	 */
-	unsigned long       info;
+	unsigned long              info;
 	/**
 	 * The size of this class.  For classes using the non-fragile ABI, the
 	 * compiler will set this to a negative value The absolute value will be
@@ -40,33 +39,33 @@ struct objc_class
 	 * In both cases, this will be set to the size of an instance of the class
 	 * after the class is registered with the runtime.
 	 */
-	long                instance_size;
+	long                       instance_size;
 	/**
 	 * Metadata describing the instance variables in this class.
 	 */
-	struct objc_ivar_list* ivars;
+	struct objc_ivar_list     *ivars;
 	/**
 	 * Metadata for for defining the mappings from selectors to IMPs.  Linked
 	 * list of method list structures, one per class and one per category.
 	 */
-	struct objc_method_list*  methods;
+	struct objc_method_list   *methods;
 	/**
 	 * The dispatch table for this class.  Intialized and maintained by the
 	 * runtime.
 	 */
-	struct sarray *    dtable;
+	void                      *dtable;
 	/**
 	 * A pointer to the first subclass for this class.  Filled in by the
 	 * runtime.
 	 */
-	struct objc_class* subclass_list;
+	struct objc_class         *subclass_list;
 	/**
 	 * A pointer to the next sibling class to this.  You may find all
 	 * subclasses of a given class by following the subclass_list pointer and
 	 * then subsequently following the sibling_class pointers in the
 	 * subclasses.
 	 */
-	struct objc_class* sibling_class;
+	struct objc_class         *sibling_class;
 
 	/**
 	 * Metadata describing the protocols adopted by this class.  Not used by
@@ -76,7 +75,7 @@ struct objc_class
 	/**
 	 * Pointer used by the Boehm GC.
 	 */
-	void* gc_object_type;
+	void                      *gc_object_type;
 	/**
 	* New ABI.  The following fields are only available with classes compiled to
 	* support the new ABI.  You may test whether any given class supports this
@@ -86,7 +85,7 @@ struct objc_class
 	/**
 	* The version of the ABI used for this class.  This is currently always zero.  
 	*/
-	long abi_version;
+	long                       abi_version;
 
 	/** 
 	* Array of pointers to variables where the runtime will store the ivar
@@ -103,7 +102,7 @@ struct objc_class
 	* where they are used.  The legacy-compatible ABI uses these with a double
 	* layer of indirection.
 	*/
-	int **ivar_offsets;
+	int                      **ivar_offsets;
 	/**
 	* List of declared properties on this class (NULL if none).  This contains
 	* the accessor methods for each property.

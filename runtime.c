@@ -418,11 +418,6 @@ const char * class_getName(Class cls)
 	return cls->name;
 }
 
-Class class_getSuperclass(Class cls)
-{
-	return class_get_super_class(cls);
-}
-
 int class_getVersion(Class theClass)
 {
 	return class_get_version(theClass);
