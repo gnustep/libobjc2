@@ -8,10 +8,10 @@
 #include <stdlib.h>
 #include <assert.h>
 
-void __objc_register_selectors_from_class(Class class);
+void objc_register_selectors_from_class(Class class);
 void *__objc_uninstalled_dtable;
-void __objc_init_protocols(struct objc_protocol_list *protos);
-void __objc_compute_ivar_offsets(Class class);
+void objc_init_protocols(struct objc_protocol_list *protos);
+void objc_compute_ivar_offsets(Class class);
 
 ////////////////////////////////////////////////////////////////////////////////
 // +load method hash table
@@ -216,7 +216,7 @@ BOOL  objc_resolve_class(Class cls)
 	objc_set_class_flag(cls, objc_class_flag_resolved);
 	objc_set_class_flag(cls->isa, objc_class_flag_resolved);
 	// Fix up the ivar offsets
-	__objc_compute_ivar_offsets(cls);
+	objc_compute_ivar_offsets(cls);
 	// Send the +load message, if required
 	objc_send_load_message(cls->isa);
 	if (_objc_load_callback)
@@ -226,7 +226,7 @@ BOOL  objc_resolve_class(Class cls)
 	return YES;
 }
 
-void __objc_resolve_class_links(void)
+void objc_resolve_class_links(void)
 {
 	LOCK_UNTIL_RETURN(__objc_runtime_mutex);
 	Class class = unresolved_class_list;
@@ -246,6 +246,17 @@ void __objc_resolve_class_links(void)
 			class = next;
 		}
 	} while (resolvedClass);
+}
+void __objc_resolve_class_links(void)
+{
+	static BOOL warned = NO;
+	if (!warned)
+	{
+		fprintf(stderr, 
+			"Warning: Calling deprecated private ObjC runtime function %s\n", __func__);
+		warned = YES;
+	}
+	objc_resolve_class_links();
 }
 
 // FIXME: Remove this once all uses of it in the runtime have been removed
@@ -281,8 +292,8 @@ void objc_load_class(struct objc_class *class)
 	class_table_insert (class);
 
 	// Register all of the selectors used by this class and its metaclass
-	__objc_register_selectors_from_class(class);
-	__objc_register_selectors_from_class(class->isa);
+	objc_register_selectors_from_class(class);
+	objc_register_selectors_from_class(class->isa);
 
 	// Set the uninstalled dtable.  The compiler could do this as well.
 	class->dtable = __objc_uninstalled_dtable;
@@ -297,7 +308,7 @@ void objc_load_class(struct objc_class *class)
 
 	if (class->protocols)
 	{
-		__objc_init_protocols (class->protocols);
+		objc_init_protocols(class->protocols);
 	}
 }
 

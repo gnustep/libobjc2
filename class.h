@@ -1,4 +1,5 @@
-
+#ifndef __OBJC_CLASS_H_INCLUDED
+#define __OBJC_CLASS_H_INCLUDED
 #ifndef __objc_runtime_INCLUDE_GNU
 struct objc_class
 {
@@ -163,3 +164,4 @@ static inline BOOL objc_test_class_flag(struct objc_class *aClass,
 {
 	return aClass->info & (long)flag;
 }
+#endif //__OBJC_CLASS_H_INCLUDED

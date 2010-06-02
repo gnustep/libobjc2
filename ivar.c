@@ -7,7 +7,7 @@
 ptrdiff_t objc_alignof_type(const char *);
 ptrdiff_t objc_sizeof_type(const char *);
 
-void __objc_compute_ivar_offsets(Class class)
+void objc_compute_ivar_offsets(Class class)
 {
 	int i = 0;
 	/* If this class was compiled with support for late-bound ivars, the
@@ -23,7 +23,7 @@ void __objc_compute_ivar_offsets(Class class)
 		{
 			if (super->instance_size <= 0)
 			{
-				__objc_compute_ivar_offsets(super);
+				objc_compute_ivar_offsets(super);
 			}
 			ivar_start = super->instance_size;
 		}

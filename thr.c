@@ -55,7 +55,6 @@ int objc_mutex_deallocate (objc_mutex_t mutex)
 	free(mutex);
 	return 0;
 }
-int __objc_init_thread_system(void) { return 0; }
 
 /* External functions for locking and unlocking runtime mutexes. */
 int

@@ -195,7 +195,7 @@ static void mergeMethodsFromSuperclass(Class super, Class cls, SparseArray *meth
 
 Class class_getSuperclass(Class);
 
-void __objc_update_dispatch_table_for_class(Class cls)
+void objc_update_dtable_for_class(Class cls)
 {
 	// Only update real dtables
 	if (!classHasDtable(cls)) { return; }
@@ -209,6 +209,17 @@ void __objc_update_dispatch_table_for_class(Class cls)
 	// Methods now contains only the new methods for this class.
 	mergeMethodsFromSuperclass(cls, cls, methods);
 	SparseArrayDestroy(methods);
+}
+void __objc_update_dispatch_table_for_class(Class cls)
+{
+	static BOOL warned = NO;
+	if (!warned)
+	{
+		fprintf(stderr, 
+			"Warning: Calling deprecated private ObjC runtime function %s\n", __func__);
+		warned = YES;
+	}
+	objc_update_dtable_for_class(cls);
 }
 
 static SparseArray *create_dtable_for_class(Class class)

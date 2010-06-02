@@ -124,7 +124,7 @@ void __objc_init_selector_tables()
 {
 	selector_list = SparseArrayNew();
 	INIT_LOCK(selector_table_lock);
-	sel_table = selector_create(40960);
+	sel_table = selector_create(4096);
 }
 
 static SEL selector_lookup(const char *name, const char *types)
@@ -306,7 +306,7 @@ unsigned sel_copyTypes(const char *selName, const char **types, unsigned count)
 	return found;
 }
 
-void __objc_register_selectors_from_list(struct objc_method_list *l)
+void objc_register_selectors_from_list(struct objc_method_list *l)
 {
 	for (int i=0 ; i<l->count ; i++)
 	{
@@ -318,14 +318,14 @@ void __objc_register_selectors_from_list(struct objc_method_list *l)
 /**
  * Register all of the (unregistered) selectors that are used in a class.
  */
-void __objc_register_selectors_from_class(Class class)
+void objc_register_selectors_from_class(Class class)
 {
 	for (struct objc_method_list *l=class->methods ; NULL!=l ; l=l->next)
 	{
-		__objc_register_selectors_from_list(l);
+		objc_register_selectors_from_list(l);
 	}
 }
-void __objc_register_selector_array(SEL selectors, unsigned long count)
+void objc_register_selector_array(SEL selectors, unsigned long count)
 {
 	// GCC is broken and always sets the count to 0, so we ignore count until
 	// we can throw stupid and buggy compilers in the bin.

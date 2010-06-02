@@ -229,40 +229,6 @@ typedef struct objc_ivar_list {
                                                   structure. */
 } IvarList, *IvarList_t;
 
-enum PropertyAttributeKind 
-{
-	OBJC_PR_noattr    = 0x00,
-	OBJC_PR_readonly  = 0x01,
-	OBJC_PR_getter    = 0x02,
-	OBJC_PR_assign    = 0x04,
-	OBJC_PR_readwrite = 0x08,
-	OBJC_PR_retain    = 0x10,
-	OBJC_PR_copy      = 0x20,
-	OBJC_PR_nonatomic = 0x40,
-	OBJC_PR_setter    = 0x80
-};
-
-/**
- * Structure used for property enumeration.  Note that property enumeration is currently quite broken on OS X, so achieving full compatibility there is impossible.  Instead, we strive to achieve com
- */
-struct objc_property {
-	const char *name;
-	const char attributes;
-	const char isSynthesized;
-	const char *setter_name;
-	const char *setter_types;
-	const char *getter_name;
-	const char *getter_types;
-};
-
-struct objc_property_list {
-	int property_count;
-	struct objc_property_list *next; /* UNUSED.  In future, categories will be
-	                                    allowed to add properties and then this will
-	                                    be used to link the declarations together. */
-	struct objc_property properties[1];
-};
-
 /*
 ** The compiler generates one (or more) of these structures for a class that
 ** has methods defined in its specification. 

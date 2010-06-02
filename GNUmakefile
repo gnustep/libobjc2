@@ -20,20 +20,22 @@ libobjc_OBJC_FILES = \
 
 libobjc_C_FILES = \
 	abi_version.c\
+	category_loader.c\
 	class_table.c\
 	encoding.c\
 	hash_table.c\
 	exception.c\
 	hooks.c\
 	ivar.c\
-	init.c\
+	loader.c\
 	misc.c\
 	nil_method.c\
 	protocol.c\
 	runtime.c\
 	sarray2.c\
 	selector_table.c\
-	sendmsg.c
+	sendmsg.c\
+	statics_loader.c
 
 ifneq ($(enable_legacy), no)
 libobjc_C_FILES += \

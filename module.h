@@ -14,12 +14,12 @@ struct objc_symbol_table_abi_8
 	/**
 	 * The number of selectors referenced in this module.
 	 */
-	unsigned long  selector_refs_count;
+	unsigned long  selector_count;
 	/**
 	 * An array of selectors used in this compilation unit.  SEL is a pointer
 	 * type and this points to the first element in an array of selectors.
 	 */
-	SEL            refs;
+	SEL            selectors;
 	/**
 	 * The number of classes defined in this module.
 	 */
@@ -70,4 +70,20 @@ struct objc_module_abi_8
 	 * A pointer to the symbol table for this compilation unit.
 	 */
 	struct objc_symbol_table_abi_8 *symbol_table;
+};
+
+/**
+ * List of static instances of a named class provided in this module.
+ */
+struct objc_static_instance_list
+{
+	/**
+	 * The name of the class.  The isa pointer of all of the instances will be
+	 * set to the class with this name.
+	 */
+	char *class_name;
+	/**
+	 * NULL-terminated array of statically-allocated instances.
+	 */
+	id    instances[1];
 };
