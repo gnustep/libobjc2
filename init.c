@@ -32,8 +32,6 @@ see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
 
 /* The version number of this runtime.  This must match the number 
    defined in gcc (objc-act.c).  */
-#define OBJC_BACK_COMPATIBLE_VERSION 8
-#define OBJC_VERSION 9
 #define PROTOCOL_VERSION 2
 #define OBJC2_PROTOCOL_VERSION 3
 
@@ -154,6 +152,8 @@ void __objc_init_protocol_table(void);
    to gather the module pointers so that they may be processed by the
    initialization routines as soon as possible.  */
 
+BOOL objc_check_abi_version(unsigned long version, unsigned long module_size);
+
 void
 __objc_exec_class (Module_t module)
 {
@@ -179,7 +179,7 @@ __objc_exec_class (Module_t module)
   DEBUG_PRINTF ("received module: %s\n", module->name);
 
   /* check compiler version */
-  init_check_module_version (module);
+  assert(objc_check_abi_version(module->version, module->size));
 
   /* On the first call of this routine, initialize some data structures.  */
   // FIXME: This should really be using a pthread_once or equivalent.
@@ -302,27 +302,6 @@ __objc_exec_class (Module_t module)
 
 void __objc_compute_ivar_offsets(Class class);
 
-/* Sanity check the version of gcc used to compile `module'.  */
-
-static void
-init_check_module_version (Module_t module)
-{
-  if ((module->version < OBJC_BACK_COMPATIBLE_VERSION) || 
-      (module->version > OBJC_VERSION) || (module->size != sizeof (Module)))
-    {
-      int code;
-
-      if (module->version > OBJC_VERSION)
-	code = OBJC_ERR_OBJC_VERSION;
-      else if (module->version < OBJC_VERSION)
-	code = OBJC_ERR_GCC_VERSION;
-      else
-	code = OBJC_ERR_MODULE_SIZE;
-
-      objc_error (nil, code, "Module %s version %d doesn't match runtime %d\n",
-		  module->name, (int)module->version, OBJC_VERSION);
-    }
-}
 
 struct objc_protocol *__objc_unique_protocol(struct objc_protocol*);
 void __objc_init_protocols (struct objc_protocol_list *protos)
