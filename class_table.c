@@ -22,7 +22,7 @@ static int imp_compare(IMP i1, IMP i2)
 }
 static int imp_hash(const IMP imp)
 {
-	return ((int)imp) >> 4;
+	return ((int)(intptr_t)imp) >> 4;
 }
 #define MAP_TABLE_NAME load_messages
 #define MAP_TABLE_COMPARE_FUNCTION imp_compare
@@ -116,7 +116,7 @@ Class class_table_get_safe(const char *class_name)
 
 Class class_table_next(void **e)
 {
-	return class_table_internal_next(class_table, 
+	return class_table_internal_next(class_table,
 			(struct class_table_internal_table_enumerator**)e);
 }
 
@@ -178,7 +178,7 @@ BOOL  objc_resolve_class(Class cls)
 	}
 	if (Nil != cls->unresolved_class_next)
 	{
-		cls->unresolved_class_next->unresolved_class_prev = 
+		cls->unresolved_class_next->unresolved_class_prev =
 			cls->unresolved_class_prev;
 	}
 	cls->unresolved_class_prev = Nil;
@@ -205,7 +205,7 @@ BOOL  objc_resolve_class(Class cls)
 	// Don't make the root class a subclass of itself
 	if (cls != super)
 	{
-		// Set up the class links 
+		// Set up the class links
 		cls->sibling_class = super->subclass_list;
 		super->subclass_list = cls;
 		// Set up the metaclass links
@@ -279,7 +279,7 @@ void objc_load_class(struct objc_class *class)
 	class->isa->dtable = __objc_uninstalled_dtable;
 
 	// If this is a root class, make the class into the metaclass's superclass.
-	// This means that all instance methods will be available to the class.  
+	// This means that all instance methods will be available to the class.
 	if (NULL == superclassName)
 	{
 		class->isa->super_class = class;
