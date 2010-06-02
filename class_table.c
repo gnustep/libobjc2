@@ -16,13 +16,13 @@ void __objc_compute_ivar_offsets(Class class);
 ////////////////////////////////////////////////////////////////////////////////
 // +load method hash table
 ////////////////////////////////////////////////////////////////////////////////
-static int imp_compare(IMP i1, IMP i2)
+static int imp_compare(const void *i1, void *i2)
 {
 	return i1 == i2;
 }
-static int imp_hash(const IMP imp)
+static int32_t imp_hash(const void *imp)
 {
-	return ((int)(intptr_t)imp) >> 4;
+	return (int32_t)(((uintptr_t)imp) >> 4);
 }
 #define MAP_TABLE_NAME load_messages
 #define MAP_TABLE_COMPARE_FUNCTION imp_compare
@@ -230,12 +230,22 @@ void __objc_resolve_class_links(void)
 {
 	LOCK_UNTIL_RETURN(__objc_runtime_mutex);
 	Class class = unresolved_class_list;
-	while ((Nil != class))
+	BOOL resolvedClass;
+	do
 	{
-		Class next = class->unresolved_class_next;
-		objc_resolve_class(class);
-		class = next;
-	}
+		resolvedClass = NO;
+		while ((Nil != class))
+		{
+			Class next = class->unresolved_class_next;
+			objc_resolve_class(class);
+			if (resolvedClass ||
+				objc_test_class_flag(class, objc_class_flag_resolved))
+			{
+				resolvedClass = YES;
+			}
+			class = next;
+		}
+	} while (resolvedClass);
 }
 
 // FIXME: Remove this once all uses of it in the runtime have been removed
