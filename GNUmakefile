@@ -86,10 +86,6 @@ ifneq ($(findstring gcc, $(CC)),)
 libobjc_CFLAGS += -fgnu89-inline 
 endif
 
-ifneq ($(findstring mingw, $(GNUSTEP_HOST_OS)),)
-libobjc_C_FILES += libobjc_entry.c
-endif
-
 include $(GNUSTEP_MAKEFILES)/aggregate.make
 include $(GNUSTEP_MAKEFILES)/library.make
 
