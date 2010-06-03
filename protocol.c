@@ -180,7 +180,10 @@ static BOOL init_protocols(struct objc_protocol_list *protocols)
 				break;
 		}
 		// Initialize all of the protocols that this protocol refers to
-		init_protocols(aProto->protocol_list);
+		if (NULL != aProto->protocol_list)
+		{
+			init_protocols(aProto->protocol_list);
+		}
 		// Replace this protocol with a unique version of it.
 		protocols->list[i] = unique_protocol(aProto);
 	}
