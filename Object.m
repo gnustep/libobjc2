@@ -182,11 +182,10 @@ see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
   return class_get_instance_method(self, aSel)!=METHOD_NULL;
 }
 
+BOOL class_respondsToSelector(Class, SEL);
 - (BOOL)respondsTo:(SEL)aSel
 {
-  return ((object_is_instance(self)
-           ?class_get_instance_method(self->isa, aSel)
-           :class_get_class_method(self->isa, aSel))!=METHOD_NULL);
+  return class_respondsToSelector(isa, aSel);
 }
 
 + (IMP)instanceMethodFor:(SEL)aSel
