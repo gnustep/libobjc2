@@ -177,20 +177,21 @@ see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
           &&!strcmp(class_get_class_name(self->isa), aClassName));
 }
 
+BOOL class_respondsToSelector(Class, SEL);
 + (BOOL)instancesRespondTo:(SEL)aSel
 {
-  return class_get_instance_method(self, aSel)!=METHOD_NULL;
+  return class_respondsToSelector(self, aSel);
 }
 
-BOOL class_respondsToSelector(Class, SEL);
 - (BOOL)respondsTo:(SEL)aSel
 {
   return class_respondsToSelector(isa, aSel);
 }
 
+IMP class_getMethodImplementation(Class cls, SEL name);
 + (IMP)instanceMethodFor:(SEL)aSel
 {
-  return method_get_imp(class_get_instance_method(self, aSel));
+  return class_getMethodImplementation(self, aSel);
 }
 
 // Indicates if the receiving class or instance conforms to the given protocol
@@ -228,23 +229,23 @@ BOOL class_respondsToSelector(Class, SEL);
 
 - (IMP)methodFor:(SEL)aSel
 {
-  return (method_get_imp(object_is_instance(self)
-                         ?class_get_instance_method(self->isa, aSel)
-                         :class_get_class_method(self->isa, aSel)));
+  return class_getMethodImplementation(isa, aSel);
 }
 
+struct objc_method *class_getInstanceMethod(Class aClass, SEL aSelector);
 + (struct objc_method_description *)descriptionForInstanceMethod:(SEL)aSel
 {
   return ((struct objc_method_description *)
-           class_get_instance_method(self, aSel));
+           class_getInstanceMethod(self, aSel));
 }
 
+struct objc_method *class_getClassMethod(Class aClass, SEL aSelector);
 - (struct objc_method_description *)descriptionForMethod:(SEL)aSel
 {
   return ((struct objc_method_description *)
            (object_is_instance(self)
-            ?class_get_instance_method(self->isa, aSel)
-            :class_get_class_method(self->isa, aSel)));
+            ?class_getInstanceMethod(self->isa, aSel)
+            :class_getClassMethod(self->isa, aSel)));
 }
 
 - perform:(SEL)aSel
