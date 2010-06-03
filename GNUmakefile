@@ -12,7 +12,6 @@ libobjc_OBJC_FILES = \
 	Object.m\
 	Protocol.m\
 	blocks_runtime.m\
-	linking.m\
 	mutation.m\
 	properties.m\
 	sync.m
@@ -22,6 +21,7 @@ libobjc_C_FILES = \
 	abi_version.c\
 	category_loader.c\
 	class_table.c\
+	dtable.c\
 	encoding.c\
 	hash_table.c\
 	exception.c\
@@ -29,17 +29,15 @@ libobjc_C_FILES = \
 	ivar.c\
 	loader.c\
 	misc.c\
-	nil_method.c\
 	protocol.c\
 	runtime.c\
 	sarray2.c\
 	selector_table.c\
-	sendmsg.c\
+	sendmsg2.c\
 	statics_loader.c
 
 ifneq ($(enable_legacy), no)
 libobjc_C_FILES += \
-	gc.c\
 	objects.c\
 	thr.c
 endif

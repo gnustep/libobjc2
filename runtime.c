@@ -65,11 +65,6 @@
  */
 void __objc_update_dispatch_table_for_class(Class);
 /**
- * Private runtime function for determining whether an object responds to a
- * selector.
- */
-BOOL __objc_responds_to(id, SEL);
-/**
  *  Runtime library constant for uninitialized dispatch table.
  */
 extern struct sarray *__objc_uninstalled_dtable;
@@ -453,15 +448,6 @@ IMP class_replaceMethod(Class cls, SEL name, IMP imp, const char *types)
 	return old;
 }
 
-
-BOOL
-class_respondsToSelector(Class cls, SEL sel)
-{
-  /* Warning the __objc_responds_to() function expects an id argument and
-   * dereferences the initial ivar (the 'isa' pointer) to find the class.
-   */
-  return __objc_responds_to((id)&cls, sel);
-}
 
 void class_setIvarLayout(Class cls, const char *layout)
 {

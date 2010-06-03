@@ -11,6 +11,7 @@
 #define _SARRAY_H_INCLUDED_
 #include <stdint.h>
 #include <stdlib.h>
+#include <assert.h>
 
 /**
  * Sparse arrays, used to implement dispatch tables.  Current implementation is

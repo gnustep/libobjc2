@@ -1,9 +1,18 @@
+#include "objc/runtime.h"
 #include "lock.h"
+#include "dtable.h"
+#include "selector.h"
+#include "loader.h"
+#include "objc/hooks.h"
 #include <stdint.h>
 #include <dlfcn.h>
+#include <stdio.h>
 
-#define PROFILE
+void objc_send_initialize(id object);
+
 __thread id objc_msg_sender;
+
+static id nil_method(id self, SEL _cmd) { return nil; }
 
 static struct objc_slot nil_slot = { Nil, Nil, "", 1, (IMP)nil_method };
 
@@ -18,39 +27,28 @@ static Slot_t objc_msg_forward3_null(id receiver, SEL op) { return &nil_slot; }
 id (*objc_proxy_lookup)(id receiver, SEL op) = objc_proxy_lookup_null;
 Slot_t (*objc_msg_forward3)(id receiver, SEL op) = objc_msg_forward3_null;
 
-static inline
-Slot_t objc_msg_lookup_internal(id *receiver, SEL selector, id sender)
+static inline Slot_t objc_msg_lookup_internal(id *receiver,
+                                              SEL selector, 
+                                              id sender)
 {
-	Slot_t result = sarray_get_safe((*receiver)->class_pointer->dtable,
-			PTR_TO_IDX(selector->sel_id));
+	Slot_t result = SparseArrayLookup((*receiver)->isa->dtable,
+			PTR_TO_IDX(selector->name));
 	if (0 == result)
 	{
-		Class class = (*receiver)->class_pointer;
+		Class class = (*receiver)->isa;
 		void *dtable = dtable_for_class(class);
 		/* Install the dtable if it hasn't already been initialized. */
 		if (dtable == __objc_uninstalled_dtable)
 		{
-			__objc_init_install_dtable (*receiver, selector);
+			objc_send_initialize(*receiver);
 			dtable = dtable_for_class(class);
-			result = sarray_get_safe(dtable, PTR_TO_IDX(selector->sel_id));
-			if (0 == result)
-			{
-				objc_mutex_lock(__objc_runtime_mutex);
-				dtable = dtable_for_class(class);
-				if (dtable == __objc_uninstalled_dtable)
-				{
-					__objc_install_dispatch_table_for_class(class);
-					dtable = dtable_for_class(class);
-				}
-				objc_mutex_unlock(__objc_runtime_mutex);
-				result = sarray_get_safe(dtable, PTR_TO_IDX(selector->sel_id));
-			}
+			result = SparseArrayLookup(dtable, PTR_TO_IDX(selector->name));
 		}
 		else
 		{
 			// Check again incase another thread updated the dtable while we
 			// weren't looking
-			result = sarray_get_safe(dtable, PTR_TO_IDX(selector->sel_id));
+			result = SparseArrayLookup(dtable, PTR_TO_IDX(selector->name));
 		}
 		if (0 == result)
 		{
@@ -95,7 +93,7 @@ Slot_t objc_msg_lookup_sender(id *receiver, SEL selector, id sender)
 	 * we can guarantee that it is not (e.g. with GCKit)
 	if (__builtin_expect(sender == nil
 		||
-		(sender->class_pointer->info & (*receiver)->class_pointer->info & _CLS_PLANE_AWARE),1))
+		(sender->isa->info & (*receiver)->isa->info & _CLS_PLANE_AWARE),1))
 	*/
 	{
 		return objc_msg_lookup_internal(receiver, selector, sender);
@@ -111,14 +109,14 @@ Slot_t objc_msg_lookup_sender(id *receiver, SEL selector, id sender)
 	return objc_plane_lookup(receiver, selector, sender);
 }
 
-Slot_t objc_slot_lookup_super(Super_t super, SEL selector)
+Slot_t objc_slot_lookup_super(struct objc_super *super, SEL selector)
 {
-	id receiver = super->self;
+	id receiver = super->receiver;
 	if (receiver)
 	{
 		Class class = super->class;
-		Slot_t result = sarray_get_safe(dtable_for_class(class),
-				PTR_TO_IDX(selector->sel_id));
+		Slot_t result = SparseArrayLookup(dtable_for_class(class),
+				PTR_TO_IDX(selector->name));
 		if (0 == result)
 		{
 			// Dtable should always be installed in the superclass
@@ -133,7 +131,10 @@ Slot_t objc_slot_lookup_super(Super_t super, SEL selector)
 	}
 }
 
-#ifdef PROFILE
+////////////////////////////////////////////////////////////////////////////////
+// Profiling
+////////////////////////////////////////////////////////////////////////////////
+
 /**
  * Mutex used to protect non-thread-safe parts of the profiling subsystem.
  */
@@ -211,4 +212,87 @@ void objc_msg_profile(id receiver, IMP method,
 	struct profile_info profile_data = { module, callsite, method };
 	fwrite(&profile_data, sizeof(profile_data), 1, profileData);
 }
-#endif
+
+/**
+ * Looks up a slot without invoking any forwarding mechanisms
+ */
+Slot_t objc_get_slot(Class cls, SEL selector)
+{
+	Slot_t result = SparseArrayLookup(cls->dtable, PTR_TO_IDX(selector->name));
+	if (0 == result)
+	{
+		void *dtable = dtable_for_class(cls);
+		/* Install the dtable if it hasn't already been initialized. */
+		if (dtable == __objc_uninstalled_dtable)
+		{
+			//objc_send_initialize((id)cls);
+			dtable = dtable_for_class(cls);
+			result = SparseArrayLookup(dtable, PTR_TO_IDX(selector->name));
+		}
+		else
+		{
+			// Check again incase another thread updated the dtable while we
+			// weren't looking
+			result = SparseArrayLookup(dtable, PTR_TO_IDX(selector->name));
+		}
+	}
+	return result;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Public API
+////////////////////////////////////////////////////////////////////////////////
+
+BOOL class_respondsToSelector(Class cls, SEL selector)
+{
+	return NULL != objc_get_slot(cls, selector);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Legacy compatibility
+////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Legacy message lookup function.
+ */
+BOOL __objc_responds_to(id object, SEL sel)
+{
+	return class_respondsToSelector(object->isa, sel);
+}
+
+IMP get_imp(Class cls, SEL selector)
+{
+	Slot_t slot = objc_get_slot(cls, selector);
+	return NULL != slot ? slot->method : NULL;
+}
+
+/**
+ * Legacy message lookup function.  Does not support fast proxies or safe IMP
+ * caching.
+ */
+IMP objc_msg_lookup(id receiver, SEL selector)
+{
+	if (nil == receiver) { return (IMP)nil_method; }
+
+	id self = receiver;
+	Slot_t slot = objc_msg_lookup_internal(&self, selector, nil);
+	if (self != receiver)
+	{
+		return __objc_msg_forward2(receiver, selector);
+	}
+	return slot->method;
+}
+
+IMP objc_msg_lookup_super(struct objc_super *super, SEL selector)
+{
+	return objc_slot_lookup_super(super, selector)->method;
+}
+/**
+ * Message send function that only ever worked on a small subset of compiler /
+ * architecture combinations.
+ */
+void *objc_msg_sendv(void)
+{
+	fprintf(stderr, "objc_msg_sendv() never worked correctly.  Don't use it.\n");
+	abort();
+}

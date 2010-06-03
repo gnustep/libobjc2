@@ -1,3 +1,5 @@
+#ifndef OBJC_SELECTOR_H_INCLUDED
+#define OBJC_SELECTOR_H_INCLUDED
 /**
  * Structure used to store the types for a selector.  This allows for a quick
  * test to see whether a selector is polymorphic and allows enumeration of all
@@ -24,3 +26,4 @@ struct objc_selector
 	const char * types;
 };
 
+#endif // OBJC_SELECTOR_H_INCLUDED
