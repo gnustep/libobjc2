@@ -22,7 +22,7 @@ libobjc_C_FILES = \
 	category_loader.c\
 	class_table.c\
 	dtable.c\
-	encoding.c\
+	encoding2.c\
 	hash_table.c\
 	exception.c\
 	hooks.c\

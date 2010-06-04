@@ -491,49 +491,6 @@ const char * ivar_getTypeEncoding(Ivar ivar)
 	return ivar->ivar_type;
 }
 
-static size_t lengthOfTypeEncoding(const char *types)
-{
-	const char *end = objc_skip_argspec(types);
-	end--;
-	while (isdigit(*end)) { end--; }
-	size_t length = end - types + 1;
-	return length;
-}
-static char *copyTypeEncoding(const char *types)
-{
-	size_t length = lengthOfTypeEncoding(types);
-	char *copy = malloc(length + 1);
-	memcpy(copy, types, length);
-	copy[length] = '\0';
-	return copy;
-}
-static const char * findParameterStart(const char *types, unsigned int index)
-{
-	for (unsigned int i=0 ; i<index ; i++)
-	{
-		types = objc_skip_argspec(types);
-		if ('\0' == *types)
-		{
-			return NULL;
-		}
-	}
-	return types;
-}
-
-char * method_copyArgumentType(Method method, unsigned int index)
-{
-	const char *types = findParameterStart(method->method_types, index);
-	if (NULL == types)
-	{
-		return NULL;
-	}
-	return copyTypeEncoding(types);
-}
-
-char * method_copyReturnType(Method method)
-{
-	return copyTypeEncoding(method->method_types);
-}
 
 void method_exchangeImplementations(Method m1, Method m2)
 {
@@ -542,28 +499,6 @@ void method_exchangeImplementations(Method m1, Method m2)
 	m2->method_imp = (objc_imp_gnu)tmp;
 	objc_updateDtableForClassContainingMethod(m1);
 	objc_updateDtableForClassContainingMethod(m2);
-}
-void method_getArgumentType(Method method, 
-                            unsigned int index,
-                            char *dst,
-                            size_t dst_len)
-{
-	const char *types = findParameterStart(method->method_types, index);
-	if (NULL == types)
-	{
-		strncpy(dst, "", dst_len);
-		return;
-	}
-	size_t length = lengthOfTypeEncoding(types);
-	if (length < dst_len)
-	{
-		memcpy(dst, types, length);
-		dst[length] = '\0';
-	}
-	else
-	{
-		memcpy(dst, types, dst_len);
-	}
 }
 
 IMP method_getImplementation(Method method)
@@ -576,38 +511,6 @@ SEL method_getName(Method method)
 	return (SEL)method->method_name;
 }
 
-unsigned method_getNumberOfArguments(Method method)
-{
-	const char *types = method->method_types;
-	unsigned int count = 0;
-	while('\0' != *types)
-	{
-		types = objc_skip_argspec(types);
-		count++;
-	}
-	return count - 1;
-}
-
-void method_getReturnType(Method method, char *dst, size_t dst_len)
-{
-	//TODO: Coped and pasted code.  Factor it out.
-	const char *types = method->method_types;
-	size_t length = lengthOfTypeEncoding(types);
-	if (length < dst_len)
-	{
-		memcpy(dst, types, length);
-		dst[length] = '\0';
-	}
-	else
-	{
-		memcpy(dst, types, dst_len);
-	}
-}
-
-const char * method_getTypeEncoding(Method method)
-{
-	return method->method_types;
-}
 
 IMP method_setImplementation(Method method, IMP imp)
 {
