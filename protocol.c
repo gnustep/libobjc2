@@ -1,6 +1,7 @@
 #include "objc/runtime.h"
 #include "protocol.h"
 #include "properties.h"
+#include "class.h"
 #include "lock.h"
 #include <stdlib.h>
 
@@ -218,12 +219,54 @@ Protocol *objc_getProtocol(const char *name)
 	return (Protocol*)protocol_for_name(name);
 }
 
-BOOL protocol_conformsToProtocol(Protocol *p, Protocol *other)
+BOOL protocol_conformsToProtocol(Protocol *p1, Protocol *p2)
 {
+	// A protocol trivially conforms to itself
+	if (strcmp(p1->name, p2->name) == 0) { return YES; }
 
+	for (struct objc_protocol_list *list = p1->protocol_list ;
+		list != NULL ; list = list->next)
+	{
+		for (int i=0 ; i<list->count ; i++)
+		{
+			fprintf(stderr, "recursively checking %s\n", list->list[i]->name);
+			if (strcmp(list->list[i]->name, p2->name) == 0)
+			{
+				return YES;
+			}
+			if (protocol_conformsToProtocol((Protocol*)list->list[i], p2))
+			{
+				return YES;
+			}
+		}
+	}
 	return NO;
 }
 
+BOOL class_conformsToProtocol(Class cls, Protocol *protocol)
+{
+	fprintf(stderr, "Testing if %s conforms to %s\n", cls->name, protocol->name);
+	while (cls)
+	{
+		for (struct objc_protocol_list *protocols = cls->protocols;
+			protocols != NULL ; protocols = protocols->next)
+		{
+			for (int i=0 ; i<protocols->count ; i++)
+			{
+				Protocol *p1 = (Protocol*)protocols->list[i];
+				fprintf(stderr, "checking %s\n", p1->name);
+				if (protocol_conformsToProtocol(p1, protocol))
+				{
+					return YES;
+				}
+			}
+		}
+		cls = cls->super_class;
+	}
+	return NO;
+}
+
+//FIXME!!!!
 struct objc_method_description *protocol_copyMethodDescriptionList(Protocol *p,
 	BOOL isRequiredMethod, BOOL isInstanceMethod, unsigned int *count)
 {

@@ -24,6 +24,7 @@ static void load_category(struct objc_category *cat, struct objc_class *class)
 {
 	register_methods(class, cat->instance_methods);
 	register_methods(class->isa, cat->class_methods);
+	//fprintf(stderr, "Loading %s (%s)\n", cat->class_name, cat->name);
 
 	if (cat->protocols)
 	{
@@ -36,11 +37,13 @@ static void load_category(struct objc_category *cat, struct objc_class *class)
 static BOOL try_load_category(struct objc_category *cat)
 {
 	Class class = (Class)objc_getClass(cat->class_name);
+	//fprintf(stderr, "Trying to load %s (%s)\n", cat->class_name, cat->name);
 	if (Nil != class)
 	{
 		load_category(cat, class);
 		return YES;
 	}
+	//fprintf(stderr, "waiting to load %s (%s)\n", cat->class_name, cat->name);
 	return NO;
 }
 

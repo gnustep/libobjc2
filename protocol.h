@@ -1,4 +1,5 @@
 #include "selector.h"
+#include <stdlib.h>
 
 struct objc_method_description_list
 {
@@ -20,10 +21,12 @@ struct objc_method_description_list
  */
 #ifdef __OBJC__
 @interface Protocol
+{
+	@public
 #else
 struct objc_protocol
-#endif 
 {
+#endif 
 	/** Class pointer. */
 	id                                   isa;
 	/** 
@@ -51,8 +54,9 @@ struct objc_protocol
 #endif 
 
 #ifdef __OBJC__
-@interface Protocol2
+@interface Protocol2 : Protocol
 {
+	@public
 #else
 typedef struct objc_protocol2
 {

@@ -259,6 +259,7 @@ void __objc_resolve_class_links(void)
 	objc_resolve_class_links();
 }
 
+/*
 // FIXME: Remove this once all uses of it in the runtime have been removed
 void __objc_add_class_to_hash(Class class)
 {
@@ -271,6 +272,7 @@ void __objc_add_class_to_hash(Class class)
 	// class number though, so we don't bother.
 	class_table_insert (class);
 }
+*/
 
 /**
  * Loads a class.  This function assumes that the runtime mutex is locked.

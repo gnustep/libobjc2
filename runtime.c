@@ -1,4 +1,11 @@
 #include "objc/runtime.h"
+#include "selector.h"
+#include "class.h"
+#include "protocol.h"
+#include "ivar.h"
+#include "method_list.h"
+#include "lock.h"
+#include "dtable.h"
 
 /* Make glibc export strdup() */
 
@@ -6,72 +13,12 @@
 	#define __USE_BSD 1
 #endif
 
-#undef __objc_INCLUDE_GNU
-#undef __thread_INCLUDE_GNU
-#undef __objc_api_INCLUDE_GNU
-#undef __encoding_INCLUDE_GNU
-
-#define objc_object objc_object_gnu
-#define id object_ptr_gnu
-#define IMP objc_imp_gnu
-#define Method objc_method_gnu
-
-#define object_copy	gnu_object_copy
-#define object_dispose	gnu_object_dispose
-#define objc_super gnu_objc_super
-#define objc_msg_lookup gnu_objc_msg_lookup 
-#define objc_msg_lookup_super gnu_objc_msg_lookup_super 
-#define BOOL GNU_BOOL
-#define SEL GNU_SEL
-#define Protocol GNU_Protocol
-#define Class GNU_Class
-
-#undef YES
-#undef NO
-#undef Nil
-#undef nil
-
-#include <objc/objc.h>
-#include <objc/objc-api.h>
-#undef GNU_BOOL
-#include <objc/encoding.h>
-#undef Class
-#undef Protocol
-#undef SEL 
-#undef objc_msg_lookup
-#undef objc_msg_lookup_super
-#undef objc_super
-#undef Method 
-#undef IMP
-#undef id
-#undef objc_object
-
-// Reinstall definitions.
-#undef YES
-#undef NO
-#undef Nil
-#undef nil
-#define YES ((BOOL)1)
-#define NO ((BOOL)0)
-#define nil ((id)_OBJC_NULL_PTR)
-#define Nil ((Class)_OBJC_NULL_PTR)
-
 #include <string.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
 
-/**
- * Private runtime function for updating a dtable.
- */
-void __objc_update_dispatch_table_for_class(Class);
-/**
- *  Runtime library constant for uninitialized dispatch table.
- */
-extern struct sarray *__objc_uninstalled_dtable;
-/**
- * Mutex used to protect the ObjC runtime library data structures.
- */
-extern objc_mutex_t __objc_runtime_mutex;
+Class objc_next_class(void*);
 
 /** 
  * Looks up the instance method in a specific class, without recursing into
@@ -80,12 +27,12 @@ extern objc_mutex_t __objc_runtime_mutex;
 static Method class_getInstanceMethodNonrecursive(Class aClass, SEL aSelector)
 {
 	for (struct objc_method_list *methods = aClass->methods;
-		methods != NULL ; methods = methods->method_next)
+		methods != NULL ; methods = methods->next)
 	{
-		for (int i=0 ; i<methods->method_count ; i++)
+		for (int i=0 ; i<methods->count ; i++)
 		{
-			Method_t method = &methods->method_list[i];
-			if (method->method_name->sel_id == aSelector->sel_id)
+			Method method = &methods->methods[i];
+			if (method->selector->name == aSelector->name)
 			{
 				return method;
 			}
@@ -103,87 +50,86 @@ static void objc_updateDtableForClassContainingMethod(Method m)
 	{
 		if (class_getInstanceMethodNonrecursive(nextClass, sel) == m)
 		{
-			__objc_update_dispatch_table_for_class(nextClass);
+			objc_update_dtable_for_class(nextClass);
 			return;
 		}
 	}
 }
 
-BOOL
-class_addIvar(Class cls, const char *name,
-  size_t size, uint8_t alignment, const char *types)
+BOOL class_addIvar(Class cls, const char *name, size_t size, uint8_t alignment,
+		const char *types)
 {
-  struct objc_ivar_list *ivarlist;
-  unsigned off;
-  Ivar ivar;
+	// You can't add ivars to resolved classes (note: You ought to be able to
+	// add them to classes that currently have no instances)
+	if (objc_test_class_flag(cls, objc_class_flag_resolved))
+	{
+		return NO;
+	}
 
-  if (CLS_ISRESOLV(cls) || CLS_ISMETA(cls))
-    {
-      return NO;
-    }
+	if (class_getInstanceVariable(cls, name) != NULL)
+	{
+		return NO;
+	}
 
-  if (class_getInstanceVariable(cls, name) != NULL)
-    {
-      return NO;
-    }
+	struct objc_ivar_list *ivarlist = cls->ivars;
 
-  ivarlist = cls->ivars;
+	if (NULL == ivarlist)
+	{
+		cls->ivars = malloc(sizeof(struct objc_ivar_list));
+		cls->ivars->count = 1;
+	}
+	else
+	{
+		ivarlist->count++;
+		// objc_ivar_list contains one ivar.  Others follow it.
+		cls->ivars = realloc(ivarlist, sizeof(struct objc_ivar_list) +
+				(ivarlist->count - 1) * sizeof(struct objc_ivar));
+	}
+	Ivar ivar = &cls->ivars->ivar_list[cls->ivars->count - 1];
+	ivar->name = strdup(name);
+	ivar->type = strdup(types);
+	// Round up the offset of the ivar so it is correctly aligned.
+	long offset = cls->instance_size >> alignment;
 
-  if (NULL == ivarlist)
-    {
-      cls->ivars = objc_malloc(sizeof(struct objc_ivar_list));
-      cls->ivars->ivar_count = 1;
-    }
-  else
-    {
-      ivarlist->ivar_count++;
-      // objc_ivar_list contains one ivar.  Others follow it.
-      cls->ivars = objc_realloc(ivarlist, sizeof(struct objc_ivar_list)
-				+ (ivarlist->ivar_count -
-				   1) * sizeof(struct objc_ivar));
-    }
+	if (offset << alignment != cls->instance_size)
+	{
+		offset = (offset+ 1) << alignment;
+	}
 
-  ivar = &cls->ivars->ivar_list[cls->ivars->ivar_count - 1];
-  ivar->ivar_name = strdup(name);
-  ivar->ivar_type = strdup(types);
-  // Round up the offset of the ivar so it is correctly aligned.
-  off = cls->instance_size >> alignment;
-  if (off << alignment != cls->instance_size)
-    off = (off + 1) << alignment;
-  ivar->ivar_offset = off;
-  // Increase the instance size to make space for this.
-  cls->instance_size = ivar->ivar_offset + size;
-  return YES;
+	ivar->offset = offset;
+	// Increase the instance size to make space for this.
+	cls->instance_size = ivar->offset + size;
+	return YES;
 }
 
 BOOL class_addMethod(Class cls, SEL name, IMP imp, const char *types)
 {
-	const char *methodName = sel_get_name(name);
+	const char *methodName = sel_getName(name);
 	struct objc_method_list *methods;
-	for (methods=cls->methods; methods!=NULL ; methods=methods->method_next)
+	for (methods=cls->methods; methods!=NULL ; methods=methods->next)
 	{
-		for (int i=0 ; i<methods->method_count ; i++)
+		for (int i=0 ; i<methods->count ; i++)
 		{
-			Method_t method = &methods->method_list[i];
-			if (strcmp(sel_get_name(method->method_name), methodName) == 0)
+			Method method = &methods->methods[i];
+			if (strcmp(sel_getName(method->selector), methodName) == 0)
 			{
 				return NO;
 			}
 		}
 	}
 
-	methods = objc_malloc(sizeof(struct objc_method_list));
-	methods->method_next = cls->methods;
+	methods = malloc(sizeof(struct objc_method_list));
+	methods->next = cls->methods;
 	cls->methods = methods;
 
-	methods->method_count = 1;
-	methods->method_list[0].method_name = sel_register_typed_name(methodName, types);
-	methods->method_list[0].method_types = strdup(types);
-	methods->method_list[0].method_imp = (objc_imp_gnu)imp;
+	methods->count = 1;
+	methods->methods[0].selector = sel_registerTypedName_np(methodName, types);
+	methods->methods[0].types = strdup(types);
+	methods->methods[0].imp = imp;
 
-	if (CLS_ISRESOLV(cls))
+	if (objc_test_class_flag(cls, objc_class_flag_resolved))
 	{
-		__objc_update_dispatch_table_for_class(cls);
+		objc_update_dtable_for_class(cls);
 	}
 
 	return YES;
@@ -193,33 +139,15 @@ BOOL class_addProtocol(Class cls, Protocol *protocol)
 {
 	if (class_conformsToProtocol(cls, protocol)) { return NO; }
 	struct objc_protocol_list *protocols = cls->protocols;
-	protocols = objc_malloc(sizeof(struct objc_protocol_list));
+	protocols = malloc(sizeof(struct objc_protocol_list));
 	if (protocols == NULL) { return NO; }
 	protocols->next = cls->protocols;
 	protocols->count = 1;
-	protocols->list[0] = protocol;
+	protocols->list[0] = (Protocol2*)protocol;
 	cls->protocols = protocols;
 
 	return YES;
 }
-
-BOOL class_conformsToProtocol(Class cls, Protocol *protocol)
-{
-	for (struct objc_protocol_list *protocols = cls->protocols;
-		protocols != NULL ; protocols = protocols->next)
-	{
-		for (int i=0 ; i<protocols->count ; i++)
-		{
-			if (strcmp(protocols->list[i]->protocol_name, 
-						protocol->protocol_name) == 0)
-			{
-				return YES;
-			}
-		}
-	}
-	return NO;
-}
-
 Ivar *
 class_copyIvarList(Class cls, unsigned int *outCount)
 {
@@ -230,7 +158,7 @@ class_copyIvarList(Class cls, unsigned int *outCount)
 
   if (ivarlist != NULL)
     {
-      count = ivarlist->ivar_count;
+      count = ivarlist->count;
     }
   if (outCount != NULL)
     {
@@ -244,7 +172,7 @@ class_copyIvarList(Class cls, unsigned int *outCount)
   list = malloc((count + 1) * sizeof(struct objc_ivar *));
   list[count] = NULL;
   count = 0;
-  for (index = 0; index < ivarlist->ivar_count; index++)
+  for (index = 0; index < ivarlist->count; index++)
     {
       list[count++] = &ivarlist->ivar_list[index];
     }
@@ -259,9 +187,9 @@ class_copyMethodList(Class cls, unsigned int *outCount)
   Method *list;
   struct objc_method_list *methods;
 
-  for (methods = cls->methods; methods != NULL; methods = methods->method_next)
+  for (methods = cls->methods; methods != NULL; methods = methods->next)
     {
-      count += methods->method_count;
+      count += methods->count;
     }
   if (outCount != NULL)
     {
@@ -275,13 +203,13 @@ class_copyMethodList(Class cls, unsigned int *outCount)
   list = malloc((count + 1) * sizeof(struct objc_method *));
   list[count] = NULL;
   count = 0;
-  for (methods = cls->methods; methods != NULL; methods = methods->method_next)
+  for (methods = cls->methods; methods != NULL; methods = methods->next)
     {
       unsigned int	index;
 
-      for (index = 0; index < methods->method_count; index++)
+      for (index = 0; index < methods->count; index++)
 	{
-          list[count++] = &methods->method_list[index];
+          list[count++] = &methods->methods[index];
 	}
     }
 
@@ -322,7 +250,7 @@ class_copyProtocolList(Class cls, unsigned int *outCount)
 
 id class_createInstance(Class cls, size_t extraBytes)
 {
-	id obj = objc_malloc(cls->instance_size + extraBytes);
+	id obj = malloc(cls->instance_size + extraBytes);
 	obj->isa = cls;
 	return obj;
 }
@@ -345,7 +273,7 @@ Method class_getInstanceMethod(Class aClass, SEL aSelector)
 
 Method class_getClassMethod(Class aClass, SEL aSelector)
 {
-	return class_getInstanceMethod(aClass->class_pointer, aSelector);
+	return class_getInstanceMethod(aClass->isa, aSelector);
 }
 
 Ivar class_getClassVariable(Class cls, const char* name)
@@ -372,11 +300,11 @@ class_getInstanceVariable(Class cls, const char *name)
 	    {
 	      int i;
 
-	      for (i = 0; i < ivarlist->ivar_count; i++)
+	      for (i = 0; i < ivarlist->count; i++)
 		{
 		  Ivar ivar = &ivarlist->ivar_list[i];
 
-		  if (strcmp(ivar->ivar_name, name) == 0)
+		  if (strcmp(ivar->name, name) == 0)
 		    {
 		      return ivar;
 		    }
@@ -415,7 +343,7 @@ const char * class_getName(Class cls)
 
 int class_getVersion(Class theClass)
 {
-	return class_get_version(theClass);
+	return theClass->version;
 }
 
 const char *class_getWeakIvarLayout(Class cls)
@@ -426,7 +354,7 @@ const char *class_getWeakIvarLayout(Class cls)
 
 BOOL class_isMetaClass(Class cls)
 {
-	return CLS_ISMETA(cls);
+	return objc_test_class_flag(cls, objc_class_flag_meta);
 }
 
 IMP class_replaceMethod(Class cls, SEL name, IMP imp, const char *types)
@@ -437,12 +365,12 @@ IMP class_replaceMethod(Class cls, SEL name, IMP imp, const char *types)
 		class_addMethod(cls, name, imp, types);
 		return NULL;
 	}
-	IMP old = (IMP)method->method_imp;
-	method->method_imp = (objc_imp_gnu)imp;
+	IMP old = (IMP)method->imp;
+	method->imp = imp;
 
-	if (CLS_ISRESOLV(cls))
+	if (objc_test_class_flag(cls, objc_class_flag_resolved))
 	{
-		__objc_update_dispatch_table_for_class(cls);
+		objc_update_dtable_for_class(cls);
 	}
 
 	return old;
@@ -453,7 +381,7 @@ void class_setIvarLayout(Class cls, const char *layout)
 {
 	struct objc_ivar_list *list = (struct objc_ivar_list*)layout;
 	size_t listsize = sizeof(struct objc_ivar_list) + 
-			sizeof(struct objc_ivar) * (list->ivar_count - 1);
+			sizeof(struct objc_ivar) * (list->count - 1);
 	cls->ivars = malloc(listsize);
 	memcpy(cls->ivars, list, listsize);
 }
@@ -468,7 +396,7 @@ Class class_setSuperclass(Class cls, Class newSuper)
 
 void class_setVersion(Class theClass, int version)
 {
-	class_set_version(theClass, version);
+	theClass->version = version;
 }
 
 void class_setWeakIvarLayout(Class cls, const char *layout)
@@ -478,44 +406,44 @@ void class_setWeakIvarLayout(Class cls, const char *layout)
 
 const char * ivar_getName(Ivar ivar)
 {
-	return ivar->ivar_name;
+	return ivar->name;
 }
 
 ptrdiff_t ivar_getOffset(Ivar ivar)
 {
-	return ivar->ivar_offset;
+	return ivar->offset;
 }
 
 const char * ivar_getTypeEncoding(Ivar ivar)
 {
-	return ivar->ivar_type;
+	return ivar->type;
 }
 
 
 void method_exchangeImplementations(Method m1, Method m2)
 {
-	IMP tmp = (IMP)m1->method_imp;
-	m1->method_imp = m2->method_imp;
-	m2->method_imp = (objc_imp_gnu)tmp;
+	IMP tmp = (IMP)m1->imp;
+	m1->imp = m2->imp;
+	m2->imp = tmp;
 	objc_updateDtableForClassContainingMethod(m1);
 	objc_updateDtableForClassContainingMethod(m2);
 }
 
 IMP method_getImplementation(Method method)
 {
-	return (IMP)method->method_imp;
+	return (IMP)method->imp;
 }
 
 SEL method_getName(Method method)
 {
-	return (SEL)method->method_name;
+	return (SEL)method->selector;
 }
 
 
 IMP method_setImplementation(Method method, IMP imp)
 {
-	IMP old = (IMP)method->method_imp;
-	method->method_imp = (objc_imp_gnu)old;
+	IMP old = (IMP)method->imp;
+	method->imp = old;
 	objc_updateDtableForClassContainingMethod(method);
 	return old;
 }
@@ -535,12 +463,12 @@ static void freeMethodLists(Class aClass)
 	struct objc_method_list *methods = aClass->methods;
 	while(methods != NULL)
 	{
-		for (int i=0 ; i<methods->method_count ; i++)
+		for (int i=0 ; i<methods->count ; i++)
 		{
-			free((void*)methods->method_list[i].method_types);
+			free((void*)methods->methods[i].types);
 		}
 		struct objc_method_list *current = methods;
-	   	methods = methods->method_next;
+	   	methods = methods->next;
 		free(current);
 	}
 }
@@ -550,11 +478,11 @@ static void freeIvarLists(Class aClass)
 	struct objc_ivar_list *ivarlist = aClass->ivars;
 	if (NULL == ivarlist) { return; }
 
-	for (int i=0 ; i<ivarlist->ivar_count ; i++)
+	for (int i=0 ; i<ivarlist->count ; i++)
 	{
 		Ivar ivar = &ivarlist->ivar_list[i];
-		free((void*)ivar->ivar_type);
-		free((void*)ivar->ivar_name);
+		free((void*)ivar->type);
+		free((void*)ivar->name);
 	}
 	free(ivarlist);
 }
@@ -589,10 +517,10 @@ void objc_disposeClassPair(Class cls)
 	Class meta = ((id)cls)->isa;
 	// Remove from the runtime system so nothing tries updating the dtable
 	// while we are freeing the class.
-	objc_mutex_lock(__objc_runtime_mutex);
+	LOCK(__objc_runtime_mutex);
 	safe_remove_from_subclass_list(meta);
 	safe_remove_from_subclass_list(cls);
-	objc_mutex_unlock(__objc_runtime_mutex);
+	UNLOCK(__objc_runtime_mutex);
 
 	// Free the method and ivar lists.
 	freeMethodLists(cls);
@@ -617,20 +545,22 @@ Class objc_allocateClassPair(Class superclass, const char *name, size_t extraByt
 	Class metaClass = calloc(1, sizeof(struct objc_class));
 
 	// Initialize the metaclass
-	metaClass->class_pointer = superclass->class_pointer->class_pointer;
-	metaClass->super_class = superclass->class_pointer;
+	metaClass->isa = superclass->isa->isa;
+	metaClass->super_class = superclass->isa;
 	metaClass->name = strdup(name);
-	metaClass->info = _CLS_META | _CLS_RUNTIME | _CLS_NEW_ABI;
+	metaClass->info = objc_class_flag_meta | objc_class_flag_user_created |
+		objc_class_flag_new_abi;
 	metaClass->dtable = __objc_uninstalled_dtable;
 	metaClass->instance_size = sizeof(struct objc_class);
 
 	// Set up the new class
-	newClass->class_pointer = metaClass;
+	newClass->isa = metaClass;
 	// Set the superclass pointer to the name.  The runtime will fix this when
 	// the class links are resolved.
 	newClass->super_class = (Class)(superclass->name);
 	newClass->name = strdup(name);
-	newClass->info = _CLS_CLASS | _CLS_RUNTIME | _CLS_NEW_ABI;
+	newClass->info = objc_class_flag_class | objc_class_flag_user_created |
+		objc_class_flag_new_abi;
 	newClass->dtable = __objc_uninstalled_dtable;
 	newClass->instance_size = superclass->instance_size;
 
@@ -642,11 +572,12 @@ Class objc_allocateMetaClass(Class superclass, size_t extraBytes)
 	Class metaClass = calloc(1, sizeof(struct objc_class) + extraBytes);
 
 	// Initialize the metaclass
-	metaClass->class_pointer = superclass->class_pointer;
-	metaClass->super_class = superclass->class_pointer;
+	metaClass->isa = superclass->isa;
+	metaClass->super_class = superclass->isa;
 	metaClass->name = "hidden class"; //strdup(superclass->name);
-	metaClass->info = _CLS_RESOLV | _CLS_INITIALIZED | _CLS_META |
-		_CLS_RUNTIME | _CLS_NEW_ABI;
+	metaClass->info = objc_class_flag_resolved | objc_class_flag_initialized |
+		objc_class_flag_meta | objc_class_flag_user_created |
+		objc_class_flag_new_abi;
 	metaClass->dtable = __objc_uninstalled_dtable;
 	metaClass->instance_size = sizeof(struct objc_class);
 
@@ -689,16 +620,8 @@ const char *object_getClassName(id obj)
 	return class_getName(object_getClass(obj));
 }
 
-void __objc_add_class_to_hash(Class cls);
-void objc_resolve_class(Class cls);
-
 void objc_registerClassPair(Class cls)
 {
-	Class metaClass = cls->class_pointer;
-	// Initialize the dispatch table for the class and metaclass.
-	__objc_update_dispatch_table_for_class(metaClass);
-	__objc_update_dispatch_table_for_class(cls);
-	__objc_add_class_to_hash(cls);
-	objc_resolve_class(cls);
-
+	LOCK_UNTIL_RETURN(__objc_runtime_mutex);
+	class_table_insert(cls);
 }

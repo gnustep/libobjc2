@@ -32,6 +32,7 @@ static void collectMethodsForMethodListToSparseArray(
 	}
 	for (unsigned i=0 ; i<list->count ; i++)
 	{
+		//fprintf(stderr, "Adding method %s (%d)\n", sel_getName(list->methods[i].selector), PTR_TO_IDX(list->methods[i].selector->name));
 		SparseArrayInsert(sarray, PTR_TO_IDX(list->methods[i].selector->name),
 				(void*)&list->methods[i]);
 	}
@@ -48,6 +49,7 @@ static BOOL installMethodInDtable(Class class,
 	struct objc_slot *slot = SparseArrayLookup(dtable, sel_id);
 	if (NULL != slot)
 	{
+		//fprintf(stderr, "Slot already exists...\n");
 		// If this method is the one already installed, pretend to install it again.
 		if (slot->method == method->imp) { return NO; }
 
@@ -59,7 +61,7 @@ static BOOL installMethodInDtable(Class class,
 			// Don't replace methods if we're not meant to (if they're from
 			// later in a method list, for example)
 			if (!replaceExisting) { return NO; }
-			//fprintf(stderr, "Replacing method %p %s in %s with %x\n", slot->method, sel_get_name(method->selector), class->name, method->imp);
+			//fprintf(stderr, "Replacing method %p %s in %s with %p\n", slot->method, sel_getName(method->selector), class->name, method->imp);
 			slot->method = method->imp;
 			return YES;
 		}
@@ -71,19 +73,21 @@ static BOOL installMethodInDtable(Class class,
 				Nil != installedFor ;
 				installedFor = installedFor->super_class)
 		{
-			if (installedFor == owner) { 
-		//fprintf(stderr, "Not installing %s from %s in %s - already overridden from %s\n", sel_get_name(method->selector), owner->name, class->name, slot->owner->name);
-				return NO; }
+			if (installedFor == owner)
+			{
+		//fprintf(stderr, "Not installing %s from %s in %s - already overridden from %s\n", sel_getName(method->selector), owner->name, class->name, slot->owner->name);
+				return NO;
+			}
 		}
 	}
 	struct objc_slot *oldSlot = slot;
-	//fprintf(stderr, "Installing method %p (%d) %s in %s (previous slot owned by %s)\n", method->imp, sel_id, sel_get_name(method->selector), class->name, slot? oldSlot->owner->name: "");
+	//fprintf(stderr, "Installing method %p (%d) %s in %s (previous slot owned by %s)\n", method->imp, sel_id, sel_getName(method->selector), class->name, slot? oldSlot->owner->name: "(no one)");
 	slot = new_slot_for_method_in_class((void*)method, owner);
 	SparseArrayInsert(dtable, sel_id, slot);
 	// Invalidate the old slot, if there is one.
 	if (NULL != oldSlot)
 	{
-		//fprintf(stderr, "Overriding method %p %s from %s in %s with %x\n", slot->method, sel_get_name(method->selector), oldSlot->owner->name, class->name, method->imp);
+		//fprintf(stderr, "Overriding method %p %s from %s in %s with %x\n", slot->method, sel_getName(method->selector), oldSlot->owner->name, class->name, method->imp);
 		oldSlot->version++;
 	}
 	return YES;
@@ -140,6 +144,7 @@ void objc_update_dtable_for_class(Class cls)
 
 	LOCK_UNTIL_RETURN(__objc_runtime_mutex);
 
+	//fprintf(stderr, "Adding methods to %s\n", cls->name);
 	SparseArray *methods = SparseArrayNewWithDepth(dtable_depth);
 	collectMethodsForMethodListToSparseArray((void*)cls->methods, methods);
 	installMethodsInClass(cls, cls, methods, YES);

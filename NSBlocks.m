@@ -1,5 +1,8 @@
-#import "objc/objc-api.h"
+#import "objc/runtime.h"
+#import "class.h"
+#import "lock.h"
 #import "objc/blocks_runtime.h"
+#import "dtable.h"
 #include <assert.h>
 
 struct objc_class _NSConcreteGlobalBlock;
@@ -11,28 +14,24 @@ static struct objc_class _NSConcreteStackBlockMeta;
 static struct objc_class _NSBlock;
 static struct objc_class _NSBlockMeta;
 
-void __objc_update_dispatch_table_for_class(Class);
-void __objc_add_class_to_hash(Class);
-extern struct sarray *__objc_uninstalled_dtable;
-extern objc_mutex_t __objc_runtime_mutex;
-
 static void createNSBlockSubclass(Class superclass, Class newClass, 
 		Class metaClass, char *name)
 {
 	// Initialize the metaclass
 	//metaClass->class_pointer = superclass->class_pointer;
 	//metaClass->super_class = superclass->class_pointer;
-	metaClass->info = _CLS_META;
+	metaClass->info = objc_class_flag_meta;
 	metaClass->dtable = __objc_uninstalled_dtable;
 
 	// Set up the new class
-	newClass->class_pointer = metaClass;
+	newClass->isa = metaClass;
 	newClass->super_class = (Class)superclass->name;
 	newClass->name = name;
-	newClass->info = _CLS_CLASS;
+	newClass->info = objc_class_flag_class;
 	newClass->dtable = __objc_uninstalled_dtable;
 
-	__objc_add_class_to_hash(newClass);
+	LOCK_UNTIL_RETURN(__objc_runtime_mutex);
+	class_table_insert(newClass);
 
 }
 

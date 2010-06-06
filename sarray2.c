@@ -11,7 +11,6 @@ static SparseArray EmptyArray = { 0xff, 0, 0, (void**)&EmptyArrayData};
 #define MAX_INDEX(sarray) (sarray->mask >> sarray->shift)
 #define DATA_SIZE(sarray) ((sarray->mask >> sarray->shift) + 1)
 
-#define fprintf(...)
 // Tweak this value to trade speed for memory usage.  Bigger values use more
 // memory, but give faster lookups.  
 #define base_shift 8
@@ -74,7 +73,7 @@ static void *SparseArrayFind(SparseArray * sarray, uint32_t * index)
 	uint32_t max = MAX_INDEX(sarray);
 	if (sarray->shift == 0)
 	{
-		while (j<max)
+		while (j<=max)
 		{
 			if (sarray->data[j] != SARRAY_EMPTY)
 			{
@@ -97,13 +96,18 @@ static void *SparseArrayFind(SparseArray * sarray, uint32_t * index)
 				{
 					return ret;
 				}
+				// The recursive call will set index to the correct value for
+				// the next index, but won't update j
+			}
+			else
+			{
+				//Add 2^n to index so j is still correct
+				(*index) += 1<<sarray->shift;
+				//Zero off the next component of the index so we don't miss any.
+				*index &= zeromask;
 			}
 			//Go to the next child
 			j++;
-			//Add 2^n to index so j is still correct
-			(*index) += 1<<sarray->shift;
-			//Zero off the next component of the index so we don't miss any.
-			*index &= zeromask;
 		}
 	}
 	return SARRAY_EMPTY;
@@ -117,12 +121,10 @@ void *SparseArrayNext(SparseArray * sarray, uint32_t * idx)
 
 void SparseArrayInsert(SparseArray * sarray, uint32_t index, void *value)
 {
-	fprintf(stderr, "Inserting in : %p\n", sarray);
 	if (sarray->shift > 0)
 	{
 		uint32_t i = MASK_INDEX(index);
 		SparseArray *child = sarray->data[i];
-		fprintf(stderr, "Child: %p\n", child);
 		if(&EmptyArray == child)
 		{
 			// Insert missing nodes
@@ -140,7 +142,6 @@ void SparseArrayInsert(SparseArray * sarray, uint32_t index, void *value)
 			init_pointers(newsarray);
 			sarray->data[i] = newsarray;
 			child = newsarray;
-			fprintf(stderr, "Created child: %p\n", child);
 		}// FIXME: Concurrency (don't CoW twice)
 		else if (child->refCount > 1)
 		{
@@ -149,7 +150,6 @@ void SparseArrayInsert(SparseArray * sarray, uint32_t index, void *value)
 			SparseArrayDestroy(child);
 			child = sarray->data[i];
 		}
-		fprintf(stderr, "Recursing in insert\n");
 		SparseArrayInsert(child, index, value);
 	}
 	else

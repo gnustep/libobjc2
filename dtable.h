@@ -25,6 +25,9 @@ typedef struct _InitializingDtable
 extern InitializingDtable *temporary_dtables;
 mutex_t initialize_lock;
 
+/**
+ * Returns whether a class has an installed dtable.
+ */
 static inline int classHasInstalledDtable(struct objc_class *cls)
 {
 	return ((void*)cls->dtable != __objc_uninstalled_dtable);
@@ -69,7 +72,16 @@ static inline SparseArray *dtable_for_class(Class cls)
 	return dtable;
 }
 
+/**
+ * Returns whether a class has had a dtable created.  The dtable may be
+ * installed, or stored in the look-aside buffer.
+ */
 static inline int classHasDtable(struct objc_class *cls)
 {
 	return (dtable_for_class(cls) != __objc_uninstalled_dtable);
 }
+/**
+ * Updates the dtable for a class and its subclasses.  Must be called after
+ * modifying a class's method list.
+ */
+void objc_update_dtable_for_class(Class);

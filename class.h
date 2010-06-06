@@ -159,9 +159,19 @@ static inline void objc_set_class_flag(struct objc_class *aClass,
 {
 	aClass->info |= (long)flag;
 }
+static inline void objc_clear_class_flag(struct objc_class *aClass,
+                                         enum objc_class_flags flag)
+{
+	aClass->info &= ~(long)flag;
+}
 static inline BOOL objc_test_class_flag(struct objc_class *aClass,
                                         enum objc_class_flags flag)
 {
 	return aClass->info & (long)flag;
 }
+
+/**
+ * Adds a class to the class table.
+ */
+void class_table_insert(Class class);
 #endif //__OBJC_CLASS_H_INCLUDED

@@ -8,9 +8,7 @@ libobjc_VERSION = 4
 
 libobjc_OBJC_FILES = \
 	NSBlocks.m\
-	NXConstStr.m\
-	Object.m\
-	Protocol.m\
+	Protocol2.m\
 	blocks_runtime.m\
 	mutation.m\
 	properties.m\
@@ -28,7 +26,6 @@ libobjc_C_FILES = \
 	hooks.c\
 	ivar.c\
 	loader.c\
-	misc.c\
 	protocol.c\
 	runtime.c\
 	sarray2.c\
@@ -38,6 +35,7 @@ libobjc_C_FILES = \
 
 ifneq ($(enable_legacy), no)
 libobjc_C_FILES += \
+	legacy_malloc.c\
 	objects.c\
 	thr.c
 endif
@@ -86,15 +84,3 @@ endif
 
 include $(GNUSTEP_MAKEFILES)/aggregate.make
 include $(GNUSTEP_MAKEFILES)/library.make
-
-ifeq ($(findstring no, $(debug)),)
-before-all::
-	@echo
-	@echo
-	@echo WARNING: You are building in debug mode.  This will generate a LOT of console \
-	output for every Objective-C program you run.  If this is not what you \
-	want, please compile with $(MAKE) debug=no
-	@echo
-	@echo
-endif
-
