@@ -229,7 +229,6 @@ BOOL protocol_conformsToProtocol(Protocol *p1, Protocol *p2)
 	{
 		for (int i=0 ; i<list->count ; i++)
 		{
-			fprintf(stderr, "recursively checking %s\n", list->list[i]->name);
 			if (strcmp(list->list[i]->name, p2->name) == 0)
 			{
 				return YES;
@@ -245,7 +244,6 @@ BOOL protocol_conformsToProtocol(Protocol *p1, Protocol *p2)
 
 BOOL class_conformsToProtocol(Class cls, Protocol *protocol)
 {
-	fprintf(stderr, "Testing if %s conforms to %s\n", cls->name, protocol->name);
 	while (cls)
 	{
 		for (struct objc_protocol_list *protocols = cls->protocols;
@@ -254,7 +252,6 @@ BOOL class_conformsToProtocol(Class cls, Protocol *protocol)
 			for (int i=0 ; i<protocols->count ; i++)
 			{
 				Protocol *p1 = (Protocol*)protocols->list[i];
-				fprintf(stderr, "checking %s\n", p1->name);
 				if (protocol_conformsToProtocol(p1, protocol))
 				{
 					return YES;
