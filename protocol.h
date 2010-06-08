@@ -15,20 +15,22 @@ struct objc_method_description_list
 	struct objc_selector methods[1];
 };
 
+
+#ifdef __OBJC__
+@interface Object { id isa; } @end
 /**
  * Definition of the Protocol type.  Protocols are objects, but are rarely used
  * as such.
  */
-#ifdef __OBJC__
-@interface Protocol
+@interface Protocol : Object
 {
 	@public
 #else
 struct objc_protocol
 {
-#endif 
 	/** Class pointer. */
 	id                                   isa;
+#endif 
 	/** 
 	 * The name of this protocol.  Two protocols are regarded as identical if
 	 * they have the same name. 
