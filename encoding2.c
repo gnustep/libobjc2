@@ -23,7 +23,7 @@ const char *objc_skip_type_qualifiers (const char *type)
 	return type;
 }
 
-static const char *sizeof_type(const char *type, size_t *size); 
+static const char *sizeof_type(const char *type, size_t *size);
 
 const char *objc_skip_typespec(const char *type)
 {
@@ -84,7 +84,7 @@ static int parse_array(const char **type, type_parser callback, void *context)
 static void parse_struct_or_union(const char **type, type_parser callback, void *context, char endchar)
 {
 	// Skip the ( and structure name
-	do 
+	do
 	{
 		(*type)++;
 		// Opaque type has no =definition
@@ -141,7 +141,7 @@ static const char *sizeof_type(const char *type, size_t *size)
 		}
 #define NON_INTEGER_TYPES 1
 #include "type_encoding_cases.h"
-		case '?': 
+		case '?':
 		case 'v': return type+1;
 		case 'j':
 		{
@@ -232,7 +232,7 @@ static const char *alignof_type(const char *type, size_t *align)
 		}
 #define NON_INTEGER_TYPES 1
 #include "type_encoding_cases.h"
-		case '?': 
+		case '?':
 		case 'v': return type+1;
 		case 'j':
 		{
@@ -348,7 +348,7 @@ const char *method_getTypeEncoding(Method method)
 }
 
 
-void method_getArgumentType(Method method, 
+void method_getArgumentType(Method method,
                             unsigned int index,
                             char *dst,
                             size_t dst_len)
@@ -425,7 +425,7 @@ unsigned objc_get_type_qualifiers (const char *type)
 	} while (1);
 }
 
-struct objc_struct_layout 
+struct objc_struct_layout
 {
 	const char *original_type;
 	const char *type;
@@ -434,7 +434,7 @@ struct objc_struct_layout
 	unsigned int record_align;
 };
 
-// Note: The implementations of these functions is horrible.  
+// Note: The implementations of these functions is horrible.
 void objc_layout_structure (const char *type,
                             struct objc_struct_layout *layout)
 {
@@ -459,7 +459,7 @@ static const char *layout_structure_callback(const char *type, struct objc_struc
 	}
 	else
 	{
-		round_up(&layout->record_size, align);
+		round_up((size_t*)&layout->record_size, align);
 		layout->record_size += size;
 	}
 	return end;
@@ -487,7 +487,7 @@ void objc_layout_structure_get_info (struct objc_struct_layout *layout,
 	*type = layout->type;
 	*offset = layout->record_size / 8;
 	*align= layout->record_align / 8;
-	round_up(offset, *align);
+	round_up((size_t*)offset, (size_t)*align);
 	printf("%s %d %d\n", *type, *offset, *align);
 }
 
@@ -523,7 +523,7 @@ typedef struct
 	float x,y;
 } Point;
 
-typedef struct 
+typedef struct
 {
 	Point a, b;
 } Rect;
