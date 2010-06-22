@@ -72,15 +72,19 @@ void objc_compute_ivar_offsets(Class class)
 		}
 		struct objc_ivar *ivar =
 			&super->ivars->ivar_list[super->ivars->count-1];
-		if (start == (ivar->offset + objc_sizeof_type(ivar->type)))
+
+		// Find the end of the last ivar - instance_size contains some padding
+		// for alignment.
+		int real_end = ivar->offset + objc_sizeof_type(ivar->type);
+		// Keep going if the new class starts at the end of the superclass
+		if (start == real_end)
 		{
 			return;
 		}
-
-		/* The classes don't line up, but don't panic; check that the
-		* difference is not just padding for alignment */
+		// The classes don't line up, but don't panic; check that the
+		// difference is not just padding for alignment
 		int align = objc_alignof_type(class->ivars->ivar_list[0].type);
-		if (start > ivar->offset && start - ivar->offset < align)
+		if (start > real_end && (start - align) < real_end)
 		{
 			return;
 		}
