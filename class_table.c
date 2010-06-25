@@ -158,7 +158,7 @@ BOOL  objc_resolve_class(Class cls)
 		root_class = (Class)objc_getClass(ROOT_OBJECT_CLASS_NAME);
 		if (Nil == root_class) { return NO; }
 
-		if (!objc_test_class_flag(root_class, objc_class_flag_resolved))
+		if (cls != root_class && !objc_test_class_flag(root_class, objc_class_flag_resolved))
 		{
 			objc_resolve_class(root_class);
 		}
