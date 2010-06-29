@@ -22,7 +22,7 @@ libobjc_C_FILES = \
 	dtable.c\
 	encoding2.c\
 	hash_table.c\
-	exception.c\
+	eh_personality.c\
 	hooks.c\
 	ivar.c\
 	loader.c\
@@ -38,6 +38,7 @@ libobjc_C_FILES += \
 	legacy_malloc.c\
 	objects.c\
 	thr.c
+
 endif
 
 libobjc_HEADER_FILES_DIR = objc
@@ -45,22 +46,9 @@ libobjc_HEADER_FILES_INSTALL_DIR = objc
 ifneq ($(install_headers), no)
 libobjc_HEADER_FILES = \
 	Availability.h\
-	NXConstStr.h\
-	Object.h\
-	Protocol.h\
 	blocks_runtime.h\
-	encoding.h\
-	hash.h\
-	objc-api.h\
-	objc-decls.h\
-	objc-list.h\
-	objc.h\
-	runtime-legacy.h\
 	runtime.h\
-	sarray.h\
-	slot.h\
-	thr.h\
-	typedstream.h
+	slot.h
 endif
 
 libobjc_LIBRARIES_DEPEND_UPON += -lpthread

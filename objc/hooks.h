@@ -38,3 +38,9 @@ OBJC_HOOK struct objc_slot *(*__objc_msg_forward3)(id, SEL);
  * handles the forwarding.
  */
 OBJC_HOOK IMP (*__objc_msg_forward2)(id, SEL);
+/**
+ * Hook defined for handling unhandled exceptions.  If the unwind library
+ * reaches the end of the stack without finding a handler then this hook is
+ * called.
+ */
+OBJC_HOOK void (*_objc_unexpected_exception)(id exception);
