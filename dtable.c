@@ -84,6 +84,11 @@ static BOOL installMethodInDtable(Class class,
 	//fprintf(stderr, "Installing method %p (%d) %s in %s (previous slot owned by %s)\n", method->imp, sel_id, sel_getName(method->selector), class->name, slot? oldSlot->owner->name: "(no one)");
 	slot = new_slot_for_method_in_class((void*)method, owner);
 	SparseArrayInsert(dtable, sel_id, slot);
+	// In TDD mode, we also register the first typed method that we
+	// encounter as the untyped version.
+#ifdef TYPE_DEPENDENT_DISPATCH
+	SparseArrayInsert(dtable, get_untyped_idx(method->selector), slot);
+#endif
 	// Invalidate the old slot, if there is one.
 	if (NULL != oldSlot)
 	{

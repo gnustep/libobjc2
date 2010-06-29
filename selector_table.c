@@ -7,6 +7,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <assert.h>
+#include <ctype.h>
 #include "lock.h"
 #include "sarray2.h"
 #include "objc/runtime.h"
@@ -52,36 +53,76 @@ inline static BOOL isSelRegistered(SEL sel)
 }
 
 /**
+ * Skip anything in a type encoding that is irrelevant to the comparison
+ * between selectors, including type qualifiers and argframe info.
+ */
+static const char *skip_irrelevant_type_info(const char *t)
+{
+	switch (*t)
+	{
+		default: return t;
+		case 'r': case 'n': case 'N': case 'o': case 'O': case 'R':
+		case 'V': case '!': case '0'...'9':
+			return skip_irrelevant_type_info(t+1);
+	}
+}
+
+
+#ifdef TYPE_DEPENDENT_DISPATCH
+static BOOL selector_types_equal(const char *t1, const char *t2)
+{
+	if (t1 == NULL || t2 == NULL) { return t1 == t2; }
+	
+	while (('\0' != *t1) && ('\0' != *t1))
+	{
+		t1 = skip_irrelevant_type_info(t1);
+		t2 = skip_irrelevant_type_info(t2);
+		if (*t1 != *t2)
+		{
+			return NO;
+		}
+
+		if ('\0' != *t1) { t1++; }
+		if ('\0' != *t2) { t2++; }
+	}
+	return YES;
+}
+#endif
+
+#ifdef TYPE_DEPENDENT_DISPATCH
+static BOOL selector_types_equivalent(const char *t1, const char *t2)
+{
+	// We always treat untyped selectors as having the same type as typed
+	// selectors, for dispatch purposes.
+	if (t1 == NULL || t2 == NULL) { return YES; }
+
+	return selector_types_equal(t1, t2);
+}
+#endif
+
+/**
  * Compare selectors based on whether they are treated as equivalent for the
  * purpose of dispatch.
  */
 static int selector_equal(const void *k,
                             const SEL value)
 {
+#ifdef TYPE_DEPENDENT_DISPATCH
+	return selector_identical(key, value);
+#else
 	SEL key = (SEL)k;
-	return string_compare(sel_getName(key), sel_getName(value)) TDD(&&
-		string_compare(sel_getType_np(key), sel_getType_np(value)));
+	return string_compare(sel_getName(key), sel_getName(value));
+#endif
 }
 /**
  * Compare whether two selectors are identical.
  */
-static int selector_identical(const SEL key,
+static int selector_identical(const void *k,
                               const SEL value)
 {
+	SEL key = (SEL)k;
 	return string_compare(sel_getName(key), sel_getName(value)) &&
 		string_compare(sel_getType_np(key), sel_getType_np(value));
-}
-static inline uint32_t addStringToHash(uint32_t hash, const char *str)
-{
-	uint32_t c;
-	if(str != NULL)
-	{
-		while((c = (uint32_t)*str++))
-		{
-			hash = hash * 33 + c;
-		}
-	}
-	return hash;
 }
 /**
  * Hash a selector.
@@ -90,13 +131,32 @@ static inline uint32_t hash_selector(const void *s)
 {
 	SEL sel = (SEL)s;
 	uint32_t hash = 5381;
-	hash = addStringToHash(hash, sel_getName(sel));
-	hash = addStringToHash(hash, sel->types);
+	const char *str = sel_getName(sel);
+	uint32_t c;
+	while((c = (uint32_t)*str++))
+	{
+		hash = hash * 33 + c;
+	}
+#ifdef TYPE_DEPENDENT_DISPATCH
+	str = sel_getType_np(sel);
+	if (NULL != str)
+	{
+		while (*str != '\0')
+		{
+			str = skip_irrelevant_type_info(str);
+			if (*str != '\0')
+			{
+				hash = hash * 33 + (uint32_t)*str;
+			}
+			str++;
+		}
+	}
+#endif //TYPE_DEPENDENT_DISPATCH
 	return hash;
 }
 
 #define MAP_TABLE_NAME selector 
-#define MAP_TABLE_COMPARE_FUNCTION selector_equal
+#define MAP_TABLE_COMPARE_FUNCTION selector_identical
 #define MAP_TABLE_HASH_KEY hash_selector
 #define MAP_TABLE_HASH_VALUE hash_selector
 #include "hash_table.h"
@@ -134,6 +194,7 @@ static SEL selector_lookup(const char *name, const char *types)
 }
 static inline void add_selector_to_table(SEL aSel, int32_t uid, uint32_t idx)
 {
+	//fprintf(stderr, "Sel %s uid: %d, idx: %d, hash: %d\n", sel_getName(aSel), uid, idx, hash_selector(aSel));
 	struct sel_type_list *typeList =
 		(struct sel_type_list *)selector_pool_alloc();
 	typeList->value = aSel->name;
@@ -153,6 +214,7 @@ static inline void register_selector_locked(SEL aSel)
 	uintptr_t idx = selector_count++;
 	if (NULL == aSel->types)
 	{
+		//fprintf(stderr, "Registering selector %d %s\n", idx, sel_getName(aSel));
 		add_selector_to_table(aSel, idx, idx);
 		objc_resize_dtables(selector_count);
 		return;
@@ -164,6 +226,7 @@ static inline void register_selector_locked(SEL aSel)
 		untyped = selector_pool_alloc();
 		untyped->name = aSel->name;
 		untyped->types = 0;
+		//fprintf(stderr, "Registering selector %d %s\n", idx, sel_getName(aSel));
 		add_selector_to_table(untyped, idx, idx);
 		// If we are in type dependent dispatch mode, the uid for the typed
 		// and untyped versions will be different
@@ -171,6 +234,7 @@ static inline void register_selector_locked(SEL aSel)
 	}
 	uintptr_t uid = (uintptr_t)untyped->name;
 	TDD(uid = idx);
+	//fprintf(stderr, "Registering typed selector %d %s\n", uid, sel_getName(aSel));
 	add_selector_to_table(aSel, uid, idx);
 
 	// Add this set of types to the list.
@@ -196,7 +260,7 @@ static SEL objc_register_selector(SEL aSel)
 	}
 	// Check that this isn't already registered, before we try 
 	SEL registered = selector_lookup(aSel->name, aSel->types);
-	if (NULL != registered && (selector_identical(aSel, registered) || NULL == aSel->types))
+	if (NULL != registered && selector_equal(aSel, registered))
 	{
 		aSel->name = registered->name;
 		return registered;
@@ -214,18 +278,24 @@ static SEL objc_register_selector_copy(SEL aSel)
 {
 	// If an identical selector is already registered, return it.
 	SEL copy = selector_lookup(aSel->name, aSel->types);
-	if (NULL != copy && (selector_identical(aSel, copy) || NULL == aSel->types))
+	//fprintf(stderr, "Checking if old selector is registered: %d (%d)\n", NULL != copy ? selector_equal(aSel, copy) : 0, ((NULL != copy) && selector_equal(aSel, copy)));
+	if ((NULL != copy) && selector_identical(aSel, copy))
+	{
+	//fprintf(stderr, "Not adding new copy\n");
+		return copy;
+	}
+	LOCK_UNTIL_RETURN(&selector_table_lock);
+	copy = selector_lookup(aSel->name, aSel->types);
+	if (NULL != copy && selector_identical(aSel, copy))
 	{
 		return copy;
 	}
-	LOCK(&selector_table_lock);
 	// Create a copy of this selector.
 	copy = selector_pool_alloc();
 	copy->name = strdup(aSel->name);
 	copy->types = (NULL == aSel->types) ? NULL : strdup(aSel->types);
 	// Try to register the copy as the authoritative version
 	register_selector_locked(copy);
-	UNLOCK(&selector_table_lock);
 	return copy;
 }
 
@@ -256,7 +326,14 @@ SEL sel_getUid(const char *selName)
 
 BOOL sel_isEqual(SEL sel1, SEL sel2)
 {
-	return selector_equal(sel1, sel2);
+	if (sel1->name == sel2->name)
+	{
+		return YES;
+	}
+	// Otherwise, do a slow compare
+	return string_compare(sel_getName(sel1), sel_getName(sel2)) TDD(&&
+			(sel1->types == NULL || sel2->types == NULL || 
+		selector_types_equivalent(sel_getType_np(sel1), sel_getType_np(sel2))));
 }
 
 SEL sel_registerName(const char *selName)

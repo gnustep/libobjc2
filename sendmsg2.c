@@ -52,6 +52,15 @@ static inline Slot_t objc_msg_lookup_internal(id *receiver,
 		}
 		if (0 == result)
 		{
+			if ((result = SparseArrayLookup(dtable, get_untyped_idx(selector))))
+			{
+				fprintf(stderr, "Calling %s with incorrect signature.  "
+						"Method has %s, selector has %s\n",
+						sel_getName(selector),
+						result->types,
+						sel_getType_np(selector));
+				return result;
+			}
 			id newReceiver = objc_proxy_lookup(*receiver, selector);
 			// If some other library wants us to play forwarding games, try again
 			// with the new object.
@@ -234,6 +243,18 @@ Slot_t objc_get_slot(Class cls, SEL selector)
 			// Check again incase another thread updated the dtable while we
 			// weren't looking
 			result = SparseArrayLookup(dtable, PTR_TO_IDX(selector->name));
+		}
+		if (NULL == result)
+		{
+			if ((result = SparseArrayLookup(dtable, get_untyped_idx(selector))))
+			{
+				fprintf(stderr, "Calling %s with incorrect signature.  "
+						"Method has %s, selector has %s\n",
+						sel_getName(selector),
+						result->types,
+						sel_getType_np(selector));
+				return result;
+			}
 		}
 	}
 	return result;

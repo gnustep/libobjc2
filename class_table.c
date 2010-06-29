@@ -47,7 +47,7 @@ void objc_send_load_message(Class class)
 		for (int i=0 ; i<l->count ; i++)
 		{
 			Method m = &l->methods[i];
-			if (m->selector->name == loadSel->name)
+			if (sel_isEqual(m->selector, loadSel))
 			{
 				if (load_messages_table_get(load_table, m->imp) == 0)
 				{

@@ -26,7 +26,7 @@ static int string_compare(const char *str1, const char *str2)
 	{
 		return 1;
 	}
-	if (str2 == NULL) 
+	if (str1 == NULL || str2 == NULL) 
 	{
 		return 0;
 	}
