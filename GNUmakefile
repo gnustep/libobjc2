@@ -33,6 +33,10 @@ libobjc_C_FILES = \
 	sendmsg2.c\
 	statics_loader.c
 
+ifneq ($(enable_legacy), no)
+libobjc_C_FILES += legacy_malloc.c
+endif
+
 libobjc_HEADER_FILES_DIR = objc
 libobjc_HEADER_FILES_INSTALL_DIR = objc
 ifneq ($(install_headers), no)
