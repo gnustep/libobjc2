@@ -76,39 +76,33 @@ Class get_type_table_entry(struct _Unwind_Context *context,
 	return (Class)objc_getClass(class_name);
 }
 
-static BOOL isKindOfClass(struct _Unwind_Exception *ex, Class type)
+static BOOL isKindOfClass(Class thrown, Class type, BOOL foreignException)
 {
 	// Nil is a catchall, but we only want to catch things that are not foreign
 	// exceptions in it.
 	if (Nil == type)
 	{
-		return ex->exception_class == objc_exception_class;
+		return (Nil != thrown) && !foreignException;
 	}
-	if (ex->exception_class != objc_exception_class)
-	{
-		// FIXME: Box and stuff.
-		return NO;
-	}
-	id object = *(id*)(ex + 1);
 
 	do
 	{
-		if (object->isa == type)
+		if (thrown == type)
 		{
 			return YES;
 		}
-		type = class_getSuperclass(type);
-	} while (Nil != type);
+		thrown = class_getSuperclass(thrown);
+	} while (Nil != thrown);
 
 	return NO;
 }
 
 
 static BOOL check_action_record(struct _Unwind_Context *context,
-                                int64_t exceptionClass,
+                                BOOL foreignException,
                                 struct dwarf_eh_lsda *lsda,
                                 dw_eh_ptr_t action_record,
-                                struct _Unwind_Exception *ex,
+                                Class thrown_class,
                                 unsigned long *selector)
 {
 	while (action_record)
@@ -120,7 +114,7 @@ static BOOL check_action_record(struct _Unwind_Context *context,
 		if (filter > 0)
 		{
 			Class type = get_type_table_entry(context, lsda, filter);
-			if (ex && isKindOfClass(ex, type))
+			if (isKindOfClass(thrown_class, type, foreignException))
 			{
 				return YES;
 			}
@@ -161,14 +155,21 @@ _Unwind_Reason_Code  __gnu_objc_personality_v0(int version,
 	// then we ignore it (for now)
 	BOOL foreignException = exceptionClass != objc_exception_class;
 
+	Class thrown_class = Nil;
+
 	// If it's not a foreign exception, then we know the layout of the
 	// language-specific exception stuff.
 	if (!foreignException)
 	{
 		ex = (struct objc_exception*) ((char*)exceptionObject - 
 				offsetof(struct objc_exception, unwindHeader));
-	}
 
+		thrown_class = ex->object->isa;
+	}
+	else if (_objc_class_for_boxing_foreign_exception)
+	{
+		thrown_class = _objc_class_for_boxing_foreign_exception(exceptionClass);
+	}
 	unsigned char *lsda_addr = (void*)_Unwind_GetLanguageSpecificData(context);
 
 	// No LSDA implies no landing pads - try the next frame
@@ -182,8 +183,8 @@ _Unwind_Reason_Code  __gnu_objc_personality_v0(int version,
 	{
 		struct dwarf_eh_lsda lsda = parse_lsda(context, lsda_addr);
 		action = dwarf_eh_find_callsite(context, &lsda);
-		BOOL found_handler = check_action_record(context, exceptionClass, &lsda,
-				action.action_record, exceptionObject, &selector);
+		BOOL found_handler = check_action_record(context, foreignException,
+				&lsda, action.action_record, thrown_class, &selector);
 		// If there's no action record, we've only found a cleanup, so keep
 		// searching for something real
 		if (found_handler)
@@ -200,18 +201,33 @@ _Unwind_Reason_Code  __gnu_objc_personality_v0(int version,
 		return _URC_CONTINUE_UNWIND;
 	}
 
-	if (!(actions & _UA_HANDLER_FRAME) || foreignException)
+	// TODO: If this is a C++ exception, we can cache the lookup and cheat a
+	// bit
+	id object = nil;
+	if (!(actions & _UA_HANDLER_FRAME))
 	{
 		struct dwarf_eh_lsda lsda = parse_lsda(context, lsda_addr);
 		action = dwarf_eh_find_callsite(context, &lsda);
 		if (0 == action.landing_pad) { return _URC_CONTINUE_UNWIND; }
 		selector = 0;
 	}
+	else if (foreignException)
+	{
+		struct dwarf_eh_lsda lsda = parse_lsda(context, lsda_addr);
+		action = dwarf_eh_find_callsite(context, &lsda);
+		check_action_record(context, foreignException, &lsda,
+				action.action_record, thrown_class, &selector);
+		//[thrown_class exceptionWithForeignException: exceptionObject];
+		SEL box_sel = sel_registerName("exceptionWithForeignException:");
+		IMP boxfunction = objc_msg_lookup((id)thrown_class, box_sel);
+		object = boxfunction((id)thrown_class, box_sel, exceptionObject);
+	}
 	else
 	{
 		// Restore the saved info if we saved some last time.
 		action.landing_pad = ex->landingPad;
 		selector = ex->handlerSwitchValue;
+		object = ex->object;
 	}
 
 

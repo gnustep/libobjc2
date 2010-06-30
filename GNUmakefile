@@ -20,9 +20,9 @@ libobjc_C_FILES = \
 	category_loader.c\
 	class_table.c\
 	dtable.c\
+	eh_personality.c\
 	encoding2.c\
 	hash_table.c\
-	eh_personality.c\
 	hooks.c\
 	ivar.c\
 	loader.c\
@@ -43,6 +43,7 @@ ifneq ($(install_headers), no)
 libobjc_HEADER_FILES = \
 	Availability.h\
 	blocks_runtime.h\
+	hooks.h\
 	runtime.h\
 	slot.h
 endif
@@ -55,8 +56,8 @@ libobjc_CPPFLAGS += -D__OBJC_RUNTIME_INTERNAL__=1 -D_XOPEN_SOURCE=500
 # Note to Riccardo.  Please do not 'fix' C99isms in this.  The new ABI is only
 # useful on compilers that support C99 (currently only clang), so there is no
 # benefit from supporting platforms with no C99 compiler.
-libobjc_CFLAGS += -Werror -std=c99 -g -march=native -fexceptions #-fno-inline
-libobjc_OBJCFLAGS += -g -std=c99 -march=native
+libobjc_CFLAGS += -std=c99 -g -march=native -fexceptions -fno-inline
+libobjc_OBJCFLAGS += $(libobjc_CFLAGS)
 libobjc_LDFLAGS += -g -ltoydispatch
 libobjc_LIB_DIRS += -L toydispatch/obj
 

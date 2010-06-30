@@ -21,7 +21,7 @@ OBJC_HOOK Class (*_objc_lookup_class)(const char *name);
 /**
  * Class load callback.  
  */
-OBJC_HOOK void (*_objc_load_callback)(Class class, struct objc_category *category);
+OBJC_HOOK void (*_objc_load_callback)(Class cls, struct objc_category *category);
 /**
  * The hook used for fast proxy lookups.  This takes an object and a selector
  * and returns the instance that the message should be forwarded to.
@@ -44,3 +44,15 @@ OBJC_HOOK IMP (*__objc_msg_forward2)(id, SEL);
  * called.
  */
 OBJC_HOOK void (*_objc_unexpected_exception)(id exception);
+/**
+ * Hook defined to return the class to be used for boxing a foreign exception
+ * type.  The class must implement:
+ *
+ * + (id)exceptionWithForeignException: (_Unwind_Exception*)ex;
+ *
+ * This will return an instance of the class that encapsulates the exception.
+ *
+ * Note: Due to limitations of the current ABI, there is no way for the handler
+ * to 
+ */
+OBJC_HOOK Class (*_objc_class_for_boxing_foreign_exception)(int64_t exceptionClass);
