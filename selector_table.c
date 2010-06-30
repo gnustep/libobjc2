@@ -1,6 +1,6 @@
 /**
  * Handle selector uniquing.
- * 
+ *
  * When building, you may define TYPE_DEPENDENT_DISPATCH to enable message
  * sends to depend on their types.
  */
@@ -32,7 +32,7 @@
 /**
  * The number of selectors currently registered.  When a selector is
  * registered, its name field is replaced with its index in the selector_list
- * array.  
+ * array.
  */
 static uint32_t selector_count = 1;
 /**
@@ -52,6 +52,8 @@ inline static BOOL isSelRegistered(SEL sel)
 	return NO;
 }
 
+
+#ifdef TYPE_DEPENDENT_DISPATCH
 /**
  * Skip anything in a type encoding that is irrelevant to the comparison
  * between selectors, including type qualifiers and argframe info.
@@ -66,13 +68,13 @@ static const char *skip_irrelevant_type_info(const char *t)
 			return skip_irrelevant_type_info(t+1);
 	}
 }
-
+#endif
 
 #ifdef TYPE_DEPENDENT_DISPATCH
 static BOOL selector_types_equal(const char *t1, const char *t2)
 {
 	if (t1 == NULL || t2 == NULL) { return t1 == t2; }
-	
+
 	while (('\0' != *t1) && ('\0' != *t1))
 	{
 		t1 = skip_irrelevant_type_info(t1);
@@ -101,20 +103,6 @@ static BOOL selector_types_equivalent(const char *t1, const char *t2)
 #endif
 
 /**
- * Compare selectors based on whether they are treated as equivalent for the
- * purpose of dispatch.
- */
-static int selector_equal(const void *k,
-                            const SEL value)
-{
-#ifdef TYPE_DEPENDENT_DISPATCH
-	return selector_identical(key, value);
-#else
-	SEL key = (SEL)k;
-	return string_compare(sel_getName(key), sel_getName(value));
-#endif
-}
-/**
  * Compare whether two selectors are identical.
  */
 static int selector_identical(const void *k,
@@ -124,6 +112,22 @@ static int selector_identical(const void *k,
 	return string_compare(sel_getName(key), sel_getName(value)) &&
 		string_compare(sel_getType_np(key), sel_getType_np(value));
 }
+
+/**
+ * Compare selectors based on whether they are treated as equivalent for the
+ * purpose of dispatch.
+ */
+static int selector_equal(const void *k,
+                            const SEL value)
+{
+#ifdef TYPE_DEPENDENT_DISPATCH
+	return selector_identical(k, value);
+#else
+	SEL key = (SEL)k;
+	return string_compare(sel_getName(key), sel_getName(value));
+#endif
+}
+
 /**
  * Hash a selector.
  */
@@ -155,7 +159,7 @@ static inline uint32_t hash_selector(const void *s)
 	return hash;
 }
 
-#define MAP_TABLE_NAME selector 
+#define MAP_TABLE_NAME selector
 #define MAP_TABLE_COMPARE_FUNCTION selector_identical
 #define MAP_TABLE_HASH_KEY hash_selector
 #define MAP_TABLE_HASH_VALUE hash_selector
@@ -258,7 +262,7 @@ static SEL objc_register_selector(SEL aSel)
 	{
 		return aSel;
 	}
-	// Check that this isn't already registered, before we try 
+	// Check that this isn't already registered, before we try
 	SEL registered = selector_lookup(aSel->name, aSel->types);
 	if (NULL != registered && selector_equal(aSel, registered))
 	{
@@ -272,7 +276,7 @@ static SEL objc_register_selector(SEL aSel)
 }
 
 /**
- * Registers a selector by copying the argument.  
+ * Registers a selector by copying the argument.
  */
 static SEL objc_register_selector_copy(SEL aSel)
 {
@@ -332,7 +336,7 @@ BOOL sel_isEqual(SEL sel1, SEL sel2)
 	}
 	// Otherwise, do a slow compare
 	return string_compare(sel_getName(sel1), sel_getName(sel2)) TDD(&&
-			(sel1->types == NULL || sel2->types == NULL || 
+			(sel1->types == NULL || sel2->types == NULL ||
 		selector_types_equivalent(sel_getType_np(sel1), sel_getType_np(sel2))));
 }
 
@@ -491,8 +495,8 @@ SEL sel_register_typed_name (const char *name, const char *type)
  * Some simple sanity tests.
  */
 #ifdef SEL_TEST
-static void logSelector(SEL sel)                         
-{                                                        
+static void logSelector(SEL sel)
+{
 	fprintf(stderr, "%s = {%p, %s}\n", sel_getName(sel), sel->name, sel_getType_np(sel));
 }
 void objc_resize_dtables(uint32_t ignored) {}
