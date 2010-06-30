@@ -233,7 +233,7 @@ _Unwind_Reason_Code  __gnu_objc_personality_v0(int version,
 
 	_Unwind_SetIP(context, (unsigned long)action.landing_pad);
 	_Unwind_SetGR(context, __builtin_eh_return_data_regno(0), 
-			(unsigned long)exceptionObject);
+			(unsigned long)object);
 	_Unwind_SetGR(context, __builtin_eh_return_data_regno(1), selector);
 
 	return _URC_INSTALL_CONTEXT;
