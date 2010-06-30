@@ -141,7 +141,7 @@ BOOL  objc_resolve_class(Class cls)
 		Class super = (Class)objc_getClass((char*)cls->super_class);
 		if (Nil == super) { return NO; }
 
-		if (!objc_test_class_flag(cls, objc_class_flag_resolved))
+		if (!objc_test_class_flag(super, objc_class_flag_resolved))
 		{
 			if (!objc_resolve_class(super))
 			{
