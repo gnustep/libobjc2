@@ -169,9 +169,6 @@ void __objc_update_dispatch_table_for_class(Class cls)
 	objc_update_dtable_for_class(cls);
 }
 
-static void __objc_install_dispatch_table_for_class(Class class);
-
-
 static SparseArray *create_dtable_for_class(Class class)
 {
 	// Don't create a dtable for a class that already has one
@@ -187,7 +184,7 @@ static SparseArray *create_dtable_for_class(Class class)
 
 	if (Nil != super && !classHasInstalledDtable(super))
 	{
-		__objc_install_dispatch_table_for_class(super);
+		super->dtable = create_dtable_for_class(super);
 	}
 
 	SparseArray *dtable;
@@ -222,10 +219,6 @@ static SparseArray *create_dtable_for_class(Class class)
 	return dtable;
 }
 
-static void __objc_install_dispatch_table_for_class(Class class)
-{
-	class->dtable = (void*)create_dtable_for_class(class);
-}
 
 Class class_table_next(void **e);
 
