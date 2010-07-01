@@ -42,7 +42,8 @@ void objc_init_load_messages_table(void)
 
 void objc_send_load_message(Class class)
 {
-	for (struct objc_method_list *l=class->methods ; NULL!=l ; l=l->next)
+	Class meta = class->isa;
+	for (struct objc_method_list *l=meta->methods ; NULL!=l ; l=l->next)
 	{
 		for (int i=0 ; i<l->count ; i++)
 		{
@@ -218,7 +219,7 @@ BOOL  objc_resolve_class(Class cls)
 	// Fix up the ivar offsets
 	objc_compute_ivar_offsets(cls);
 	// Send the +load message, if required
-	objc_send_load_message(cls->isa);
+	objc_send_load_message(cls);
 	if (_objc_load_callback)
 	{
 		_objc_load_callback(cls, 0);

@@ -167,7 +167,7 @@ static inline void objc_clear_class_flag(struct objc_class *aClass,
 static inline BOOL objc_test_class_flag(struct objc_class *aClass,
                                         enum objc_class_flags flag)
 {
-	return aClass->info & (long)flag;
+	return (aClass->info & (long)flag) == (long)flag;
 }
 
 /**
