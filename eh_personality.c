@@ -78,13 +78,6 @@ Class get_type_table_entry(struct _Unwind_Context *context,
 
 static BOOL isKindOfClass(Class thrown, Class type, BOOL foreignException)
 {
-	// Nil is a catchall, but we only want to catch things that are not foreign
-	// exceptions in it.
-	if (Nil == type)
-	{
-		return (Nil != thrown) && !foreignException;
-	}
-
 	do
 	{
 		if (thrown == type)
@@ -114,6 +107,12 @@ static BOOL check_action_record(struct _Unwind_Context *context,
 		if (filter > 0)
 		{
 			Class type = get_type_table_entry(context, lsda, filter);
+			// If the handler is a cleanup, we don't want to do mark it as a
+			// handler, but we might unwind through it.
+			if (Nil == type)
+			{
+				return YES;
+			}
 			if (isKindOfClass(thrown_class, type, foreignException))
 			{
 				return YES;
@@ -203,12 +202,16 @@ _Unwind_Reason_Code  __gnu_objc_personality_v0(int version,
 
 	// TODO: If this is a C++ exception, we can cache the lookup and cheat a
 	// bit
-	id object = nil;
+	void *object = nil;
 	if (!(actions & _UA_HANDLER_FRAME))
 	{
 		struct dwarf_eh_lsda lsda = parse_lsda(context, lsda_addr);
 		action = dwarf_eh_find_callsite(context, &lsda);
+		// If there's no cleanup here, continue unwinding.
 		if (0 == action.landing_pad) { return _URC_CONTINUE_UNWIND; }
+		// If there is a cleanup, we need to return the exception structure
+		// (not the object) to the calling frame.  The exception object
+		object = exceptionObject;
 		selector = 0;
 	}
 	else if (foreignException)
@@ -229,7 +232,6 @@ _Unwind_Reason_Code  __gnu_objc_personality_v0(int version,
 		selector = ex->handlerSwitchValue;
 		object = ex->object;
 	}
-
 
 	_Unwind_SetIP(context, (unsigned long)action.landing_pad);
 	_Unwind_SetGR(context, __builtin_eh_return_data_regno(0), 
