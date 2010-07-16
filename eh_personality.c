@@ -36,6 +36,11 @@ struct objc_exception
 	id object;
 };
 
+static void cleanup(_Unwind_Reason_Code reason, struct _Unwind_Exception *e)
+{
+	free((struct objc_exception*) ((char*)e - offsetof(struct objc_exception,
+					unwindHeader)));
+}
 /**
  *
  */
@@ -44,6 +49,7 @@ void objc_exception_throw(id object)
 	struct objc_exception *ex = calloc(1, sizeof(struct objc_exception));
 
 	ex->unwindHeader.exception_class = objc_exception_class;
+	ex->unwindHeader.exception_cleanup = cleanup;
 
 	ex->object = object;
 
@@ -231,6 +237,7 @@ _Unwind_Reason_Code  __gnu_objc_personality_v0(int version,
 		action.landing_pad = ex->landingPad;
 		selector = ex->handlerSwitchValue;
 		object = ex->object;
+		free(ex);
 	}
 
 	_Unwind_SetIP(context, (unsigned long)action.landing_pad);
