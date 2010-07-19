@@ -152,7 +152,7 @@ static BOOL init_protocols(struct objc_protocol_list *protocols)
 		protocol_class = objc_getClass("Protocol");
 		protocol_class2 = objc_getClass("Protocol2");
 	}
-	if (nil == protocol_class2)
+	if (nil == protocol_class2 || nil == protocol_class)
 	{
 		return NO;
 	}

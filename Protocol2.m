@@ -4,12 +4,6 @@
 #include <stdio.h>
 #include <string.h>
 
-@implementation Protocol2 
-+ (void)load
-{
-	objc_clear_class_flag(self, objc_class_flag_plane_aware);
-}
-@end
 @implementation Protocol
 + (void)load
 {
@@ -20,6 +14,12 @@
 - (BOOL)conformsTo: (Protocol*)p
 {
 	return protocol_conformsToProtocol(self, p);
+}
+@end
+@implementation Protocol2 
++ (void)load
+{
+	objc_clear_class_flag(self, objc_class_flag_plane_aware);
 }
 @end
 
