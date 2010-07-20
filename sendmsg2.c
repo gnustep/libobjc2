@@ -299,6 +299,8 @@ IMP objc_msg_lookup(id receiver, SEL selector)
 	Slot_t slot = objc_msg_lookup_internal(&self, selector, nil);
 	if (self != receiver)
 	{
+		if (0 == __objc_msg_forward2) { return 0; }
+
 		return __objc_msg_forward2(receiver, selector);
 	}
 	return slot->method;
