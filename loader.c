@@ -16,6 +16,7 @@ void __objc_init_selector_tables(void);
 void __objc_init_protocol_table(void);
 void __objc_init_class_tables(void);
 void __objc_init_dispatch_tables(void);
+void objc_send_load_message(Class class);
 
 /* Number of threads that are alive.  */
 int __objc_runtime_threads_alive = 1;			/* !T:MUTEX */
@@ -72,6 +73,7 @@ void __objc_exec_class(struct objc_module_abi_8 *module)
 	{
 		objc_load_class(symbols->definitions[defs++]);
 	}
+	unsigned int category_start = defs;
 	// Load the categories from this module
 	for (unsigned short i=0 ; i<symbols->category_count; i++)
 	{
@@ -84,9 +86,20 @@ void __objc_exec_class(struct objc_module_abi_8 *module)
 		objc_init_statics(*(statics++));
 	}
 
-	// Fix up the class links for loaded classes.
-	objc_resolve_class_links();
 	// Load categories and statics that were deferred.
 	objc_load_buffered_categories();
 	objc_init_buffered_statics();
+	// Fix up the class links for loaded classes.
+	objc_resolve_class_links();
+	for (unsigned short i=0 ; i<symbols->category_count; i++)
+	{
+		struct objc_category *cat = (struct objc_category*)
+			symbols->definitions[category_start++];
+		Class class = (Class)objc_getClass(cat->class_name);
+		if ((Nil != class) && 
+		    objc_test_class_flag(class, objc_class_flag_resolved))
+		{
+			objc_send_load_message(class);
+		}
+	}
 }

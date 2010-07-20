@@ -34,7 +34,6 @@ static void load_category(struct objc_category *cat, struct objc_class *class)
 		cat->protocols->next = class->protocols;
 		class->protocols = cat->protocols;
 	}
-	objc_send_load_message(class);
 }
 
 static BOOL try_load_category(struct objc_category *cat)
