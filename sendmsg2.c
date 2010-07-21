@@ -25,11 +25,15 @@ static id objc_proxy_lookup_null(id receiver, SEL op) { return nil; }
 static Slot_t objc_msg_forward3_null(id receiver, SEL op) { return &nil_slot; }
 
 id (*objc_proxy_lookup)(id receiver, SEL op) = objc_proxy_lookup_null;
-Slot_t (*objc_msg_forward3)(id receiver, SEL op) = objc_msg_forward3_null;
+Slot_t (*__objc_msg_forward3)(id receiver, SEL op) = objc_msg_forward3_null;
 
-static inline Slot_t objc_msg_lookup_internal(id *receiver,
-                                              SEL selector, 
-                                              id sender)
+static 
+// Uncomment for debugging
+//__attribute__((noinline))
+__attribute__((always_inline))
+Slot_t objc_msg_lookup_internal(id *receiver,
+                                SEL selector, 
+                                id sender)
 {
 	Slot_t result = SparseArrayLookup((*receiver)->isa->dtable,
 			PTR_TO_IDX(selector->name));
@@ -62,8 +66,8 @@ static inline Slot_t objc_msg_lookup_internal(id *receiver,
 				return result;
 			}
 			id newReceiver = objc_proxy_lookup(*receiver, selector);
-			// If some other library wants us to play forwarding games, try again
-			// with the new object.
+			// If some other library wants us to play forwarding games, try
+			// again with the new object.
 			if (nil != newReceiver)
 			{
 				*receiver = newReceiver;
@@ -71,7 +75,7 @@ static inline Slot_t objc_msg_lookup_internal(id *receiver,
 			}
 			if (0 == result)
 			{
-				result = objc_msg_forward3(*receiver, selector);
+				result = __objc_msg_forward3(*receiver, selector);
 			}
 		}
 	}
@@ -299,9 +303,7 @@ IMP objc_msg_lookup(id receiver, SEL selector)
 	Slot_t slot = objc_msg_lookup_internal(&self, selector, nil);
 	if (self != receiver)
 	{
-		if (0 == __objc_msg_forward2) { return 0; }
-
-		return __objc_msg_forward2(receiver, selector);
+		slot = __objc_msg_forward3(receiver, selector);
 	}
 	return slot->method;
 }
