@@ -190,6 +190,8 @@ BOOL  objc_resolve_class(Class cls)
 	// If this class has no superclass, use [NS]Object
 	Class super = root_class;
 	Class superMeta = root_class;
+	Class meta = cls->isa;
+
 	if (NULL != cls->super_class)
 	{
 		// Resolve the superclass if it isn't already resolved
@@ -201,18 +203,22 @@ BOOL  objc_resolve_class(Class cls)
 		superMeta = super->isa;
 		// Set the superclass pointer for the class and the superclass
 		cls->super_class = super;
-		cls->isa->super_class = super->isa;
 	}
+
 	// Don't make the root class a subclass of itself
 	if (cls != super)
 	{
 		// Set up the class links
 		cls->sibling_class = super->subclass_list;
 		super->subclass_list = cls;
-		// Set up the metaclass links
-		cls->isa->sibling_class = superMeta->subclass_list;
-		superMeta->subclass_list = cls->isa;
 	}
+	// Make the root class the superclass of the metaclass (e.g. NSObject is
+	// the superclass of all metaclasses)
+	meta->super_class = superMeta;
+	// Set up the metaclass links
+	meta->sibling_class = superMeta->subclass_list;
+	superMeta->subclass_list = meta;
+
 	// Mark this class (and its metaclass) as resolved
 	objc_set_class_flag(cls, objc_class_flag_resolved);
 	objc_set_class_flag(cls->isa, objc_class_flag_resolved);
