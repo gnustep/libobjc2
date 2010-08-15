@@ -1,3 +1,5 @@
+#ifndef __OBJC_SLOT_H_INCLUDED__
+#define __OBJC_SLOT_H_INCLUDED__
 /**
  * The objc_slot structure is used to permit safe IMP caching.  It is returned
  * by the new lookup APIs.  When you cache an IMP, you should store a copy of
@@ -37,3 +39,4 @@ struct objc_slot
 	/** The method pointer for this method. */
 	IMP method;
 } OBJC_NONPORTABLE;
+#endif // __OBJC_SLOT_H_INCLUDED__

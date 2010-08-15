@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include "objc/runtime.h"
 #include "sarray2.h"
 #include "selector.h"
@@ -8,19 +9,13 @@
 #include "slot_pool.h"
 #include "dtable.h"
 
-SparseArray *__objc_uninstalled_dtable;
+dtable_t __objc_uninstalled_dtable;
 
 /** Head of the list of temporary dtables.  Protected by initialize_lock. */
 InitializingDtable *temporary_dtables;
 mutex_t initialize_lock;
-
 static uint32_t dtable_depth = 8;
 
-void __objc_init_dispatch_tables ()
-{
-	INIT_LOCK(initialize_lock);
-	__objc_uninstalled_dtable = SparseArrayNewWithDepth(dtable_depth);
-}
 
 static void collectMethodsForMethodListToSparseArray(
 		struct objc_method_list *list,
@@ -36,6 +31,262 @@ static void collectMethodsForMethodListToSparseArray(
 		SparseArrayInsert(sarray, PTR_TO_IDX(list->methods[i].selector->name),
 				(void*)&list->methods[i]);
 	}
+}
+
+
+#ifdef __OBJC_LOW_MEMORY__
+
+struct objc_dtable
+{
+	struct cache_line
+	{
+		uint32_t idx;
+		uint32_t version;
+		struct objc_slot *slot;
+	} cache[8];
+	Class cls;
+	struct slots_list
+	{
+		uint32_t idx;
+		struct objc_slot *slot;
+	} *slots;
+	int slot_count;
+	int slot_size;
+	mutex_t lock;
+};
+
+void __objc_init_dispatch_tables ()
+{
+	INIT_LOCK(initialize_lock);
+}
+
+Class class_getSuperclass(Class);
+
+void __objc_update_dispatch_table_for_class(Class cls)
+{
+	static BOOL warned = NO;
+	if (!warned)
+	{
+		fprintf(stderr, 
+			"Warning: Calling deprecated private ObjC runtime function %s\n", __func__);
+		warned = YES;
+	}
+}
+
+static dtable_t create_dtable_for_class(Class class)
+{
+	// Don't create a dtable for a class that already has one
+	if (classHasDtable(class)) { return dtable_for_class(class); }
+
+	LOCK_UNTIL_RETURN(__objc_runtime_mutex);
+
+	// Make sure that another thread didn't create the dtable while we were
+	// waiting on the lock.
+	if (classHasDtable(class)) { return dtable_for_class(class); }
+
+	Class super = class_getSuperclass(class);
+
+	if (Nil != super && !classHasInstalledDtable(super))
+	{
+		super->dtable = create_dtable_for_class(super);
+	}
+
+	/* Allocate dtable if necessary */
+	dtable_t dtable = calloc(1, sizeof(struct objc_dtable));
+	dtable->cls = class;
+	INIT_LOCK(dtable->lock);
+
+	return dtable;
+}
+
+
+void objc_resize_dtables(uint32_t newSize)
+{
+	if (1<<dtable_depth > newSize) { return; }
+	dtable_depth <<= 1;
+}
+
+#define HASH_UID(uid) ((uid >> 2) & 7)
+
+static struct objc_slot* check_cache(dtable_t dtable, uint32_t uid)
+{
+	int i = HASH_UID(uid);
+	volatile struct cache_line *cache = &dtable->cache[i];
+	int32_t initial_idx = cache->idx;
+
+	if (initial_idx != uid)
+	{
+		return NULL;
+	}
+
+	struct objc_slot *slot;
+	int32_t idx;
+	int32_t version;
+	do
+	{
+		initial_idx = cache->idx;
+		version = cache->version;
+		slot = cache->slot;
+		__sync_synchronize();
+		idx = cache->idx;
+	} while (idx != initial_idx);
+
+	return (idx == uid) && (slot->version == version) ? slot : NULL;
+}
+
+static struct slots_list *find_slot(uint32_t uid, 
+		struct slots_list *slots, int slot_count)
+{
+	if (slot_count == 0) { return NULL; }
+	int idx = slot_count >> 1;
+	struct slots_list *slot = &slots[idx];
+	if (slot_count == 1)
+	{
+		if (slot->idx == uid)
+		{
+			return slot;
+		}
+		return NULL;
+	}
+	if (slot->idx > uid)
+	{
+		return find_slot(uid, slots, idx);
+	}
+	if (slot->idx < uid)
+	{
+		return find_slot(uid, slots+idx, slot_count - idx);
+	}
+	if (slot->idx == uid)
+	{
+		return slot;
+	}
+	return NULL;
+}
+
+static int slot_cmp(const void *l, const void *r)
+{
+	return (((struct slots_list*)l)->idx - ((struct slots_list*)r)->idx);
+}
+
+static void insert_slot(dtable_t dtable, struct objc_slot *slot, uint32_t idx)
+{
+	if (dtable->slot_size == dtable->slot_count)
+	{
+		dtable->slot_size += 16;
+		dtable->slots = realloc(dtable->slots, dtable->slot_size *
+				sizeof(struct slots_list));
+		assert(NULL != dtable->slots && "Out of memory!");
+	}
+	dtable->slots[dtable->slot_count].slot = slot;
+	dtable->slots[dtable->slot_count++].idx = idx;
+}
+
+static void update_dtable(dtable_t dtable)
+{
+	//fprintf(stderr, "Updating dtable for %s! %d\n", dtable->cls->name, dtable_depth);
+	Class cls = dtable->cls;
+
+	if (NULL == cls->methods) { return; }
+
+	SparseArray *methods = SparseArrayNewWithDepth(dtable_depth);
+	collectMethodsForMethodListToSparseArray((void*)cls->methods, methods);
+
+	if (NULL == dtable->slots)
+	{
+		dtable->slots = calloc(sizeof(struct slots_list), 16);
+		dtable->slot_size = 16;
+	}
+
+	uint32_t old_slot_count = dtable->slot_count;
+	struct objc_method *m;
+	uint32_t idx = 0;
+	while ((m = SparseArrayNext(methods, &idx)))
+	{
+		uint32_t idx = PTR_TO_IDX(m->selector->name);
+		struct slots_list *s = find_slot(idx, dtable->slots, old_slot_count);
+		if (NULL != s)
+		{
+			s->slot->method = m->imp;
+			s->slot->version++;
+		}
+		else
+		{
+			struct objc_slot *slot = new_slot_for_method_in_class(m, cls);
+			insert_slot(dtable, slot, idx);
+			if (Nil != cls->super_class)
+			{
+				slot = objc_dtable_lookup(dtable_for_class(cls->super_class), idx);
+				if (NULL != slot)
+				{
+					slot->version++;
+				}
+			}
+		}
+	}
+	mergesort(dtable->slots, dtable->slot_count, sizeof(struct slots_list),
+			slot_cmp);
+	SparseArrayDestroy(methods);
+}
+
+void objc_update_dtable_for_class(Class cls)
+{
+	dtable_t dtable = dtable_for_class(cls);
+	// Be lazy about constructing the slot list - don't do it unless we actually
+	// need to access it
+	if ((NULL == dtable) || (NULL == dtable->slots)) { return; }
+
+	LOCK_UNTIL_RETURN(&dtable->lock);
+
+	update_dtable(dtable);
+
+}
+
+struct objc_slot* objc_dtable_lookup(dtable_t dtable, uint32_t uid)
+{
+	if (NULL == dtable) { return NULL; }
+
+	struct objc_slot *slot = check_cache(dtable, uid);
+	
+	if (NULL != slot)
+	{
+		return slot;
+	}
+
+	LOCK_UNTIL_RETURN(&dtable->lock);
+	if (NULL == dtable->slots)
+	{
+		update_dtable(dtable);
+	}
+	//fprintf(stderr, "Using slow path: %d entries in table for %s\n", dtable->slot_count, dtable->cls->name);
+	struct slots_list *s = find_slot(uid, dtable->slots, dtable->slot_count);
+	if (NULL != s)
+	{
+		slot = s->slot;
+		int i = HASH_UID(uid);
+		volatile struct cache_line *cache = &dtable->cache[i];
+		cache->idx = 0;
+		cache->version = slot->version;
+		cache->slot = slot;
+		__sync_synchronize();
+		cache->idx = uid;
+		return slot;
+	}
+
+	if (NULL != dtable->cls->super_class)
+	{
+		return objc_dtable_lookup(dtable->cls->super_class->dtable, uid);
+	}
+	return NULL;
+}
+
+
+#else
+
+
+void __objc_init_dispatch_tables ()
+{
+	INIT_LOCK(initialize_lock);
+	__objc_uninstalled_dtable = SparseArrayNewWithDepth(dtable_depth);
 }
 
 static BOOL installMethodInDtable(Class class,
@@ -248,6 +499,8 @@ void objc_resize_dtables(uint32_t newSize)
 	}
 }
 
+#endif // __OBJC_LOW_MEMORY__
+
 void objc_resolve_class(Class);
 
 /**
@@ -297,8 +550,8 @@ void objc_send_initialize(id object)
 
 
 	// Create a temporary dtable, to be installed later.
-	SparseArray *class_dtable = create_dtable_for_class(class);
-	SparseArray *dtable = create_dtable_for_class(meta);
+	dtable_t class_dtable = create_dtable_for_class(class);
+	dtable_t dtable = create_dtable_for_class(meta);
 
 	// Create an entry in the dtable look-aside buffer for this.  When sending
 	// a message to this class in future, the lookup function will check this
@@ -320,7 +573,7 @@ void objc_send_initialize(id object)
 		initializeSel = sel_registerName("initialize");
 	}
 	struct objc_slot *initializeSlot = 
-		SparseArrayLookup(dtable, PTR_TO_IDX(initializeSel->name));
+		objc_dtable_lookup(dtable, PTR_TO_IDX(initializeSel->name));
 
 	if (0 != initializeSlot)
 	{
@@ -328,8 +581,8 @@ void objc_send_initialize(id object)
 		{
 			// The dtable to use for sending messages to the superclass.  This is
 			// the superclass's metaclass' dtable.
-			SparseArray *super_dtable = class->super_class->isa->dtable;
-			struct objc_slot *superSlot = SparseArrayLookup(super_dtable,
+			dtable_t super_dtable = class->super_class->isa->dtable;
+			struct objc_slot *superSlot = objc_dtable_lookup(super_dtable,
 					PTR_TO_IDX(initializeSel->name));
 			// Check that this IMP comes from the class, not from its superclass.
 			// Note that the superclass dtable is guaranteed to be installed at

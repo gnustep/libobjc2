@@ -1,10 +1,12 @@
 #include "lock.h"
 #include "class.h"
 #include "sarray2.h"
+#include "objc/slot.h"
+#include <stdint.h>
 
-#ifdef __LIBOBJC_LOW_MEMORY__
-struct objc_dtable* dtable_t;
-Slot_t objc_dtable_lookup(dtable_t dtable, uint32_t uid);
+#ifdef __OBJC_LOW_MEMORY__
+typedef struct objc_dtable* dtable_t;
+struct objc_slot* objc_dtable_lookup(dtable_t dtable, uint32_t uid);
 #else
 typedef SparseArray* dtable_t;
 #	define objc_dtable_lookup SparseArrayLookup
@@ -68,7 +70,7 @@ static inline dtable_t dtable_for_class(Class cls)
 	{
 		if (buffer->class == cls)
 		{
-			dtable = (SparseArray*)buffer->dtable;
+			dtable = buffer->dtable;
 			break;
 		}
 		buffer = buffer->next;
@@ -89,9 +91,9 @@ static inline int classHasDtable(struct objc_class *cls)
 {
 	return (dtable_for_class(cls) != __objc_uninstalled_dtable);
 }
+
 /**
  * Updates the dtable for a class and its subclasses.  Must be called after
  * modifying a class's method list.
  */
 void objc_update_dtable_for_class(Class);
-
