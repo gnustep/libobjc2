@@ -1,10 +1,19 @@
 #include "lock.h"
 #include "class.h"
 #include "sarray2.h"
+
+#ifdef __LIBOBJC_LOW_MEMORY__
+struct objc_dtable* dtable_t;
+Slot_t objc_dtable_lookup(dtable_t dtable, uint32_t uid);
+#else
+typedef SparseArray* dtable_t;
+#	define objc_dtable_lookup SparseArrayLookup
+#endif
+
 /**
  * Pointer to the sparse array representing the pretend (uninstalled) dtable.
  */
-extern SparseArray *__objc_uninstalled_dtable;
+extern dtable_t __objc_uninstalled_dtable;
 /**
  * Structure for maintaining a linked list of temporary dtables.  When sending
  * an +initialize message to a class, we create a temporary dtables and store
@@ -16,21 +25,21 @@ typedef struct _InitializingDtable
 	/** The class that owns the dtable. */
 	Class class;
 	/** The dtable for this class. */
-	void *dtable;
+	dtable_t dtable;
 	/** The next uninstalled dtable in the list. */
 	struct _InitializingDtable *next;
 } InitializingDtable;
 
 /** Head of the list of temporary dtables.  Protected by initialize_lock. */
 extern InitializingDtable *temporary_dtables;
-mutex_t initialize_lock;
+extern mutex_t initialize_lock;
 
 /**
  * Returns whether a class has an installed dtable.
  */
 static inline int classHasInstalledDtable(struct objc_class *cls)
 {
-	return ((void*)cls->dtable != __objc_uninstalled_dtable);
+	return (cls->dtable != __objc_uninstalled_dtable);
 }
 
 /**
@@ -38,22 +47,22 @@ static inline int classHasInstalledDtable(struct objc_class *cls)
  * method then this will block if called from a thread other than the one
  * running the +initialize method.  
  */
-static inline SparseArray *dtable_for_class(Class cls)
+static inline dtable_t dtable_for_class(Class cls)
 {
 	if (classHasInstalledDtable(cls))
 	{
-		return (SparseArray*)cls->dtable;
+		return cls->dtable;
 	}
 	LOCK_UNTIL_RETURN(&initialize_lock);
 	if (classHasInstalledDtable(cls))
 	{
-		return (SparseArray*)cls->dtable;
+		return cls->dtable;
 	}
 	/* This is a linear search, and so, in theory, could be very slow.  It is
 	* O(n) where n is the number of +initialize methods on the stack.  In
 	* practice, this is a very small number.  Profiling with GNUstep showed that
 	* this peaks at 8. */
-	SparseArray *dtable = __objc_uninstalled_dtable;
+	dtable_t dtable = __objc_uninstalled_dtable;
 	InitializingDtable *buffer = temporary_dtables;
 	while (NULL != buffer)
 	{
@@ -85,3 +94,4 @@ static inline int classHasDtable(struct objc_class *cls)
  * modifying a class's method list.
  */
 void objc_update_dtable_for_class(Class);
+

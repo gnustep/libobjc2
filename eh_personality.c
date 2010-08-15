@@ -7,15 +7,17 @@
 #include "objc/hooks.h"
 
 #include "class.h"
+#define fprintf(...)
 
 /**
  * Class of exceptions to distinguish between this and other exception types.
  */
-#define objc_exception_class (*(int64_t*)"GNUCC++\0")
+#define objc_exception_class (*(int64_t*)"GNUCOBJC")
+
 /**
- * Class used for C++ exceptions.  Used to box them.  
+ * Type info used for catch handlers that catch id.
  */
-#define cxx_exception_class (*(int64_t*)"GNUCC++\0")
+const char *__objc_id_typeinfo = "id";
 
 /**
  * Structure used as a header on thrown exceptions.  
@@ -35,6 +37,14 @@ struct objc_exception
 	 * exception handler can catch this as a foreign exception. */
 	id object;
 };
+
+typedef enum
+{
+	handler_none,
+	handler_cleanup,
+	handler_catchall,
+	handler_class
+} handler_type;
 
 static void cleanup(_Unwind_Reason_Code reason, struct _Unwind_Exception *e)
 {
@@ -79,10 +89,14 @@ Class get_type_table_entry(struct _Unwind_Context *context,
 
 	if (0 == class_name) { return Nil; }
 
+	fprintf(stderr, "Class name: %d\n", class_name);
+
+	if (__objc_id_typeinfo == class_name) { return (Class)1; }
+
 	return (Class)objc_getClass(class_name);
 }
 
-static BOOL isKindOfClass(Class thrown, Class type, BOOL foreignException)
+static BOOL isKindOfClass(Class thrown, Class type)
 {
 	do
 	{
@@ -97,43 +111,64 @@ static BOOL isKindOfClass(Class thrown, Class type, BOOL foreignException)
 }
 
 
-static BOOL check_action_record(struct _Unwind_Context *context,
-                                BOOL foreignException,
-                                struct dwarf_eh_lsda *lsda,
-                                dw_eh_ptr_t action_record,
-                                Class thrown_class,
-                                unsigned long *selector)
+static handler_type check_action_record(struct _Unwind_Context *context,
+                                        BOOL foreignException,
+                                        struct dwarf_eh_lsda *lsda,
+                                        dw_eh_ptr_t action_record,
+                                        Class thrown_class,
+                                        unsigned long *selector)
 {
+	//if (!action_record) { return handler_cleanup; }
 	while (action_record)
 	{
 		int filter = read_sleb128(&action_record);
 		dw_eh_ptr_t action_record_offset_base = action_record;
 		int displacement = read_sleb128(&action_record);
 		*selector = filter;
+		fprintf(stderr, "Filter: %d\n", filter);
 		if (filter > 0)
 		{
 			Class type = get_type_table_entry(context, lsda, filter);
-			// If the handler is a cleanup, we don't want to do mark it as a
-			// handler, but we might unwind through it.
+			fprintf(stderr, "%p type: %d\n", type, !foreignException);
+			// Catchall
 			if (Nil == type)
 			{
-				return YES;
+				return handler_catchall;
 			}
-			if (isKindOfClass(thrown_class, type, foreignException))
+			// We treat id catches as catchalls when an object is thrown and as
+			// nothing when a foreign exception is thrown
+			else if ((Class)1 == type)
 			{
-				return YES;
+				if (!foreignException)
+				{
+					return handler_catchall;
+				}
+			}
+			else if (!foreignException && isKindOfClass(thrown_class, type))
+			{
+				fprintf(stderr, "found handler for %s\n", type->name);
+				return handler_class;
 			}
 		}
 		else if (filter == 0)
 		{
-			// Catchall 
-			return YES;
+			fprintf(stderr, "0 filter\n");
+			// Cleanup?  I think the GNU ABI doesn't actually use this, but it
+			// would be a good way of indicating a non-id catchall...
+			return handler_cleanup;
+		}
+		else
+		{
+			fprintf(stderr, "Filter value: %d\n"
+					"Your compiler and I disagree on the correct layout of EH data.\n", 
+					filter);
+			abort();
 		}
 		*selector = 0;
 		action_record = displacement ? 
 			action_record_offset_base + displacement : 0;
 	}
-	return NO;
+	return handler_none;
 }
 
 /**
@@ -154,6 +189,8 @@ _Unwind_Reason_Code  __gnu_objc_personality_v0(int version,
 	}
 	struct objc_exception *ex = 0;
 
+	//char *cls = (char*)&exceptionClass;
+	fprintf(stderr, "Class: %c%c%c%c%c%c%c%c\n", cls[0], cls[1], cls[2], cls[3], cls[4], cls[5], cls[6], cls[7]);
 
 	// Check if this is a foreign exception.  If it is a C++ exception, then we
 	// have to box it.  If it's something else, like a LanguageKit exception
@@ -174,6 +211,7 @@ _Unwind_Reason_Code  __gnu_objc_personality_v0(int version,
 	else if (_objc_class_for_boxing_foreign_exception)
 	{
 		thrown_class = _objc_class_for_boxing_foreign_exception(exceptionClass);
+		fprintf(stderr, "Foreign class: %p\n", thrown_class);
 	}
 	unsigned char *lsda_addr = (void*)_Unwind_GetLanguageSpecificData(context);
 
@@ -188,11 +226,12 @@ _Unwind_Reason_Code  __gnu_objc_personality_v0(int version,
 	{
 		struct dwarf_eh_lsda lsda = parse_lsda(context, lsda_addr);
 		action = dwarf_eh_find_callsite(context, &lsda);
-		BOOL found_handler = check_action_record(context, foreignException,
+		handler_type handler = check_action_record(context, foreignException,
 				&lsda, action.action_record, thrown_class, &selector);
 		// If there's no action record, we've only found a cleanup, so keep
 		// searching for something real
-		if (found_handler)
+		if (handler == handler_class ||
+		    ((handler == handler_catchall)))// && !foreignException))
 		{
 			// Cache the results for the phase 2 unwind, if we found a handler
 			// and this is not a foreign exception.
@@ -201,10 +240,12 @@ _Unwind_Reason_Code  __gnu_objc_personality_v0(int version,
 				ex->handlerSwitchValue = selector;
 				ex->landingPad = action.landing_pad;
 			}
+			fprintf(stderr, "Found handler! %d\n", handler);
 			return _URC_HANDLER_FOUND;
 		}
 		return _URC_CONTINUE_UNWIND;
 	}
+	fprintf(stderr, "Phase 2: Fight!\n");
 
 	// TODO: If this is a C++ exception, we can cache the lookup and cheat a
 	// bit
@@ -214,14 +255,30 @@ _Unwind_Reason_Code  __gnu_objc_personality_v0(int version,
 		struct dwarf_eh_lsda lsda = parse_lsda(context, lsda_addr);
 		action = dwarf_eh_find_callsite(context, &lsda);
 		// If there's no cleanup here, continue unwinding.
-		if (0 == action.landing_pad) { return _URC_CONTINUE_UNWIND; }
+		if (0 == action.landing_pad)
+		{
+			return _URC_CONTINUE_UNWIND;
+		}
+		handler_type handler = check_action_record(context, foreignException,
+				&lsda, action.action_record, thrown_class, &selector);
+		fprintf(stderr, "handler! %d %d\n",handler, selector);
+		// If this is not a cleanup, ignore it and keep unwinding.
+		//if (check_action_record(context, foreignException, &lsda,
+				//action.action_record, thrown_class, &selector) != handler_cleanup)
+		if (handler != handler_cleanup)
+		{
+			fprintf(stderr, "Ignoring handler! %d\n",handler);
+			return _URC_CONTINUE_UNWIND;
+		}
+		fprintf(stderr, "Installing cleanup...\n");
 		// If there is a cleanup, we need to return the exception structure
 		// (not the object) to the calling frame.  The exception object
 		object = exceptionObject;
-		selector = 0;
+		//selector = 0;
 	}
 	else if (foreignException)
 	{
+		fprintf(stderr, "Doing the foreign exception thing...\n");
 		struct dwarf_eh_lsda lsda = parse_lsda(context, lsda_addr);
 		action = dwarf_eh_find_callsite(context, &lsda);
 		check_action_record(context, foreignException, &lsda,
