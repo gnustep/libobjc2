@@ -48,6 +48,10 @@ libobjc_HEADER_FILES = \
 	slot.h
 endif
 
+ifeq ($(tdd), yes)
+libobjc_CPPFLAGS += -DTYPE_DEPENDENT_DISPATCH
+endif
+
 libobjc_LIBRARIES_DEPEND_UPON += -lpthread
 
 # Deprecated functions are only deprecated for external use, not for us because

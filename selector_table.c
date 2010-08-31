@@ -21,6 +21,8 @@
 #	define TDD(x)
 #endif
 
+#define fprintf(...)
+
 
 // Define the pool allocator for selectors.  This is a simple bump-the-pointer
 // allocator for low-overhead allocation.
@@ -68,9 +70,7 @@ static const char *skip_irrelevant_type_info(const char *t)
 			return skip_irrelevant_type_info(t+1);
 	}
 }
-#endif
 
-#ifdef TYPE_DEPENDENT_DISPATCH
 static BOOL selector_types_equal(const char *t1, const char *t2)
 {
 	if (t1 == NULL || t2 == NULL) { return t1 == t2; }
@@ -89,9 +89,7 @@ static BOOL selector_types_equal(const char *t1, const char *t2)
 	}
 	return YES;
 }
-#endif
 
-#ifdef TYPE_DEPENDENT_DISPATCH
 static BOOL selector_types_equivalent(const char *t1, const char *t2)
 {
 	// We always treat untyped selectors as having the same type as typed
@@ -109,8 +107,9 @@ static int selector_identical(const void *k,
                               const SEL value)
 {
 	SEL key = (SEL)k;
+	fprintf(stderr, "Comparing %s %s, %s %s\n", sel_getName(key), sel_getName(value), sel_getType_np(key), sel_getType_np(value));
 	return string_compare(sel_getName(key), sel_getName(value)) &&
-		string_compare(sel_getType_np(key), sel_getType_np(value));
+		selector_types_equal(sel_getType_np(key), sel_getType_np(value));
 }
 
 /**
@@ -141,21 +140,8 @@ static inline uint32_t hash_selector(const void *s)
 	{
 		hash = hash * 33 + c;
 	}
-#ifdef TYPE_DEPENDENT_DISPATCH
-	str = sel_getType_np(sel);
-	if (NULL != str)
-	{
-		while (*str != '\0')
-		{
-			str = skip_irrelevant_type_info(str);
-			if (*str != '\0')
-			{
-				hash = hash * 33 + (uint32_t)*str;
-			}
-			str++;
-		}
-	}
-#endif //TYPE_DEPENDENT_DISPATCH
+	// FIXME: We might want to make the hash dependent on the types, since not
+	// doing so increases the number of potential hash collisions.
 	return hash;
 }
 
@@ -216,9 +202,10 @@ static inline void add_selector_to_table(SEL aSel, int32_t uid, uint32_t idx)
 static inline void register_selector_locked(SEL aSel)
 {
 	uintptr_t idx = selector_count++;
+	SEL original = selector_lookup(aSel->name, 0);
 	if (NULL == aSel->types)
 	{
-		//fprintf(stderr, "Registering selector %d %s\n", idx, sel_getName(aSel));
+		fprintf(stderr, "Registering selector %d %s\n", idx, sel_getName(aSel));
 		add_selector_to_table(aSel, idx, idx);
 		objc_resize_dtables(selector_count);
 		return;
@@ -230,7 +217,7 @@ static inline void register_selector_locked(SEL aSel)
 		untyped = selector_pool_alloc();
 		untyped->name = aSel->name;
 		untyped->types = 0;
-		//fprintf(stderr, "Registering selector %d %s\n", idx, sel_getName(aSel));
+		fprintf(stderr, "Registering selector %d %s\n", idx, sel_getName(aSel));
 		add_selector_to_table(untyped, idx, idx);
 		// If we are in type dependent dispatch mode, the uid for the typed
 		// and untyped versions will be different
@@ -238,7 +225,7 @@ static inline void register_selector_locked(SEL aSel)
 	}
 	uintptr_t uid = (uintptr_t)untyped->name;
 	TDD(uid = idx);
-	//fprintf(stderr, "Registering typed selector %d %s\n", uid, sel_getName(aSel));
+	fprintf(stderr, "Registering typed selector %d %s %s\n", uid, sel_getName(aSel), sel_getType_np(aSel));
 	add_selector_to_table(aSel, uid, idx);
 
 	// Add this set of types to the list.
