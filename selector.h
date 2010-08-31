@@ -33,5 +33,14 @@ static uint32_t get_untyped_idx(SEL aSel)
 	return (uint32_t)(uintptr_t)untyped->name;
 }
 
+/**
+ * Returns whether a selector is mapped.  
+ */
+BOOL sel_is_mapped(SEL selector);
+/**
+ * Registers the selector.  This selector may be returned later, so it must not
+ * be freed.
+ */
+SEL objc_register_selector(SEL aSel);
 
 #endif // OBJC_SELECTOR_H_INCLUDED

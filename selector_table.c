@@ -256,7 +256,7 @@ static inline void register_selector_locked(SEL aSel)
 /**
  * Registers a selector.  This assumes that the argument is never deallocated.
  */
-static SEL objc_register_selector(SEL aSel)
+SEL objc_register_selector(SEL aSel)
 {
 	if (isSelRegistered(aSel))
 	{
@@ -486,7 +486,7 @@ SEL sel_register_name(const char *name)
 	return sel_registerName(name);
 }
 
-SEL sel_register_typed_name (const char *name, const char *type)
+SEL sel_register_typed_name(const char *name, const char *type)
 {
 	return sel_registerTypedName_np(name, type);
 }

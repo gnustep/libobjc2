@@ -35,6 +35,7 @@ Slot_t objc_msg_lookup_internal(id *receiver,
                                 SEL selector, 
                                 id sender)
 {
+retry:;
 	Slot_t result = objc_dtable_lookup((*receiver)->isa->dtable,
 			PTR_TO_IDX(selector->name));
 	if (0 == result)
@@ -56,6 +57,13 @@ Slot_t objc_msg_lookup_internal(id *receiver,
 		}
 		if (0 == result)
 		{
+			if (!sel_is_mapped(selector))
+			{
+				objc_register_selector(selector);
+				// This should be a tail call, but GCC is stupid and won't let
+				// us tail call an always_inline function.
+				goto retry;
+			}
 			if ((result = objc_dtable_lookup(dtable, get_untyped_idx(selector))))
 			{
 				fprintf(stderr, "Calling %s with incorrect signature.  "
@@ -250,6 +258,11 @@ Slot_t objc_get_slot(Class cls, SEL selector)
 		}
 		if (NULL == result)
 		{
+			if (!sel_is_mapped(selector))
+			{
+				objc_register_selector(selector);
+				return objc_get_slot(cls, selector);
+			}
 			if ((result = objc_dtable_lookup(dtable, get_untyped_idx(selector))))
 			{
 				fprintf(stderr, "Calling %s with incorrect signature.  "

@@ -131,7 +131,7 @@ void __objc_init_class_tables(void)
 // Loader functions
 ////////////////////////////////////////////////////////////////////////////////
 
-BOOL  objc_resolve_class(Class cls)
+BOOL objc_resolve_class(Class cls)
 {
 	// Skip this if the class is already resolved.
 	if (objc_test_class_flag(cls, objc_class_flag_resolved)) { return YES; }
