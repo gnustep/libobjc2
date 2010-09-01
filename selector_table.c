@@ -54,8 +54,6 @@ inline static BOOL isSelRegistered(SEL sel)
 	return NO;
 }
 
-
-#ifdef TYPE_DEPENDENT_DISPATCH
 /**
  * Skip anything in a type encoding that is irrelevant to the comparison
  * between selectors, including type qualifiers and argframe info.
@@ -89,6 +87,8 @@ static BOOL selector_types_equal(const char *t1, const char *t2)
 	}
 	return YES;
 }
+
+#ifdef TYPE_DEPENDENT_DISPATCH
 
 static BOOL selector_types_equivalent(const char *t1, const char *t2)
 {
@@ -202,7 +202,6 @@ static inline void add_selector_to_table(SEL aSel, int32_t uid, uint32_t idx)
 static inline void register_selector_locked(SEL aSel)
 {
 	uintptr_t idx = selector_count++;
-	SEL original = selector_lookup(aSel->name, 0);
 	if (NULL == aSel->types)
 	{
 		fprintf(stderr, "Registering selector %d %s\n", idx, sel_getName(aSel));

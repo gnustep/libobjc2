@@ -56,3 +56,11 @@ OBJC_HOOK void (*_objc_unexpected_exception)(id exception);
  * to 
  */
 OBJC_HOOK Class (*_objc_class_for_boxing_foreign_exception)(int64_t exceptionClass);
+
+/**
+ * Hook called when selector type does not match the method type in the
+ * receiver.  This should return the slot to use instead, although it may throw
+ * an exception or perform some other action.
+ */
+extern struct objc_slot* (*_objc_selector_type_mismatch)(Class cls, 
+       SEL selector, struct objc_slot *result);

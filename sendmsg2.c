@@ -27,6 +27,20 @@ static Slot_t objc_msg_forward3_null(id receiver, SEL op) { return &nil_slot; }
 id (*objc_proxy_lookup)(id receiver, SEL op) = objc_proxy_lookup_null;
 Slot_t (*__objc_msg_forward3)(id receiver, SEL op) = objc_msg_forward3_null;
 
+static struct objc_slot* objc_selector_type_mismatch(Class cls, SEL
+		selector, Slot_t result)
+{
+	fprintf(stderr, "Calling [%s %c%s] with incorrect signature.  "
+			"Method has %s, selector has %s\n",
+			cls->name,
+			class_isMetaClass(cls) ? '+' : '-',
+			sel_getName(selector),
+			result->types,
+			sel_getType_np(selector));
+	return result;
+}
+struct objc_slot* (*_objc_selector_type_mismatch)(Class cls, SEL
+		selector, struct objc_slot *result) = objc_selector_type_mismatch;
 static 
 // Uncomment for debugging
 //__attribute__((noinline))
@@ -66,12 +80,8 @@ retry:;
 			}
 			if ((result = objc_dtable_lookup(dtable, get_untyped_idx(selector))))
 			{
-				fprintf(stderr, "Calling %s with incorrect signature.  "
-						"Method has %s, selector has %s\n",
-						sel_getName(selector),
-						result->types,
-						sel_getType_np(selector));
-				return result;
+				return _objc_selector_type_mismatch((*receiver)->isa, selector,
+						result);
 			}
 			id newReceiver = objc_proxy_lookup(*receiver, selector);
 			// If some other library wants us to play forwarding games, try
@@ -265,12 +275,7 @@ Slot_t objc_get_slot(Class cls, SEL selector)
 			}
 			if ((result = objc_dtable_lookup(dtable, get_untyped_idx(selector))))
 			{
-				fprintf(stderr, "Calling %s with incorrect signature.  "
-						"Method has %s, selector has %s\n",
-						sel_getName(selector),
-						result->types,
-						sel_getType_np(selector));
-				return result;
+				return _objc_selector_type_mismatch(cls, selector, result);
 			}
 		}
 	}
