@@ -344,7 +344,7 @@ const char *sel_getType_np(SEL aSel)
 }
 
 
-unsigned sel_copyTypes(const char *selName, const char **types, unsigned count)
+unsigned sel_copyTypes_np(const char *selName, const char **types, unsigned count)
 {
 	SEL untyped = selector_lookup(selName, 0);
 	if (untyped == NULL) { return 0; }
@@ -368,6 +368,35 @@ unsigned sel_copyTypes(const char *selName, const char **types, unsigned count)
 	while (NULL != l && found<count)
 	{
 		types[found++] = l->value;
+		l = l->next;
+	}
+	return found;
+}
+
+unsigned sel_copyTypedSelectors_np(const char *selName, SEL *const sels, unsigned count)
+{
+	SEL untyped = selector_lookup(selName, 0);
+	if (untyped == NULL) { return 0; }
+
+	struct sel_type_list *l =
+		SparseArrayLookup(selector_list, (uint32_t)(uintptr_t)untyped->name);
+	// Skip the head, which just contains the name, not the types.
+	l = l->next;
+
+	if (count == 0)
+	{
+		while (NULL != l)
+		{
+			count++;
+			l = l->next;
+		}
+		return count;
+	}
+
+	unsigned found = 0;
+	while (NULL != l && found<count)
+	{
+		sels[found++] = selector_lookup(selName, l->value);
 		l = l->next;
 	}
 	return found;

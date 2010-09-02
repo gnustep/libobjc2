@@ -19,6 +19,7 @@
 #include <assert.h>
 
 Class objc_next_class(void*);
+struct objc_slot *objc_get_slot(Class cls, SEL selector);
 
 /** 
  * Looks up the instance method in a specific class, without recursing into
@@ -257,18 +258,15 @@ id class_createInstance(Class cls, size_t extraBytes)
 
 Method class_getInstanceMethod(Class aClass, SEL aSelector)
 {
-	Method method = class_getInstanceMethodNonrecursive(aClass, aSelector);
-	if (method == NULL)
-	{
-		// TODO: Check if this should be NULL or aClass
-		Class superclass = class_getSuperclass(aClass);
-		if (superclass == NULL)
-		{
-			return NULL;
-		}
-		return class_getInstanceMethod(superclass, aSelector);
-	}
-	return method;
+	// Do a dtable lookup to find out which class the method comes from.
+	struct objc_slot *slot = objc_get_slot(aClass, aSelector);
+	if (NULL == slot) { return NULL; }
+
+	// Now find the typed variant of the selector, with the correct types.
+	aSelector = sel_registerTypedName_np(sel_getName(aSelector), slot->types);
+	
+	// Then do the slow lookup to find the method.
+	return class_getInstanceMethodNonrecursive(slot->owner, aSelector);
 }
 
 Method class_getClassMethod(Class aClass, SEL aSelector)
@@ -359,10 +357,11 @@ BOOL class_isMetaClass(Class cls)
 
 IMP class_replaceMethod(Class cls, SEL name, IMP imp, const char *types)
 {
-	Method method = class_getInstanceMethodNonrecursive(cls, name);
+	SEL sel = sel_registerTypedName_np(sel_getName(name), types);
+	Method method = class_getInstanceMethodNonrecursive(cls, sel);
 	if (method == NULL)
 	{
-		class_addMethod(cls, name, imp, types);
+		class_addMethod(cls, sel, imp, types);
 		return NULL;
 	}
 	IMP old = (IMP)method->imp;
