@@ -52,7 +52,7 @@ ifeq ($(tdd), yes)
 libobjc_CPPFLAGS += -DTYPE_DEPENDENT_DISPATCH
 endif
 
-libobjc_LIBRARIES_DEPEND_UPON += -lpthread
+libobjc_LIBRARIES_DEPEND_UPON += -lpthread -ltoydispatch
 
 # Deprecated functions are only deprecated for external use, not for us because
 # we are special, precious, little flowers.
@@ -62,7 +62,7 @@ libobjc_CPPFLAGS += -D__OBJC_RUNTIME_INTERNAL__=1 -D_XOPEN_SOURCE=500
 # benefit from supporting platforms with no C99 compiler.
 libobjc_CFLAGS += -std=c99 -g -march=native -fexceptions -fno-inline
 libobjc_OBJCFLAGS += $(libobjc_CFLAGS)
-libobjc_LDFLAGS += -g -ltoydispatch
+libobjc_LDFLAGS += -g
 libobjc_LIB_DIRS += -L toydispatch/obj
 
 libobjc_CFLAGS +=  -O3

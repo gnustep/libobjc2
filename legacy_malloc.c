@@ -14,10 +14,17 @@ void *objc_atomic_malloc(size_t size)
 	return malloc(size);
 }
 
+#ifdef __MINGW32__
+void *objc_valloc(size_t size)
+{
+	return malloc(size);
+}
+#else
 void *objc_valloc(size_t size)
 {
 	return valloc(size);
 }
+#endif
 
 void *objc_realloc(void *mem, size_t size)
 {

@@ -2,6 +2,15 @@
 #include <stdio.h>
 #include <unistd.h>
 
+#ifdef __MINGW32__
+#include <windows.h>
+static unsigned sleep(unsigned seconds)
+{
+	Sleep(seconds*1000);
+	return 0;
+}
+#endif
+
 // Subset of NSObject interface needed for properties.
 @interface NSObject {}
 - (id)retain;
