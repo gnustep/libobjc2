@@ -45,7 +45,9 @@ libobjc_HEADER_FILES = \
 	blocks_runtime.h\
 	hooks.h\
 	runtime.h\
-	slot.h
+	slot.h\
+	objc.h\
+	objc-api.h
 endif
 
 ifeq ($(tdd), yes)
