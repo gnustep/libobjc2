@@ -81,6 +81,19 @@ typedef void *objc_property_t;
 typedef struct objc_protocol Protocol;
 #endif
 
+struct objc_method_description
+{
+	/**
+	 * The name of this method.
+	 */
+	SEL   name;
+	/**
+	 * The types of this method.
+	 */
+	const char *types;
+};
+
+
 #ifndef YES
 #define YES ((BOOL)1)
 #endif

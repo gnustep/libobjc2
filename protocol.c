@@ -267,13 +267,68 @@ BOOL class_conformsToProtocol(Class cls, Protocol *protocol)
 struct objc_method_description *protocol_copyMethodDescriptionList(Protocol *p,
 	BOOL isRequiredMethod, BOOL isInstanceMethod, unsigned int *count)
 {
+	static id protocol2 = NULL;
+
+	if (NULL == protocol2)
+	{
+		protocol2 = objc_getClass("Protocol2");
+	}
+
+	struct objc_method_description_list *list;
 	*count = 0;
-	return NULL;
+	if (isRequiredMethod)
+	{
+		if (isInstanceMethod)
+		{
+			list = p->instance_methods;
+		}
+		else
+		{
+			list = p->class_methods;
+		}
+	}
+	else
+	{
+		if (p->isa != protocol2) { return NULL; }
+
+
+		if (isInstanceMethod)
+		{
+			list = ((Protocol2*)p)->optional_instance_methods;
+		}
+		else
+		{
+			list = ((Protocol2*)p)->optional_class_methods;
+		}
+	}
+	if (NULL == list || list->count == 0) { return NULL; }
+
+	*count = list->count;
+	struct objc_method_description *out = 
+		calloc(sizeof(struct objc_method_description_list), list->count);
+
+	for (int i=0 ; i<list->count ; i++)
+	{
+		out[i].name = sel_registerTypedName_np(list->methods[i].name,
+		                                       list->methods[i].types);
+		out[i].types = list->methods[i].types;
+	}
+	return out;
 }
 
 Protocol **protocol_copyProtocolList(Protocol *p, unsigned int *count)
 {
 	*count = 0;
+	if (p->protocol_list == NULL || p->protocol_list->count ==0)
+	{
+		return NULL;
+	}
+
+	Protocol **out = calloc(sizeof(Protocol*), p->protocol_list->count);
+	for (int i=0 ; i<p->protocol_list->count ; i++)
+	{
+		out[i] = (Protocol*)p->protocol_list->list[i];
+	}
 	return NULL;
 }
 
