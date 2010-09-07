@@ -263,9 +263,10 @@ BOOL class_conformsToProtocol(Class cls, Protocol *protocol)
 	return NO;
 }
 
-//FIXME!!!!
-struct objc_method_description *protocol_copyMethodDescriptionList(Protocol *p,
-	BOOL isRequiredMethod, BOOL isInstanceMethod, unsigned int *count)
+static struct objc_method_description_list *
+get_method_list(Protocol *p,
+                BOOL isRequiredMethod,
+                BOOL isInstanceMethod)
 {
 	static id protocol2 = NULL;
 
@@ -273,9 +274,7 @@ struct objc_method_description *protocol_copyMethodDescriptionList(Protocol *p,
 	{
 		protocol2 = objc_getClass("Protocol2");
 	}
-
 	struct objc_method_description_list *list;
-	*count = 0;
 	if (isRequiredMethod)
 	{
 		if (isInstanceMethod)
@@ -301,6 +300,17 @@ struct objc_method_description *protocol_copyMethodDescriptionList(Protocol *p,
 			list = ((Protocol2*)p)->optional_class_methods;
 		}
 	}
+	return list;
+}
+
+//FIXME!!!!
+struct objc_method_description *protocol_copyMethodDescriptionList(Protocol *p,
+	BOOL isRequiredMethod, BOOL isInstanceMethod, unsigned int *count)
+{
+
+	struct objc_method_description_list *list = 
+		get_method_list(p, isRequiredMethod, isInstanceMethod);
+	*count = 0;
 	if (NULL == list || list->count == 0) { return NULL; }
 
 	*count = list->count;
@@ -331,6 +341,33 @@ Protocol **protocol_copyProtocolList(Protocol *p, unsigned int *count)
 	}
 	return NULL;
 }
+struct objc_method_description 
+protocol_getMethodDescription(Protocol *p,
+                              SEL aSel,
+                              BOOL isRequiredMethod,
+                              BOOL isInstanceMethod)
+{
+	struct objc_method_description d = {0,0};
+	struct objc_method_description_list *list = 
+		get_method_list(p, isRequiredMethod, isInstanceMethod);
+	if (NULL == list)
+	{
+		return d;
+	}
+	// TODO: We could make this much more efficient if 
+	for (int i=0 ; i<list->count ; i++)
+	{
+		SEL s = sel_registerTypedName_np(list->methods[i].name, 0);
+		if (sel_isEqual(s, aSel))
+		{
+			d.name = s;
+			d.types = list->methods[i].types;
+			break;
+		}
+	}
+	return d;
+}
+
 
 const char *protocol_getName(Protocol *p)
 {
