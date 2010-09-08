@@ -17,6 +17,7 @@ libobjc_OBJC_FILES = \
 
 libobjc_C_FILES = \
 	abi_version.c\
+	caps.c\
 	category_loader.c\
 	class_table.c\
 	dtable.c\
@@ -43,6 +44,7 @@ ifneq ($(install_headers), no)
 libobjc_HEADER_FILES = \
 	Availability.h\
 	blocks_runtime.h\
+	capabilities.h\
 	hooks.h\
 	runtime.h\
 	slot.h\
