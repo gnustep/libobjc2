@@ -59,7 +59,7 @@
 	{\
 		if (!objc_test_capability(x))\
 		{\
-			fprintf(stderr, "Runtime does not support required property: " #x "\n");\
+			fprintf(stderr, "Runtime does not support required feature: " #x "\n");\
 			exit(1);\
 		}\
 	}
