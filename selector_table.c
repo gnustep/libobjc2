@@ -311,7 +311,7 @@ const char *sel_getName(SEL sel)
 
 SEL sel_getUid(const char *selName)
 {
-	return selector_lookup(selName, 0);
+	return sel_registerName(selName);
 }
 
 BOOL sel_isEqual(SEL sel1, SEL sel2)
