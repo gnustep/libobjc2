@@ -418,14 +418,13 @@ unsigned objc_get_type_qualifiers (const char *type)
 		switch (*(type++))
 		{
 			default: return flags;
-			// Byref is implicit
-			case 'R': break;
 			MAP('r', 1)
 			MAP('n', 1)
 			MAP('o', 2)
 			MAP('N', 3)
 			MAP('O', 4)
 			MAP('V', 8)
+			MAP('R', 8)
 		}
 	} while (1);
 }

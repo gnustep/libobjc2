@@ -56,11 +56,14 @@ void objc_layout_structure_get_info (struct objc_struct_layout *layout,
                                      unsigned int *align,
                                      const char **type);
 
-#define _F_IN       0x01
-#define _F_OUT      0x02
-#define _F_INOUT    0x03
-#define _F_BYCOPY   0x04
-#define _F_ONEWAY   0x08
-#define _F_CONST    0x01
+#define _F_CONST       0x01
+#define _F_IN          0x01
+#define _F_OUT         0x02
+#define _F_INOUT       0x03
+#define _F_BYCOPY      0x04
+#define _F_ONEWAY      0x08
+#define _F_BYREF       0x08
+#define _F_ONEWAY      0x10
+#define _F_GCINVISIBLE 0x20
 
 #endif // __LIBOBJC_ENCODING_H_INCLUDED__

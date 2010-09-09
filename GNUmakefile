@@ -44,6 +44,7 @@ ifneq ($(install_headers), no)
 libobjc_HEADER_FILES = \
 	Availability.h\
 	Object.h\
+	Protocol.h\
 	blocks_runtime.h\
 	capabilities.h\
 	encoding.h\
