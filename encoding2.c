@@ -320,11 +320,6 @@ size_t objc_aligned_size(const char *type)
 	return size + (size % align);
 }
 
-/*
-  The size rounded up to the nearest integral of the wordsize, taken
-  to be the size of a void *.
-*/
-
 size_t objc_promoted_size(const char *type)
 {
 	size_t size = objc_sizeof_type(type);

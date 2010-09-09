@@ -14,6 +14,8 @@ size_t objc_alignof_type(const char *type);
 
 size_t objc_aligned_size(const char *type);
 
+size_t objc_promoted_size(const char *type);
+
 void method_getReturnType(Method method, char *dst, size_t dst_len);
 
 const char *method_getTypeEncoding(Method method);
