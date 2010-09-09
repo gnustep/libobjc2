@@ -139,8 +139,8 @@ BOOL class_addMethod(Class cls, SEL name, IMP imp, const char *types)
 BOOL class_addProtocol(Class cls, Protocol *protocol)
 {
 	if (class_conformsToProtocol(cls, protocol)) { return NO; }
-	struct objc_protocol_list *protocols = cls->protocols;
-	protocols = malloc(sizeof(struct objc_protocol_list));
+	struct objc_protocol_list *protocols = 
+		malloc(sizeof(struct objc_protocol_list));
 	if (protocols == NULL) { return NO; }
 	protocols->next = cls->protocols;
 	protocols->count = 1;
