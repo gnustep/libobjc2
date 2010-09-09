@@ -367,5 +367,11 @@ static const id self = nil;
 
 #define _C_COMPLEX  'j'
 #define _C_CONST    'r'
+#define _C_IN       'n'
+#define _C_INOUT    'N'
+#define _C_OUT      'o'
+#define _C_BYCOPY   'O'
+#define _C_ONEWAY   'V'
+
 
 #endif // __LIBOBJC_RUNTIME_H_INCLUDED__

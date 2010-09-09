@@ -43,8 +43,10 @@ libobjc_HEADER_FILES_INSTALL_DIR = objc
 ifneq ($(install_headers), no)
 libobjc_HEADER_FILES = \
 	Availability.h\
+	Object.h\
 	blocks_runtime.h\
 	capabilities.h\
+	encoding.h\
 	hooks.h\
 	runtime.h\
 	slot.h\
