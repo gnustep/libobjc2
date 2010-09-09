@@ -3,8 +3,9 @@
 
 // If __LEGACY_GNU_MODE__ is defined then we include the old GNU runtime header
 // instead of this one
-#ifndef __OBJC_LEGACY_GNU_MODE__
 #define __GNUSTEP_RUNTIME__
+
+
 
 #include <stdint.h>
 #include <stddef.h>
@@ -20,22 +21,26 @@
 
 // Undo GNUstep substitutions
 #ifdef class_setVersion 
-#undef class_setVersion
+#	undef class_setVersion
 #endif
 #ifdef class_getClassMethod
-#undef class_getClassMethod
+#	undef class_getClassMethod
 #endif
 #ifdef objc_getClass
-#undef objc_getClass
+#	undef objc_getClass
 #endif
 #ifdef objc_lookUpClass
-#undef objc_lookUpClass
+#	undef objc_lookUpClass
 #endif
 
 typedef struct objc_ivar* Ivar;
 
 // Don't redefine these types if the old GNU header was included first.
 #ifndef __objc_INCLUDE_GNU
+// Define the macro so that including the old GNU header does nothing.
+#	define __objc_INCLUDE_GNU
+#	define __objc_api_INCLUDE_GNU
+
 typedef struct objc_selector *SEL;
 
 typedef struct objc_class *Class;
@@ -45,7 +50,8 @@ typedef struct objc_object
 	Class isa;
 } *id;
 
-struct objc_super {
+struct objc_super
+{
 	id receiver;
 #	if !defined(__cplusplus)  &&  !__OBJC2__
 	Class class;
@@ -95,27 +101,29 @@ struct objc_method_description
 
 
 #ifndef YES
-#define YES ((BOOL)1)
+#	define YES ((BOOL)1)
 #endif
 #ifndef NO 
-#define NO ((BOOL)0)
+#	define NO ((BOOL)0)
 #endif
 
 #ifdef __GNUC
-#define _OBJC_NULL_PTR __null
+#	define _OBJC_NULL_PTR __null
 #elif defined(__cplusplus)
-#define _OBJC_NULL_PTR 0
+#	define _OBJC_NULL_PTR 0
 #else
-#define _OBJC_NULL_PTR ((void*)0)
+#	define _OBJC_NULL_PTR ((void*)0)
 #endif
 
 #ifndef nil
-#define nil ((id)_OBJC_NULL_PTR)
+#	define nil ((id)_OBJC_NULL_PTR)
 #endif
 
 #ifndef Nil
-#define Nil ((Class)_OBJC_NULL_PTR)
+#	define Nil ((Class)_OBJC_NULL_PTR)
 #endif
+
+#include "slot.h"
 
 BOOL class_addIvar(Class cls,
                    const char *name,
@@ -301,11 +309,6 @@ const char *sel_getType_np(SEL aSel);
  * types, returning the number of types.
  */
 unsigned sel_copyTypes(const char *selName, const char **types, unsigned count);
-
-#else
-#include "runtime-legacy.h"
-#endif // __LEGACY_GNU_MODE__
-#include "slot.h"
 
 /**
  * New ABI lookup function.  Receiver may be modified during lookup or proxy
