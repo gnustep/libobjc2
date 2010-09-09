@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <objc/runtime.h>
+#include "objc/runtime.h"
 #include "class.h"
 #include "ivar.h"
 

@@ -10,10 +10,10 @@
 // that it doesn't impact the rest of the program.
 #ifndef _GNU_SOURCE
 #	define _GNU_SOURCE 1
-#	include <unwind.h>
+#	include "unwind.h"
 #	undef _GNU_SOURCE
 #else
-#	include <unwind.h>
+#	include "unwind.h"
 #endif
 
 typedef unsigned char *dw_eh_ptr_t;
