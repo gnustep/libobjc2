@@ -41,7 +41,12 @@ typedef struct objc_ivar* Ivar;
 #	define __objc_INCLUDE_GNU
 #	define __objc_api_INCLUDE_GNU
 
+
+#if !defined(__clang__) && !defined(__OBJC_RUNTIME_INTERNAL__)
+typedef const struct objc_selector *SEL;
+#else
 typedef struct objc_selector *SEL;
+#endif
 
 typedef struct objc_class *Class;
 
