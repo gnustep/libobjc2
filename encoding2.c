@@ -423,7 +423,7 @@ unsigned objc_get_type_qualifiers (const char *type)
 			MAP('o', 2)
 			MAP('N', 3)
 			MAP('O', 4)
-			MAP('V', 8)
+			MAP('V', 10)
 			MAP('R', 8)
 		}
 	} while (1);

@@ -61,7 +61,6 @@ void objc_layout_structure_get_info (struct objc_struct_layout *layout,
 #define _F_OUT         0x02
 #define _F_INOUT       0x03
 #define _F_BYCOPY      0x04
-#define _F_ONEWAY      0x08
 #define _F_BYREF       0x08
 #define _F_ONEWAY      0x10
 #define _F_GCINVISIBLE 0x20
