@@ -1,20 +1,42 @@
 GNUstep Objective-C Runtime
 ===========================
 
-The GNUstep Objective-C runtime is based on the GCC runtime.  It supports both
-a legacy and a modern ABI, allowing code compiled with old versions of GCC to
-be supported without requiring recompilation.  The modern ABI adds the
-following features:
+The GNUstep Objective-C runtime is designed as a drop-in replacement for the
+GCC runtime.  It supports both a legacy and a modern ABI, allowing code
+compiled with old versions of GCC to be supported without requiring
+recompilation.  The modern ABI adds the following features:
 
 - Non-fragile instance variables.
 - Protocol uniquing.
 - Object planes support.
 - Declared property introspection.
 
-Both ABIs support the following feature above and beyond the GNU runtime:
+Both ABIs support the following feature above and beyond the GCC runtime:
 
 - The modern Objective-C runtime APIs, introduced with OS X 10.5.
 - Blocks (closures).
+- Low memory profile for platforms where memory usage is more important than
+  speed.
+- Synthesised property accessors.
+- Efficient support for @synchronize()
+- Type-dependent dispatch, eliminating stack corruption from mismatched
+  selectors.
+
+History
+-------
+
+Early work on the GNUstep runtime combined code from the GCC Objective-C
+runtime, the Étoilé Objective-C runtime, Remy Demarest's blocks runtime for OS
+X 10.5, and the Étoilé Objective-C 2 API compatibility framework.  All of these
+aside from the GCC runtime were MIT licensed, although the GPL'd code present
+in the GCC runtime meant that the combined work had to remain under the GPL.
+
+Since then, all of the GCC code has been removed, leaving the remaining files
+all MIT licensed, and allowing the entire work to be MIT licensed.  
+
+The exception handling code uses a header file implementing the generic parts
+of the Itanium EH ABI.  This file comes from PathScale's libc++rt.  PathScale
+kindly allowed it to be MIT licensed for inclusion here.
 
 Non-Fragile Instance Variables
 ------------------------------
@@ -23,7 +45,7 @@ When a class is compiled to support non-fragile instance variables, the
 instance_size field in the class is set to 0 - the size of the instance
 variables declared on that class (excluding those inherited.  For example, an
 NSObject subclass declaring an int ivar would have its instance_size set to 0 -
-sizeof(int).  The offsets of each instance variable in the class's ivar_list
+sizeof(int)).  The offsets of each instance variable in the class's ivar_list
 field are then set to the offset from the start of the superclass's ivars.
 
 When the class is loaded, the runtime library uses the size of the superclass
@@ -59,7 +81,7 @@ example if it is declared in the same compilation unit, by finding the symbol
 during a link-time optimization phase, or as a result of a command-line
 argument, then it may use the __objc_ivar_offset_value_NewClass.anIvar symbol
 as the ivar offset.  This eliminates the need for one load for every ivar
-access.
+access.  
 
 Protocols
 ---------
@@ -77,6 +99,12 @@ Protocols have been extended to provide space for introspection on properties
 and optional methods.  These fields only exist on protocols compiled with a
 compiler that supports Objective-C 2.  To differentiate the two, the isa
 pointer for new protocols will be set to the Protocol2 class.
+
+Blocks
+------
+
+The GNUstep runtime provides the run time support required for Apple's blocks
+(closures) extension to C.  
 
 Fast Proxies and Cacheable Lookups
 ----------------------------------
@@ -142,13 +170,65 @@ GNUstep, it is a pointer to an NSZone structure.
 Threading
 ---------
 
-The old threading layer is gone.  It was buggy, badly supported, and
-inadequately tested.  The library now always runs in thread-safe mode.  The
-same functions for locking the runtime mutex are still supported, but their use
-any mutex not exported by the runtime library is explicitly not supported.  The
-(private) lock.h header is now used to abstract the details of different
-threading systems sufficiently for the runtime.  This provides mechanisms for
-locking, unlocking, creating, and destroying mutex objects.  
+The threading APIs from GCC libobjc are not present in this runtime.  They were
+buggy, badly supported, inadequately tested, and irrelevant now that there are
+well tested thread abstraction layers, such as the POSIX thread APIs and the
+C1x thread functions.  The library always runs in thread-safe mode.  The same
+functions for locking the runtime mutex are still supported, but their use any
+mutex not exported by the runtime library is explicitly not supported.  The
+(private) lock.h header is used to abstract the details of different threading
+systems sufficiently for the runtime.  This provides mechanisms for locking,
+unlocking, creating, and destroying mutex objects.  
+
+Type-Dependent Dispatch
+-----------------------
+
+Traditionally, Objective-C method lookup is done entirely on the name of the
+method.  This is problematic when the sender and receiver of the method
+disagree on the types of a method.  
+
+For example, consider a trivial case where you have two methods with the same
+name, one taking an integer, the other taking a floating point value.  Both
+will pass their argument in a register on most platforms, but not the same
+register.  If the sender thinks it is calling one, but is really calling the
+other, then the receiver will look in the wrong register and use a nonsense
+value.  The compiler will often not warn about this.
+
+This is a relatively benign example, but if the mismatch is between methods
+taking or returning a structure and those only using scalar arguments and
+return then the call frame layout will be so different that the result will be
+stack corruption, possibly leading to security holes.
+
+If you compile the GNUstep runtime with type-dependent dispatch enabled, then
+sending a message with a typed selector will only ever invoke a method with the
+same types.  Sending a message with an untyped selector will invoke any method
+with a matching name, although the slot returned from the lookup function will
+contain the types, allowing the caller to check them and construct a valid call
+frame, if required.
+
+If a lookup with a typed selector matches a method with the wrong types, the
+runtime will call a handler.  This handler, by default, prints a helpful
+message and exits.  LanguageKit provides an alternative version which
+dynamically generates a new method performing the required boxing and calling
+the original.
+
+Low Memory Profile
+------------------
+
+The dispatch tables for each class, in spite of using a more space-efficient
+sparse array implementation than GCC libobjc, can still use quite a lot of
+memory.  The NeXT runtime avoided this problem by not providing dispatch tables
+at all.  Instead, it did a linear search of the method lists, caching a few
+results.  Although this is O(n), it performed reasonably well.  Most message
+sends are to a small number of methods.  For example, an NSMutableDictionary is
+most often sent -objectForKey: and -setObject:forKey:.  If these two methods
+are in the cache, then the O(n) algorithm is almost never used.
+
+If you compile the GNUstep runtime with the low memory profile, it uses a
+similar strategy.  The caches use the same slot-caching mechanism described
+above and can be combined with caching at the call site.  The runtime will not
+create dispatch tables, which can save a few MB of RAM in projects with a lot
+of classes, but can make message sending a lot slower in the worst case.
 
 Objective-C 2 Features
 ----------------------
