@@ -55,7 +55,7 @@ libobjc_HEADER_FILES = \
 	objc-api.h
 endif
 
-ifeq ($(tdd), yes)
+ifneq ($(tdd), no)
 libobjc_CPPFLAGS += -DTYPE_DEPENDENT_DISPATCH
 endif
 

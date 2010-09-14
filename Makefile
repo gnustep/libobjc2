@@ -5,6 +5,7 @@ VERSION = 4
 #CC=clang
 
 CFLAGS += -std=c99
+CPPFLAGS += -DTYPE_DEPENDENT_DISPATCH
 
 #LIB_DIR=/usr/local/GNUstep/Local/Library/Libraries/
 #HEADER_DIR=/usr/local/GNUstep/Local/Library/Headers
