@@ -506,6 +506,11 @@ SEL sel_register_typed_name(const char *name, const char *type)
 	return sel_registerTypedName_np(name, type);
 }
 
+BOOL sel_eq(SEL s1, SEL s2)
+{
+	return sel_isEqual(s1, s2);
+}
+
 /*
  * Some simple sanity tests.
  */

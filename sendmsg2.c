@@ -43,8 +43,8 @@ struct objc_slot* (*_objc_selector_type_mismatch)(Class cls, SEL
 		selector, struct objc_slot *result) = objc_selector_type_mismatch;
 static 
 // Uncomment for debugging
-//__attribute__((noinline))
-__attribute__((always_inline))
+__attribute__((noinline))
+//__attribute__((always_inline))
 Slot_t objc_msg_lookup_internal(id *receiver,
                                 SEL selector, 
                                 id sender)
