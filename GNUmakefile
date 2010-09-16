@@ -72,11 +72,7 @@ libobjc_OBJCFLAGS += $(libobjc_CFLAGS)
 libobjc_LDFLAGS += -g
 libobjc_LIB_DIRS += -L toydispatch/obj
 
-ifneq ($(debug), yes)
-libobjc_CFLAGS += -O3
-else
-libobjc_CFLAGS += -O0
-endif
+libobjc_CFLAGS +=  -O3
 
 ifneq ($(findstring gcc, $(CC)),)
 libobjc_CFLAGS += -fgnu89-inline 
