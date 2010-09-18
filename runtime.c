@@ -94,8 +94,9 @@ BOOL class_addIvar(Class cls, const char *name, size_t size, uint8_t alignment,
 
 	if (offset << alignment != cls->instance_size)
 	{
-		offset = (offset+ 1) << alignment;
+		offset++;
 	}
+	offset <<= alignment;
 
 	ivar->offset = offset;
 	// Increase the instance size to make space for this.
@@ -288,30 +289,27 @@ size_t class_getInstanceSize(Class cls)
 Ivar
 class_getInstanceVariable(Class cls, const char *name)
 {
-  if (name != NULL)
-    {
-      while (cls != Nil)
+	if (name != NULL)
 	{
-	  struct objc_ivar_list *ivarlist = cls->ivars;
-
-	  if (ivarlist != NULL)
-	    {
-	      int i;
-
-	      for (i = 0; i < ivarlist->count; i++)
+		while (cls != Nil)
 		{
-		  Ivar ivar = &ivarlist->ivar_list[i];
+			struct objc_ivar_list *ivarlist = cls->ivars;
 
-		  if (strcmp(ivar->name, name) == 0)
-		    {
-		      return ivar;
-		    }
+			if (ivarlist != NULL)
+			{
+				for (int i = 0; i < ivarlist->count; i++)
+				{
+					Ivar ivar = &ivarlist->ivar_list[i];
+					if (strcmp(ivar->name, name) == 0)
+					{
+						return ivar;
+					}
+				}
+			}
+			cls = class_getSuperclass(cls);
 		}
-	    }
-	  cls = class_getSuperclass(cls);
 	}
-    }
-  return NULL;
+	return NULL;
 }
 
 // The format of the char* is undocumented.  This function is only ever used in
