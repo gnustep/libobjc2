@@ -1,3 +1,4 @@
+#include <objc/runtime.h>
 
 @interface Object
 {
