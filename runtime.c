@@ -60,9 +60,9 @@ static void objc_updateDtableForClassContainingMethod(Method m)
 BOOL class_addIvar(Class cls, const char *name, size_t size, uint8_t alignment,
 		const char *types)
 {
-	// You can't add ivars to resolved classes (note: You ought to be able to
-	// add them to classes that currently have no instances)
-	if (objc_test_class_flag(cls, objc_class_flag_resolved))
+	// You can't add ivars to initialized classes.  Note: We can't use the
+	// resolved flag here because class_getInstanceVariable() sets it.
+	if (objc_test_class_flag(cls, objc_class_flag_initialized))
 	{
 		return NO;
 	}
