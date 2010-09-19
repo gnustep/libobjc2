@@ -45,6 +45,7 @@ static SparseArray *selector_list  = NULL;
 // Get the functions for string hashing
 #include "string_hash.h"
 
+
 inline static BOOL isSelRegistered(SEL sel)
 {
 	if ((uintptr_t)sel->name < (uintptr_t)selector_count)
@@ -52,6 +53,22 @@ inline static BOOL isSelRegistered(SEL sel)
 		return YES;
 	}
 	return NO;
+}
+
+static const char *sel_getNameNonUnique(SEL sel)
+{
+	const char *name = sel->name;
+	if (isSelRegistered(sel))
+	{
+		struct sel_type_list * list =
+			SparseArrayLookup(selector_list, (uint32_t)(uintptr_t)sel->name);
+		name = (list == NULL) ? NULL : list->value;
+	}
+	if (NULL == name)
+	{
+		name = "";
+	}
+	return name;
 }
 
 /**
@@ -107,8 +124,8 @@ static int selector_identical(const void *k,
                               const SEL value)
 {
 	SEL key = (SEL)k;
-	fprintf(stderr, "Comparing %s %s, %s %s\n", sel_getName(key), sel_getName(value), sel_getType_np(key), sel_getType_np(value));
-	return string_compare(sel_getName(key), sel_getName(value)) &&
+	fprintf(stderr, "Comparing %s %s, %s %s\n", sel_getNameNonUnique(key), sel_getNameNonUnique(value), sel_getType_np(key), sel_getType_np(value));
+	return string_compare(sel_getNameNonUnique(key), sel_getNameNonUnique(value)) &&
 		selector_types_equal(sel_getType_np(key), sel_getType_np(value));
 }
 
@@ -123,7 +140,7 @@ static int selector_equal(const void *k,
 	return selector_identical(k, value);
 #else
 	SEL key = (SEL)k;
-	return string_compare(sel_getName(key), sel_getName(value));
+	return string_compare(sel_getNameNonUnique(key), sel_getNameNonUnique(value));
 #endif
 }
 
@@ -134,7 +151,7 @@ static inline uint32_t hash_selector(const void *s)
 {
 	SEL sel = (SEL)s;
 	uint32_t hash = 5381;
-	const char *str = sel_getName(sel);
+	const char *str = sel_getNameNonUnique(sel);
 	uint32_t c;
 	while((c = (uint32_t)*str++))
 	{
@@ -184,7 +201,7 @@ static SEL selector_lookup(const char *name, const char *types)
 }
 static inline void add_selector_to_table(SEL aSel, int32_t uid, uint32_t idx)
 {
-	//fprintf(stderr, "Sel %s uid: %d, idx: %d, hash: %d\n", sel_getName(aSel), uid, idx, hash_selector(aSel));
+	//fprintf(stderr, "Sel %s uid: %d, idx: %d, hash: %d\n", sel_getNameNonUnique(aSel), uid, idx, hash_selector(aSel));
 	struct sel_type_list *typeList =
 		(struct sel_type_list *)selector_pool_alloc();
 	typeList->value = aSel->name;
@@ -204,7 +221,7 @@ static inline void register_selector_locked(SEL aSel)
 	uintptr_t idx = selector_count++;
 	if (NULL == aSel->types)
 	{
-		fprintf(stderr, "Registering selector %d %s\n", idx, sel_getName(aSel));
+		fprintf(stderr, "Registering selector %d %s\n", idx, sel_getNameNonUnique(aSel));
 		add_selector_to_table(aSel, idx, idx);
 		objc_resize_dtables(selector_count);
 		return;
@@ -216,15 +233,20 @@ static inline void register_selector_locked(SEL aSel)
 		untyped = selector_pool_alloc();
 		untyped->name = aSel->name;
 		untyped->types = 0;
-		fprintf(stderr, "Registering selector %d %s\n", idx, sel_getName(aSel));
+		fprintf(stderr, "Registering selector %d %s\n", idx, sel_getNameNonUnique(aSel));
 		add_selector_to_table(untyped, idx, idx);
 		// If we are in type dependent dispatch mode, the uid for the typed
 		// and untyped versions will be different
 		idx++; selector_count++;
 	}
+	else
+	{
+		// Make sure we only store one name
+		aSel->name = sel_getNameNonUnique(untyped);
+	}
 	uintptr_t uid = (uintptr_t)untyped->name;
 	TDD(uid = idx);
-	fprintf(stderr, "Registering typed selector %d %s %s\n", uid, sel_getName(aSel), sel_getType_np(aSel));
+	fprintf(stderr, "Registering typed selector %d %s %s\n", uid, sel_getNameNonUnique(aSel), sel_getType_np(aSel));
 	add_selector_to_table(aSel, uid, idx);
 
 	// Add this set of types to the list.
@@ -302,6 +324,14 @@ const char *sel_getName(SEL sel)
 			SparseArrayLookup(selector_list, (uint32_t)(uintptr_t)sel->name);
 		name = (list == NULL) ? NULL : list->value;
 	}
+	else
+	{
+		SEL old = selector_lookup(sel->name, sel->types);
+		if (NULL != old)
+		{
+			return sel_getName(old);
+		}
+	}
 	if (NULL == name)
 	{
 		name = "";
@@ -321,7 +351,7 @@ BOOL sel_isEqual(SEL sel1, SEL sel2)
 		return YES;
 	}
 	// Otherwise, do a slow compare
-	return string_compare(sel_getName(sel1), sel_getName(sel2)) TDD(&&
+	return string_compare(sel_getNameNonUnique(sel1), sel_getNameNonUnique(sel2)) TDD(&&
 			(sel1->types == NULL || sel2->types == NULL ||
 		selector_types_equivalent(sel_getType_np(sel1), sel_getType_np(sel2))));
 }
@@ -483,7 +513,7 @@ SEL sel_get_uid(const char *name)
 
 const char *sel_get_name(SEL selector)
 {
-	return sel_getName(selector);
+	return sel_getNameNonUnique(selector);
 }
 
 BOOL sel_is_mapped(SEL selector)
@@ -517,7 +547,7 @@ BOOL sel_eq(SEL s1, SEL s2)
 #ifdef SEL_TEST
 static void logSelector(SEL sel)
 {
-	fprintf(stderr, "%s = {%p, %s}\n", sel_getName(sel), sel->name, sel_getType_np(sel));
+	fprintf(stderr, "%s = {%p, %s}\n", sel_getNameNonUnique(sel), sel->name, sel_getType_np(sel));
 }
 void objc_resize_dtables(uint32_t ignored) {}
 
