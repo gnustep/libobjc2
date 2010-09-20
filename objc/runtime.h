@@ -301,13 +301,19 @@ SEL sel_registerName(const char *selName);
 /**
  * Register a typed selector.
  */
-SEL sel_registerTypedName_np(const char *selName, const char *types);
+SEL sel_registerTypedName_np(const char *selName, const char *types) OBJC_NONPORTABLE;
 
 /**
  * Returns the type encoding associated with a selector, or the empty string is
  * there is no such type.
  */
-const char *sel_getType_np(SEL aSel);
+const char *sel_getType_np(SEL aSel) OBJC_NONPORTABLE;
+
+/**
+ * Enumerates all of the type encodings associated with a given selector name
+ * (up to a specified limit).
+ */
+unsigned sel_copyTypes_np(const char *selName, const char **types, unsigned count) OBJC_NONPORTABLE;
 
 /**
  * Copies all of the type encodings associated with a given selector name into
