@@ -311,7 +311,11 @@ const char *sel_getType_np(SEL aSel) OBJC_NONPORTABLE;
 
 /**
  * Enumerates all of the type encodings associated with a given selector name
- * (up to a specified limit).
+ * (up to a specified limit).  This function returns the number of types that
+ * exist for a specific selector, but only copies up to count of them into the
+ * array passed as the types argument.  This allows you to call the function
+ * once with a relatively small on-stack buffer and then only call it again
+ * with a heap-allocated buffer if there is not enough space.
  */
 unsigned sel_copyTypes_np(const char *selName, const char **types, unsigned count) OBJC_NONPORTABLE;
 

@@ -395,9 +395,13 @@ unsigned sel_copyTypes_np(const char *selName, const char **types, unsigned coun
 	}
 
 	unsigned found = 0;
-	while (NULL != l && found<count)
+	while (NULL != l) 
 	{
-		types[found++] = l->value;
+		if (found<count)
+		{
+			types[found] = l->value;
+		}
+		found++;
 		l = l->next;
 	}
 	return found;
