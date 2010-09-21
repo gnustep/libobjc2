@@ -303,7 +303,6 @@ get_method_list(Protocol *p,
 	return list;
 }
 
-//FIXME!!!!
 struct objc_method_description *protocol_copyMethodDescriptionList(Protocol *p,
 	BOOL isRequiredMethod, BOOL isInstanceMethod, unsigned int *count)
 {
@@ -341,6 +340,81 @@ Protocol **protocol_copyProtocolList(Protocol *p, unsigned int *count)
 	}
 	return NULL;
 }
+
+objc_property_t *protocol_copyPropertyList(Protocol *protocol,
+                                           unsigned int *outCount)
+{
+	if (protocol->isa != ObjC2ProtocolClass)
+	{
+		return NULL;
+	}
+	Protocol2 *p = (Protocol2*)protocol;
+	struct objc_property_list *properties = p->properties;
+	unsigned int count = 0;
+	if (NULL != properties)
+	{
+		count = properties->count;
+	}
+	if (NULL != p->optional_properties)
+	{
+		count = p->optional_properties->count;
+	}
+	if (0 == count)
+	{
+		return NULL;
+	}
+	objc_property_t *list = calloc(sizeof(objc_property_t), count);
+	unsigned int out = 0;
+	if (properties)
+	{
+		for (int i=0 ; i<properties->count ; i++)
+		{
+			list[out] = &properties->properties[i];
+		}
+	}
+	properties = p->optional_properties;
+	if (properties)
+	{
+		for (int i=0 ; i<properties->count ; i++)
+		{
+			list[out] = &properties->properties[i];
+		}
+	}
+	*outCount = count;
+	return list;
+}
+
+objc_property_t protocol_getProperty(Protocol *protocol,
+                                     const char *name,
+                                     BOOL isRequiredProperty,
+                                     BOOL isInstanceProperty)
+{
+	// Class properties are not supported yet (there is no language syntax for
+	// defining them!)
+	if (!isInstanceProperty) { return NULL; }
+	if (protocol->isa != ObjC2ProtocolClass)
+	{
+		return NULL;
+	}
+	Protocol2 *p = (Protocol2*)protocol;
+	struct objc_property_list *properties = 
+	    isRequiredProperty ? p->properties : p->optional_properties;
+	while (NULL != properties)
+	{
+		for (int i=0 ; i<properties->count ; i++)
+		{
+			objc_property_t prop = &properties->properties[i];
+			if (strcmp(prop->name, name) == 0)
+			{
+				return prop;
+			}
+		}
+		properties = properties->next;
+	}
+	return NULL;
+}
+
+
 struct objc_method_description 
 protocol_getMethodDescription(Protocol *p,
                               SEL aSel,

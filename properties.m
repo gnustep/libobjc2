@@ -1,6 +1,10 @@
 #include "objc/runtime.h"
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
+#include "class.h"
+#include "properties.h"
 
 #ifdef __MINGW32__
 #include <windows.h>
@@ -116,3 +120,55 @@ void objc_setProperty(id obj, SEL _cmd, int offset, id arg, BOOL isAtomic, BOOL 
 	}
 	[old release];
 }
+
+objc_property_t class_getProperty(Class cls, const char *name)
+{
+	// Old ABI classes don't have declared properties
+	if (!objc_test_class_flag(cls, objc_class_flag_new_abi))
+	{
+		return NULL;
+	}
+	struct objc_property_list *properties = cls->properties;
+	while (NULL != properties)
+	{
+		for (int i=0 ; i<properties->count ; i++)
+		{
+			objc_property_t p = &properties->properties[i];
+			if (strcmp(p->name, name) == 0)
+			{
+				return p;
+			}
+		}
+		properties = properties->next;
+	}
+	return NULL;
+}
+objc_property_t* class_copyPropertyList(Class cls, unsigned int *outCount)
+{
+	if (!objc_test_class_flag(cls, objc_class_flag_new_abi))
+	{
+		return NULL;
+	}
+	struct objc_property_list *properties = cls->properties;
+	unsigned int count = 0;
+	for (struct objc_property_list *l=properties ; NULL!=l ; l=l->next)
+	{
+		count += l->count;
+	}
+	if (0 == count)
+	{
+		return NULL;
+	}
+	objc_property_t *list = calloc(sizeof(objc_property_t), count);
+	unsigned int out = 0;
+	for (struct objc_property_list *l=properties ; NULL!=l ; l=l->next)
+	{
+		for (int i=0 ; i<properties->count ; i++)
+		{
+			list[out] = &l->properties[i];
+		}
+	}
+	*outCount = count;
+	return list;
+}
+

@@ -13,10 +13,10 @@
 #include "Availability.h"
 
 #ifdef ERROR_UNSUPPORTED_RUNTIME_FUNCTIONS
-#	define OBJC_GNU_RUNTIME_UNSUPPORTED(x) \
+#	define OBJC_GNUSTEP_RUNTIME_UNSUPPORTED(x) \
 		__attribute__((error(x " not supported by this runtime")))
 #else
-#	define OBJC_GNU_RUNTIME_UNSUPPORTED(x)
+#	define OBJC_GNUSTEP_RUNTIME_UNSUPPORTED(x)
 #endif
 
 // Undo GNUstep substitutions
@@ -84,8 +84,8 @@ typedef unsigned char BOOL;
 #endif // __objc_INCLUDE_GNU
 
 
-
-typedef void *objc_property_t;
+struct objc_property;
+typedef struct objc_property* objc_property_t;
 #ifdef __OBJC__
 @class Protocol;
 #else
@@ -146,8 +146,7 @@ Ivar * class_copyIvarList(Class cls, unsigned int *outCount);
 
 Method * class_copyMethodList(Class cls, unsigned int *outCount);
 
-OBJC_GNU_RUNTIME_UNSUPPORTED("Property introspection")
-objc_property_t * class_copyPropertyList(Class cls, unsigned int *outCount);
+objc_property_t* class_copyPropertyList(Class cls, unsigned int *outCount);
 
 Protocol ** class_copyProtocolList(Class cls, unsigned int *outCount);
 
@@ -175,14 +174,13 @@ IMP class_getMethodImplementation_stret(Class cls, SEL name);
 
 const char * class_getName(Class cls);
 
-OBJC_GNU_RUNTIME_UNSUPPORTED("Property introspection")
 objc_property_t class_getProperty(Class cls, const char *name);
 
 Class class_getSuperclass(Class cls);
 
 int class_getVersion(Class theClass);
 
-OBJC_GNU_RUNTIME_UNSUPPORTED("Weak instance variables")
+OBJC_GNUSTEP_RUNTIME_UNSUPPORTED("Weak instance variables")
 const char *class_getWeakIvarLayout(Class cls);
 
 BOOL class_isMetaClass(Class cls);
@@ -198,7 +196,7 @@ Class class_setSuperclass(Class cls, Class newSuper);
 
 void class_setVersion(Class theClass, int version);
 
-OBJC_GNU_RUNTIME_UNSUPPORTED("Weak instance variables")
+OBJC_GNUSTEP_RUNTIME_UNSUPPORTED("Weak instance variables")
 void class_setWeakIvarLayout(Class cls, const char *layout);
 
 const char * ivar_getName(Ivar ivar);
@@ -265,26 +263,25 @@ const char *object_getClassName(id obj);
 IMP objc_msg_lookup(id, SEL);
 IMP objc_msg_lookup_super(struct objc_super*, SEL);
 
-OBJC_GNU_RUNTIME_UNSUPPORTED("Protocol introspection")
 BOOL protocol_conformsToProtocol(Protocol *p, Protocol *other);
 
-OBJC_GNU_RUNTIME_UNSUPPORTED("Protocol introspection")
 struct objc_method_description *protocol_copyMethodDescriptionList(Protocol *p,
 	BOOL isRequiredMethod, BOOL isInstanceMethod, unsigned int *count);
 
-OBJC_GNU_RUNTIME_UNSUPPORTED("Protocol introspection")
 objc_property_t *protocol_copyPropertyList(Protocol *p, unsigned int *count);
 
-OBJC_GNU_RUNTIME_UNSUPPORTED("Protocol introspection")
 Protocol **protocol_copyProtocolList(Protocol *p, unsigned int *count);
 
-OBJC_GNU_RUNTIME_UNSUPPORTED("Protocol introspection")
 struct objc_method_description protocol_getMethodDescription(Protocol *p,
 	SEL aSel, BOOL isRequiredMethod, BOOL isInstanceMethod);
 
 const char *protocol_getName(Protocol *p);
 
-OBJC_GNU_RUNTIME_UNSUPPORTED("Protocol introspection")
+/**
+ * Note: The Apple documentation for this method contains some nonsense for
+ * isInstanceProperty.  As there is no language syntax for defining properties
+ * on classes, we return NULL if this is not YES.
+ */
 objc_property_t protocol_getProperty(Protocol *p, const char *name,
 	BOOL isRequiredProperty, BOOL isInstanceProperty);
 
