@@ -172,3 +172,7 @@ objc_property_t* class_copyPropertyList(Class cls, unsigned int *outCount)
 	return list;
 }
 
+const char *property_getName(objc_property_t property)
+{
+	return property->name;
+}

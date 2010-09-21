@@ -12,6 +12,12 @@
  * although they are present in the header and understood by the runtime, they
  * may not be supported by the installed runtime.  
  */
+#include "Availability.h"
+
+#ifndef __GNUSTEP_RUNTIME__
+#	define __GNUSTEP_RUNTIME__
+#endif
+
 
 /**
  * The runtime supports zero-cost exceptions.  
@@ -68,4 +74,4 @@
  * Run time feature test.  This function returns 1 if the runtime supports the
  * specified feature or 0 if it does not.
  */
-int objc_test_capability(int x);
+int objc_test_capability(int x) OBJC_NONPORTABLE;

@@ -10,3 +10,11 @@
 #else
 #	define OBJC_DEPRECATED __attribute__((deprecated))
 #endif
+
+#ifdef ERROR_UNSUPPORTED_RUNTIME_FUNCTIONS
+#	define OBJC_GNUSTEP_RUNTIME_UNSUPPORTED(x) \
+		__attribute__((error(x " not supported by this runtime")))
+#else
+#	define OBJC_GNUSTEP_RUNTIME_UNSUPPORTED(x)
+#endif
+

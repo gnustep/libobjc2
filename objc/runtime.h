@@ -1,9 +1,9 @@
 #ifndef __LIBOBJC_RUNTIME_H_INCLUDED__
 #define __LIBOBJC_RUNTIME_H_INCLUDED__
 
-// If __LEGACY_GNU_MODE__ is defined then we include the old GNU runtime header
-// instead of this one
-#define __GNUSTEP_RUNTIME__
+#ifndef __GNUSTEP_RUNTIME__
+#	define __GNUSTEP_RUNTIME__
+#endif
 
 
 
@@ -11,13 +11,6 @@
 #include <stddef.h>
 #include <sys/types.h>
 #include "Availability.h"
-
-#ifdef ERROR_UNSUPPORTED_RUNTIME_FUNCTIONS
-#	define OBJC_GNUSTEP_RUNTIME_UNSUPPORTED(x) \
-		__attribute__((error(x " not supported by this runtime")))
-#else
-#	define OBJC_GNUSTEP_RUNTIME_UNSUPPORTED(x)
-#endif
 
 // Undo GNUstep substitutions
 #ifdef class_setVersion 
@@ -260,8 +253,10 @@ Class object_setClass(id obj, Class cls);
 
 const char *object_getClassName(id obj);
 
-IMP objc_msg_lookup(id, SEL);
-IMP objc_msg_lookup_super(struct objc_super*, SEL);
+IMP objc_msg_lookup(id, SEL) OBJC_NONPORTABLE;
+IMP objc_msg_lookup_super(struct objc_super*, SEL) OBJC_NONPORTABLE;
+
+const char *property_getName(objc_property_t property);
 
 BOOL protocol_conformsToProtocol(Protocol *p, Protocol *other);
 
@@ -315,12 +310,6 @@ const char *sel_getType_np(SEL aSel) OBJC_NONPORTABLE;
  * with a heap-allocated buffer if there is not enough space.
  */
 unsigned sel_copyTypes_np(const char *selName, const char **types, unsigned count) OBJC_NONPORTABLE;
-
-/**
- * Copies all of the type encodings associated with a given selector name into
- * types, returning the number of types.
- */
-unsigned sel_copyTypes(const char *selName, const char **types, unsigned count);
 
 /**
  * New ABI lookup function.  Receiver may be modified during lookup or proxy
