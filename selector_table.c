@@ -346,6 +346,10 @@ SEL sel_getUid(const char *selName)
 
 BOOL sel_isEqual(SEL sel1, SEL sel2)
 {
+	if ((0 == sel1) || (0 == sel2))
+	{
+		return sel1 == sel2;
+	}
 	if (sel1->name == sel2->name)
 	{
 		return YES;
