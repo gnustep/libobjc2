@@ -1,6 +1,14 @@
+
+PACKAGE_NAME = gnustep-objc2
+VERSION=1.0.0
+SVN_MODULE_NAME = libobjc2
+SVN_BASE_URL = svn+ssh://svn.gna.org/svn/gnustep/libs
+SVN_TAG_NAME=objc2
+
 include $(GNUSTEP_MAKEFILES)/common.make
 
-LIBRARY_NAME = libobjc 
+LIBRARY_NAME = libobjc
+
 
 SUBPROJECTS = toydispatch
 
