@@ -106,7 +106,7 @@ static BOOL selector_types_equal(const char *t1, const char *t2)
 		// and apply a cluebat to those responsible.
 		if ((*t1 == '*') && (*t2 != '*'))
 		{
-			if (*t2 == '^' && (((*(t2+2) == 'C') || (*(t2+2) == 'C'))))
+			if (*t2 == '^' && (((*(t2+1) == 'C') || (*(t2+2) == 'c'))))
 			{
 				t2++;
 			}
@@ -117,7 +117,7 @@ static BOOL selector_types_equal(const char *t1, const char *t2)
 		}
 		else if ((*t2 == '*') && (*t1 != '*'))
 		{
-			if (*t1 == '^' && (((*(t1+2) == 'C') || (*(t1+2) == 'C'))))
+			if (*t1 == '^' && (((*(t1+1) == 'C') || (*(t1+1) == 'c'))))
 			{
 				t1++;
 			}
