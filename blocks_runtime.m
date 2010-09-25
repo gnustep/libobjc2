@@ -132,7 +132,7 @@ void _Block_object_assign(void *destAddr, const void *object, const int flags)
 		}
 		else if((flags & BLOCK_FIELD_IS_OBJECT) == BLOCK_FIELD_IS_OBJECT)
 		{
-			id src = object;
+			id src = (id)object;
 			id *dst = destAddr;
 			*dst = [src retain];
 		}
@@ -174,7 +174,7 @@ void _Block_object_dispose(const void *object, const int flags)
 		}
 		else if((flags & ~BLOCK_BYREF_CALLER) == BLOCK_FIELD_IS_OBJECT)
 		{
-			id src = object;
+			id src = (id)object;
 			[src release];
 		}
 	}

@@ -4,6 +4,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#ifdef __clang__
+#define SELECTOR(x) @selector(x)
+#else
+#define SELECTOR(x) (SEL)@selector(x)
+#endif
+
 int snprintf(char *restrict s, size_t n, const char *restrict format, ...);
 
 @interface Fake
@@ -25,7 +31,7 @@ static void deallocLockClass(id obj, SEL _cmd);
 static inline Class findLockClass(id obj)
 {
 	struct objc_object object = { obj->isa };
-	SEL dealloc = @selector(dealloc);
+	SEL dealloc = SELECTOR(dealloc);
 	// Find the first class where this lookup is correct
 	if (objc_msg_lookup((id)&object, dealloc) != (IMP)deallocLockClass)
 	{
@@ -62,8 +68,8 @@ static inline Class initLockObject(id obj)
 	}
 	const char *types =
 		method_getTypeEncoding(class_getInstanceMethod(obj->isa,
-					@selector(dealloc)));
-	class_addMethod(lockClass, @selector(dealloc), (IMP)deallocLockClass,
+					SELECTOR(dealloc)));
+	class_addMethod(lockClass, SELECTOR(dealloc), (IMP)deallocLockClass,
 			types);
 	if (!class_isMetaClass(obj->isa))
 	{
@@ -83,7 +89,7 @@ static void deallocLockClass(id obj, SEL _cmd)
 	Class realClass = class_getSuperclass(lockClass);
 	// Call the real -dealloc method
 	struct objc_super super = {obj, realClass };
-	objc_msgSendSuper(&super, @selector(dealloc));
+	objc_msgSendSuper(&super, SELECTOR(dealloc));
 	// After calling [super dealloc], the object will no longer exist.
 	// Free the lock
 	mutex_t *lock = object_getIndexedIvars(lockClass);

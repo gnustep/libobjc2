@@ -458,8 +458,9 @@ static const char *layout_structure_callback(const char *type, struct objc_struc
 	}
 	else
 	{
-		round_up((size_t*)&layout->record_size, align);
-		layout->record_size += size;
+        size_t rsize = (size_t)layout->record_size;
+		round_up(&rsize, align);
+        layout->record_size = rsize + size;
 	}
 	return end;
 }
