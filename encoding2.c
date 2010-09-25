@@ -328,6 +328,7 @@ size_t objc_promoted_size(const char *type)
 
 void method_getReturnType(Method method, char *dst, size_t dst_len)
 {
+	if (NULL == method) { return; }
 	//TODO: Coped and pasted code.  Factor it out.
 	const char *types = method->types;
 	size_t length = lengthOfTypeEncoding(types);
@@ -344,6 +345,7 @@ void method_getReturnType(Method method, char *dst, size_t dst_len)
 
 const char *method_getTypeEncoding(Method method)
 {
+	if (NULL == method) { return NULL; }
 	return method->types;
 }
 
@@ -353,6 +355,7 @@ void method_getArgumentType(Method method,
                             char *dst,
                             size_t dst_len)
 {
+	if (NULL == method) { return; }
 	const char *types = findParameterStart(method->types, index);
 	if (NULL == types)
 	{
@@ -373,6 +376,7 @@ void method_getArgumentType(Method method,
 
 unsigned method_getNumberOfArguments(Method method)
 {
+	if (NULL == method) { return 0; }
 	const char *types = method->types;
 	unsigned int count = 0;
 	while('\0' != *types)
@@ -391,6 +395,7 @@ unsigned method_get_number_of_arguments(struct objc_method *method)
 
 char * method_copyArgumentType(Method method, unsigned int index)
 {
+	if (NULL == method) { return NULL; }
 	const char *types = findParameterStart(method->types, index);
 	if (NULL == types)
 	{
@@ -401,6 +406,7 @@ char * method_copyArgumentType(Method method, unsigned int index)
 
 char * method_copyReturnType(Method method)
 {
+	if (NULL == method) { return NULL; }
 	return copyTypeEncoding(method->types);
 }
 

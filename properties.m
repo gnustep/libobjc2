@@ -73,6 +73,7 @@ inline static void lock_spinlock(int *spinlock)
 
 id objc_getProperty(id obj, SEL _cmd, int offset, BOOL isAtomic)
 {
+	if (nil == obj) { return nil; }
 	char *addr = (char*)obj;
 	addr += offset;
 	id ret;
@@ -94,6 +95,7 @@ id objc_getProperty(id obj, SEL _cmd, int offset, BOOL isAtomic)
 
 void objc_setProperty(id obj, SEL _cmd, int offset, id arg, BOOL isAtomic, BOOL isCopy)
 {
+	if (nil == obj) { return; }
 	if (isCopy)
 	{
 		arg = [arg copy];
@@ -124,7 +126,7 @@ void objc_setProperty(id obj, SEL _cmd, int offset, id arg, BOOL isAtomic, BOOL 
 objc_property_t class_getProperty(Class cls, const char *name)
 {
 	// Old ABI classes don't have declared properties
-	if (!objc_test_class_flag(cls, objc_class_flag_new_abi))
+	if (Nil == cls || !objc_test_class_flag(cls, objc_class_flag_new_abi))
 	{
 		return NULL;
 	}
@@ -145,8 +147,9 @@ objc_property_t class_getProperty(Class cls, const char *name)
 }
 objc_property_t* class_copyPropertyList(Class cls, unsigned int *outCount)
 {
-	if (!objc_test_class_flag(cls, objc_class_flag_new_abi))
+	if (Nil == cls || !objc_test_class_flag(cls, objc_class_flag_new_abi))
 	{
+		if (outCount) { *outCount = 0; }
 		return NULL;
 	}
 	struct objc_property_list *properties = cls->properties;
@@ -154,6 +157,10 @@ objc_property_t* class_copyPropertyList(Class cls, unsigned int *outCount)
 	for (struct objc_property_list *l=properties ; NULL!=l ; l=l->next)
 	{
 		count += l->count;
+	}
+	if (outCount)
+	{
+		*outCount = count;
 	}
 	if (0 == count)
 	{
@@ -168,7 +175,6 @@ objc_property_t* class_copyPropertyList(Class cls, unsigned int *outCount)
 			list[out] = &l->properties[i];
 		}
 	}
-	*outCount = count;
 	return list;
 }
 

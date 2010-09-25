@@ -349,6 +349,7 @@ static SEL objc_register_selector_copy(SEL aSel)
 
 const char *sel_getName(SEL sel)
 {
+	if ((SEL)NULL == sel) { return "<null selector>"; }
 	const char *name = sel->name;
 	if (isSelRegistered(sel))
 	{
@@ -394,24 +395,28 @@ BOOL sel_isEqual(SEL sel1, SEL sel2)
 
 SEL sel_registerName(const char *selName)
 {
+	if (NULL == selName) { return (SEL)NULL; }
 	struct objc_selector sel = {selName, 0};
 	return objc_register_selector_copy(&sel);
 }
 
 SEL sel_registerTypedName_np(const char *selName, const char *types)
 {
+	if (NULL == selName) { return (SEL)NULL; }
 	struct objc_selector sel = {selName, types};
 	return objc_register_selector_copy(&sel);
 }
 
 const char *sel_getType_np(SEL aSel)
 {
+	if ((SEL)NULL == aSel) { return NULL; }
 	return aSel->types;
 }
 
 
 unsigned sel_copyTypes_np(const char *selName, const char **types, unsigned count)
 {
+	if (NULL == selName) { return 0; }
 	SEL untyped = selector_lookup(selName, 0);
 	if (untyped == NULL) { return 0; }
 
@@ -445,6 +450,7 @@ unsigned sel_copyTypes_np(const char *selName, const char **types, unsigned coun
 
 unsigned sel_copyTypedSelectors_np(const char *selName, SEL *const sels, unsigned count)
 {
+	if (NULL == selName) { return 0; }
 	SEL untyped = selector_lookup(selName, 0);
 	if (untyped == NULL) { return 0; }
 
@@ -511,6 +517,7 @@ void objc_register_selector_array(SEL selectors, unsigned long count)
 
 SEL sel_get_typed_uid (const char *name, const char *types)
 {
+	if (NULL == name) { return (SEL)NULL; }
 	SEL sel = selector_lookup(name, types);
 	if (NULL == sel) { return sel_registerTypedName_np(name, types); }
 
@@ -527,6 +534,7 @@ SEL sel_get_typed_uid (const char *name, const char *types)
 
 SEL sel_get_any_typed_uid (const char *name)
 {
+	if (NULL == name) { return (SEL)NULL; }
 	SEL sel = selector_lookup(name, 0);
 	if (NULL == sel) { return sel_registerName(name); }
 

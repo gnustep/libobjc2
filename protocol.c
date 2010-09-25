@@ -216,11 +216,14 @@ void objc_init_protocols(struct objc_protocol_list *protocols)
 // Public functions:
 Protocol *objc_getProtocol(const char *name)
 {
+	if (NULL == name) { return NULL; }
 	return (Protocol*)protocol_for_name(name);
 }
 
 BOOL protocol_conformsToProtocol(Protocol *p1, Protocol *p2)
 {
+	if (NULL == p1 || NULL == p2) { return NO; }
+
 	// A protocol trivially conforms to itself
 	if (strcmp(p1->name, p2->name) == 0) { return YES; }
 
@@ -244,6 +247,7 @@ BOOL protocol_conformsToProtocol(Protocol *p1, Protocol *p2)
 
 BOOL class_conformsToProtocol(Class cls, Protocol *protocol)
 {
+	if (Nil == cls || NULL == protocol) { return NO; }
 	while (cls)
 	{
 		for (struct objc_protocol_list *protocols = cls->protocols;
@@ -306,7 +310,7 @@ get_method_list(Protocol *p,
 struct objc_method_description *protocol_copyMethodDescriptionList(Protocol *p,
 	BOOL isRequiredMethod, BOOL isInstanceMethod, unsigned int *count)
 {
-
+	if (NULL == p) { return NULL; }
 	struct objc_method_description_list *list = 
 		get_method_list(p, isRequiredMethod, isInstanceMethod);
 	*count = 0;
@@ -327,6 +331,7 @@ struct objc_method_description *protocol_copyMethodDescriptionList(Protocol *p,
 
 Protocol **protocol_copyProtocolList(Protocol *p, unsigned int *count)
 {
+	if (NULL == p) { return NULL; }
 	*count = 0;
 	if (p->protocol_list == NULL || p->protocol_list->count ==0)
 	{
@@ -344,6 +349,7 @@ Protocol **protocol_copyProtocolList(Protocol *p, unsigned int *count)
 objc_property_t *protocol_copyPropertyList(Protocol *protocol,
                                            unsigned int *outCount)
 {
+	if (NULL == protocol) { return NULL; }
 	if (protocol->isa != ObjC2ProtocolClass)
 	{
 		return NULL;
@@ -389,6 +395,7 @@ objc_property_t protocol_getProperty(Protocol *protocol,
                                      BOOL isRequiredProperty,
                                      BOOL isInstanceProperty)
 {
+	if (NULL == protocol) { return NULL; }
 	// Class properties are not supported yet (there is no language syntax for
 	// defining them!)
 	if (!isInstanceProperty) { return NULL; }

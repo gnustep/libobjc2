@@ -344,6 +344,7 @@ int objc_getClassList(Class *buffer, int bufferLen)
 
 Class class_getSuperclass(Class cls)
 {
+	if (Nil == cls) { return Nil; }
 	if (!objc_test_class_flag(cls, objc_class_flag_resolved))
 	{
 		objc_resolve_class(cls);

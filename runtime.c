@@ -153,11 +153,15 @@ BOOL class_addProtocol(Class cls, Protocol *protocol)
 Ivar *
 class_copyIvarList(Class cls, unsigned int *outCount)
 {
-  struct objc_ivar_list *ivarlist = cls->ivars;
+  struct objc_ivar_list *ivarlist = NULL;
   unsigned int count = 0;
   unsigned int index;
   Ivar *list;
 
+  if (cls)
+    {
+      ivarlist = cls->ivars;
+    }
   if (ivarlist != NULL)
     {
       count = ivarlist->count;
@@ -189,9 +193,12 @@ class_copyMethodList(Class cls, unsigned int *outCount)
   Method *list;
   struct objc_method_list *methods;
 
-  for (methods = cls->methods; methods != NULL; methods = methods->next)
+  if (cls != NULL)
     {
-      count += methods->count;
+      for (methods = cls->methods; methods != NULL; methods = methods->next)
+        {
+          count += methods->count;
+        }
     }
   if (outCount != NULL)
     {
@@ -221,11 +228,15 @@ class_copyMethodList(Class cls, unsigned int *outCount)
 Protocol **
 class_copyProtocolList(Class cls, unsigned int *outCount)
 {
-  struct objc_protocol_list *protocolList = cls->protocols;
+  struct objc_protocol_list *protocolList = NULL;
   struct objc_protocol_list *list;
   unsigned int count = 0;
   Protocol **protocols;
 
+  if (Nil != cls)
+    {
+      protocolList = cls->protocols;
+    }
   for (list = protocolList; list != NULL; list = list->next)
     {
       count += list->count;
@@ -252,6 +263,7 @@ class_copyProtocolList(Class cls, unsigned int *outCount)
 
 id class_createInstance(Class cls, size_t extraBytes)
 {
+	if (Nil == cls)	{ return nil; }
 	id obj = malloc(cls->instance_size + extraBytes);
 	obj->isa = cls;
 	return obj;
@@ -272,7 +284,7 @@ Method class_getInstanceMethod(Class aClass, SEL aSelector)
 
 Method class_getClassMethod(Class aClass, SEL aSelector)
 {
-	return class_getInstanceMethod(aClass->isa, aSelector);
+	return class_getInstanceMethod(object_getClass((id)aClass), aSelector);
 }
 
 Ivar class_getClassVariable(Class cls, const char* name)
@@ -283,6 +295,7 @@ Ivar class_getClassVariable(Class cls, const char* name)
 
 size_t class_getInstanceSize(Class cls)
 {
+	if (Nil == cls) { return 0; }
 	return cls->instance_size;
 }
 
@@ -316,6 +329,7 @@ class_getInstanceVariable(Class cls, const char *name)
 // conjunction with class_setIvarLayout().
 const char *class_getIvarLayout(Class cls)
 {
+	if (Nil == cls) { return NULL; }
 	return (char*)cls->ivars;
 }
 
@@ -339,6 +353,7 @@ const char * class_getName(Class cls)
 
 int class_getVersion(Class theClass)
 {
+	if (Nil == theClass) { return 0; }
 	return theClass->version;
 }
 
@@ -350,11 +365,13 @@ const char *class_getWeakIvarLayout(Class cls)
 
 BOOL class_isMetaClass(Class cls)
 {
+	if (Nil == cls) { return NO; }
 	return objc_test_class_flag(cls, objc_class_flag_meta);
 }
 
 IMP class_replaceMethod(Class cls, SEL name, IMP imp, const char *types)
 {
+	if (Nil == cls) { return (IMP)0; }
 	SEL sel = sel_registerTypedName_np(sel_getName(name), types);
 	Method method = class_getInstanceMethodNonrecursive(cls, sel);
 	if (method == NULL)
@@ -376,6 +393,7 @@ IMP class_replaceMethod(Class cls, SEL name, IMP imp, const char *types)
 
 void class_setIvarLayout(Class cls, const char *layout)
 {
+	if (Nil == cls) { return; }
 	struct objc_ivar_list *list = (struct objc_ivar_list*)layout;
 	size_t listsize = sizeof(struct objc_ivar_list) + 
 			sizeof(struct objc_ivar) * (list->count - 1);
@@ -386,6 +404,7 @@ void class_setIvarLayout(Class cls, const char *layout)
 __attribute__((deprecated))
 Class class_setSuperclass(Class cls, Class newSuper)
 {
+	if (Nil == cls) { return Nil; }
 	Class oldSuper = cls->super_class;
 	cls->super_class = newSuper;
 	return oldSuper;
@@ -393,6 +412,7 @@ Class class_setSuperclass(Class cls, Class newSuper)
 
 void class_setVersion(Class theClass, int version)
 {
+	if (Nil == theClass) { return; }
 	theClass->version = version;
 }
 
@@ -403,22 +423,26 @@ void class_setWeakIvarLayout(Class cls, const char *layout)
 
 const char * ivar_getName(Ivar ivar)
 {
+	if (NULL == ivar) { return NULL; }
 	return ivar->name;
 }
 
 ptrdiff_t ivar_getOffset(Ivar ivar)
 {
+	if (NULL == ivar) { return 0; }
 	return ivar->offset;
 }
 
 const char * ivar_getTypeEncoding(Ivar ivar)
 {
+	if (NULL == ivar) { return NULL; }
 	return ivar->type;
 }
 
 
 void method_exchangeImplementations(Method m1, Method m2)
 {
+	if (NULL == m1 || NULL == m2) { return; }
 	IMP tmp = (IMP)m1->imp;
 	m1->imp = m2->imp;
 	m2->imp = tmp;
@@ -428,17 +452,20 @@ void method_exchangeImplementations(Method m1, Method m2)
 
 IMP method_getImplementation(Method method)
 {
+	if (NULL == method) { return (IMP)NULL; }
 	return (IMP)method->imp;
 }
 
 SEL method_getName(Method method)
 {
+	if (NULL == method) { return (SEL)NULL; }
 	return (SEL)method->selector;
 }
 
 
 IMP method_setImplementation(Method method, IMP imp)
 {
+	if (NULL == method) { return (IMP)NULL; }
 	IMP old = (IMP)method->imp;
 	method->imp = old;
 	objc_updateDtableForClassContainingMethod(method);
@@ -584,6 +611,7 @@ Class objc_allocateMetaClass(Class superclass, size_t extraBytes)
 
 void *object_getIndexedIvars(id obj)
 {
+	if (nil == obj) { return NULL; }
 	if (class_isMetaClass(obj->isa))
 	{
 		return ((char*)obj) + sizeof(struct objc_class);
