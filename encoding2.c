@@ -188,7 +188,6 @@ static const char *sizeof_type(const char *type, size_t *size)
 			*size += union_size;
 			return t;
 		}
-		//FIXME: union
 		case 'b':
 		{
 			// Consume the b
@@ -272,7 +271,6 @@ static const char *alignof_type(const char *type, size_t *align)
 			parse_array(&t, (type_parser)alignof_type, &align);
 			return t;
 		}
-		//FIXME: union
 		case 'b':
 		{
 			// Consume the b
