@@ -158,7 +158,7 @@ class_copyIvarList(Class cls, unsigned int *outCount)
   unsigned int index;
   Ivar *list;
 
-  if (cls)
+  if (Nil != cls)
     {
       ivarlist = cls->ivars;
     }

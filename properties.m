@@ -149,7 +149,7 @@ objc_property_t* class_copyPropertyList(Class cls, unsigned int *outCount)
 {
 	if (Nil == cls || !objc_test_class_flag(cls, objc_class_flag_new_abi))
 	{
-		if (outCount) { *outCount = 0; }
+		if (NULL != outCount) { *outCount = 0; }
 		return NULL;
 	}
 	struct objc_property_list *properties = cls->properties;
@@ -158,7 +158,7 @@ objc_property_t* class_copyPropertyList(Class cls, unsigned int *outCount)
 	{
 		count += l->count;
 	}
-	if (outCount)
+	if (NULL != outCount)
 	{
 		*outCount = count;
 	}
