@@ -114,7 +114,7 @@ void _Block_object_assign(void *destAddr, const void *object, const int flags)
 				{
 					(*dst)->forwarding = *dst;
 				}
-				if(src->size >= sizeof(struct psy_block_byref_obj))
+				if((size_t)src->size >= sizeof(struct psy_block_byref_obj))
 				{
 					src->byref_keep(*dst, src);
 				}
@@ -161,7 +161,7 @@ void _Block_object_dispose(const void *object, const int flags)
 			src->flags--;
 			if((src->flags & ~BLOCK_HAS_COPY_DISPOSE) == 0)
 			{
-				if(src->size >= sizeof(struct psy_block_byref_obj))
+				if((size_t)src->size >= sizeof(struct psy_block_byref_obj))
 					src->byref_dispose(src);
 				
 				free(src);

@@ -157,17 +157,17 @@ enum objc_class_flags
 static inline void objc_set_class_flag(struct objc_class *aClass,
                                        enum objc_class_flags flag)
 {
-	aClass->info |= (long)flag;
+	aClass->info |= (unsigned long)flag;
 }
 static inline void objc_clear_class_flag(struct objc_class *aClass,
                                          enum objc_class_flags flag)
 {
-	aClass->info &= ~(long)flag;
+	aClass->info &= ~(unsigned long)flag;
 }
 static inline BOOL objc_test_class_flag(struct objc_class *aClass,
                                         enum objc_class_flags flag)
 {
-	return (aClass->info & (long)flag) == (long)flag;
+	return (aClass->info & (unsigned long)flag) == (unsigned long)flag;
 }
 
 /**
