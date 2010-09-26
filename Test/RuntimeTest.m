@@ -1,6 +1,24 @@
 #import <Foundation/Foundation.h>
 #include <objc/runtime.h>
-#include <assert.h>
+
+static int exitStatus = 0;
+
+static void _test(BOOL X, char *expr, int line)
+{
+  if (!X)
+  {
+    exitStatus = 1;
+    fprintf(stderr, "ERROR: Test failed: '%s' on %s:%d\n", expr, __FILE__, line);
+  }
+}
+#define test(X) _test(X, __STRING(X), __LINE__)
+
+static int stringsEqual(const char *a, const char *b)
+{
+  return 0 == strcmp(a,b);
+}
+
+
 
 @interface Foo : NSObject
 {
@@ -8,6 +26,7 @@
 }
 - (void) aMethod;
 + (void) aMethod;
+- (int) manyTypes;
 @end
 
 @interface Bar : Foo
@@ -16,6 +35,8 @@
 }
 - (void) anotherMethod;
 + (void) anotherMethod;
+- (id) manyTypes;
+- (id) aBool: (BOOL)d andAnInt: (int) w;
 @end
 
 
@@ -26,6 +47,10 @@
 + (void) aMethod
 {
 }
+- (int) manyTypes
+{
+  return YES;
+}
 @end
 
 @implementation Bar
@@ -35,67 +60,130 @@
 + (void) anotherMethod
 {
 }
+- (id) manyTypes
+{
+  return @"Hello";
+}
+- (id) aBool: (BOOL)d andAnInt: (int) w
+{
+  return @"Hello";
+}
 @end
 
 
 void testInvalidArguments()
 {
-  assert(NO == class_conformsToProtocol([NSObject class], NULL));
-  assert(NO == class_conformsToProtocol(Nil, NULL));
-  assert(NO == class_conformsToProtocol(Nil, @protocol(NSCoding)));
-  assert(NULL == class_copyIvarList(Nil, NULL));
-  assert(NULL == class_copyMethodList(Nil, NULL));
-  assert(NULL == class_copyPropertyList(Nil, NULL));
-  assert(NULL == class_copyProtocolList(Nil, NULL));
-  assert(nil == class_createInstance(Nil, 0));
-  assert(0 == class_getVersion(Nil));
-  assert(NO == class_isMetaClass(Nil));
-  assert(Nil == class_getSuperclass(Nil));
+  test(NO == class_conformsToProtocol([NSObject class], NULL));
+  test(NO == class_conformsToProtocol(Nil, NULL));
+  test(NO == class_conformsToProtocol(Nil, @protocol(NSCoding)));
+  test(NULL == class_copyIvarList(Nil, NULL));
+  test(NULL == class_copyMethodList(Nil, NULL));
+  test(NULL == class_copyPropertyList(Nil, NULL));
+  test(NULL == class_copyProtocolList(Nil, NULL));
+  test(nil == class_createInstance(Nil, 0));
+  test(0 == class_getVersion(Nil));
+  test(NO == class_isMetaClass(Nil));
+  test(Nil == class_getSuperclass(Nil));
         
-  assert(NULL == method_getName(NULL));
-  assert(NULL == method_copyArgumentType(NULL, 0));
-  assert(NULL == method_copyReturnType(NULL));
+  test(NULL == method_getName(NULL));
+  test(NULL == method_copyArgumentType(NULL, 0));
+  test(NULL == method_copyReturnType(NULL));
   method_exchangeImplementations(NULL, NULL);
-  assert((IMP)NULL == method_setImplementation(NULL, (IMP)NULL));
-  assert((IMP)NULL == method_getImplementation(NULL));
+  test((IMP)NULL == method_setImplementation(NULL, (IMP)NULL));
+  test((IMP)NULL == method_getImplementation(NULL));
   method_getArgumentType(NULL, 0, NULL, 0);
-  assert(0 == method_getNumberOfArguments(NULL));
-  assert(NULL == method_getTypeEncoding(NULL));
+  test(0 == method_getNumberOfArguments(NULL));
+  test(NULL == method_getTypeEncoding(NULL));
   method_getReturnType(NULL, NULL, 0);
   
-  assert(NULL == ivar_getName(NULL));
-  assert(0 == ivar_getOffset(NULL));
-  assert(NULL == ivar_getTypeEncoding(NULL));
+  test(NULL == ivar_getName(NULL));
+  test(0 == ivar_getOffset(NULL));
+  test(NULL == ivar_getTypeEncoding(NULL));
   
-  assert(nil == objc_getProtocol(NULL));
+  test(nil == objc_getProtocol(NULL));
   
-  assert(0 == strcmp("<null selector>", sel_getName((SEL)0)));
-  assert((SEL)0 == sel_getUid(NULL));
-  assert(0 != sel_getUid("")); // the empty string is permitted as a selector
-  assert(0 == strcmp("", sel_getName(sel_getUid(""))));
-  assert(YES == sel_isEqual((SEL)0, (SEL)0));
+  test(stringsEqual("<null selector>", sel_getName((SEL)0)));
+  test((SEL)0 == sel_getUid(NULL));
+  test(0 != sel_getUid("")); // the empty string is permitted as a selector
+  test(stringsEqual("", sel_getName(sel_getUid(""))));
+  test(YES == sel_isEqual((SEL)0, (SEL)0));
   
-  printf("testInvalidArguments() passed\n");
+  //test(NULL == property_getName(NULL));
+
+  printf("testInvalidArguments() ran\n");
 }
 
 void testAMethod(Method m)
 {
-  assert(NULL != m);
-  assert(0 == strcmp("aMethod", sel_getName(method_getName(m))));
+  test(NULL != m);
+  test(stringsEqual("aMethod", sel_getName(method_getName(m))));
   
-  printf("testAMethod() passed\n");
+  printf("testAMethod() ran\n");
 }
 
 void testGetMethod()
 {
   testAMethod(class_getClassMethod([Bar class], @selector(aMethod)));
   testAMethod(class_getClassMethod([Bar class], sel_getUid("aMethod")));
+
+  printf("testGetMethod() ran\n");  
+}
+
+void testProtocols()
+{
+  test(protocol_isEqual(@protocol(NSCoding), objc_getProtocol("NSCoding")));
+
+  printf("testProtocols() ran\n");  
+}
+
+void testMultiTypedSelector()
+{
+  test(sel_isEqual(@selector(manyTypes),sel_getUid("manyTypes")));
+  test(@selector(manyTypes) == sel_getUid("manyTypes"));
+    
+  Method intMethod = class_getInstanceMethod([Foo class], @selector(manyTypes));
+  Method idMethod = class_getInstanceMethod([Bar class], @selector(manyTypes));  
+  
+  test(method_getName(intMethod) == @selector(manyTypes));
+  test(method_getName(idMethod) == @selector(manyTypes));
+
+  test(sel_isEqual(method_getName(intMethod), @selector(manyTypes)));
+  test(sel_isEqual(method_getName(idMethod), @selector(manyTypes)));
+ 
+  char ret[10];
+  method_getReturnType(intMethod, ret, 10);
+  test(stringsEqual(ret, "i"));
+  method_getReturnType(idMethod, ret, 10);
+  test(stringsEqual(ret, "@"));
+  
+  printf("testMultiTypedSelector() ran\n");
+}
+
+void testClassHierarchy()
+{
+  Class nsProxy = objc_getClass("NSProxy");
+  Class nsObject = objc_getClass("NSObject");
+  Class nsProxyMeta = object_getClass(nsProxy);
+  Class nsObjectMeta = object_getClass(nsObject);
+  
+  test(object_getClass(nsProxyMeta) == nsProxyMeta);
+  test(object_getClass(nsObjectMeta) == nsObjectMeta);
+  
+  test(Nil == class_getSuperclass(nsProxy));
+  test(Nil == class_getSuperclass(nsObject));
+  
+  test(nsObject == class_getSuperclass(nsObjectMeta));
+  test(nsProxy == class_getSuperclass(nsProxyMeta));
+  printf("testClassHierarchy() ran\n");
 }
 
 int main (int argc, const char * argv[])
 {
   testInvalidArguments();
   testGetMethod();
+  testProtocols();
+  testMultiTypedSelector();
+  testClassHierarchy();
   printf("Instance of NSObject: %p\n", class_createInstance([NSObject class], 0));
-  return 0;
+  return exitStatus;
 }
