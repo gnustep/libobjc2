@@ -15,4 +15,9 @@ toydispatch_LIBRARIES_DEPEND_UPON += -lpthread
 
 toydispatch_CFLAGS += -Werror -std=c99
 
+# Hack to get the __sync_* GCC builtins to work on Windows
+ifeq ($(GNUSTEP_TARGET_OS), mingw32)
+toydispatch_CFLAGS += -march=i586
+endif
+
 include $(GNUSTEP_MAKEFILES)/library.make

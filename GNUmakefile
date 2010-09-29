@@ -86,5 +86,10 @@ ifneq ($(findstring gcc, $(CC)),)
 libobjc_CFLAGS += -fgnu89-inline 
 endif
 
+# Hack to get the __sync_* GCC builtins to work on Windows
+ifeq ($(GNUSTEP_TARGET_OS), mingw32)
+libobjc_CFLAGS += -march=i586
+endif
+
 include $(GNUSTEP_MAKEFILES)/aggregate.make
 include $(GNUSTEP_MAKEFILES)/library.make
