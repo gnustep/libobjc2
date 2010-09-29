@@ -11,7 +11,7 @@ static void _test(BOOL X, char *expr, int line)
     fprintf(stderr, "ERROR: Test failed: '%s' on %s:%d\n", expr, __FILE__, line);
   }
 }
-#define test(X) _test(X, __STRING(X), __LINE__)
+#define test(X) _test(X, #X, __LINE__)
 
 static int stringsEqual(const char *a, const char *b)
 {
