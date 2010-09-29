@@ -41,7 +41,7 @@ const char *objc_skip_argspec(const char *type)
 static size_t lengthOfTypeEncoding(const char *types)
 {
 	const char *end = objc_skip_typespec(types);
-	size_t length = end - types + 1;
+	size_t length = end - types;
 	return length;
 }
 
