@@ -11,7 +11,7 @@
 
 BLOCKS_EXPORT void *_Block_copy(void *);
 BLOCKS_EXPORT void _Block_release(void *);
-BLOCKS_EXPORT const char *_Block_get_types(void*) OBJC_NONPORTABLE;
+BLOCKS_EXPORT const char *block_getType_np(void *b) OBJC_NONPORTABLE;
 
 #define Block_copy(x) ((__typeof(x))_Block_copy((void *)(x)))
 #define Block_release(x) _Block_release((void *)(x))
