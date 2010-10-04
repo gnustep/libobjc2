@@ -29,6 +29,7 @@ static int stringsEqual(const char *a, const char *b)
 - (int) manyTypes;
 - (void) synchronizedCode;
 + (void) synchronizedCode;
++ (id) shared;
 - (BOOL) basicThrowAndCatchException;
 @end
 
@@ -61,6 +62,11 @@ static int stringsEqual(const char *a, const char *b)
 + (void) synchronizedCode
 {
 	@synchronized(self) { }
+}
++ (id) shared
+{
+	@synchronized(self) { }
+	return nil;
 }
 - (void) throwException
 {
@@ -214,6 +220,7 @@ void testSynchronized()
   printf("Enter synchronized code\n");
   [foo synchronizedCode];
   [foo release];
+  [Foo shared];
   printf("testSynchronized() ran\n");
 }
 
