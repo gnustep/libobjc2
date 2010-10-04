@@ -595,10 +595,12 @@ Class objc_allocateClassPair(Class superclass, const char *name, size_t extraByt
 void *object_getIndexedIvars(id obj)
 {
 	if (nil == obj) { return NULL; }
+	/*
 	if (class_isMetaClass(obj->isa))
 	{
 		return ((char*)obj) + sizeof(struct objc_class);
 	}
+	*/
 	return ((char*)obj) + obj->isa->instance_size;
 }
 
@@ -609,7 +611,6 @@ Class object_getClass(id obj)
 		Class isa = obj->isa;
 		while ((Nil != isa) && objc_test_class_flag(isa, objc_class_flag_hidden_class))
 		{
-			fprintf(stderr, "Skipping hidden class: %s\n", isa->name);
 			isa = isa->super_class;
 		}
 		return isa;

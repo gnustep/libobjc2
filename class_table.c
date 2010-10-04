@@ -222,6 +222,7 @@ BOOL objc_resolve_class(Class cls)
 	// Mark this class (and its metaclass) as resolved
 	objc_set_class_flag(cls, objc_class_flag_resolved);
 	objc_set_class_flag(cls->isa, objc_class_flag_resolved);
+	cls->isa->isa = (Nil == cls->isa->isa) ? root_class : (Class)objc_getClass((char*)cls->isa->isa);
 	// Fix up the ivar offsets
 	objc_compute_ivar_offsets(cls);
 	// Send the +load message, if required

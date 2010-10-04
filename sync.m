@@ -51,7 +51,7 @@ static Class allocateLockClass(Class superclass)
 	// Set the superclass pointer to the name.  The runtime will fix this when
 	// the class links are resolved.
 	newClass->name = superclass->name;
-	newClass->info = objc_class_flag_resolved | 
+	newClass->info = objc_class_flag_resolved | objc_class_flag_initialized |
 		objc_class_flag_class | objc_class_flag_user_created |
 		objc_class_flag_new_abi | objc_class_flag_hidden_class |
 		objc_class_flag_lock_class;
@@ -62,6 +62,8 @@ static Class allocateLockClass(Class superclass)
 	{
 		newClass->info |= objc_class_flag_meta;
 	}
+	mutex_t *lock = object_getIndexedIvars(newClass);
+	INIT_LOCK(*lock);
 
 	return newClass;
 }
@@ -72,7 +74,6 @@ static inline Class initLockObject(id obj)
 	if (class_isMetaClass(obj->isa))
 	{
 		obj->isa = lockClass;
-		objc_send_initialize(obj);
 	}
 	else
 	{
@@ -83,10 +84,7 @@ static inline Class initLockObject(id obj)
 				types);
 		obj->isa = lockClass;
 	}
-	mutex_t *lock = object_getIndexedIvars(lockClass);
-	INIT_LOCK(*lock);
 
-	fprintf(stderr, "Making %p hidden class for %p\n", lockClass, obj);
 	return lockClass;
 }
 
