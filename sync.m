@@ -102,6 +102,10 @@ static void deallocLockClass(id obj, SEL _cmd)
 	// Free the lock
 	mutex_t *lock = object_getIndexedIvars(lockClass);
 	DESTROY_LOCK(lock);
+
+	// FIXME: Low memory profile.
+	SparseArrayDestroy(lockClass->dtable);
+
 	// Free the class
 	free(lockClass);
 }
