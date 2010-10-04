@@ -235,10 +235,10 @@ int main (int argc, const char * argv[])
   testClassHierarchy();
   printf("Instance of NSObject: %p\n", class_createInstance([NSObject class], 0));
 
-  CREATE_AUTORELEASE_POOL(pool);
+  NSAutoreleasePool *pool = [NSAutoreleasePool new];
   testSynchronized();
   testExceptions();
-  DESTROY(pool);
+  [pool release];
 
   return exitStatus;
 }
