@@ -1,0 +1,17 @@
+GNUstep Objective-C Runtime 1.0
+===============================
+
+This is the first official release of the GNUstep Objective-C runtime (a.k.a.
+libobjc2).  This runtime was designed to support the features of Objective-C 2
+for use with GNUstep and other Objective-C programs.
+
+The runtime library is responsible for implementing the core features of the
+object model, as well as exposing introspection features to the user.  The
+GNUstep runtime implements Apple's Objective-C Runtime APIs, and a small number
+of GCC APIs for legacy compatibility.
+
+This library is based on the Étoilé Objective-C Runtime, an earlier research
+prototype, and includes support for non-fragile instance variables,
+type-dependent dispatch, and object planes.  It is fully compatible with the
+FSF's GCC Objective-C ABI and also implements a new ABI that is supported by
+Clang and is required for some of the newer features.
