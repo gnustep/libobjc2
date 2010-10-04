@@ -15,3 +15,10 @@ prototype, and includes support for non-fragile instance variables,
 type-dependent dispatch, and object planes.  It is fully compatible with the
 FSF's GCC Objective-C ABI and also implements a new ABI that is supported by
 Clang and is required for some of the newer features.
+
+Although the runtime has been tested by several people, and is being used
+extensively by the Étoilé project, it is entirely new (MIT licensed) code and
+may still contain bugs.  If you come across any problems, please report them to
+the GNUstep Developer mailing list <gnustep-dev@gnu.org>.  A 1.1 release,
+fixing any bugs that are encountered in wider deployment, is planned to
+coincide with the next GNUstep release.
