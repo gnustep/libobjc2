@@ -27,6 +27,9 @@ static int stringsEqual(const char *a, const char *b)
 - (void) aMethod;
 + (void) aMethod;
 - (int) manyTypes;
+- (void) synchronizedCode;
++ (void) synchronizedCode;
+- (BOOL) basicThrowAndCatchException;
 @end
 
 @interface Bar : Foo
@@ -50,6 +53,34 @@ static int stringsEqual(const char *a, const char *b)
 - (int) manyTypes
 {
   return YES;
+}
+- (void) synchronizedCode
+{
+	@synchronized(self) { [[self class] synchronizedCode]; }		
+}
++ (void) synchronizedCode
+{
+	@synchronized(self) { }
+}
+- (void) throwException
+{
+	@throw [NSException exceptionWithName: @"RuntimeTestException" reason: @"" userInfo: nil];
+}
+- (BOOL) basicThrowAndCatchException
+{
+	@try
+	{  
+		[self throwException];
+	}
+	@catch (NSException *e)
+	{
+		NSLog(@"Caught %@", e);
+	}
+	@finally
+	{
+		return YES;
+	}
+	return NO;
 }
 @end
 
@@ -177,6 +208,24 @@ void testClassHierarchy()
   printf("testClassHierarchy() ran\n");
 }
 
+void testSynchronized()
+{
+  Foo *foo = [Foo new];
+  printf("Enter synchronized code\n");
+  [foo synchronizedCode];
+  [foo release];
+  printf("testSynchronized() ran\n");
+}
+
+void testExceptions()
+{
+  Foo *foo = [Foo new];
+  test([foo basicThrowAndCatchException]);
+  [foo release];
+  printf("testExceptions() ran\n");
+
+}
+
 int main (int argc, const char * argv[])
 {
   testInvalidArguments();
@@ -185,5 +234,11 @@ int main (int argc, const char * argv[])
   testMultiTypedSelector();
   testClassHierarchy();
   printf("Instance of NSObject: %p\n", class_createInstance([NSObject class], 0));
+
+  CREATE_AUTORELEASE_POOL(pool);
+  testSynchronized();
+  testExceptions();
+  DESTROY(pool);
+
   return exitStatus;
 }
