@@ -18,7 +18,7 @@ Both ABIs support the following feature above and beyond the GCC runtime:
 - Low memory profile for platforms where memory usage is more important than
   speed.
 - Synthesised property accessors.
-- Efficient support for @synchronize()
+- Efficient support for @synchronized()
 - Type-dependent dispatch, eliminating stack corruption from mismatched
   selectors.
 

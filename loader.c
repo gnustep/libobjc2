@@ -44,7 +44,7 @@ void __objc_exec_class(struct objc_module_abi_8 *module)
 		// this does not perform any synchronization.
 		INIT_LOCK(objc_runtime_mutex);
 		// Create the lock used to protect the creation of hidden classes by
-		// @synchronize()
+		// @synchronized()
 		__objc_sync_init();
 
 		// Create the various tables that the runtime needs.

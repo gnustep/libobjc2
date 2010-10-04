@@ -158,7 +158,7 @@ enum objc_class_flags
 	 */
 	objc_class_flag_hidden_class = (1<<7),
 	/**
-	 * This class is a hidden class used to implement @synchronize()
+	 * This class is a hidden class used to implement @synchronized()
 	 */
 	objc_class_flag_lock_class = (1<<8)
 };

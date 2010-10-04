@@ -95,7 +95,7 @@ static void deallocLockClass(id obj, SEL _cmd)
 	Class lockClass = findLockClass(obj);
 	Class realClass = class_getSuperclass(lockClass);
 	// Call the real -dealloc method (this ordering is required in case the
-	// user does @synchronize(self) in -dealloc)
+	// user does @synchronized(self) in -dealloc)
 	struct objc_super super = {obj, realClass };
 	objc_msgSendSuper(&super, SELECTOR(dealloc));
 	// After calling [super dealloc], the object will no longer exist.
