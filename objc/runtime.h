@@ -220,9 +220,6 @@ IMP method_setImplementation(Method method, IMP imp);
 
 Class objc_allocateClassPair(Class superclass, const char *name, size_t extraBytes);
 
-OBJC_NONPORTABLE
-Class objc_allocateMetaClass(Class superclass, size_t extraBytes);
-
 void objc_disposeClassPair(Class cls);
 
 id objc_getClass(const char *name);

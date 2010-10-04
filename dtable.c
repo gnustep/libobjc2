@@ -278,7 +278,13 @@ struct objc_slot* objc_dtable_lookup(dtable_t dtable, uint32_t uid)
 	}
 	return NULL;
 }
-
+dtable_t objc_copy_dtable_for_class(dtable_t old, Class cls)
+{
+	dtable_t dtable = calloc(1, sizeof(struct objc_dtable));
+	dtable->cls = cls;
+	INIT_LOCK(dtable->lock);
+	return dtable;
+}
 
 #else
 
@@ -497,6 +503,11 @@ void objc_resize_dtables(uint32_t newSize)
 			SparseArrayExpandingArray((void*)next->dtable);
 		}
 	}
+}
+
+dtable_t objc_copy_dtable_for_class(dtable_t old, Class cls)
+{
+	return SparseArrayCopy(old);
 }
 
 #endif // __OBJC_LOW_MEMORY__

@@ -97,3 +97,8 @@ static inline int classHasDtable(struct objc_class *cls)
  * modifying a class's method list.
  */
 void objc_update_dtable_for_class(Class);
+
+/**
+ * Creates a copy of the class's dispatch table.
+ */
+dtable_t objc_copy_dtable_for_class(dtable_t old, Class cls);

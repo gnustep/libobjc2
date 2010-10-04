@@ -151,7 +151,16 @@ enum objc_class_flags
 	 * It should be cleared by protocols, constant strings, and objects not
 	 * allocated by NSAllocateObject().
 	 */
-	objc_class_flag_plane_aware = (1<<6)
+	objc_class_flag_plane_aware = (1<<6),
+	/**
+	 * This class is a hidden class (should not be registered in the class
+	 * table nor returned from object_getClass()).
+	 */
+	objc_class_flag_hidden_class = (1<<7),
+	/**
+	 * This class is a hidden class used to implement @synchronize()
+	 */
+	objc_class_flag_lock_class = (1<<8)
 };
 
 static inline void objc_set_class_flag(struct objc_class *aClass,

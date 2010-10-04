@@ -591,23 +591,6 @@ Class objc_allocateClassPair(Class superclass, const char *name, size_t extraByt
 	return newClass;
 }
 
-Class objc_allocateMetaClass(Class superclass, size_t extraBytes)
-{
-	Class metaClass = calloc(1, sizeof(struct objc_class) + extraBytes);
-
-	// Initialize the metaclass
-	metaClass->isa = superclass->isa;
-	metaClass->super_class = superclass->isa;
-	metaClass->name = "hidden class"; //strdup(superclass->name);
-	metaClass->info = objc_class_flag_resolved | objc_class_flag_initialized |
-		objc_class_flag_meta | objc_class_flag_user_created |
-		objc_class_flag_new_abi;
-	metaClass->dtable = __objc_uninstalled_dtable;
-	metaClass->instance_size = sizeof(struct objc_class);
-
-	return metaClass;
-}
-
 
 void *object_getIndexedIvars(id obj)
 {
@@ -623,7 +606,13 @@ Class object_getClass(id obj)
 {
 	if (nil != obj)
 	{
-		return obj->isa;
+		Class isa = obj->isa;
+		while ((Nil != isa) && objc_test_class_flag(isa, objc_class_flag_hidden_class))
+		{
+			fprintf(stderr, "Skipping hidden class: %s\n", isa->name);
+			isa = isa->super_class;
+		}
+		return isa;
 	}
 	return Nil;
 }
