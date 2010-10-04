@@ -5,6 +5,14 @@ This is the first official release of the GNUstep Objective-C runtime (a.k.a.
 libobjc2).  This runtime was designed to support the features of Objective-C 2
 for use with GNUstep and other Objective-C programs.
 
+You may obtain the code for this release from subversion at the following
+address:
+
+svn://svn.gna.org/svn/gnustep/libs/libobjc2/1.0
+
+Source tarballs will be made available shortly after the release and
+distributions are encouraged to provide binary versions.
+
 The runtime library is responsible for implementing the core features of the
 object model, as well as exposing introspection features to the user.  The
 GNUstep runtime implements Apple's Objective-C Runtime APIs, and a small number
