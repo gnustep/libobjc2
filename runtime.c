@@ -569,7 +569,9 @@ Class objc_allocateClassPair(Class superclass, const char *name, size_t extraByt
 	Class metaClass = calloc(1, sizeof(struct objc_class));
 
 	// Initialize the metaclass
-	metaClass->isa = superclass->isa->isa;
+	// Set the meta-metaclass pointer to the name.  The runtime will fix this
+	// in objc_resolve_class().
+	metaClass->isa = (Class)superclass->isa->isa->name;
 	metaClass->super_class = superclass->isa;
 	metaClass->name = strdup(name);
 	metaClass->info = objc_class_flag_meta | objc_class_flag_user_created |

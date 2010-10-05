@@ -214,6 +214,18 @@ void testClassHierarchy()
   printf("testClassHierarchy() ran\n");
 }
 
+void testAllocateClass()
+{
+  Class newClass = objc_allocateClassPair(objc_lookUpClass("NSObject"), "UserAllocated", 0);
+  test(Nil != newClass);
+  // class_getSuperclass() will call objc_resolve_class().
+  // Although we have not called objc_registerClassPair() yet, this works with 
+  // the Apple runtime and GNUstep Base relies on this behavior in 
+  // GSObjCMakeClass().
+  test(objc_lookUpClass("NSObject") == class_getSuperclass(newClass));
+  printf("testAllocateClass() ran\n");
+}
+
 void testSynchronized()
 {
   Foo *foo = [Foo new];
@@ -240,6 +252,7 @@ int main (int argc, const char * argv[])
   testProtocols();
   testMultiTypedSelector();
   testClassHierarchy();
+  testAllocateClass();
   printf("Instance of NSObject: %p\n", class_createInstance([NSObject class], 0));
 
   NSAutoreleasePool *pool = [NSAutoreleasePool new];
