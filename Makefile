@@ -6,6 +6,7 @@ VERSION = 4
 
 CFLAGS += -std=c99
 CPPFLAGS += -DTYPE_DEPENDENT_DISPATCH
+CPPFLAGS += -D__OBJC_RUNTIME_INTERNAL__=1 -D_XOPEN_SOURCE=500
 
 #LIB_DIR=/usr/local/GNUstep/Local/Library/Libraries/
 #HEADER_DIR=/usr/local/GNUstep/Local/Library/Headers
