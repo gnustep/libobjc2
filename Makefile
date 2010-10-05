@@ -4,7 +4,7 @@ VERSION = 4
 
 #CC=clang
 
-CFLAGS += -std=c99
+CFLAGS += -std=c99 -fPIC
 CPPFLAGS += -DTYPE_DEPENDENT_DISPATCH
 CPPFLAGS += -D__OBJC_RUNTIME_INTERNAL__=1 -D_XOPEN_SOURCE=500
 
@@ -39,11 +39,19 @@ OBJECTS = \
 	statics_loader.o\
 	sync.o
 
-all: libobjc.so.$(VERSION)
+all: libobjc.so.$(VERSION) libobjc.a
 
 libobjc.so.$(VERSION): $(OBJECTS)
 	@echo Linking shared library...
-	ld -shared -o $@ $(OBJECTS)
+	@ld -shared -o $@ $(OBJECTS)
+	@@ -4,7 +4,7 @@
+
+libobjc.a: $(OBJECTS)
+	@echo Linking static library...
+	@ld -r -s -o $@ $(OBJECTS)
+
+libobjc.so.$(VERSION): $(OBJECTS)
+		@echo Linking shared library...
 
 .c.o:
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
@@ -60,3 +68,4 @@ install: all
 clean:
 	rm -f $(OBJECTS)
 	rm -f libobjc.so.$(VERSION)
+	rm -f libobjc.a
