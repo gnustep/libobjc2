@@ -8,10 +8,9 @@ CFLAGS += -std=c99 -fPIC
 CPPFLAGS += -DTYPE_DEPENDENT_DISPATCH
 CPPFLAGS += -D__OBJC_RUNTIME_INTERNAL__=1 -D_XOPEN_SOURCE=500
 
-#LIB_DIR=/usr/local/GNUstep/Local/Library/Libraries/
-#HEADER_DIR=/usr/local/GNUstep/Local/Library/Headers
-LIB_DIR=/tmp/usr/lib/
-HEADER_DIR=/tmp/usr/include/
+PREFIX?= /usr/local
+LIB_DIR= ${PREFIX}/lib
+HEADER_DIR= ${PREFIX}/include
 
 OBJECTS = \
 	NSBlocks.o\
@@ -44,14 +43,10 @@ all: libobjc.so.$(VERSION) libobjc.a
 libobjc.so.$(VERSION): $(OBJECTS)
 	@echo Linking shared library...
 	@ld -shared -o $@ $(OBJECTS)
-	@@ -4,7 +4,7 @@
 
 libobjc.a: $(OBJECTS)
 	@echo Linking static library...
 	@ld -r -s -o $@ $(OBJECTS)
-
-libobjc.so.$(VERSION): $(OBJECTS)
-		@echo Linking shared library...
 
 .c.o:
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
@@ -61,6 +56,7 @@ libobjc.so.$(VERSION): $(OBJECTS)
 
 install: all
 	install -m 444 libobjc.so.$(VERSION) $(LIB_DIR)
+	install -m 444 libobjc.a $(LIB_DIR)
 	ln -sf $(LIB_DIR)/libobjc.so.$(VERSION) $(LIB_DIR)/libobjc.so
 	install -d $(HEADER_DIR)/objc
 	install -m 444 objc/*.h $(HEADER_DIR)/objc
