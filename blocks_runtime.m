@@ -41,7 +41,14 @@ enum {
 	BLOCK_HAS_COPY_DISPOSE = (1 << 25),
 	BLOCK_HAS_CTOR         = (1 << 26), // helpers have C++ code
 	BLOCK_IS_GLOBAL        = (1 << 28),
-	BLOCK_HAS_DESCRIPTOR   = (1 << 29), // interim until complete world build is accomplished
+	/**
+	 * Block function uses a calling convention that returns a structure via a
+	 * pointer passed in by the caller.
+	 */
+	BLOCK_USE_SRET         = (1 << 29),
+	/**
+	 * Block has an Objective-C type encoding.
+	 */
 	BLOCK_HAS_SIGNATURE    = (1 << 30)
 };
 
@@ -251,14 +258,17 @@ void *_Block_copy(void *src)
 	extern void _NSConcreteStackBlock __attribute__((weak));
 	
 	// If the block is Global, there's no need to copy it on the heap.
-	if(self->isa == &_NSConcreteStackBlock && self->flags & BLOCK_HAS_DESCRIPTOR)
+	if(self->isa == &_NSConcreteStackBlock)
 	{
 		if(self->reserved == 0)
 		{
+			size_t size = 
 			ret = malloc(self->descriptor->size);
 			memcpy(ret, self, self->descriptor->size);
 			if(self->flags & BLOCK_HAS_COPY_DISPOSE)
+			{
 				self->descriptor->copy_helper(ret, self);
+			}
 			memcpy(self, ret, self->descriptor->size);
 		}
 		ret->reserved++;
@@ -274,7 +284,6 @@ void _Block_release(void *src)
 	extern void _NSConcreteStackBlock __attribute__((weak));
 
 	if(self->isa == &_NSConcreteStackBlock && // A Global block doesn't need to be released
-	   self->flags & BLOCK_HAS_DESCRIPTOR  && // Should always be true...
 	   self->reserved > 0)		// If false, then it's not allocated on the heap, we won't release auto memory !
 	{
 		self->reserved--;
