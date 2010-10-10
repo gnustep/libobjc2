@@ -245,7 +245,6 @@ struct StackBlockClass {
 	  void (*copy_helper)(void *dst, void *src);
 	  void (*dispose_helper)(void *src); 
 	} *descriptor;
-	const char *types;
 };
 
 
@@ -263,12 +262,15 @@ void *_Block_copy(void *src)
 		if(self->reserved == 0)
 		{
 			ret = malloc(self->descriptor->size);
-			memcpy(ret, self, self->descriptor->size);
 			if(self->flags & BLOCK_HAS_COPY_DISPOSE)
 			{
+				memcpy(self, ret, sizeof(struct StackBlockClass));
 				self->descriptor->copy_helper(ret, self);
 			}
-			memcpy(self, ret, self->descriptor->size);
+			else
+			{
+				memcpy(self, ret, self->descriptor->size);
+			}
 		}
 		ret->reserved++;
 	}
