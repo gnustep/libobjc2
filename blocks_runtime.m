@@ -262,7 +262,6 @@ void *_Block_copy(void *src)
 	{
 		if(self->reserved == 0)
 		{
-			size_t size = 
 			ret = malloc(self->descriptor->size);
 			memcpy(ret, self, self->descriptor->size);
 			if(self->flags & BLOCK_HAS_COPY_DISPOSE)
