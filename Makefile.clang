@@ -1,0 +1,79 @@
+.POSIX:
+
+.SUFFIXES: .c .bc .m
+
+VERSION = 4
+
+#CC=clang
+
+CFLAGS += -fPIC
+CPPFLAGS += -DTYPE_DEPENDENT_DISPATCH -DGNUSTEP
+CPPFLAGS += -D__OBJC_RUNTIME_INTERNAL__=1 -D_XOPEN_SOURCE=500
+
+PREFIX?= /usr/local
+LIB_DIR= ${PREFIX}/lib
+HEADER_DIR= ${PREFIX}/include
+
+OBJECTS = \
+	NSBlocks.bc\
+	Protocol2.bc\
+	abi_version.bc\
+	blocks_runtime.bc\
+	caps.bc\
+	category_loader.bc\
+	class_table.bc\
+	dtable.bc\
+	eh_personality.bc\
+	encoding2.bc\
+	hash_table.bc\
+	hooks.bc\
+	ivar.bc\
+	legacy_malloc.bc\
+	loader.bc\
+	mutation.bc\
+	properties.bc\
+	protocol.bc\
+	runtime.bc\
+	sarray2.bc\
+	selector_table.bc\
+	sendmsg2.bc\
+	statics_loader.bc\
+	sync.bc\
+	toydispatch.bc
+
+all: libobjc.so.$(VERSION) libobjc.a
+
+libobjc.so.$(VERSION): libobjc.o
+	@echo Linking shared library...
+	@ld -shared -o $@ libobjc.o
+
+libobjc.a: libobjc.o
+	@echo Linking static library...
+	@ld -r -s -o $@ libobjc.o
+
+libobjc.o: libobjc.bc
+	llc -O3 -filetype=obj -o libobjc.o libobjc.bc
+
+libobjc.bc: $(OBJECTS)
+	@echo Linking bitcode...
+	pwd
+	llvm-ld -internalize-public-api-file=../exports.txt -link-as-library -native -o libobjc.bc $(OBJECTS)
+
+.c.bc: obj
+	clang $(CPPFLAGS) $(CFLAGS) -emit-llvm -c $< -o $@
+
+.m.bc: obj
+	clang $(CPPFLAGS) $(CFLAGS) -emit-llvm -c $< -o $@
+
+obj:
+	mkdir obj
+
+install: all
+	install -m 444 libobjc.so.$(VERSION) $(LIB_DIR)
+	install -m 444 libobjc.a $(LIB_DIR)
+	ln -sf $(LIB_DIR)/libobjc.so.$(VERSION) $(LIB_DIR)/libobjc.so
+	install -d $(HEADER_DIR)/objc
+	install -m 444 objc/*.h $(HEADER_DIR)/objc
+
+clean:
+	rm -f obj/*

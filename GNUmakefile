@@ -9,9 +9,6 @@ include $(GNUSTEP_MAKEFILES)/common.make
 
 LIBRARY_NAME = libobjc
 
-
-SUBPROJECTS = toydispatch
-
 libobjc_VERSION = 4
 
 libobjc_OBJC_FILES = \
@@ -40,7 +37,8 @@ libobjc_C_FILES = \
 	sarray2.c\
 	selector_table.c\
 	sendmsg2.c\
-	statics_loader.c
+	statics_loader.c\
+	toydispatch.c
 
 ifneq ($(enable_legacy), no)
 libobjc_C_FILES += legacy_malloc.c
@@ -60,14 +58,15 @@ libobjc_HEADER_FILES = \
 	runtime.h\
 	slot.h\
 	objc.h\
-	objc-api.h
+	objc-api.h\
+	toydispatch.h
 endif
 
 ifneq ($(tdd), no)
 libobjc_CPPFLAGS += -DTYPE_DEPENDENT_DISPATCH
 endif
 
-libobjc_LIBRARIES_DEPEND_UPON += -lpthread -ltoydispatch
+libobjc_LIBRARIES_DEPEND_UPON += -lpthread 
 
 # Deprecated functions are only deprecated for external use, not for us because
 # we are special, precious, little flowers.
@@ -75,9 +74,9 @@ libobjc_CPPFLAGS += -D__OBJC_RUNTIME_INTERNAL__=1 -D_XOPEN_SOURCE=500
 # Note to Riccardo.  Please do not 'fix' C99isms in this.  The new ABI is only
 # useful on compilers that support C99 (currently only clang), so there is no
 # benefit from supporting platforms with no C99 compiler.
-libobjc_CFLAGS += -std=c99 -g -fexceptions -fno-inline
-libobjc_OBJCFLAGS += $(libobjc_CFLAGS)
-libobjc_LDFLAGS += -g
+libobjc_CFLAGS += -std=c99 -g -fexceptions #-fvisibility=hidden
+libobjc_OBJCFLAGS += $(libobjc_CFLAGS) $(libobjc_CFLAGS)
+libobjc_LDFLAGS += -g 
 libobjc_LIB_DIRS += -L toydispatch/obj
 
 libobjc_CFLAGS +=  -O3

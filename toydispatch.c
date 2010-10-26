@@ -1,7 +1,7 @@
 #include <pthread.h>
 #include <stdlib.h>
 #define __TOY_DISPATCH__
-#include "toydispatch.h"
+#include "objc/toydispatch.h"
 
 /**
  * Amount of total space in the ring buffer.  Must be a power of two.

@@ -15,6 +15,11 @@
 {
 	return protocol_conformsToProtocol(self, p);
 }
+- (id)retain
+{
+	return self;
+}
+- (void)release {}
 @end
 @implementation Protocol2 
 + (void)load
