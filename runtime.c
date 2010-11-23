@@ -18,7 +18,6 @@
 #include <stdlib.h>
 #include <assert.h>
 
-Class objc_next_class(void*);
 struct objc_slot *objc_get_slot(Class cls, SEL selector);
 
 /** 
