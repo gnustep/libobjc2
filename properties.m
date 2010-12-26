@@ -51,10 +51,31 @@ static inline int *lock_for_pointer(void *ptr)
 	return spinlocks + (hash & spinlock_mask);
 }
 
+/**
+ * Unlocks the spinlock.  This is not an atomic operation.  We are only ever
+ * modifying the lowest bit of the spinlock word, so it doesn't matter if this
+ * is two writes because there is no contention among the high bit.  There is
+ * no possibility of contention among calls to this, because it may only be
+ * called by the thread owning the spin lock.
+ */
 inline static void unlock_spinlock(int *spinlock)
 {
 	*spinlock = 0;
 }
+/**
+ * Attempts to lock a spinlock.  This is heavily optimised for the uncontended
+ * case, because property access should (generally) not be contended.  In the
+ * uncontended case, this is a single atomic compare and swap instruction and a
+ * branch.  Atomic CAS is relatively expensive (can be a pipeline flush, and
+ * may require locking a cache line in a cache-coherent SMP system, but it's a
+ * lot cheaper than a system call).
+ *
+ * If the lock is contended, then we just sleep and then try again after the
+ * other threads have run.  Note that there is no upper bound on the potential
+ * running time of this function, which is one of the great many reasons that
+ * using atomic accessors is a terrible idea, but in the common case it should
+ * be very fast.
+ */
 inline static void lock_spinlock(int *spinlock)
 {
 	int count = 0;
@@ -71,6 +92,9 @@ inline static void lock_spinlock(int *spinlock)
 	}
 }
 
+/**
+ * Public function for getting a property.  
+ */
 id objc_getProperty(id obj, SEL _cmd, int offset, BOOL isAtomic)
 {
 	if (nil == obj) { return nil; }
@@ -122,6 +146,82 @@ void objc_setProperty(id obj, SEL _cmd, int offset, id arg, BOOL isAtomic, BOOL 
 	}
 	[old release];
 }
+
+/**
+ * Structure copy function.  This is provided for compatibility with the Apple
+ * APIs (it's an ABI function, so it's semi-public), but it's a bad design so
+ * it's not used.  The problem is that it does not identify which of the
+ * pointers corresponds to the object, which causes some excessive locking to
+ * be needed.
+ */
+void objc_copyPropertyStruct(void *dest,
+                             void *src,
+                             ptrdiff_t size,
+                             BOOL atomic,
+                             BOOL strong)
+{
+	if (atomic)
+	{
+		int *lock = lock_for_pointer(src);
+		int *lock2 = lock_for_pointer(src);
+		lock_spinlock(lock);
+		lock_spinlock(lock2);
+		memcpy(dest, src, size);
+		unlock_spinlock(lock);
+		unlock_spinlock(lock2);
+	}
+	else
+	{
+		memcpy(dest, src, size);
+	}
+}
+
+/**
+ * Get property structure function.  Copies a structure from an ivar to another
+ * variable.  Locks on the address of src.
+ */
+void objc_getPropertyStruct(void *dest,
+                            void *src,
+                            ptrdiff_t size,
+                            BOOL atomic,
+                            BOOL strong)
+{
+	if (atomic)
+	{
+		int *lock = lock_for_pointer(src);
+		lock_spinlock(lock);
+		memcpy(dest, src, size);
+		unlock_spinlock(lock);
+	}
+	else
+	{
+		memcpy(dest, src, size);
+	}
+}
+
+/**
+ * Set property structure function.  Copes a structure to an ivar.  Locks on
+ * dest.
+ */
+void objc_setPropertyStruct(void *dest,
+                            void *src,
+                            ptrdiff_t size,
+                            BOOL atomic,
+                            BOOL strong)
+{
+	if (atomic)
+	{
+		int *lock = lock_for_pointer(dest);
+		lock_spinlock(lock);
+		memcpy(dest, src, size);
+		unlock_spinlock(lock);
+	}
+	else
+	{
+		memcpy(dest, src, size);
+	}
+}
+
 
 objc_property_t class_getProperty(Class cls, const char *name)
 {
