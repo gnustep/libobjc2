@@ -1,6 +1,6 @@
 
 PACKAGE_NAME = gnustep-objc2
-VERSION=1.0.0
+VERSION=1.1.0
 SVN_MODULE_NAME = libobjc2
 SVN_BASE_URL = svn+ssh://svn.gna.org/svn/gnustep/libs
 SVN_TAG_NAME=objc2
@@ -75,6 +75,9 @@ libobjc_CPPFLAGS += -D__OBJC_RUNTIME_INTERNAL__=1 -D_XOPEN_SOURCE=500
 # useful on compilers that support C99 (currently only clang), so there is no
 # benefit from supporting platforms with no C99 compiler.
 libobjc_CFLAGS += -std=c99 -g -fexceptions #-fvisibility=hidden
+# Uncomment this when debugging - it makes everything slow, but means that the
+# debugger actually works...
+#libobjc_CFLAGS += -fno-inline
 libobjc_OBJCFLAGS += $(libobjc_CFLAGS) $(libobjc_CFLAGS)
 libobjc_LDFLAGS += -g 
 libobjc_LIB_DIRS += -L toydispatch/obj
