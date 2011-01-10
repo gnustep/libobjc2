@@ -1,8 +1,3 @@
-.objc_sel_nameautorelease
-.objc_sel_namecopy
-.objc_sel_namedealloc
-.objc_sel_namerelease
-.objc_sel_nameretain
 _Block_copy
 _Block_object_assign
 _Block_object_dispose
@@ -53,16 +48,12 @@ class_getSuperclass
 class_getVersion
 class_getWeakIvarLayout
 class_isMetaClass
-class_pose_as
 class_replaceMethod
 class_respondsToSelector
 class_setIvarLayout
 class_setSuperclass
 class_setVersion
 class_setWeakIvarLayout
-class_table_get_safe
-class_table_insert
-class_table_internal_create
 get_imp
 ivar_getName
 ivar_getOffset
@@ -84,9 +75,6 @@ objc_allocateClassPair
 objc_atomic_malloc
 objc_calloc
 objc_check_abi_version
-objc_collect_garbage_data
-objc_compute_ivar_offsets
-objc_copy_dtable_for_class
 objc_create_block_classes_as_subclasses_of
 objc_disposeClassPair
 objc_enumerationMutation
@@ -102,10 +90,6 @@ objc_get_class
 objc_get_meta_class
 objc_get_slot
 objc_get_type_qualifiers
-objc_init_buffered_statics
-objc_init_load_messages_table
-objc_init_protocols
-objc_init_statics
 objc_layout_structure
 objc_layout_structure_get_info
 objc_layout_structure_next_member
@@ -164,7 +148,6 @@ sel_get_type
 sel_get_typed_uid
 sel_get_uid
 sel_isEqual
-sel_is_mapped
 sel_registerName
 sel_registerTypedName_np
 sel_register_name
