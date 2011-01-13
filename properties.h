@@ -42,7 +42,8 @@ enum PropertyAttributeKind
 /**
  * Structure used for property enumeration.  Note that property enumeration is
  * currently quite broken on OS X, so achieving full compatibility there is
- * impossible.  Instead, we strive to achieve com
+ * impossible.  Instead, we strive to achieve compatibility with the
+ * documentation.
  */
 struct objc_property
 {

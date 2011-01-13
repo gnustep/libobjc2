@@ -315,19 +315,6 @@ unsigned sel_copyTypes_np(const char *selName, const char **types, unsigned coun
 extern struct objc_slot *objc_msg_lookup_sender(id *receiver, SEL selector, id sender)
 	OBJC_NONPORTABLE;
 
-// Global self so that self is a valid symbol everywhere.  Will be replaced by
-// a real self in an inner scope if there is one.
-static const id self = nil;
-// This uses a GCC extension, but the is no good way of doing it otherwise.
-#define objc_msgSend(theReceiver, theSelector, ...) \
-({\
-	id __receiver = theReceiver;\
-	SEL op = theSelector;\
-	objc_msg_lookup_sender(&__receiver, op, self)(__receiver, op, ## __VA_ARGS__);\
-})
-
-#define objc_msgSendSuper(super, op, ...) objc_msg_lookup_super(super, op)((super)->receiver, op, ## __VA_ARGS__)
-
 /**
  * Legacy GNU runtime compatibility.
  *
