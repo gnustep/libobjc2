@@ -424,7 +424,7 @@ static MAP_TABLE_VALUE_TYPE
 #endif
 }
 __attribute__((unused))
-static void PREFIX(_table_set)(PREFIX(_table) *table, void *key,
+static void PREFIX(_table_set)(PREFIX(_table) *table, const void *key,
 		MAP_TABLE_VALUE_TYPE value)
 {
 	PREFIX(_table_cell) cell = PREFIX(_table_get_cell)(table, key);

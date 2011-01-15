@@ -1,15 +1,17 @@
 #include "magic_objects.h"
 #include "objc/runtime.h"
 #include "objc/hooks.h"
+#include "objc/developer.h"
 #include "class.h"
 #include "method_list.h"
 #include "selector.h"
 #include "lock.h"
+#include "ivar.h"
+#include "dtable.h"
 #include <stdlib.h>
 #include <assert.h>
 
 void objc_register_selectors_from_class(Class class);
-void *__objc_uninstalled_dtable;
 void objc_init_protocols(struct objc_protocol_list *protos);
 void objc_compute_ivar_offsets(Class class);
 
@@ -91,6 +93,13 @@ static class_table_internal_table *class_table;
  * Linked list using the subclass_list pointer in unresolved classes.
  */
 static Class unresolved_class_list;
+
+static enum objc_developer_mode_np mode;
+
+void objc_setDeveloperMode_np(enum objc_developer_mode_np newMode)
+{
+	mode = newMode;
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Class table manipulation
@@ -268,11 +277,107 @@ void __objc_resolve_class_links(void)
 	objc_resolve_class_links();
 }
 
+static void reload_class(struct objc_class *class, struct objc_class *old)
+{
+	const char *superclassName = (char*)class->super_class;
+	class->super_class = class_table_get_safe(superclassName);
+	// Checking the instance sizes are equal here is a quick-and-dirty test.
+	// It's not actually needed, because we're testing the ivars are at the
+	// same locations next, but it lets us skip those tests if the total size
+	// is different.
+	BOOL equalLayouts = (class->super_class == old->super_class) && 
+		(class->instance_size == old->instance_size);
+	// If either of the classes has an empty ivar list, then the other one must too.
+	if ((NULL == class->ivars) || (NULL == old->ivars))
+	{
+		equalLayouts &= (class->ivars == old->ivars);
+	}
+	else
+	{
+		// If the class sizes are the same, ensure that the ivars have the same
+		// types, names, and offsets.  Note: Renaming an ivar is treated as a
+		// conflict because name changes are often accompanied by semantic
+		// changes.  For example, an object ivar at offset 16 goes from being
+		// called 'delegate' to being called 'view' - we almost certainly don't
+		// want methods that expect to be working with the delegate ivar to
+		// work with the view ivar now!
+		for (int i=0 ; equalLayouts && (i<old->ivars->count) ; i++)
+		{
+			struct objc_ivar *oldIvar = &old->ivars->ivar_list[i];
+			struct objc_ivar *newIvar = &class->ivars->ivar_list[i];
+			equalLayouts &= strcmp(oldIvar->name, newIvar->name) == 0;
+			equalLayouts &= strcmp(oldIvar->type, newIvar->type) == 0;
+			equalLayouts &= (oldIvar->offset == newIvar->offset);
+		}
+	}
+
+	// If the layouts are equal, then we can simply tack the class's method
+	// list on to the front of the old class and update the dtable.  
+	if (equalLayouts)
+	{
+		class->methods->next = old->methods;
+		old->methods = class->methods;
+		objc_update_dtable_for_class(old);
+		return;
+	}
+
+	// If we get to here, then we are adding a new class.  This is where things
+	// start to get a bit tricky...
+
+	// Ideally, we'd want to capture the subclass list here.  Unfortunately,
+	// this is not possible because the subclass will contain methods that
+	// refer to ivars in the superclass.  
+	//
+	// We can't use the non-fragile ABI's offset facility easily, because we'd
+	// have to have two (or more) offsets for the same ivar.  This gets messy
+	// very quickly.  Ideally, we'd want every class to include ivar offsets
+	// for every single (public) ivar in its superclasses.  These could then be
+	// updated by copies of the class.  Defining a development ABI is something
+	// to consider for a future release.
+	class->subclass_list = NULL;
+
+	// Replace the old class with this one in the class table.  New lookups for
+	// this class will now return this class.
+	class_table_internal_table_set(class_table, (void*)class->name, class);
+
+	// Register all of the selectors used by this class and its metaclass
+	objc_register_selectors_from_class(class);
+	objc_register_selectors_from_class(class->isa);
+
+	// Set the uninstalled dtable.  The compiler could do this as well.
+	class->dtable = __objc_uninstalled_dtable;
+	class->isa->dtable = __objc_uninstalled_dtable;
+
+	// If this is a root class, make the class into the metaclass's superclass.
+	// This means that all instance methods will be available to the class.
+	if (NULL == superclassName)
+	{
+		class->isa->super_class = class;
+	}
+
+	if (class->protocols)
+	{
+		objc_init_protocols(class->protocols);
+	}
+}
+
 /**
  * Loads a class.  This function assumes that the runtime mutex is locked.
  */
 void objc_load_class(struct objc_class *class)
 {
+	struct objc_class *existingClass = class_table_get_safe(class->name);
+	if (Nil != existingClass)
+	{
+		if (objc_developer_mode_developer != mode)
+		{
+			fprintf(stderr, 
+				"Objective-C runtime error.  Loading two versions of %s\n", class->name);
+			abort();
+		}
+		reload_class(class, existingClass);
+	}
+
 	// The compiler initialises the super class pointer to the name of the
 	// superclass, not the superclass pointer.
 	// Note: With the new ABI, the class pointer is public.  We could,
@@ -285,7 +390,7 @@ void objc_load_class(struct objc_class *class)
 	class->subclass_list = NULL;
 
 	// Insert the class into the class table
-	class_table_insert (class);
+	class_table_insert(class);
 
 	// Register all of the selectors used by this class and its metaclass
 	objc_register_selectors_from_class(class);

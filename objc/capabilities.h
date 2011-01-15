@@ -53,6 +53,16 @@
  * for reduced memory consumption.
  */
 #define OBJC_CAP_LOW_MEMORY              7
+/**
+ * The runtime supports developer mode.  When in user mode (the default),
+ * loading two classes with the same name will cause the program to abort.  In
+ * developer mode, the new class will replace the old one.  If the ivar layouts
+ * are the same, the new class will be treated as a category.  If they are
+ * different, then it will replace the old one in the class table, meaning that
+ * message sends to the class will go to the new version, but existing
+ * instances will not acquire the new methods.
+ */
+#define OBJC_DEVELOPER_MODE              8
 
 
 /**

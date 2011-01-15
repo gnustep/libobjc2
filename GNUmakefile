@@ -1,6 +1,6 @@
 
 PACKAGE_NAME = gnustep-objc2
-VERSION=1.1.0
+VERSION=1.2.0
 SVN_MODULE_NAME = libobjc2
 SVN_BASE_URL = svn+ssh://svn.gna.org/svn/gnustep/libs
 SVN_TAG_NAME=objc2
