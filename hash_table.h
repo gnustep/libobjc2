@@ -324,6 +324,7 @@ static int PREFIX(_insert)(PREFIX(_table) *table,
 		return PREFIX(_insert)(table, value);
 	}
 	fprintf(stderr, "Insert failed\n");
+	MAP_UNLOCK();
 	return 0;
 }
 
