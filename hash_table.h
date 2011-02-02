@@ -279,6 +279,7 @@ static int PREFIX(_insert)(PREFIX(_table) *table,
 		cell->secondMaps = 0;
 		cell->value = value;
 		table->table_used++;
+		MAP_UNLOCK();
 		return 1;
 	}
 	/* If this cell is full, try the next one. */
@@ -323,6 +324,7 @@ static int PREFIX(_insert)(PREFIX(_table) *table,
 		return PREFIX(_insert)(table, value);
 	}
 	fprintf(stderr, "Insert failed\n");
+	MAP_UNLOCK();
 	return 0;
 }
 
