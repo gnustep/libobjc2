@@ -279,6 +279,7 @@ static int PREFIX(_insert)(PREFIX(_table) *table,
 		cell->secondMaps = 0;
 		cell->value = value;
 		table->table_used++;
+		MAP_UNLOCK();
 		return 1;
 	}
 	/* If this cell is full, try the next one. */
@@ -527,10 +528,9 @@ PREFIX(_current)(PREFIX(_table) *table,
 
 #undef MAP_TABLE_VALUE_TYPE
 
-#ifndef MAP_TABLE_NO_LOCK
-#	undef MAP_LOCK
-#	undef MAP_UNLOCK
-#else
+#undef MAP_LOCK
+#undef MAP_UNLOCK
+#ifdef MAP_TABLE_NO_LOCK
 #	undef MAP_TABLE_NO_LOCK
 #endif
 
