@@ -75,7 +75,6 @@ static inline dtable_t dtable_for_class(Class cls)
 		}
 		buffer = buffer->next;
 	}
-	UNLOCK(&initialize_lock);
 	if (dtable == 0)
 	{
 		dtable = __objc_uninstalled_dtable;
