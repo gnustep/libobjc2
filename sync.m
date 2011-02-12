@@ -110,7 +110,7 @@ static void deallocLockClass(id obj, SEL _cmd)
 
 // TODO: This should probably have a special case for classes conforming to the
 // NSLocking protocol, just sending them a -lock message.
-void objc_sync_enter(id obj)
+int objc_sync_enter(id obj)
 {
 	Class lockClass = findLockClass(obj);
 	if (Nil == lockClass)
@@ -126,11 +126,13 @@ void objc_sync_enter(id obj)
 	}
 	mutex_t *lock = object_getIndexedIvars(lockClass);
 	LOCK(lock);
+	return 0;
 }
 
-void objc_sync_exit(id obj)
+int objc_sync_exit(id obj)
 {
 	Class lockClass = findLockClass(obj);
 	mutex_t *lock = object_getIndexedIvars(lockClass);
 	UNLOCK(lock);
+	return 0;
 }
