@@ -383,8 +383,8 @@ void _Block_object_dispose(const void *object, const int flags)
 				fprintf(stderr, "src: %p\n", src);
 				fprintf(stderr, "forwarding: %p\n", src->forwarding);
 				fprintf(stderr, "dispose: %p\n", src->byref_dispose);
-				void *var = src+1;
-				id obj = *(id*)var;
+				//void *var = src+1;
+				//id obj = *(id*)var;
 				fprintf(stderr, "Cleaning up %p\n" ,obj);
 				// Call nontrivial destructors, but don't
 				if (0 != src->byref_dispose)
