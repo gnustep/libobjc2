@@ -288,6 +288,8 @@ Slot_t objc_get_slot(Class cls, SEL selector)
 
 BOOL class_respondsToSelector(Class cls, SEL selector)
 {
+	if (0 == selector || 0 == cls) { return NO; }
+
 	return NULL != objc_get_slot(cls, selector);
 }
 
