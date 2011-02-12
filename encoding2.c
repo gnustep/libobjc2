@@ -95,6 +95,22 @@ static void parse_struct_or_union(const char **type, type_parser callback, void 
 
 	while (**type != endchar)
 	{
+		// Structure elements sometimes have their names in front of each
+		// element, as in {NSPoint="x"f"y"f} - We need to skip the type name
+		// here.
+		//
+		// TODO: In a future version we should provide a callback that lets
+		// users of this code get the field name
+		if ('"'== **type)
+		{
+
+			do
+			{
+				(*type)++;
+			} while ('"' != **type);
+			// Skip the closing "
+			(*type)++;
+		}
 		*type = callback(*type, context);
 	}
 	// skip }
