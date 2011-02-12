@@ -308,7 +308,7 @@ BOOL __objc_responds_to(id object, SEL sel)
 IMP get_imp(Class cls, SEL selector)
 {
 	Slot_t slot = objc_get_slot(cls, selector);
-	return NULL != slot ? slot->method : NULL;
+	return NULL != slot ? slot->method : __objc_msg_forward2(nil, selector);
 }
 
 /**
