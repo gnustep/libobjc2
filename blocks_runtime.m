@@ -72,7 +72,7 @@ enum block_flags
 	 * 3 bytes are reserved for the reference count, the top byte for the
 	 * flags.
 	 */
-	BLOCK_REFCOUNT_MASK    = 0x00ffffffff
+	BLOCK_REFCOUNT_MASK    = 0x00ffffff
 };
 
 /**
@@ -102,6 +102,7 @@ enum
 	
 	BLOCK_BYREF_CALLER	  = 128, // called from byref copy/dispose helpers
 };
+#define IS_SET(x, y) ((x & y) == y)
 
 /**
  * Block descriptor that contains copy and dispose operations.
@@ -283,10 +284,16 @@ void _Block_object_assign(void *destAddr, const void *object, const int flags)
 	}
 	//else
 	{
+		fprintf(stderr, "BLOCK_FIELD_IS_OBJECT: %d\n", (flags & BLOCK_FIELD_IS_OBJECT) == BLOCK_FIELD_IS_OBJECT);
+		fprintf(stderr, "BLOCK_FIELD_IS_BLOCK: %d\n", (flags & BLOCK_FIELD_IS_BLOCK) == BLOCK_FIELD_IS_BLOCK);
+		fprintf(stderr, "BLOCK_FIELD_IS_BYREF: %d\n", (flags & BLOCK_FIELD_IS_BYREF) == BLOCK_FIELD_IS_BYREF);
+		fprintf(stderr, "BLOCK_FIELD_IS_WEAK: %d\n", (flags & BLOCK_FIELD_IS_WEAK) == BLOCK_FIELD_IS_WEAK);
 		if(flags & BLOCK_FIELD_IS_BYREF)
 		{
 			struct block_byref_obj *src = (struct block_byref_obj *)object;
 			struct block_byref_obj **dst = destAddr;
+			fprintf(stderr, "Copy dispose? %d\n", (src->flags & BLOCK_HAS_COPY_DISPOSE) == BLOCK_HAS_COPY_DISPOSE);
+			fprintf(stderr, "Retain Count? %x %x\n", src->flags & BLOCK_REFCOUNT_MASK, BLOCK_REFCOUNT_MASK);
 			
 			if ((src->flags & BLOCK_REFCOUNT_MASK) == 0)
 			{
@@ -310,7 +317,6 @@ void _Block_object_assign(void *destAddr, const void *object, const int flags)
 				// it.  If the forwarding pointer in src has changed, then we
 				// recover - clean up and then return the structure that the
 				// other thread created.
-				/*
 				if (!__sync_bool_compare_and_swap(&src->forwarding, src, *dst))
 				{
 					if((size_t)src->size >= sizeof(struct block_byref_obj))
@@ -320,14 +326,13 @@ void _Block_object_assign(void *destAddr, const void *object, const int flags)
 					free(*dst);
 					*dst = src->forwarding;
 				}
-				*/
 			}
 			else
 			{
 				*dst = (struct block_byref_obj*)src;
+				increment24(&(*dst)->flags);
+				fprintf(stderr, "Flags for block: %p: %d (refcount %x)\n", *dst, (*dst)->flags, (*dst)->flags & BLOCK_REFCOUNT_MASK);
 			}
-			increment24(&(*dst)->flags);
-			fprintf(stderr, "Flags for block: %p: %d\n", *dst, (*dst)->flags);
 		}
 		else if((flags & BLOCK_FIELD_IS_BLOCK) == BLOCK_FIELD_IS_BLOCK)
 		{
@@ -336,7 +341,7 @@ void _Block_object_assign(void *destAddr, const void *object, const int flags)
 			
 			*dst = Block_copy(src);
 		}
-		else if((flags & BLOCK_FIELD_IS_OBJECT) == BLOCK_FIELD_IS_OBJECT)
+		else if ((flags & BLOCK_FIELD_IS_OBJECT) == BLOCK_FIELD_IS_OBJECT)
 		{
 			fprintf(stderr, "-retain\n");
 			id src = (id)object;
@@ -355,6 +360,10 @@ void _Block_object_assign(void *destAddr, const void *object, const int flags)
 void _Block_object_dispose(const void *object, const int flags)
 {
 	fprintf(stderr, "Dispose %p, Flags: %d\n", object, flags);
+		fprintf(stderr, "BLOCK_FIELD_IS_OBJECT: %d\n", (flags & BLOCK_FIELD_IS_OBJECT) == BLOCK_FIELD_IS_OBJECT);
+		fprintf(stderr, "BLOCK_FIELD_IS_BLOCK: %d\n", (flags & BLOCK_FIELD_IS_BLOCK) == BLOCK_FIELD_IS_BLOCK);
+		fprintf(stderr, "BLOCK_FIELD_IS_BYREF: %d\n", (flags & BLOCK_FIELD_IS_BYREF) == BLOCK_FIELD_IS_BYREF);
+		fprintf(stderr, "BLOCK_FIELD_IS_WEAK: %d\n", (flags & BLOCK_FIELD_IS_WEAK) == BLOCK_FIELD_IS_WEAK);
 	// FIXME: Needs to be implemented
 	//if(flags & BLOCK_FIELD_IS_WEAK)
 	{
@@ -367,8 +376,9 @@ void _Block_object_dispose(const void *object, const int flags)
 				(struct block_byref_obj*)object;
 			if (src->isa == _HeapBlockByRef)
 			{
-				fprintf(stderr, "refcount %d\n", src->flags);
-				int refcount = decrement24(&src->flags);
+				fprintf(stderr, "refcount %x\n", src->flags & BLOCK_REFCOUNT_MASK);
+				int refcount = (src->flags & BLOCK_REFCOUNT_MASK) == 0 ? 0 : decrement24(&src->flags);
+				fprintf(stderr, "new refcount %x\n", refcount & BLOCK_REFCOUNT_MASK);
 				if (refcount == 0)
 				{
 					if (0 != src->byref_dispose)
@@ -383,15 +393,12 @@ void _Block_object_dispose(const void *object, const int flags)
 				fprintf(stderr, "src: %p\n", src);
 				fprintf(stderr, "forwarding: %p\n", src->forwarding);
 				fprintf(stderr, "dispose: %p\n", src->byref_dispose);
-				//void *var = src+1;
-				//id obj = *(id*)var;
-				fprintf(stderr, "Cleaning up %p\n" ,obj);
+				fprintf(stderr, "Cleaning up %p\n" , *(id*)(src+1));
 				// Call nontrivial destructors, but don't
 				if (0 != src->byref_dispose)
 				{
 					//fprintf(stderr, "Calling byref dispose\n");
-					//src->byref_dispose(src);
-					//src->byref_dispose(0);
+					src->byref_dispose(src);
 					//fprintf(stderr, "Called byref dispose\n");
 				}
 				// If this block has been promoted to the heap, decrement its
