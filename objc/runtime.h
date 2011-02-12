@@ -26,31 +26,52 @@
 #	undef objc_lookUpClass
 #endif
 
+/**
+ * Opaque type for Objective-C instance variable metadata.
+ */
 typedef struct objc_ivar* Ivar;
 
-// Don't redefine these types if the old GNU header was included first.
+// Don't redefine these types if the old GCC header was included first.
 #ifndef __objc_INCLUDE_GNU
-// Define the macro so that including the old GNU header does nothing.
+// Define the macro so that including the old GCC header does nothing.
 #	define __objc_INCLUDE_GNU
 #	define __objc_api_INCLUDE_GNU
 
 
+/**
+ * Opaque type used for selectors.
+ */
 #if !defined(__clang__) && !defined(__OBJC_RUNTIME_INTERNAL__)
 typedef const struct objc_selector *SEL;
 #else
 typedef struct objc_selector *SEL;
 #endif
 
+/**
+ * Opaque type for Objective-C classes.
+ */
 typedef struct objc_class *Class;
 
+/**
+ * Type for Objective-C objects.  
+ */
 typedef struct objc_object
 {
+	/**
+	 * Pointer to this object's class.  Accessing this directly is STRONGLY
+	 * discouraged.  You are recommended to use object_getClass() instead.
+	 */
 	Class isa;
 } *id;
 
+/**
+ * Structure used for calling superclass methods.
+ */
 struct objc_super
 {
+	/** The receiver of the message. */
 	id receiver;
+	/** The class containing the method to call. */
 #	if !defined(__cplusplus)  &&  !__OBJC2__
 	Class class;
 #	else
@@ -58,9 +79,21 @@ struct objc_super
 #	endif
 };
 
+/**
+ * Instance Method Pointer type.  Note: Since the calling convention for
+ * variadic functions sometimes differs from the calling convention for
+ * non-variadic functions, you must cast an IMP to the correct type before
+ * calling.
+ */
 typedef id (*IMP)(id, SEL, ...);
+/**
+ * Opaque type for Objective-C method metadata.
+ */
 typedef struct objc_method *Method;
 
+/**
+ * Objective-C boolean type.  
+ */
 #	ifdef STRICT_APPLE_COMPATIBILITY
 typedef signed char BOOL;
 #	else
@@ -77,14 +110,24 @@ typedef unsigned char BOOL;
 #endif // __objc_INCLUDE_GNU
 
 
-struct objc_property;
+/**
+ * Opaque type for Objective-C property metadata.
+ */
 typedef struct objc_property* objc_property_t;
+/**
+ * Opaque type for Objective-C protocols.  Note that, although protocols are
+ * objects, sending messages to them is deprecated in Objective-C 2 and may not
+ * work in the future.
+ */
 #ifdef __OBJC__
 @class Protocol;
 #else
 typedef struct objc_protocol Protocol;
 #endif
 
+/**
+ * Objective-C method description.
+ */
 struct objc_method_description
 {
 	/**
@@ -123,19 +166,40 @@ struct objc_method_description
 
 #include "slot.h"
 
+/**
+ * Adds an instance variable to the named class.  The class must not have been
+ * registered by the runtime.  The alignment must be the base-2 logarithm of
+ * the alignment requirement and the types should be an Objective-C type encoding.
+ */
 BOOL class_addIvar(Class cls,
                    const char *name,
                    size_t size,
                    uint8_t alignment,
                    const char *types);
 
+/**
+ * Adds a method to the class.  
+ */
 BOOL class_addMethod(Class cls, SEL name, IMP imp, const char *types);
 
+/**
+ * Adds a protocol to the class.
+ */
 BOOL class_addProtocol(Class cls, Protocol *protocol);
 
+/**
+ * Tests for protocol conformance.  Note: Currently, protocols with the same
+ * name are regarded as equivalent, even if they have different methods.  This
+ * behaviour will change in a future version.
+ */
 BOOL class_conformsToProtocol(Class cls, Protocol *protocol);
 
-Ivar * class_copyIvarList(Class cls, unsigned int *outCount);
+/**
+ * Copies the instance variable list for this class.  The integer pointed to by
+ * the outCount argument is set to the number of instance variables returned.
+ * The caller is responsible for freeing the returned buffer.
+ */
+Ivar* class_copyIvarList(Class cls, unsigned int *outCount);
 
 Method * class_copyMethodList(Class cls, unsigned int *outCount);
 
@@ -153,7 +217,8 @@ Method class_getInstanceMethod(Class aClass, SEL aSelector);
 
 size_t class_getInstanceSize(Class cls);
 
-/** Look up the named instance variable in the class (and its superclasses)
+/**
+ * Look up the named instance variable in the class (and its superclasses)
  * returning a pointer to the instance variable definition or a null
  * pointer if no instance variable of that name was found.
  */
@@ -283,6 +348,16 @@ const char *sel_getName(SEL sel);
 
 SEL sel_getUid(const char *selName);
 
+/**
+ * Returns whether two selectors are equal.  For the purpose of comparison,
+ * selectors with the same name and type are regarded as equal.  Selectors with
+ * the same name and different types are regarded as different.  If one
+ * selector is typed and the other is untyped, but the names are the same, then
+ * they are regarded as equal.  This means that sel_isEqual(a, b) and
+ * sel_isEqual(a, c) does not imply sel_isEqual(b, c) - if a is untyped but
+ * both b and c are typed selectors with different types, then then the first
+ * two will return YES, but the third case will return NO.
+ */
 BOOL sel_isEqual(SEL sel1, SEL sel2);
 
 SEL sel_registerName(const char *selName);
@@ -321,7 +396,6 @@ extern struct objc_slot *objc_msg_lookup_sender(id *receiver, SEL selector, id s
  * All of the functions in this section are deprecated and should not be used
  * in new code.
  */
-
 __attribute__((deprecated))
 void *objc_malloc(size_t size);
 
