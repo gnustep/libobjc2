@@ -222,6 +222,7 @@ struct block_byref_obj
 	 */
 };
 
+
 /**
  * Returns the Objective-C type encoding for the block.
  */
@@ -266,6 +267,22 @@ static int decrement24(int *ref)
 	}
 	return val - 1;
 }
+
+// This is a really ugly hack that works around a buggy register allocator in
+// GCC.  Compiling nontrivial code using __sync_bool_compare_and_swap() with
+// GCC (4.2.1, at least), causes the register allocator to run out of registers
+// and fall over and die.  We work around this by wrapping this CAS in a
+// function, which means the register allocator can trivially handle it.  Do
+// not remove the noinline attribute - without it, gcc will inline it early on
+// and then crash later.
+#ifndef __clang__
+__attribute__((noinline))
+static int cas(void *ptr, void *old, void *new)
+{
+	return __sync_bool_compare_and_swap((void**)ptr, old, new);
+}
+#define __sync_bool_compare_and_swap cas
+#endif
 
 /* Certain field types require runtime assistance when being copied to the
  * heap.  The following function is used to copy fields of types: blocks,
