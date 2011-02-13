@@ -19,6 +19,7 @@
 #include <assert.h>
 
 struct objc_slot *objc_get_slot(Class cls, SEL selector);
+#define CHECK_ARG(arg) if (0 == arg) { return 0; }
 
 /** 
  * Looks up the instance method in a specific class, without recursing into
@@ -59,6 +60,9 @@ static void objc_updateDtableForClassContainingMethod(Method m)
 BOOL class_addIvar(Class cls, const char *name, size_t size, uint8_t alignment,
 		const char *types)
 {
+	CHECK_ARG(cls);
+	CHECK_ARG(name);
+	CHECK_ARG(types);
 	// You can't add ivars to initialized classes.  Note: We can't use the
 	// resolved flag here because class_getInstanceVariable() sets it.
 	if (objc_test_class_flag(cls, objc_class_flag_initialized))
@@ -105,6 +109,10 @@ BOOL class_addIvar(Class cls, const char *name, size_t size, uint8_t alignment,
 
 BOOL class_addMethod(Class cls, SEL name, IMP imp, const char *types)
 {
+	CHECK_ARG(cls);
+	CHECK_ARG(name);
+	CHECK_ARG(imp);
+	CHECK_ARG(types);
 	const char *methodName = sel_getName(name);
 	struct objc_method_list *methods;
 	for (methods=cls->methods; methods!=NULL ; methods=methods->next)
@@ -138,6 +146,8 @@ BOOL class_addMethod(Class cls, SEL name, IMP imp, const char *types)
 
 BOOL class_addProtocol(Class cls, Protocol *protocol)
 {
+	CHECK_ARG(cls);
+	CHECK_ARG(protocol);
 	if (class_conformsToProtocol(cls, protocol)) { return NO; }
 	struct objc_protocol_list *protocols = 
 		malloc(sizeof(struct objc_protocol_list));
@@ -149,119 +159,120 @@ BOOL class_addProtocol(Class cls, Protocol *protocol)
 
 	return YES;
 }
-Ivar *
-class_copyIvarList(Class cls, unsigned int *outCount)
+
+Ivar * class_copyIvarList(Class cls, unsigned int *outCount)
 {
-  struct objc_ivar_list *ivarlist = NULL;
-  unsigned int count = 0;
-  unsigned int index;
-  Ivar *list;
+	CHECK_ARG(cls);
+	struct objc_ivar_list *ivarlist = NULL;
+	unsigned int count = 0;
+	unsigned int index;
+	Ivar *list;
 
-  if (Nil != cls)
-    {
-      ivarlist = cls->ivars;
-    }
-  if (ivarlist != NULL)
-    {
-      count = ivarlist->count;
-    }
-  if (outCount != NULL)
-    {
-      *outCount = count;
-    }
-  if (count == 0)
-    {
-      return NULL;
-    }
-
-  list = malloc((count + 1) * sizeof(struct objc_ivar *));
-  list[count] = NULL;
-  count = 0;
-  for (index = 0; index < ivarlist->count; index++)
-    {
-      list[count++] = &ivarlist->ivar_list[index];
-    }
-
-  return list;
-}
-
-Method *
-class_copyMethodList(Class cls, unsigned int *outCount)
-{
-  unsigned int count = 0;
-  Method *list;
-  struct objc_method_list *methods;
-
-  if (cls != NULL)
-    {
-      for (methods = cls->methods; methods != NULL; methods = methods->next)
-        {
-          count += methods->count;
-        }
-    }
-  if (outCount != NULL)
-    {
-      *outCount = count;
-    }
-  if (count == 0)
-    {
-      return NULL;
-    }
-
-  list = malloc((count + 1) * sizeof(struct objc_method *));
-  list[count] = NULL;
-  count = 0;
-  for (methods = cls->methods; methods != NULL; methods = methods->next)
-    {
-      unsigned int	index;
-
-      for (index = 0; index < methods->count; index++)
+	if (Nil != cls)
 	{
-          list[count++] = &methods->methods[index];
+		ivarlist = cls->ivars;
 	}
-    }
+	if (ivarlist != NULL)
+	{
+		count = ivarlist->count;
+	}
+	if (outCount != NULL)
+	{
+		*outCount = count;
+	}
+	if (count == 0)
+	{
+		return NULL;
+	}
 
-  return list;
+	list = malloc((count + 1) * sizeof(struct objc_ivar *));
+	list[count] = NULL;
+	count = 0;
+	for (index = 0; index < ivarlist->count; index++)
+	{
+		list[count++] = &ivarlist->ivar_list[index];
+	}
+
+	return list;
 }
 
-Protocol **
-class_copyProtocolList(Class cls, unsigned int *outCount)
+Method * class_copyMethodList(Class cls, unsigned int *outCount)
 {
-  struct objc_protocol_list *protocolList = NULL;
-  struct objc_protocol_list *list;
-  unsigned int count = 0;
-  Protocol **protocols;
+	CHECK_ARG(cls);
+	unsigned int count = 0;
+	Method *list;
+	struct objc_method_list *methods;
 
-  if (Nil != cls)
-    {
-      protocolList = cls->protocols;
-    }
-  for (list = protocolList; list != NULL; list = list->next)
-    {
-      count += list->count;
-    }
-  if (outCount != NULL)
-    {
-      *outCount = count;
-    }
-  if (count == 0)
-    {
-      return NULL;
-    }
+	if (cls != NULL)
+	{
+		for (methods = cls->methods; methods != NULL; methods = methods->next)
+		{
+			count += methods->count;
+		}
+	}
+	if (outCount != NULL)
+	{
+		*outCount = count;
+	}
+	if (count == 0)
+	{
+		return NULL;
+	}
 
-  protocols = malloc((count + 1) * sizeof(Protocol *));
-  protocols[count] = NULL;
-  count = 0;
-  for (list = protocolList; list != NULL; list = list->next)
-    {
-      memcpy(&protocols[count], list->list, list->count * sizeof(Protocol *));
-      count += list->count;
-    }
-  return protocols;
+	list = malloc((count + 1) * sizeof(struct objc_method *));
+	list[count] = NULL;
+	count = 0;
+	for (methods = cls->methods; methods != NULL; methods = methods->next)
+	{
+		unsigned int	index;
+		for (index = 0; index < methods->count; index++)
+		{
+			list[count++] = &methods->methods[index];
+		}
+	}
+
+	return list;
+}
+
+Protocol** class_copyProtocolList(Class cls, unsigned int *outCount)
+{ 
+	CHECK_ARG(cls);
+	struct objc_protocol_list *protocolList = NULL;
+	struct objc_protocol_list *list;
+	unsigned int count = 0;
+	Protocol **protocols;
+
+	if (Nil != cls)
+	{
+		protocolList = cls->protocols;
+	}
+	for (list = protocolList; list != NULL; list = list->next)
+	{
+		count += list->count;
+	}
+	if (outCount != NULL)
+	{
+		*outCount = count;
+	}
+	if (count == 0)
+	{
+		return NULL;
+	}
+
+	protocols = malloc((count + 1) * sizeof(Protocol *));
+	protocols[count] = NULL;
+	count = 0;
+	for (list = protocolList; list != NULL; list = list->next)
+	{
+		memcpy(&protocols[count], list->list, list->count * sizeof(Protocol *));
+		count += list->count;
+	}
+	return protocols;
 }
 
 id class_createInstance(Class cls, size_t extraBytes)
 {
+	CHECK_ARG(cls);
 	if (Nil == cls)	{ return nil; }
 	id obj = malloc(cls->instance_size + extraBytes);
 	obj->isa = cls;
@@ -270,6 +281,8 @@ id class_createInstance(Class cls, size_t extraBytes)
 
 Method class_getInstanceMethod(Class aClass, SEL aSelector)
 {
+	CHECK_ARG(aClass);
+	CHECK_ARG(aSelector);
 	// Do a dtable lookup to find out which class the method comes from.
 	struct objc_slot *slot = objc_get_slot(aClass, aSelector);
 	if (NULL == slot) { return NULL; }
@@ -288,8 +301,8 @@ Method class_getClassMethod(Class aClass, SEL aSelector)
 
 Ivar class_getClassVariable(Class cls, const char* name)
 {
-	assert(0 && "Class variables not implemented");
-	return NULL;
+	// Note: We don't have compiler support for cvars in ObjC
+	return class_getInstanceVariable(object_getClass((id)cls), name);
 }
 
 size_t class_getInstanceSize(Class cls)
@@ -298,8 +311,7 @@ size_t class_getInstanceSize(Class cls)
 	return cls->instance_size;
 }
 
-Ivar
-class_getInstanceVariable(Class cls, const char *name)
+Ivar class_getInstanceVariable(Class cls, const char *name)
 {
 	if (name != NULL)
 	{
@@ -328,31 +340,35 @@ class_getInstanceVariable(Class cls, const char *name)
 // conjunction with class_setIvarLayout().
 const char *class_getIvarLayout(Class cls)
 {
-	if (Nil == cls) { return NULL; }
+	CHECK_ARG(cls);
 	return (char*)cls->ivars;
 }
 
 IMP class_getMethodImplementation(Class cls, SEL name)
 {
+	CHECK_ARG(cls);
+	CHECK_ARG(name);
 	struct objc_object obj = { cls };
 	return (IMP)objc_msg_lookup((id)&obj, name);
 }
 
 IMP class_getMethodImplementation_stret(Class cls, SEL name)
 {
+	CHECK_ARG(cls);
+	CHECK_ARG(name);
 	struct objc_object obj = { cls };
 	return (IMP)objc_msg_lookup((id)&obj, name);
 }
 
 const char * class_getName(Class cls)
 {
-	if (Nil == cls) { return "nil"; }
+	CHECK_ARG(cls);
 	return cls->name;
 }
 
 int class_getVersion(Class theClass)
 {
-	if (Nil == theClass) { return 0; }
+	CHECK_ARG(theClass);
 	return theClass->version;
 }
 
@@ -364,7 +380,7 @@ const char *class_getWeakIvarLayout(Class cls)
 
 BOOL class_isMetaClass(Class cls)
 {
-	if (Nil == cls) { return NO; }
+	CHECK_ARG(cls);
 	return objc_test_class_flag(cls, objc_class_flag_meta);
 }
 
@@ -392,7 +408,7 @@ IMP class_replaceMethod(Class cls, SEL name, IMP imp, const char *types)
 
 void class_setIvarLayout(Class cls, const char *layout)
 {
-	if (Nil == cls) { return; }
+	if ((Nil == cls) || (NULL == layout)) { return; }
 	struct objc_ivar_list *list = (struct objc_ivar_list*)layout;
 	size_t listsize = sizeof(struct objc_ivar_list) + 
 			sizeof(struct objc_ivar) * (list->count - 1);
@@ -403,6 +419,8 @@ void class_setIvarLayout(Class cls, const char *layout)
 __attribute__((deprecated))
 Class class_setSuperclass(Class cls, Class newSuper)
 {
+	CHECK_ARG(cls);
+	CHECK_ARG(newSuper);
 	if (Nil == cls) { return Nil; }
 	Class oldSuper = cls->super_class;
 	cls->super_class = newSuper;
@@ -422,19 +440,19 @@ void class_setWeakIvarLayout(Class cls, const char *layout)
 
 const char * ivar_getName(Ivar ivar)
 {
-	if (NULL == ivar) { return NULL; }
+	CHECK_ARG(ivar);
 	return ivar->name;
 }
 
 ptrdiff_t ivar_getOffset(Ivar ivar)
 {
-	if (NULL == ivar) { return 0; }
+	CHECK_ARG(ivar);
 	return ivar->offset;
 }
 
 const char * ivar_getTypeEncoding(Ivar ivar)
 {
-	if (NULL == ivar) { return NULL; }
+	CHECK_ARG(ivar);
 	return ivar->type;
 }
 
@@ -473,6 +491,7 @@ IMP method_setImplementation(Method method, IMP imp)
 
 id objc_getRequiredClass(const char *name)
 {
+	CHECK_ARG(name);
 	id cls = objc_getClass(name);
 	if (nil == cls)
 	{
@@ -537,6 +556,7 @@ static inline void safe_remove_from_subclass_list(Class cls)
 
 void objc_disposeClassPair(Class cls)
 {
+	if (0 == cls) { return; }
 	Class meta = ((id)cls)->isa;
 	// Remove from the runtime system so nothing tries updating the dtable
 	// while we are freeing the class.
@@ -595,44 +615,32 @@ Class objc_allocateClassPair(Class superclass, const char *name, size_t extraByt
 
 void *object_getIndexedIvars(id obj)
 {
-	if (nil == obj) { return NULL; }
-	/*
-	if (class_isMetaClass(obj->isa))
-	{
-		return ((char*)obj) + sizeof(struct objc_class);
-	}
-	*/
+	CHECK_ARG(obj);
 	return ((char*)obj) + obj->isa->instance_size;
 }
 
 Class object_getClass(id obj)
 {
-	if (nil != obj)
+	CHECK_ARG(obj);
+	Class isa = obj->isa;
+	while ((Nil != isa) && objc_test_class_flag(isa, objc_class_flag_hidden_class))
 	{
-		Class isa = obj->isa;
-		while ((Nil != isa) && objc_test_class_flag(isa, objc_class_flag_hidden_class))
-		{
-			isa = isa->super_class;
-		}
-		return isa;
+		isa = isa->super_class;
 	}
-	return Nil;
+	return isa;
 }
 
 Class object_setClass(id obj, Class cls)
 {
-	if (nil != obj)
-	{
-		Class oldClass =  obj->isa;
-		obj->isa = cls;
-		return oldClass;
-	}
-	return Nil;
+	CHECK_ARG(obj);
+	Class oldClass =  obj->isa;
+	obj->isa = cls;
+	return oldClass;
 }
 
 const char *object_getClassName(id obj)
 {
-	if (nil == obj) { return "nil"; }
+	CHECK_ARG(obj);
 	return class_getName(object_getClass(obj));
 }
 
