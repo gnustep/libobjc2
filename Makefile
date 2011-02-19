@@ -1,5 +1,7 @@
 .POSIX:
 
+.SUFFIXES: .c .m .o
+
 VERSION = 4
 
 #CC=clang
