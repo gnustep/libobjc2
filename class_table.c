@@ -376,6 +376,7 @@ void objc_load_class(struct objc_class *class)
 			abort();
 		}
 		reload_class(class, existingClass);
+		return;
 	}
 
 	// The compiler initialises the super class pointer to the name of the
