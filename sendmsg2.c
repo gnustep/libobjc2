@@ -293,6 +293,19 @@ BOOL class_respondsToSelector(Class cls, SEL selector)
 	return NULL != objc_get_slot(cls, selector);
 }
 
+IMP class_getMethodImplementation(Class cls, SEL name)
+{
+	if ((cls = Nil) || (name == NULL)) { return (IMP)0; }
+	Slot_t slot = objc_get_slot(cls, name);
+	return NULL != slot ? slot->method : __objc_msg_forward2(nil, name);
+}
+
+IMP class_getMethodImplementation_stret(Class cls, SEL name)
+{
+	return class_getMethodImplementation(cls, name);
+}
+
+
 ////////////////////////////////////////////////////////////////////////////////
 // Legacy compatibility
 ////////////////////////////////////////////////////////////////////////////////
@@ -307,10 +320,8 @@ BOOL __objc_responds_to(id object, SEL sel)
 
 IMP get_imp(Class cls, SEL selector)
 {
-	Slot_t slot = objc_get_slot(cls, selector);
-	return NULL != slot ? slot->method : __objc_msg_forward2(nil, selector);
+	return class_getMethodImplementation(cls, selector);
 }
-
 /**
  * Legacy message lookup function.  Does not support fast proxies or safe IMP
  * caching.

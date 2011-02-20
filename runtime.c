@@ -344,21 +344,6 @@ const char *class_getIvarLayout(Class cls)
 	return (char*)cls->ivars;
 }
 
-IMP class_getMethodImplementation(Class cls, SEL name)
-{
-	CHECK_ARG(cls);
-	CHECK_ARG(name);
-	struct objc_object obj = { cls };
-	return (IMP)objc_msg_lookup((id)&obj, name);
-}
-
-IMP class_getMethodImplementation_stret(Class cls, SEL name)
-{
-	CHECK_ARG(cls);
-	CHECK_ARG(name);
-	struct objc_object obj = { cls };
-	return (IMP)objc_msg_lookup((id)&obj, name);
-}
 
 const char * class_getName(Class cls)
 {
