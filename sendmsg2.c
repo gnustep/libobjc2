@@ -295,7 +295,7 @@ BOOL class_respondsToSelector(Class cls, SEL selector)
 
 IMP class_getMethodImplementation(Class cls, SEL name)
 {
-	if ((cls = Nil) || (name == NULL)) { return (IMP)0; }
+	if ((Nil == cls) || (NULL == name)) { return (IMP)0; }
 	Slot_t slot = objc_get_slot(cls, name);
 	return NULL != slot ? slot->method : __objc_msg_forward2(nil, name);
 }
