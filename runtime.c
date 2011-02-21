@@ -347,7 +347,7 @@ const char *class_getIvarLayout(Class cls)
 
 const char * class_getName(Class cls)
 {
-	CHECK_ARG(cls);
+	if (Nil == cls) { return "nil"; }
 	return cls->name;
 }
 
