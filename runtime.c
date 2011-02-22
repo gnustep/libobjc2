@@ -601,7 +601,20 @@ Class objc_allocateClassPair(Class superclass, const char *name, size_t extraByt
 void *object_getIndexedIvars(id obj)
 {
 	CHECK_ARG(obj);
-	return ((char*)obj) + obj->isa->instance_size;
+	size_t size = obj->isa->instance_size;
+	if ((0 == size) && class_isMetaClass(obj->isa))
+	{
+		Class cls = (Class)obj;
+		if (objc_test_class_flag(cls, objc_class_flag_new_abi))
+		{
+			size = sizeof(struct objc_class);
+		}
+		else
+		{
+			size = sizeof(struct legacy_abi_objc_class);
+		}
+	}
+	return ((char*)obj) + size;
 }
 
 Class object_getClass(id obj)

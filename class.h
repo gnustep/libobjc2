@@ -110,6 +110,30 @@ struct objc_class
 	*/
 	struct objc_property_list *properties;
 };
+
+/**
+ * Structure representing the old ABI class structure.  This is only ever
+ * required so that we can take its size - struct objc_class begins with the
+ * same fields, and you can test the new abi flag to tell whether it is safe to
+ * access the subsequent fields.
+ */
+struct legacy_abi_objc_class
+{
+	struct objc_class         *isa;
+	struct objc_class         *super_class;
+	const char                *name;
+	long                       version;
+	unsigned long              info;
+	long                       instance_size;
+	struct objc_ivar_list     *ivars;
+	struct objc_method_list   *methods;
+	void                      *dtable;
+	struct objc_class         *subclass_list;
+	struct objc_class         *sibling_class;
+	struct objc_protocol_list *protocols;
+	void                      *gc_object_type;
+};
+
 #endif
 
 /**
