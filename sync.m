@@ -62,7 +62,7 @@ static Class allocateLockClass(Class superclass)
 	{
 		newClass->info |= objc_class_flag_meta;
 	}
-	mutex_t *lock = object_getIndexedIvars(newClass);
+	mutex_t *lock = (void*)(newClass+1);
 	INIT_LOCK(*lock);
 
 	return newClass;
@@ -98,7 +98,7 @@ static void deallocLockClass(id obj, SEL _cmd)
 	objc_msg_lookup_super(&super, SELECTOR(dealloc))(obj, SELECTOR(dealloc));
 	// After calling [super dealloc], the object will no longer exist.
 	// Free the lock
-	mutex_t *lock = object_getIndexedIvars(lockClass);
+	mutex_t *lock = (void*)(newClass+1);
 	DESTROY_LOCK(lock);
 
 	// FIXME: Low memory profile.
@@ -124,7 +124,7 @@ int objc_sync_enter(id obj)
 		}
 		UNLOCK(&at_sync_init_lock);
 	}
-	mutex_t *lock = object_getIndexedIvars(lockClass);
+	mutex_t *lock = (void*)(newClass+1);
 	LOCK(lock);
 	return 0;
 }
@@ -132,7 +132,7 @@ int objc_sync_enter(id obj)
 int objc_sync_exit(id obj)
 {
 	Class lockClass = findLockClass(obj);
-	mutex_t *lock = object_getIndexedIvars(lockClass);
+	mutex_t *lock = (void*)(newClass+1);
 	UNLOCK(lock);
 	return 0;
 }
