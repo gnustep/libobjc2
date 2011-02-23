@@ -95,7 +95,7 @@ inline static void lock_spinlock(int *spinlock)
 /**
  * Public function for getting a property.  
  */
-id objc_getProperty(id obj, SEL _cmd, int offset, BOOL isAtomic)
+id objc_getProperty(id obj, SEL _cmd, ptrdiff_t offset, BOOL isAtomic)
 {
 	if (nil == obj) { return nil; }
 	char *addr = (char*)obj;
@@ -117,7 +117,7 @@ id objc_getProperty(id obj, SEL _cmd, int offset, BOOL isAtomic)
 	return [ret autorelease];
 }
 
-void objc_setProperty(id obj, SEL _cmd, int offset, id arg, BOOL isAtomic, BOOL isCopy)
+void objc_setProperty(id obj, SEL _cmd, ptrdiff_t offset, id arg, BOOL isAtomic, BOOL isCopy)
 {
 	if (nil == obj) { return; }
 	if (isCopy)
