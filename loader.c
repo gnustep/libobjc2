@@ -3,7 +3,6 @@
 #include "objc/runtime.h"
 #include "lock.h"
 #include "loader.h"
-#include "magic_objects.h"
 
 /**
  * Runtime lock.  This is exposed in 

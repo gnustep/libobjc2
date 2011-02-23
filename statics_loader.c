@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include "objc/runtime.h"
 #include "module.h"
-#include "magic_objects.h"
+#include "constant_string.h"
 
 #define BUFFER_TYPE struct objc_static_instance_list
 #include "buffer.h"
@@ -21,7 +21,7 @@ static BOOL try_init_statics(struct objc_static_instance_list *statics)
 	// NXConstantString instances.  This is a mess.  We hack around this by
 	// silently assuming that the user meant NSConstantString when they said
 	// NXConstantString if NSConstantString is set as the constant string class
-	// in magic_objects.h
+	// in string_class.h or by an external -D flag.
 	if (strcmp(class_name, "NXConstantString") == 0)
 	{
 		class_name = CONSTANT_STRING_CLASS;
