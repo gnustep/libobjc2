@@ -365,6 +365,7 @@ static void reload_class(struct objc_class *class, struct objc_class *old)
  */
 void objc_load_class(struct objc_class *class)
 {
+	/*
 	struct objc_class *existingClass = class_table_get_safe(class->name);
 	if (Nil != existingClass)
 	{
@@ -377,6 +378,7 @@ void objc_load_class(struct objc_class *class)
 		reload_class(class, existingClass);
 		return;
 	}
+	*/
 
 	// The compiler initialises the super class pointer to the name of the
 	// superclass, not the superclass pointer.
