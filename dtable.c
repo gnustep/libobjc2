@@ -86,11 +86,6 @@ static dtable_t create_dtable_for_class(Class class)
 
 	Class super = class_getSuperclass(class);
 
-	if (Nil != super && !classHasInstalledDtable(super))
-	{
-		super->dtable = create_dtable_for_class(super);
-	}
-
 	/* Allocate dtable if necessary */
 	dtable_t dtable = calloc(1, sizeof(struct objc_dtable));
 	dtable->cls = class;
@@ -438,22 +433,20 @@ static SparseArray *create_dtable_for_class(Class class)
 	if (classHasDtable(class)) { return dtable_for_class(class); }
 
 	Class super = class_getSuperclass(class);
+	dtable_t dtable;
 
-	if (Nil != super && !classHasInstalledDtable(super))
-	{
-		super->dtable = create_dtable_for_class(super);
-	}
 
-	SparseArray *dtable;
-
-	/* Allocate dtable if necessary */
 	if (Nil == super)
 	{
 		dtable = SparseArrayNewWithDepth(dtable_depth);
 	}
 	else
 	{
-		assert(__objc_uninstalled_dtable != dtable_for_class(super));
+		dtable_t super_dtable = dtable_for_class(super);
+		if (super_dtable == __objc_uninstalled_dtable)
+		{
+			super_dtable = create_dtable_for_class(super);
+		}
 		dtable = SparseArrayCopy(dtable_for_class(super));
 	}
 
@@ -562,21 +555,22 @@ void objc_send_initialize(id object)
 
 	// Create a temporary dtable, to be installed later.
 	dtable_t class_dtable = create_dtable_for_class(class);
-	dtable_t dtable = create_dtable_for_class(meta);
+	InitializingDtable buffer = { class, class_dtable, temporary_dtables };
+	temporary_dtables = &buffer;
 
 	// Create an entry in the dtable look-aside buffer for this.  When sending
 	// a message to this class in future, the lookup function will check this
 	// buffer if the receiver's dtable is not installed, and block if
 	// attempting to send a message to this class.
+	dtable_t dtable = create_dtable_for_class(meta);
 	InitializingDtable meta_buffer = { meta, dtable, temporary_dtables };
-	InitializingDtable buffer = { class, class_dtable, &meta_buffer };
+	temporary_dtables = &meta_buffer;
 
 	// Store the buffer in the temporary dtables list.  Note that it is safe to
 	// insert it into a global list, even though it's a temporary variable,
 	// because we will clean it up after this function.
 	//
 	// FIXME: This will actually break if +initialize throws an exception...
-	temporary_dtables = &buffer;
 
 	static SEL initializeSel = 0;
 	if (0 == initializeSel)
@@ -590,14 +584,17 @@ void objc_send_initialize(id object)
 	{
 		if (Nil != class->super_class)
 		{
-			// The dtable to use for sending messages to the superclass.  This is
-			// the superclass's metaclass' dtable.
-			dtable_t super_dtable = class->super_class->isa->dtable;
+			// The dtable to use for sending messages to the superclass.  This
+			// is the superclass's metaclass' dtable.
+			dtable_t super_dtable = dtable_for_class(class->super_class->isa);
 			struct objc_slot *superSlot = objc_dtable_lookup(super_dtable,
 					PTR_TO_IDX(initializeSel->name));
-			// Check that this IMP comes from the class, not from its superclass.
-			// Note that the superclass dtable is guaranteed to be installed at
-			// this point because we sent it a +initialize message already.
+			// Check that this IMP comes from the class, not from its
+			// superclass.  We still have to use dtable_for_class() here
+			// because our +initialize call might be in response to a message
+			// sent from a subclass (e.g. NSObject +initialize sending a
+			// message to NSAutoreleasePool: NSObject's dtable won't have been
+			// installed at this point.
 			if (0 == superSlot || superSlot->method != initializeSlot->method)
 			{
 				initializeSlot->method((id)class, initializeSel);
@@ -614,17 +611,17 @@ void objc_send_initialize(id object)
 	class->dtable = class_dtable;
 
 	// Remove the look-aside buffer entry.
-	if (temporary_dtables == &buffer)
+	if (temporary_dtables == &meta_buffer)
 	{
-		temporary_dtables = meta_buffer.next;
+		temporary_dtables = buffer.next;
 	}
 	else
 	{
 		InitializingDtable *prev = temporary_dtables;
-		while (prev->next->class != class)
+		while (prev->next->class != meta)
 		{
 			prev = prev->next;
 		}
-		prev->next = meta_buffer.next;
+		prev->next = buffer.next;
 	}
 }
