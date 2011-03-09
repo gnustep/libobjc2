@@ -365,20 +365,18 @@ static void reload_class(struct objc_class *class, struct objc_class *old)
  */
 void objc_load_class(struct objc_class *class)
 {
-	/*
 	struct objc_class *existingClass = class_table_get_safe(class->name);
 	if (Nil != existingClass)
 	{
 		if (objc_developer_mode_developer != mode)
 		{
 			fprintf(stderr, 
-				"Objective-C runtime error.  Loading two versions of %s\n", class->name);
-			abort();
+				"Loading two versions of %s.  The class that will be used is undefined\n", 
+				class->name);
 		}
 		reload_class(class, existingClass);
 		return;
 	}
-	*/
 
 	// The compiler initialises the super class pointer to the name of the
 	// superclass, not the superclass pointer.
