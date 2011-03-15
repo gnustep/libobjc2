@@ -22,7 +22,11 @@ struct sel_type_list
  */
 struct objc_selector
 {
-	const char * name;
+	union
+	{
+		const char *name;
+		uintptr_t index;
+	};
 	const char * types;
 };
 

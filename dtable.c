@@ -28,7 +28,7 @@ static void collectMethodsForMethodListToSparseArray(
 	for (unsigned i=0 ; i<list->count ; i++)
 	{
 		//fprintf(stderr, "Adding method %s (%d)\n", sel_getName(list->methods[i].selector), PTR_TO_IDX(list->methods[i].selector->name));
-		SparseArrayInsert(sarray, PTR_TO_IDX(list->methods[i].selector->name),
+		SparseArrayInsert(sarray, list->methods[i].selector->index,
 				(void*)&list->methods[i]);
 	}
 }
@@ -197,7 +197,7 @@ static void update_dtable(dtable_t dtable)
 	uint32_t idx = 0;
 	while ((m = SparseArrayNext(methods, &idx)))
 	{
-		uint32_t idx = PTR_TO_IDX(m->selector->name);
+		uint32_t idx = m->selector->index;
 		struct slots_list *s = find_slot(idx, dtable->slots, old_slot_count);
 		if (NULL != s)
 		{
@@ -297,7 +297,7 @@ static BOOL installMethodInDtable(Class class,
                                   BOOL replaceExisting)
 {
 	assert(__objc_uninstalled_dtable != dtable);
-	uint32_t sel_id = PTR_TO_IDX(method->selector->name);
+	uint32_t sel_id = method->selector->index;
 	struct objc_slot *slot = SparseArrayLookup(dtable, sel_id);
 	if (NULL != slot)
 	{
@@ -578,7 +578,7 @@ void objc_send_initialize(id object)
 		initializeSel = sel_registerName("initialize");
 	}
 	struct objc_slot *initializeSlot = 
-		objc_dtable_lookup(dtable, PTR_TO_IDX(initializeSel->name));
+		objc_dtable_lookup(dtable, initializeSel->index);
 
 	if (0 != initializeSlot)
 	{
@@ -588,7 +588,7 @@ void objc_send_initialize(id object)
 			// is the superclass's metaclass' dtable.
 			dtable_t super_dtable = dtable_for_class(class->super_class->isa);
 			struct objc_slot *superSlot = objc_dtable_lookup(super_dtable,
-					PTR_TO_IDX(initializeSel->name));
+					initializeSel->index);
 			// Check that this IMP comes from the class, not from its
 			// superclass.  We still have to use dtable_for_class() here
 			// because our +initialize call might be in response to a message

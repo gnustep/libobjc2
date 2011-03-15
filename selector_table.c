@@ -228,7 +228,7 @@ void __objc_init_selector_tables()
 
 static SEL selector_lookup(const char *name, const char *types)
 {
-	struct objc_selector sel = {name, types};
+	struct objc_selector sel = {{name}, types};
 	return selector_table_get(sel_table, &sel);
 }
 static inline void add_selector_to_table(SEL aSel, int32_t uid, uint32_t idx)
@@ -396,14 +396,14 @@ BOOL sel_isEqual(SEL sel1, SEL sel2)
 SEL sel_registerName(const char *selName)
 {
 	if (NULL == selName) { return NULL; }
-	struct objc_selector sel = {selName, 0};
+	struct objc_selector sel = {{selName}, 0};
 	return objc_register_selector_copy(&sel);
 }
 
 SEL sel_registerTypedName_np(const char *selName, const char *types)
 {
 	if (NULL == selName) { return NULL; }
-	struct objc_selector sel = {selName, types};
+	struct objc_selector sel = {{selName}, types};
 	return objc_register_selector_copy(&sel);
 }
 
@@ -483,7 +483,7 @@ void objc_register_selectors_from_list(struct objc_method_list *l)
 	for (int i=0 ; i<l->count ; i++)
 	{
 		Method m = &l->methods[i];
-		struct objc_selector sel = { (const char*)m->selector, m->types };
+		struct objc_selector sel = { {(const char*)m->selector}, m->types };
 		m->selector = objc_register_selector_copy(&sel);
 	}
 }

@@ -51,7 +51,7 @@ Slot_t objc_msg_lookup_internal(id *receiver,
 {
 retry:;
 	Slot_t result = objc_dtable_lookup((*receiver)->isa->dtable,
-			PTR_TO_IDX(selector->name));
+			selector->index);
 	if (0 == result)
 	{
 		Class class = (*receiver)->isa;
@@ -61,13 +61,13 @@ retry:;
 		{
 			objc_send_initialize(*receiver);
 			dtable = dtable_for_class(class);
-			result = objc_dtable_lookup(dtable, PTR_TO_IDX(selector->name));
+			result = objc_dtable_lookup(dtable, selector->index);
 		}
 		else
 		{
 			// Check again incase another thread updated the dtable while we
 			// weren't looking
-			result = objc_dtable_lookup(dtable, PTR_TO_IDX(selector->name));
+			result = objc_dtable_lookup(dtable, selector->index);
 		}
 		if (0 == result)
 		{
@@ -147,7 +147,7 @@ Slot_t objc_slot_lookup_super(struct objc_super *super, SEL selector)
 	{
 		Class class = super->class;
 		Slot_t result = objc_dtable_lookup(dtable_for_class(class),
-				PTR_TO_IDX(selector->name));
+				selector->index);
 		if (0 == result)
 		{
 			// Dtable should always be installed in the superclass
@@ -249,7 +249,7 @@ void objc_msg_profile(id receiver, IMP method,
  */
 Slot_t objc_get_slot(Class cls, SEL selector)
 {
-	Slot_t result = objc_dtable_lookup(cls->dtable, PTR_TO_IDX(selector->name));
+	Slot_t result = objc_dtable_lookup(cls->dtable, selector->index);
 	if (0 == result)
 	{
 		void *dtable = dtable_for_class(cls);
@@ -258,13 +258,13 @@ Slot_t objc_get_slot(Class cls, SEL selector)
 		{
 			//objc_send_initialize((id)cls);
 			dtable = dtable_for_class(cls);
-			result = objc_dtable_lookup(dtable, PTR_TO_IDX(selector->name));
+			result = objc_dtable_lookup(dtable, selector->index);
 		}
 		else
 		{
 			// Check again incase another thread updated the dtable while we
 			// weren't looking
-			result = objc_dtable_lookup(dtable, PTR_TO_IDX(selector->name));
+			result = objc_dtable_lookup(dtable, selector->index);
 		}
 		if (NULL == result)
 		{
