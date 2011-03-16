@@ -5,8 +5,8 @@
 #include "dwarf_eh.h"
 #include "objc/runtime.h"
 #include "objc/hooks.h"
-
 #include "class.h"
+
 #define fprintf(...)
 
 /**
@@ -52,10 +52,26 @@ static void cleanup(_Unwind_Reason_Code reason, struct _Unwind_Exception *e)
 					unwindHeader)));
 }
 /**
- *
+ * Throws an Objective-C exception.  This function is, unfortunately, used for
+ * rethrowing caught exceptions too, even in @finally() blocks.  Unfortunately,
+ * this means that we have some problems if the exception is boxed.
  */
 void objc_exception_throw(id object)
 {
+
+	SEL rethrow_sel = sel_registerName("rethrow");
+	if ((nil != object) &&
+	    (class_respondsToSelector(object->isa, rethrow_sel)))
+	{
+		fprintf(stderr, "Rethrowing\n");
+		IMP rethrow = objc_msg_lookup(object, rethrow_sel);
+		rethrow(object, rethrow_sel);
+		// Should not be reached!  If it is, then the rethrow method actually
+		// didn't, so we throw it normally.
+	}
+
+	fprintf(stderr, "Throwing %p\n", object);
+
 	struct objc_exception *ex = calloc(1, sizeof(struct objc_exception));
 
 	ex->unwindHeader.exception_class = objc_exception_class;
@@ -89,7 +105,7 @@ Class get_type_table_entry(struct _Unwind_Context *context,
 
 	if (0 == class_name) { return Nil; }
 
-	fprintf(stderr, "Class name: %d\n", class_name);
+	fprintf(stderr, "Class name: %s\n", class_name);
 
 	if (__objc_id_typeinfo == class_name) { return (Class)1; }
 
@@ -261,7 +277,7 @@ _Unwind_Reason_Code  __gnu_objc_personality_v0(int version,
 		}
 		handler_type handler = check_action_record(context, foreignException,
 				&lsda, action.action_record, thrown_class, &selector);
-		fprintf(stderr, "handler! %d %d\n",handler, selector);
+		fprintf(stderr, "handler! %d %d\n", (int)handler,  (int)selector);
 		// If this is not a cleanup, ignore it and keep unwinding.
 		//if (check_action_record(context, foreignException, &lsda,
 				//action.action_record, thrown_class, &selector) != handler_cleanup)
@@ -287,6 +303,7 @@ _Unwind_Reason_Code  __gnu_objc_personality_v0(int version,
 		SEL box_sel = sel_registerName("exceptionWithForeignException:");
 		IMP boxfunction = objc_msg_lookup((id)thrown_class, box_sel);
 		object = boxfunction((id)thrown_class, box_sel, exceptionObject);
+		fprintf(stderr, "Boxed as %p\n", object);
 	}
 	else
 	{
