@@ -15,11 +15,6 @@
 #define objc_exception_class (*(int64_t*)"GNUCOBJC")
 
 /**
- * Type info used for catch handlers that catch id.
- */
-const char *__objc_id_typeinfo = "id";
-
-/**
  * Structure used as a header on thrown exceptions.  
  */
 struct objc_exception
@@ -42,6 +37,7 @@ typedef enum
 {
 	handler_none,
 	handler_cleanup,
+	handler_catchall_id,
 	handler_catchall,
 	handler_class
 } handler_type;
@@ -107,7 +103,7 @@ Class get_type_table_entry(struct _Unwind_Context *context,
 
 	fprintf(stderr, "Class name: %s\n", class_name);
 
-	if (__objc_id_typeinfo == class_name) { return (Class)1; }
+	if (strcmp("@id", class_name) == 0) { return (Class)1; }
 
 	return (Class)objc_getClass(class_name);
 }
@@ -155,9 +151,10 @@ static handler_type check_action_record(struct _Unwind_Context *context,
 			// nothing when a foreign exception is thrown
 			else if ((Class)1 == type)
 			{
+				fprintf(stderr, "Found id catch\n");
 				if (!foreignException)
 				{
-					return handler_catchall;
+					return handler_catchall_id;
 				}
 			}
 			else if (!foreignException && isKindOfClass(thrown_class, type))
@@ -205,7 +202,7 @@ _Unwind_Reason_Code  __gnu_objc_personality_v0(int version,
 	}
 	struct objc_exception *ex = 0;
 
-	//char *cls = (char*)&exceptionClass;
+	char *cls = (char*)&exceptionClass;
 	fprintf(stderr, "Class: %c%c%c%c%c%c%c%c\n", cls[0], cls[1], cls[2], cls[3], cls[4], cls[5], cls[6], cls[7]);
 
 	// Check if this is a foreign exception.  If it is a C++ exception, then we
@@ -247,7 +244,8 @@ _Unwind_Reason_Code  __gnu_objc_personality_v0(int version,
 		// If there's no action record, we've only found a cleanup, so keep
 		// searching for something real
 		if (handler == handler_class ||
-		    ((handler == handler_catchall)))// && !foreignException))
+		   ((handler == handler_catchall_id) && !foreignException) ||
+			(handler == handler_catchall))
 		{
 			// Cache the results for the phase 2 unwind, if we found a handler
 			// and this is not a foreign exception.
