@@ -212,6 +212,90 @@ message and exits.  LanguageKit provides an alternative version which
 dynamically generates a new method performing the required boxing and calling
 the original.
 
+Exception ABI Changes
+---------------------
+
+The non-fragile ABI makes a small change to the exception structure.  The old
+GCC ABI was very poorly designed.  It attempted to do things in a clever way,
+avoiding the need to call functions on entering and exiting catch blocks, but
+in doing so completely broke support for throwing foreign (e.g. C++) exceptions
+through Objective-C stack frames containing an @finally or @catch(id) block.
+It also could not differentiate between @catch(id) (catch any object type) and
+@catch(...) (catch any exception and discard it).
+
+The new ABI makes a small number of changes.  Most importantly, @catch(id) is
+now indicated by using the string "@id" as the type ID, in the same way that
+"Foo" is used for @catch(Foo*).  Catchalls remain identified by a NULL pointer
+in this field, as with the GCC ABI.  The runtime will still deliver the
+exception object to catchalls, for interoperability with old code and with the
+old ABI, but this comes with all of the same problems that the old ABI had
+(i.e. code using this ABI will break in exciting and spectacular ways when
+mixed with C++).
+
+The runtime provides a hook, _objc_class_for_boxing_foreign_exception(), which
+takes an exception class (64-bit integer value) as an argument, and returns a
+class for boxing exceptions using this ABI.  The returned class must implement
+a +exceptionWithForeignException: method, taking a pointer to the ABI-defined
+generic exception structure as the argument.  It should also implement a
+-rethrow method, used for rethrowing the exception.  If this is omitted, then
+the boxed version of the exception, rather than the original, will propagate
+out from @finally blocks.
+
+If a catch block exists that handles this class, then it will box foreign
+exceptions and allow them to propagate through any @finally directives.  Boxed
+exceptions will only match explicit catch statements.  To fully understand the
+semantics, we'll take a look at some examples.  These all use GNUstep's
+`CXXException` class, which boxes C++ exceptions, and this simple C++ function:
+
+	extern "C" void throwcxx()
+	{
+		throw 1;
+	}
+
+This exception will be caught, boxed, and then silently discarded by a catchall:
+
+	@try
+	{
+		throwcxx();
+	}
+	@catch(...)
+	{
+		// This will be reached, then the exception propagation stops.
+	}
+
+If an id catch block is encountered, it will be ignored, but @finally blocks
+will still be called:
+
+	@try
+	{
+		throwcxx();
+	}
+	@catch(id anyObject)
+	{
+		// Code here is not reached.
+	}
+	@finally
+	{
+		// This will be reached, then the exception propagation continues.
+	}
+
+The `CXXException` class is a subclass of `NSObject`, but catch statements for
+the superclass will not be hit:
+
+	@try
+	{
+		throwcxx();
+	}
+	@catch(NSObject *anyObject)
+	{
+		// Code here is not reached.
+	}
+	@catch(CXXException *boxedForeign)
+	{
+		// Code here is reached.
+	}
+
+
 Low Memory Profile
 ------------------
 
