@@ -157,9 +157,13 @@ static handler_type check_action_record(struct _Unwind_Context *context,
 					return handler_catchall_id;
 				}
 			}
-			else if (isKindOfClass(thrown_class, type))
+			else if (!foreignException && isKindOfClass(thrown_class, type))
 			{
 				fprintf(stderr, "found handler for %s\n", type->name);
+				return handler_class;
+			}
+			else if (thrown_class == type)
+			{
 				return handler_class;
 			}
 		}
