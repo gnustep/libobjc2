@@ -157,7 +157,7 @@ static handler_type check_action_record(struct _Unwind_Context *context,
 					return handler_catchall_id;
 				}
 			}
-			else if (!foreignException && isKindOfClass(thrown_class, type))
+			else if (isKindOfClass(thrown_class, type))
 			{
 				fprintf(stderr, "found handler for %s\n", type->name);
 				return handler_class;
@@ -202,7 +202,7 @@ _Unwind_Reason_Code  __gnu_objc_personality_v0(int version,
 	}
 	struct objc_exception *ex = 0;
 
-	char *cls = (char*)&exceptionClass;
+	//char *cls = (char*)&exceptionClass;
 	fprintf(stderr, "Class: %c%c%c%c%c%c%c%c\n", cls[0], cls[1], cls[2], cls[3], cls[4], cls[5], cls[6], cls[7]);
 
 	// Check if this is a foreign exception.  If it is a C++ exception, then we
