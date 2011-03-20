@@ -166,7 +166,7 @@ void* objc_object_for_cxx_exception(void *thrown_exception)
 	{
 		return (id)-1;
 	}
-	return (id)(ex-1);
+	return *(id*)(ex+1);
 }
 
 void print_type_info(void *thrown_exception)

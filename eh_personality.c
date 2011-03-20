@@ -218,7 +218,7 @@ _Unwind_Reason_Code  __gnu_objc_personality_v0(int version,
 	}
 	struct objc_exception *ex = 0;
 
-	//char *cls = (char*)&exceptionClass;
+	char *cls = (char*)&exceptionClass;
 	fprintf(stderr, "Class: %c%c%c%c%c%c%c%c\n", cls[7], cls[6], cls[5], cls[4], cls[3], cls[2], cls[1], cls[0]);
 
 	// Check if this is a foreign exception.  If it is a C++ exception, then we
@@ -236,6 +236,7 @@ _Unwind_Reason_Code  __gnu_objc_personality_v0(int version,
 		if (obj != (id)-1)
 		{
 			object = obj;
+			fprintf(stderr, "ObjC++ object exception %p\n", object);
 			objcxxException = YES;
 			// This is a foreign exception, buy for the purposes of exception
 			// matching, we pretend that it isn't.
@@ -328,7 +329,6 @@ _Unwind_Reason_Code  __gnu_objc_personality_v0(int version,
 	}
 	else if (foreignException || objcxxException)
 	{
-		fprintf(stderr, "Doing the foreign exception thing...\n");
 		struct dwarf_eh_lsda lsda = parse_lsda(context, lsda_addr);
 		action = dwarf_eh_find_callsite(context, &lsda);
 		check_action_record(context, foreignException, &lsda,
@@ -337,16 +337,17 @@ _Unwind_Reason_Code  __gnu_objc_personality_v0(int version,
 		// exception, then we need to delete the exception object.
 		if (foreignException)
 		{
+			fprintf(stderr, "Doing the foreign exception thing...\n");
 			//[thrown_class exceptionWithForeignException: exceptionObject];
 			SEL box_sel = sel_registerName("exceptionWithForeignException:");
 			IMP boxfunction = objc_msg_lookup((id)thrown_class, box_sel);
 			object = boxfunction((id)thrown_class, box_sel, exceptionObject);
+			fprintf(stderr, "Boxed as %p\n", object);
 		}
 		else // ObjCXX exception
 		{
 			_Unwind_DeleteException(exceptionObject);
 		}
-		fprintf(stderr, "Boxed as %p\n", object);
 	}
 	else
 	{
