@@ -120,6 +120,7 @@ void class_table_insert(Class class)
 
 Class class_table_get_safe(const char *class_name)
 {
+	if (NULL == class_name) { return Nil; }
 	return class_table_internal_table_get(class_table, class_name);
 }
 

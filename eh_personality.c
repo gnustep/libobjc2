@@ -6,13 +6,15 @@
 #include "objc/runtime.h"
 #include "objc/hooks.h"
 #include "class.h"
+#include "objcxx_eh.h"
 
 #define fprintf(...)
 
 /**
  * Class of exceptions to distinguish between this and other exception types.
  */
-#define objc_exception_class (*(int64_t*)"GNUCOBJC")
+const uint64_t objc_exception_class = EXCEPTION_CLASS('G','N','U','C','O','B','J','C');
+const uint64_t cxx_exception_class = EXCEPTION_CLASS('G','N','U','C','C','+','+','\0');
 
 /**
  * Structure used as a header on thrown exceptions.  
@@ -31,6 +33,11 @@ struct objc_exception
 	/** Thrown object.  This is after the unwind header so that the C++
 	 * exception handler can catch this as a foreign exception. */
 	id object;
+	/** C++ exception structure.  Used for mixed exceptions.  When we are in
+	 * Objective-C++ code, we create this structure for passing to the C++
+	 * exception personality function.  It will then handle installing
+	 * exceptions for us.  */
+	struct _Unwind_Exception *cxx_exception;
 };
 
 typedef enum
@@ -44,8 +51,13 @@ typedef enum
 
 static void cleanup(_Unwind_Reason_Code reason, struct _Unwind_Exception *e)
 {
+	/*
+  if (header->exceptionDestructor)
+		  header->exceptionDestructor (e + 1);
+
 	free((struct objc_exception*) ((char*)e - offsetof(struct objc_exception,
 					unwindHeader)));
+					*/
 }
 /**
  * Throws an Objective-C exception.  This function is, unfortunately, used for
@@ -189,7 +201,7 @@ static handler_type check_action_record(struct _Unwind_Context *context,
 }
 
 /**
- * The exception personality function.  
+ * The Objective-C exception personality function.  
  */
 _Unwind_Reason_Code  __gnu_objc_personality_v0(int version,
                                                _Unwind_Action actions,
@@ -207,18 +219,39 @@ _Unwind_Reason_Code  __gnu_objc_personality_v0(int version,
 	struct objc_exception *ex = 0;
 
 	//char *cls = (char*)&exceptionClass;
-	fprintf(stderr, "Class: %c%c%c%c%c%c%c%c\n", cls[0], cls[1], cls[2], cls[3], cls[4], cls[5], cls[6], cls[7]);
+	fprintf(stderr, "Class: %c%c%c%c%c%c%c%c\n", cls[7], cls[6], cls[5], cls[4], cls[3], cls[2], cls[1], cls[0]);
 
 	// Check if this is a foreign exception.  If it is a C++ exception, then we
 	// have to box it.  If it's something else, like a LanguageKit exception
 	// then we ignore it (for now)
 	BOOL foreignException = exceptionClass != objc_exception_class;
+	// Is this a C++ exception containing an Objective-C++ object?
+	BOOL objcxxException = NO;
+	// The object to return
+	void *object = NULL;
+
+	if (exceptionClass == cxx_exception_class)
+	{
+		id obj = objc_object_for_cxx_exception(exceptionObject);
+		if (obj != (id)-1)
+		{
+			object = obj;
+			objcxxException = YES;
+			// This is a foreign exception, buy for the purposes of exception
+			// matching, we pretend that it isn't.
+			foreignException = NO;
+		}
+	}
 
 	Class thrown_class = Nil;
 
+	if (objcxxException)
+	{
+		thrown_class = (object == 0) ? Nil : ((id)object)->isa;
+	}
 	// If it's not a foreign exception, then we know the layout of the
 	// language-specific exception stuff.
-	if (!foreignException)
+	else if (!foreignException)
 	{
 		ex = (struct objc_exception*) ((char*)exceptionObject - 
 				offsetof(struct objc_exception, unwindHeader));
@@ -267,7 +300,6 @@ _Unwind_Reason_Code  __gnu_objc_personality_v0(int version,
 
 	// TODO: If this is a C++ exception, we can cache the lookup and cheat a
 	// bit
-	void *object = nil;
 	if (!(actions & _UA_HANDLER_FRAME))
 	{
 		struct dwarf_eh_lsda lsda = parse_lsda(context, lsda_addr);
@@ -294,17 +326,26 @@ _Unwind_Reason_Code  __gnu_objc_personality_v0(int version,
 		object = exceptionObject;
 		//selector = 0;
 	}
-	else if (foreignException)
+	else if (foreignException || objcxxException)
 	{
 		fprintf(stderr, "Doing the foreign exception thing...\n");
 		struct dwarf_eh_lsda lsda = parse_lsda(context, lsda_addr);
 		action = dwarf_eh_find_callsite(context, &lsda);
 		check_action_record(context, foreignException, &lsda,
 				action.action_record, thrown_class, &selector);
-		//[thrown_class exceptionWithForeignException: exceptionObject];
-		SEL box_sel = sel_registerName("exceptionWithForeignException:");
-		IMP boxfunction = objc_msg_lookup((id)thrown_class, box_sel);
-		object = boxfunction((id)thrown_class, box_sel, exceptionObject);
+		// If it's a foreign exception, then box it.  If it's an Objective-C++
+		// exception, then we need to delete the exception object.
+		if (foreignException)
+		{
+			//[thrown_class exceptionWithForeignException: exceptionObject];
+			SEL box_sel = sel_registerName("exceptionWithForeignException:");
+			IMP boxfunction = objc_msg_lookup((id)thrown_class, box_sel);
+			object = boxfunction((id)thrown_class, box_sel, exceptionObject);
+		}
+		else // ObjCXX exception
+		{
+			_Unwind_DeleteException(exceptionObject);
+		}
 		fprintf(stderr, "Boxed as %p\n", object);
 	}
 	else
@@ -322,4 +363,33 @@ _Unwind_Reason_Code  __gnu_objc_personality_v0(int version,
 	_Unwind_SetGR(context, __builtin_eh_return_data_regno(1), selector);
 
 	return _URC_INSTALL_CONTEXT;
+}
+
+
+_Unwind_Reason_Code  __gnustep_objcxx_personality_v0(int version,
+                                                     _Unwind_Action actions,
+                                                     uint64_t exceptionClass,
+                                                     struct _Unwind_Exception *exceptionObject,
+                                                     struct _Unwind_Context *context)
+{
+	if (exceptionClass == objc_exception_class)
+	{
+		struct objc_exception *ex = (struct objc_exception*)
+			((char*)exceptionObject - offsetof(struct objc_exception,
+				unwindHeader));
+		if (0 == ex->cxx_exception)
+		{
+			id *newEx = __cxa_allocate_exception(sizeof(id));
+			*newEx = ex->object;
+			ex->cxx_exception = objc_init_cxx_exception(newEx);
+			ex->cxx_exception->exception_class = cxx_exception_class;
+			ex->cxx_exception->exception_cleanup = cleanup;
+			ex->cxx_exception->private_1 = exceptionObject->private_1;
+			ex->cxx_exception->private_2 = exceptionObject->private_2;
+		}
+		exceptionObject = ex->cxx_exception;
+		exceptionClass = cxx_exception_class;
+	}
+	return __gxx_personality_v0(version, actions, exceptionClass,
+			exceptionObject, context);
 }

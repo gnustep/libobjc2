@@ -315,3 +315,5 @@ static struct dwarf_eh_action
 	}
 	return result;
 }
+
+#define EXCEPTION_CLASS(a,b,c,d,e,f,g,h) (((uint64_t)a << 56) + ((uint64_t)b << 48) + ((uint64_t)c << 40) + ((uint64_t)d << 32) + ((uint64_t)e << 24) + ((uint64_t)f << 16) + ((uint64_t)g << 8) + ((uint64_t)h))
