@@ -318,7 +318,7 @@ SEL objc_register_selector(SEL aSel)
 /**
  * Registers a selector by copying the argument.
  */
-static SEL objc_register_selector_copy(SEL aSel)
+static SEL objc_register_selector_copy(SEL aSel, BOOL copyArgs)
 {
 	// If an identical selector is already registered, return it.
 	SEL copy = selector_lookup(aSel->name, aSel->types);
@@ -336,8 +336,9 @@ static SEL objc_register_selector_copy(SEL aSel)
 	}
 	// Create a copy of this selector.
 	copy = selector_pool_alloc();
-	copy->name = strdup(aSel->name);
-	copy->types = (NULL == aSel->types) ? NULL : strdup(aSel->types);
+	copy->name = copyArgs ? strdup(aSel->name) : aSel->name;
+	copy->types = (NULL == aSel->types) ? NULL :
+	                 (copy ? strdup(aSel->types) : aSel->types);
 	// Try to register the copy as the authoritative version
 	register_selector_locked(copy);
 	return copy;
@@ -397,14 +398,14 @@ SEL sel_registerName(const char *selName)
 {
 	if (NULL == selName) { return NULL; }
 	struct objc_selector sel = {{selName}, 0};
-	return objc_register_selector_copy(&sel);
+	return objc_register_selector_copy(&sel, YES);
 }
 
 SEL sel_registerTypedName_np(const char *selName, const char *types)
 {
 	if (NULL == selName) { return NULL; }
 	struct objc_selector sel = {{selName}, types};
-	return objc_register_selector_copy(&sel);
+	return objc_register_selector_copy(&sel, YES);
 }
 
 const char *sel_getType_np(SEL aSel)
@@ -484,7 +485,7 @@ void objc_register_selectors_from_list(struct objc_method_list *l)
 	{
 		Method m = &l->methods[i];
 		struct objc_selector sel = { {(const char*)m->selector}, m->types };
-		m->selector = objc_register_selector_copy(&sel);
+		m->selector = objc_register_selector_copy(&sel, NO);
 	}
 }
 /**
