@@ -169,6 +169,7 @@ void* objc_object_for_cxx_exception(void *thrown_exception)
 	return *(id*)(ex+1);
 }
 
+/*
 void print_type_info(void *thrown_exception)
 {
 	__cxa_exception *ex = (__cxa_exception*) ((char*)thrown_exception -
@@ -176,6 +177,7 @@ void print_type_info(void *thrown_exception)
 	fprintf(stderr, "Type info: %s\n", ex->exceptionType->name());
 	fprintf(stderr, "offset is: %d\n", offsetof(struct __cxa_exception, unwindHeader));
 }
+*/
 
 } // extern "C"
 
