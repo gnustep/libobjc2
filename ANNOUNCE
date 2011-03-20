@@ -1,20 +1,22 @@
-GNUstep Objective-C Runtime 1.1
+GNUstep Objective-C Runtime 1.3
 ===============================
 
-This is the second official release of the GNUstep Objective-C runtime (a.k.a.
+This is the fourth official release of the GNUstep Objective-C runtime (a.k.a.
 libobjc2).  This runtime was designed to support the features of Objective-C 2
 for use with GNUstep and other Objective-C programs.  This release contains
-minor bug fixes and provides compatibility with synthesised declared properties
-from GCC 4.6 and recent versions of clang.
+several bug fixes and includes a unified exception model, providing the same
+features as Apple's Modern runtime for Objective-C++ code, specifically the
+ability to throw Objective-C objects with @throw() or throw() and catch them
+with @catch() or catch().
 
 You may obtain the code for this release from subversion at the following
 subversion branch:
 
-svn://svn.gna.org/svn/gnustep/libs/libobjc2/1.1
+svn://svn.gna.org/svn/gnustep/libs/libobjc2/1.3
 
 Alternatively, a tarball is available from:
 
-http://download.gna.org/gnustep/libobjc2-1.1.tar.bz2
+http://download.gna.org/gnustep/libobjc2-1.3.tar.bz2
 
 The runtime library is responsible for implementing the core features of the
 object model, as well as exposing introspection features to the user.  The
