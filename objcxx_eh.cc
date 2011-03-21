@@ -71,6 +71,15 @@ namespace gnustep
 	}
 };
 
+
+static bool AppleCompatibleMode = true;
+extern "C" int objc_set_apple_compatible_objcxx_exceptions(int newValue)
+{
+	bool old = AppleCompatibleMode;
+	AppleCompatibleMode = newValue;
+	return old;
+}
+
 gnustep::libobjc::__objc_class_type_info::~__objc_class_type_info() {}
 gnustep::libobjc::__objc_id_type_info::~__objc_id_type_info() {}
 bool gnustep::libobjc::__objc_class_type_info::__do_catch(const type_info *thrownType,
@@ -80,21 +89,21 @@ bool gnustep::libobjc::__objc_class_type_info::__do_catch(const type_info *throw
 	id thrown = (id)obj;
 	bool found = false;
 	// Id throw matches any ObjC catch.  This may be a silly idea!
-	if (dynamic_cast<const __objc_id_type_info*>(thrownType))
+	if (dynamic_cast<const __objc_id_type_info*>(thrownType)
+	    || (AppleCompatibleMode && 
+	        dynamic_cast<const __objc_class_type_info*>(thrownType)))
 	{
 		thrown = **(id**)obj;
-		// nil matches any handler
+		// nil only matches id catch handlers in Apple-compatible mode, or when thrown as an id
 		if (0 == thrown)
 		{
-			found = true;
+			return false;
 		}
-		else
-		{
-			// Check whether the real thrown object matches the catch type.
-			found = isKindOfClass(object_getClass(thrown), (Class)objc_getClass(name()));
-		}
+		// Check whether the real thrown object matches the catch type.
+		found = isKindOfClass(object_getClass(thrown),
+		                      (Class)objc_getClass(name()));
 	}
-	if (dynamic_cast<const __objc_class_type_info*>(thrownType))
+	else if (dynamic_cast<const __objc_class_type_info*>(thrownType))
 	{
 		thrown = **(id**)obj;
 		found = isKindOfClass((Class)objc_getClass(thrownType->name()),

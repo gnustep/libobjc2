@@ -40,11 +40,10 @@ libobjc_C_FILES = \
 	statics_loader.c\
 	toydispatch.c
 
-ifeq ($(objective-cxx), yes)
+ifneq ($(objective-cxx), no)
 libobjc_CC_FILES = objcxx_eh.cc
 #libobjc_LDFLAGS = -lc++sup
 endif
-
 
 ifneq ($(enable_legacy), no)
 libobjc_C_FILES += legacy_malloc.c

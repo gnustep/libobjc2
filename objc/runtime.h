@@ -391,6 +391,26 @@ extern struct objc_slot *objc_msg_lookup_sender(id *receiver, SEL selector, id s
 	OBJC_NONPORTABLE;
 
 /**
+ * Toggles whether Objective-C objects caught in C++ exception handlers in
+ * Objective-C++ mode should follow Objective-C or C++ semantics.  The obvious
+ * choice is for them to follow C++ semantics, because people using a C++
+ * language construct would intuitively expect them to have C++ semantics,
+ * where the catch behaviour depends on the static type of the thrown object,
+ * not its run-time type.
+ *
+ * Apple, therefore, chose the other option.
+ *
+ * We default to Apple-compatible mode, but can enable the sane behaviour if
+ * the user opts in.  Note that doing this when linking against third-party
+ * frameworks written in Objective-C++ 2 may cause weird problems if the expect
+ * the other behaviour.
+ *
+ * This currently sets a global value.  In the future, it may be configurable
+ * on a per-thread basis.
+ */
+int objc_set_apple_compatible_objcxx_exceptions(int newValue) OBJC_NONPORTABLE;
+
+/**
  * Legacy GNU runtime compatibility.
  *
  * All of the functions in this section are deprecated and should not be used

@@ -63,6 +63,13 @@
  * instances will not acquire the new methods.
  */
 #define OBJC_DEVELOPER_MODE              8
+/**
+ * This runtime supports the unified exception model.  This means that
+ * Objective-C objects can be caught by either Objective-C or C++ exception
+ * handlers (the latter only in Objective-C++ code), irrespective of whether
+ * they are thrown from C++ throw of Objective-C @throw statements.
+ */
+#define OBJC_UNIFIED_EXCEPTION_MODEL     9
 
 
 /**
