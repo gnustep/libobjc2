@@ -14,9 +14,8 @@
  */
 #include "Availability.h"
 
-#ifndef __GNUSTEP_RUNTIME__
-#	define __GNUSTEP_RUNTIME__
-#endif
+#ifndef __GNUSTEP_CAPABILITIES_H__
+#	define __GNUSTEP_CAPABILITIES_H__
 
 
 /**
@@ -71,7 +70,6 @@
  */
 #define OBJC_UNIFIED_EXCEPTION_MODEL     9
 
-
 /**
  * Macro used to require the existence of a specific capability.  This creates
  * a function that is called by the loader and tests that the runtime supports
@@ -92,3 +90,5 @@
  * specified feature or 0 if it does not.
  */
 int objc_test_capability(int x) OBJC_NONPORTABLE;
+
+#endif //__GNUSTEP_CAPABILITIES_H__
