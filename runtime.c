@@ -274,7 +274,7 @@ id class_createInstance(Class cls, size_t extraBytes)
 {
 	CHECK_ARG(cls);
 	if (Nil == cls)	{ return nil; }
-	id obj = malloc(cls->instance_size + extraBytes);
+	id obj = calloc(cls->instance_size + extraBytes, 1);
 	obj->isa = cls;
 	return obj;
 }

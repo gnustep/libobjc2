@@ -1,6 +1,10 @@
 #ifndef __LIBOBJC_RUNTIME_H_INCLUDED__
 #define __LIBOBJC_RUNTIME_H_INCLUDED__
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifndef __GNUSTEP_RUNTIME__
 #	define __GNUSTEP_RUNTIME__
 #endif
@@ -201,20 +205,58 @@ BOOL class_conformsToProtocol(Class cls, Protocol *protocol);
  */
 Ivar* class_copyIvarList(Class cls, unsigned int *outCount);
 
+/**
+ * Copies the method list for this class.  The integer pointed to by the
+ * outCount argument is set to the number of methods returned.  The caller is
+ * responsible for freeing the returned buffer.
+ */
 Method * class_copyMethodList(Class cls, unsigned int *outCount);
 
+/**
+ * Copies the declared property list for this class.  The integer pointed to by
+ * the outCount argument is set to the number of declared properties returned.
+ * The caller is responsible for freeing the returned buffer.
+ */
 objc_property_t* class_copyPropertyList(Class cls, unsigned int *outCount);
 
+/**
+ * Copies the protocol list for this class.  The integer pointed to by the
+ * outCount argument is set to the number of protocols returned.  The caller is
+ * responsible for freeing the returned buffer.
+ */
 Protocol ** class_copyProtocolList(Class cls, unsigned int *outCount);
 
+/**
+ * Creates an instance of this class, allocating memory using malloc.
+ */
 id class_createInstance(Class cls, size_t extraBytes);
 
+/**
+ * Returns a pointer to the method metadata for the specified method in this
+ * class.  This is an opaque data type and must be accessed with the method_*()
+ * family of functions.
+ */
 Method class_getClassMethod(Class aClass, SEL aSelector);
 
+/**
+ * Returns a pointer to the  metadata for the specified class variable in
+ * this class.  This is an opaque data type and must be accessed with the
+ * ivar_*() family of functions.
+ */
 Ivar class_getClassVariable(Class cls, const char* name);
 
+/**
+ * Returns a pointer to the method metadata for the specified instance method
+ * in this class.  This is an opaque data type and must be accessed with the
+ * method_*() family of functions.
+ */
 Method class_getInstanceMethod(Class aClass, SEL aSelector);
 
+/**
+ * Returns the size of an instance of the named class, in bytes.  All of the
+ * class's superclasses must be loaded before this call, or the result is
+ * undefined with the non-fragile ABI.
+ */
 size_t class_getInstanceSize(Class cls);
 
 /**
@@ -226,8 +268,14 @@ Ivar class_getInstanceVariable(Class cls, const char* name);
 
 const char *class_getIvarLayout(Class cls);
 
+/**
+ * Returns a pointer to the function used to handle the function 
+ */
 IMP class_getMethodImplementation(Class cls, SEL name);
 
+/**
+ * Identical to class_getMethodImplementation().
+ */
 IMP class_getMethodImplementation_stret(Class cls, SEL name);
 
 const char * class_getName(Class cls);
@@ -528,5 +576,8 @@ BOOL sel_eq(SEL s1, SEL s2);
 #define _C_BYCOPY   'O'
 #define _C_ONEWAY   'V'
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif // __LIBOBJC_RUNTIME_H_INCLUDED__
