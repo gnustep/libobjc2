@@ -43,6 +43,8 @@ libobjc_C_FILES = \
 ifneq ($(objective-cxx), no)
 libobjc_CC_FILES = objcxx_eh.cc
 #libobjc_LDFLAGS = -lc++sup
+else
+libobjc_CFLAGS += -DNO_OBJCXX
 endif
 
 ifneq ($(enable_legacy), no)

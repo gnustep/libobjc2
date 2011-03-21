@@ -218,7 +218,7 @@ _Unwind_Reason_Code  __gnu_objc_personality_v0(int version,
 	}
 	struct objc_exception *ex = 0;
 
-	char *cls = (char*)&exceptionClass;
+	//char *cls = (char*)&exceptionClass;
 	fprintf(stderr, "Class: %c%c%c%c%c%c%c%c\n", cls[7], cls[6], cls[5], cls[4], cls[3], cls[2], cls[1], cls[0]);
 
 	// Check if this is a foreign exception.  If it is a C++ exception, then we
@@ -230,6 +230,7 @@ _Unwind_Reason_Code  __gnu_objc_personality_v0(int version,
 	// The object to return
 	void *object = NULL;
 
+#ifdef NO_OBJCXX
 	if (exceptionClass == cxx_exception_class)
 	{
 		id obj = objc_object_for_cxx_exception(exceptionObject);
@@ -243,6 +244,7 @@ _Unwind_Reason_Code  __gnu_objc_personality_v0(int version,
 			foreignException = NO;
 		}
 	}
+#endif
 
 	Class thrown_class = Nil;
 
@@ -366,6 +368,7 @@ _Unwind_Reason_Code  __gnu_objc_personality_v0(int version,
 	return _URC_INSTALL_CONTEXT;
 }
 
+#ifndef NO_OBJCXX
 
 _Unwind_Reason_Code  __gnustep_objcxx_personality_v0(int version,
                                                      _Unwind_Action actions,
@@ -394,3 +397,5 @@ _Unwind_Reason_Code  __gnustep_objcxx_personality_v0(int version,
 	return __gxx_personality_v0(version, actions, exceptionClass,
 			exceptionObject, context);
 }
+
+#endif
