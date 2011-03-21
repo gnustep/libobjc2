@@ -295,6 +295,63 @@ the superclass will not be hit:
 		// Code here is reached.
 	}
 
+As of version 1.3, the runtime also provides a unified exception model for
+Objective-C++.  This allows C++ `catch` statements and Objective-C `@catch`
+statements to catch Objective-C objects thrown with `@throw` or `throw`.
+
+This required some small changes to the ABI.  Both `@try` and `try` must use
+the same personality function in Objective-C++ code, because otherwise things
+like nested blocks are not possible.  The unwind library must be able to map
+from any instruction pointer value to a single personality function, and
+without a unified personality function, it would not be able to in code like
+this:
+
+	@try
+	{
+		try
+		{
+			// What personality function should be used when unwinding from
+			// here?
+			objc_exception_throw(@"foo");
+		}
+		catch (int i) {}
+	}
+	catch (id foo) {}
+
+If there is a single personality function, there must be a single format for
+language-specific data.  The current C++ format is more expressive than the
+Objective-C format, so we used it directly, with one extension.  C++ landing
+pads are identified by a `std::type_info` subclass in the type info tables for
+exception unwinding.  We provide two subclasses of this: 
+
+	gnustep::libobjc::__objc_id_type_info;
+	gnustep::libobjc::__objc_class_type_info;
+
+The first is used for identifying `id`-typed throws and catches.  The second is
+for identifying Objective-C classes.  All `id` throws use the singleton
+instance of the first class, exported as `__objc_id_type_info` (with C
+linkage).  Type info for classes should generate an instance of the second
+class, with the name `__objc_eh_typeinfo_Foo` where `Foo` is the name of the
+class (e.g. `NSObject` should generate `__objc_eh_typeinfo_NSObject`).  The
+name field should be set to the name of the class, via a global variable named
+`__objc_eh_typename_Foo`.  Both should have link-once ODR linkage, so that the
+linker will ensure that they are unique and pointer comparison can be used to
+test for equality (required by the C++ personality function).
+
+In Objective-C++ code, the personality function is:
+
+	__gnustep_objcxx_personality_v0()
+
+This is a very thin wrapper around the C++ personality function.  If it is
+called with an exception coming from Objective-C code, then it wraps it in a
+__cxa_exception structure (defined by the C++ ABI spec).  For any other
+exception type (including C++ exceptions), it passes it directly to the C++
+personality function.
+
+The Objective-C personality function was also modified slightly so that any
+incoming C++ exception that was has type info indicating that it's an
+Objective-C type is treated as an Objective-C object, for the purpose of
+exception delivery.
 
 Low Memory Profile
 ------------------
