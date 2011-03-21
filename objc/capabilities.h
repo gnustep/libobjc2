@@ -17,6 +17,9 @@
 #ifndef __GNUSTEP_CAPABILITIES_H__
 #	define __GNUSTEP_CAPABILITIES_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * The runtime supports zero-cost exceptions.  
@@ -90,5 +93,8 @@
  * specified feature or 0 if it does not.
  */
 int objc_test_capability(int x) OBJC_NONPORTABLE;
+#ifdef __cplusplus
+}
+#endif
 
 #endif //__GNUSTEP_CAPABILITIES_H__
