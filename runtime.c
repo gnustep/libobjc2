@@ -279,6 +279,18 @@ id class_createInstance(Class cls, size_t extraBytes)
 	return obj;
 }
 
+id object_copy(id obj, size_t size)
+{
+	id cpy = class_createInstance(object_getClass(obj));
+	memcpy(((char*)cpy + sizeof(id)), ((char*)obj + sizeof(id)), size - sizeof(id));
+	return cpy;
+}
+
+id object_dispose(id obj)
+{
+	free(obj);
+}
+
 Method class_getInstanceMethod(Class aClass, SEL aSelector)
 {
 	CHECK_ARG(aClass);

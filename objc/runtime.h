@@ -109,7 +109,7 @@ typedef unsigned char BOOL;
 #	endif
 
 #else
-// Method in the GNU runtime is a struct, Method_t is the pointer
+// Method in the GCC runtime is a struct, Method_t is the pointer
 #	define Method Method_t
 #endif // __objc_INCLUDE_GNU
 
@@ -266,10 +266,10 @@ size_t class_getInstanceSize(Class cls);
  */
 Ivar class_getInstanceVariable(Class cls, const char* name);
 
-const char *class_getIvarLayout(Class cls);
-
 /**
- * Returns a pointer to the function used to handle the function 
+ * Returns a pointer to the function used to handle the specified message.  If
+ * the receiver does not have a method corresponding to this message then this
+ * function may return a runtime function that performs forwarding.
  */
 IMP class_getMethodImplementation(Class cls, SEL name);
 
@@ -278,111 +278,312 @@ IMP class_getMethodImplementation(Class cls, SEL name);
  */
 IMP class_getMethodImplementation_stret(Class cls, SEL name);
 
+/**
+ * Returns the name of the class.  This string is owned by the runtime and is
+ * valid for (at least) as long as the class remains loaded.
+ */
 const char * class_getName(Class cls);
 
+/**
+ * Retrieves metadata about the property with the specified name.
+ */
 objc_property_t class_getProperty(Class cls, const char *name);
 
+/**
+ * Returns the superclass of the specified class.
+ */
 Class class_getSuperclass(Class cls);
 
+/**
+ * Returns the version of the class.  Currently, the class version is not used
+ * inside the runtime at all, however it may be used for the developer-mode ABI.
+ */
 int class_getVersion(Class theClass);
+
+/**
+ * Sets the version for this class.
+ */
+void class_setVersion(Class theClass, int version);
 
 OBJC_GNUSTEP_RUNTIME_UNSUPPORTED("Weak instance variables")
 const char *class_getWeakIvarLayout(Class cls);
 
+/**
+ * Returns whether the class is a metaclass.  This can be used in conjunction
+ * with object_getClass() for differentiating between objects and classes.
+ */
 BOOL class_isMetaClass(Class cls);
 
+/**
+ * Replaces the named method with a new implementation.  Note: the GNUstep
+ * Objective-C runtime uses typed selectors, however the types of the selector
+ * will be ignored and a new selector registered with the specified types.
+ */
 IMP class_replaceMethod(Class cls, SEL name, IMP imp, const char *types);
 
+/**
+ * Returns YES if instances of this class has a method that implements the
+ * specified message, NO otherwise.  If the class handles this message via one
+ * or more of the various forwarding mechanisms, then this will still return
+ * NO.
+ */
 BOOL class_respondsToSelector(Class cls, SEL sel);
 
+/**
+ * Returns the instance variable layout of this class as an opaque list that
+ * can be applied to other classes.
+ */
+const char *class_getIvarLayout(Class cls);
+/**
+ * Sets the class's instance variable layout.  The layout argument must be a
+ * value returned by class_getIvarLayout().
+ */
 void class_setIvarLayout(Class cls, const char *layout);
 
+/**
+ * Sets the superclass of the specified class.  This function is deprecated,
+ * because modifying the superclass of a class at run time is a very complex
+ * operation and this function is almost always used incorrectly.
+ */
 __attribute__((deprecated))
 Class class_setSuperclass(Class cls, Class newSuper);
-
-void class_setVersion(Class theClass, int version);
 
 OBJC_GNUSTEP_RUNTIME_UNSUPPORTED("Weak instance variables")
 void class_setWeakIvarLayout(Class cls, const char *layout);
 
-const char * ivar_getName(Ivar ivar);
+/**
+ * Returns the name of an instance variable.
+ */
+const char* ivar_getName(Ivar ivar);
 
+/**
+ * Returns the offset of an instance variable.  This value can be added to the
+ * object pointer to get the address of the instance variable.
+ */
 ptrdiff_t ivar_getOffset(Ivar ivar);
 
-const char * ivar_getTypeEncoding(Ivar ivar);
+/**
+ * Returns the Objective-C type encoding of the instance variable.
+ */
+const char* ivar_getTypeEncoding(Ivar ivar);
 
-char * method_copyArgumentType(Method method, unsigned int index);
+/**
+ * Copies the type encoding of an argument of this method.  The caller is
+ * responsible for freeing the returned C string.  Arguments 0 and 1 of any
+ * Objective-C method will be the self and _cmd parameters, so the returned
+ * value will be "@" and ":" respectively.
+ */
+char* method_copyArgumentType(Method method, unsigned int index);
 
-char * method_copyReturnType(Method method);
+/**
+ * Copies the type encoding of an argument of this method.  The caller is
+ * responsible for freeing the returned C string.
+ */
+char* method_copyReturnType(Method method);
 
+/**
+ * Exchanges the implementations of the two methods.  Note: this call is very
+ * expensive on the GNUstep runtime and its use is discouraged.  It is
+ * recommended that users call class_replaceMethod() instead.
+ */
 void method_exchangeImplementations(Method m1, Method m2);
 
+/**
+ * Copies the Objective-C type encoding of a specified method parameter into a
+ * buffer provided by the caller.  This method does not provide any means for
+ * the caller to easily detect truncation, and will only NULL-terminate the
+ * output string if there is enough space for the argument type and the NULL
+ * terminator.  Its use is therefore discouraged.
+ */
 void method_getArgumentType(Method method, unsigned int index, char *dst, size_t dst_len);
 
+/**
+ * Returns a pointer to the function used to implement this method.
+ */
 IMP method_getImplementation(Method method);
 
+/**
+ * Returns the selector used to identify this method.  Note that, unlike the
+ * Apple runtimes, the GNUstep runtime uses typed selectors, so the return
+ * value for this also identifies the type of the method, not just its name,
+ * although calling method_getTypeEncoding() is faster if you just require the
+ * types.
+ */
 SEL method_getName(Method method);
 
+/**
+ * Returns the number of arguments (including self and _cmd) that this method
+ * expects.
+ */
 unsigned method_getNumberOfArguments(Method method);
 
+/**
+ * Copies the Objective-C type encoding of a method's return value into a
+ * buffer provided by the caller.  This method does not provide any means for
+ * the caller to easily detect truncation, and will only NULL-terminate the
+ * output string if there is enough space for the argument type and the NULL
+ * terminator.  Its use is therefore discouraged.
+ */
 void method_getReturnType(Method method, char *dst, size_t dst_len);
 
+/**
+ * Returns the type encoding for the method.  This string is owned by the
+ * runtime and will persist for (at least) as long as the class owning the
+ * method is loaded.
+ */
 const char * method_getTypeEncoding(Method method);
 
+/**
+ * Sets the function used to implement this method.  This function is very
+ * expensive with the GNUstep runtime and its use is discouraged.  It is
+ * recommended that you call class_replaceMethod() instead.
+ */
 IMP method_setImplementation(Method method, IMP imp);
 
+/**
+ * Allocates a new class and metaclass inheriting from the specified class,
+ * with some space after the class for storing extra data.  This space can be
+ * used for class variables by adding instance variables to the returned
+ * metaclass.
+ */
 Class objc_allocateClassPair(Class superclass, const char *name, size_t extraBytes);
 
+/**
+ * Frees a class and metaclass allocated with objc_allocateClassPair().  Any
+ * attempts to send messages to instances of this class or its subclasses
+ * result in undefined behaviour.
+ */
 void objc_disposeClassPair(Class cls);
 
+/**
+ * Returns the class with the specified name, if one has been registered with
+ * the runtime, or nil if one does not exist.  If no class of this name is
+ * loaded, it calls the _objc_lookup_class() callback to allow an external
+ * library to load the module providing this class.
+ */
 id objc_getClass(const char *name);
 
+/**
+ * Copies all of the classes currently registered with the runtime into the
+ * buffer specified as the first argument.  If the buffer is NULL or its length
+ * is 0, it returns the total number of classes registered with the runtime.
+ * Otherwise, it copies classes and returns the number copied.
+ */
 int objc_getClassList(Class *buffer, int bufferLen);
 
+/**
+ * Returns the metaclass with the specified name.  This is equivalent to
+ * calling object_getClass() on the result of objc_getClass().
+ */
 id objc_getMetaClass(const char *name);
 
+/**
+ * Returns the class with the specified name, aborting if none is found.  This
+ * function should generally only be called early on in a program, to ensure
+ * that all required libraries are loaded.
+ */
 id objc_getRequiredClass(const char *name);
 
+/**
+ * Looks up the class with the specified name, but does not invoke any
+ * external lazy loading mechanisms.
+ */
 id objc_lookUpClass(const char *name);
 
-Class objc_allocateClassPair(Class superclass, const char *name, size_t extraBytes);
-
+/**
+ * Returns the protocol with the specified name.
+ */
 Protocol *objc_getProtocol(const char *name);
 
+/**
+ * Registers a new class and its metaclass with the runtime.  This function
+ * should be called after allocating a class with objc_allocateClassPair() and
+ * adding instance variables and methods to it.  A class can not have instance
+ * variables added to it after objc_registerClassPair() has been called.
+ */
 void objc_registerClassPair(Class cls);
 
+/**
+ * Returns a pointer immediately after the instance variables declared in an
+ * object.  This is a pointer to the storage specified with the extraBytes
+ * parameter given when allocating an object.
+ */
 void *object_getIndexedIvars(id obj);
 
 // FIXME: The GNU runtime has a version of this which omits the size parameter
 //id object_copy(id obj, size_t size);
 
+/**
+ * Free an object created with class_createInstance().
+ */
 id object_dispose(id obj);
 
+/**
+ * Returns the class of the object.  Note: the isa pointer should not be
+ * accessed directly with the GNUstep runtime.
+ */
 Class object_getClass(id obj);
+
+/**
+ * Sets the class of the object.  Note: the isa pointer should not be
+ * accessed directly with the GNUstep runtime.
+ */
 Class object_setClass(id obj, Class cls);
 
+/**
+ * Returns the name of the class of the object.  This is equivalent to calling
+ * class_getName() on the result of object_getClass().
+ */
 const char *object_getClassName(id obj);
 
-IMP objc_msg_lookup(id, SEL) OBJC_NONPORTABLE;
-IMP objc_msg_lookup_super(struct objc_super*, SEL) OBJC_NONPORTABLE;
 
+/**
+ * Returns the name of a specified property.
+ */
 const char *property_getName(objc_property_t property);
 
+/**
+ * Testswhether a protocol conforms to another protocol.
+ */
 BOOL protocol_conformsToProtocol(Protocol *p, Protocol *other);
 
+/**
+ * Returns an array of method descriptions.  Stores the number of elements in
+ * the array in the variable pointed to by the last parameter.  The caller is
+ * responsible for freeing this array.
+ */
 struct objc_method_description *protocol_copyMethodDescriptionList(Protocol *p,
 	BOOL isRequiredMethod, BOOL isInstanceMethod, unsigned int *count);
 
+/**
+ * Returns an array of property metadata values, with the number being stored
+ * in the variable pointed to by the last argument.  The caller is responsible
+ * for freeing the returned array.
+ */
 objc_property_t *protocol_copyPropertyList(Protocol *p, unsigned int *count);
 
+/**
+ * Returns an array of protocols that this protocol conforms to, with the
+ * number of protocols in the array being returned via the last argument.  The
+ * caller is responsible for freeing this array.
+ */
 Protocol **protocol_copyProtocolList(Protocol *p, unsigned int *count);
 
+/**
+ * Returns the method description for the specified method within a given
+ * protocol.
+ */
 struct objc_method_description protocol_getMethodDescription(Protocol *p,
 	SEL aSel, BOOL isRequiredMethod, BOOL isInstanceMethod);
 
-const char *protocol_getName(Protocol *p);
+/**
+ * Returns the name of the specified protocol.
+ */
+const char* protocol_getName(Protocol *p);
 
 /**
+ * Returns the property metadata for the property with the specified name.
+ *
  * Note: The Apple documentation for this method contains some nonsense for
  * isInstanceProperty.  As there is no language syntax for defining properties
  * on classes, we return NULL if this is not YES.
@@ -390,10 +591,34 @@ const char *protocol_getName(Protocol *p);
 objc_property_t protocol_getProperty(Protocol *p, const char *name,
 	BOOL isRequiredProperty, BOOL isInstanceProperty);
 
+/**
+ * Compares two protocols.  Currently, protocols are assumed to be equal if
+ * their names match.  This is required for compatibility with the GCC ABI,
+ * which made not attempt to unique protocols (or even register them with the
+ * runtime).
+ */
 BOOL protocol_isEqual(Protocol *p, Protocol *other);
 
+/**
+ * The message lookup function used by the GCC ABI.  This returns a pointer to
+ * the function (either a method or a forwarding hook) that should be called in
+ * response to a given message.
+ */
+IMP objc_msg_lookup(id, SEL) OBJC_NONPORTABLE;
+/**
+ * The message lookup function used for messages sent to super in the GCC ABI.
+ * This specifies both the class and the 
+ */
+IMP objc_msg_lookup_super(struct objc_super*, SEL) OBJC_NONPORTABLE;
+
+/**
+ * Returns the name of the specified selector.
+ */
 const char *sel_getName(SEL sel);
 
+/**
+ * Registers a selector with the runtime.  This is equivalent to sel_registerName().
+ */
 SEL sel_getUid(const char *selName);
 
 /**
@@ -408,6 +633,9 @@ SEL sel_getUid(const char *selName);
  */
 BOOL sel_isEqual(SEL sel1, SEL sel2);
 
+/**
+ * Registers an untyped selector with the runtime.
+ */
 SEL sel_registerName(const char *selName);
 
 /**
@@ -430,6 +658,16 @@ const char *sel_getType_np(SEL aSel) OBJC_NONPORTABLE;
  * with a heap-allocated buffer if there is not enough space.
  */
 unsigned sel_copyTypes_np(const char *selName, const char **types, unsigned count) OBJC_NONPORTABLE;
+
+/**
+ * Enumerates all of the type encodings associated with a given selector name
+ * (up to a specified limit).  This function returns the number of types that
+ * exist for a specific selector, but only copies up to count of them into the
+ * array passed as the types argument.  This allows you to call the function
+ * once with a relatively small on-stack buffer and then only call it again
+ * with a heap-allocated buffer if there is not enough space.
+ */
+unsigned sel_copyTypedSelectors_np(const char *selName, SEL *const sels, unsigned count) OBJC_NONPORTABLE;
 
 /**
  * New ABI lookup function.  Receiver may be modified during lookup or proxy
@@ -457,80 +695,6 @@ extern struct objc_slot *objc_msg_lookup_sender(id *receiver, SEL selector, id s
  * on a per-thread basis.
  */
 int objc_set_apple_compatible_objcxx_exceptions(int newValue) OBJC_NONPORTABLE;
-
-/**
- * Legacy GNU runtime compatibility.
- *
- * All of the functions in this section are deprecated and should not be used
- * in new code.
- */
-__attribute__((deprecated))
-void *objc_malloc(size_t size);
-
-__attribute__((deprecated))
-void *objc_atomic_malloc(size_t size);
-
-__attribute__((deprecated))
-void *objc_valloc(size_t size);
-
-__attribute__((deprecated))
-void *objc_realloc(void *mem, size_t size);
-
-__attribute__((deprecated))
-void * objc_calloc(size_t nelem, size_t size);
-
-__attribute__((deprecated))
-void objc_free(void *mem);
-
-__attribute__((deprecated))
-id objc_get_class(const char *name);
-
-__attribute__((deprecated))
-id objc_lookup_class(const char *name);
-
-__attribute__((deprecated))
-id objc_get_meta_class(const char *name);
-
-#if !defined(__OBJC_RUNTIME_INTERNAL__)
-__attribute__((deprecated))
-#endif
-Class objc_next_class(void **enum_state);
-
-__attribute__((deprecated))
-Class class_pose_as(Class impostor, Class super_class);
-
-__attribute__((deprecated))
-SEL sel_get_typed_uid (const char *name, const char *types);
-
-__attribute__((deprecated))
-SEL sel_get_any_typed_uid (const char *name);
-
-__attribute__((deprecated))
-SEL sel_get_any_uid (const char *name);
-
-__attribute__((deprecated))
-SEL sel_get_uid(const char *name);
-
-__attribute__((deprecated))
-const char *sel_get_name(SEL selector);
-
-#if !defined(__OBJC_RUNTIME_INTERNAL__)
-__attribute__((deprecated))
-#endif
-BOOL sel_is_mapped(SEL selector);
-
-__attribute__((deprecated))
-const char *sel_get_type(SEL selector);
-
-__attribute__((deprecated))
-SEL sel_register_name(const char *name);
-
-__attribute__((deprecated))
-SEL sel_register_typed_name(const char *name, const char *type);
-
-__attribute__((deprecated))
-BOOL sel_eq(SEL s1, SEL s2);
-
 
 
 #define _C_ID       '@'
@@ -575,6 +739,8 @@ BOOL sel_eq(SEL s1, SEL s2);
 #define _C_OUT      'o'
 #define _C_BYCOPY   'O'
 #define _C_ONEWAY   'V'
+
+#include "runtime-deprecated.h"
 
 #ifdef __cplusplus
 }

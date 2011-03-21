@@ -45,7 +45,7 @@ static size_t lengthOfTypeEncoding(const char *types)
 	return length;
 }
 
-static char *copyTypeEncoding(const char *types)
+static char* copyTypeEncoding(const char *types)
 {
 	size_t length = lengthOfTypeEncoding(types);
 	char *copy = malloc(length + 1);
@@ -407,7 +407,7 @@ unsigned method_get_number_of_arguments(struct objc_method *method)
 }
 
 
-char * method_copyArgumentType(Method method, unsigned int index)
+char* method_copyArgumentType(Method method, unsigned int index)
 {
 	if (NULL == method) { return NULL; }
 	const char *types = findParameterStart(method->types, index);
@@ -418,7 +418,7 @@ char * method_copyArgumentType(Method method, unsigned int index)
 	return copyTypeEncoding(types);
 }
 
-char * method_copyReturnType(Method method)
+char* method_copyReturnType(Method method)
 {
 	if (NULL == method) { return NULL; }
 	return copyTypeEncoding(method->types);

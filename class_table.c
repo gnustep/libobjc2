@@ -420,7 +420,7 @@ void objc_load_class(struct objc_class *class)
 
 int objc_getClassList(Class *buffer, int bufferLen)
 {
-	if (buffer == NULL)
+	if (buffer == NULL || bufferLen == 0)
 	{
 		return class_table->table_used;
 	}
