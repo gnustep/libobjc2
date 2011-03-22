@@ -24,12 +24,26 @@ struct objc_selector
 {
 	union
 	{
+		/**
+		 * The name of this selector.  Used for unregistered selectors.
+		 */
 		const char *name;
+		/**
+		 * The index of this selector in the selector table.  When a selector
+		 * is registered with the runtime, its name is replaced by an index
+		 * uniquely identifying this selector.  The index is used for dispatch.
+		 */
 		uintptr_t index;
 	};
+	/**
+	 * The Objective-C type encoding of the message identified by this selector.
+	 */
 	const char * types;
 };
 
+/**
+ * Returns the untyped variant of a selector.
+ */
 __attribute__((unused))
 static uint32_t get_untyped_idx(SEL aSel)
 {

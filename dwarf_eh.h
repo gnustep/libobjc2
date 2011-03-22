@@ -5,7 +5,7 @@
 #include <assert.h>
 #include <stdint.h>
 
-// _GNU_SOURCE must be defiend for unwind.h to expose some of the functions
+// _GNU_SOURCE must be defined for unwind.h to expose some of the functions
 // that we want.  If it isn't, then we define it and undefine it to make sure
 // that it doesn't impact the rest of the program.
 #ifndef _GNU_SOURCE
@@ -16,6 +16,9 @@
 #	include "unwind.h"
 #endif
 
+/**
+ * Type used to store pointers to values computed by DWARF expressions.
+ */
 typedef unsigned char *dw_eh_ptr_t;
 // Flag indicating a signed quantity
 #define DW_EH_PE_signed 0x08

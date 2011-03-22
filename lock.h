@@ -1,5 +1,8 @@
-// libobjc requires recursive mutexes.  These are delegated to the underlying
-// threading implementation.
+/**
+ * libobjc requires recursive mutexes.  These are delegated to the underlying
+ * threading implementation.  This file contains a VERY thin wrapper over the
+ * Windows and POSIX mutex APIs.
+ */
 
 #ifndef __LIBOBJC_LOCK_H_INCLUDED__
 #define __LIBOBJC_LOCK_H_INCLUDED__
