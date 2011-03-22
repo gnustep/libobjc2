@@ -63,6 +63,7 @@ libobjc_HEADER_FILES = \
 	encoding.h\
 	hooks.h\
 	runtime.h\
+	runtime-deprecated.h\
 	slot.h\
 	objc.h\
 	objc-api.h\
