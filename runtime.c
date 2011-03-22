@@ -281,7 +281,8 @@ id class_createInstance(Class cls, size_t extraBytes)
 
 id object_copy(id obj, size_t size)
 {
-	id cpy = class_createInstance(object_getClass(obj));
+	Class cls = object_getClass(obj);
+	id cpy = class_createInstance(cls, size - class_getInstanceSize(cls));
 	memcpy(((char*)cpy + sizeof(id)), ((char*)obj + sizeof(id)), size - sizeof(id));
 	return cpy;
 }
@@ -289,6 +290,7 @@ id object_copy(id obj, size_t size)
 id object_dispose(id obj)
 {
 	free(obj);
+	return nil;
 }
 
 Method class_getInstanceMethod(Class aClass, SEL aSelector)
