@@ -18,6 +18,7 @@ OBJECTS = \
 	NSBlocks.bc\
 	Protocol2.bc\
 	abi_version.bc\
+	alias_table.bc\
 	blocks_runtime.bc\
 	caps.bc\
 	category_loader.bc\

@@ -22,6 +22,7 @@ libobjc_OBJC_FILES = \
 
 libobjc_C_FILES = \
 	abi_version.c\
+	alias_table.c\
 	caps.c\
 	category_loader.c\
 	class_table.c\

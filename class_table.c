@@ -1,6 +1,7 @@
 #include "objc/runtime.h"
 #include "objc/hooks.h"
 #include "objc/developer.h"
+#include "alias.h"
 #include "class.h"
 #include "method_list.h"
 #include "selector.h"
@@ -270,7 +271,7 @@ void __objc_resolve_class_links(void)
 	static BOOL warned = NO;
 	if (!warned)
 	{
-		fprintf(stderr, 
+		fprintf(stderr,
 			"Warning: Calling deprecated private ObjC runtime function %s\n", __func__);
 		warned = YES;
 	}
@@ -285,7 +286,7 @@ static void reload_class(struct objc_class *class, struct objc_class *old)
 	// It's not actually needed, because we're testing the ivars are at the
 	// same locations next, but it lets us skip those tests if the total size
 	// is different.
-	BOOL equalLayouts = (class->super_class == old->super_class) && 
+	BOOL equalLayouts = (class->super_class == old->super_class) &&
 		(class->instance_size == old->instance_size);
 	// If either of the classes has an empty ivar list, then the other one must too.
 	if ((NULL == class->ivars) || (NULL == old->ivars))
@@ -312,7 +313,7 @@ static void reload_class(struct objc_class *class, struct objc_class *old)
 	}
 
 	// If the layouts are equal, then we can simply tack the class's method
-	// list on to the front of the old class and update the dtable.  
+	// list on to the front of the old class and update the dtable.
 	if (equalLayouts)
 	{
 		class->methods->next = old->methods;
@@ -326,7 +327,7 @@ static void reload_class(struct objc_class *class, struct objc_class *old)
 
 	// Ideally, we'd want to capture the subclass list here.  Unfortunately,
 	// this is not possible because the subclass will contain methods that
-	// refer to ivars in the superclass.  
+	// refer to ivars in the superclass.
 	//
 	// We can't use the non-fragile ABI's offset facility easily, because we'd
 	// have to have two (or more) offsets for the same ivar.  This gets messy
@@ -371,8 +372,8 @@ void objc_load_class(struct objc_class *class)
 	{
 		if (objc_developer_mode_developer != mode)
 		{
-			fprintf(stderr, 
-				"Loading two versions of %s.  The class that will be used is undefined\n", 
+			fprintf(stderr,
+				"Loading two versions of %s.  The class that will be used is undefined\n",
 				class->name);
 		}
 		reload_class(class, existingClass);
@@ -452,6 +453,11 @@ id objc_getClass(const char *name)
 
 	if (nil != class) { return class; }
 
+	// Second chance lookup via @compatibilty_alias:
+	class = (id)alias_getClass(name);
+	if (nil != class) { return class; }
+
+	// Third chance lookup via the hook:
 	if (0 != _objc_lookup_class)
 	{
 		class = (id)_objc_lookup_class(name);

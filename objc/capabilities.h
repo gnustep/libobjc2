@@ -2,7 +2,7 @@
  * capabilities.h - This file defines the list of capabilities.  Runtime
  * capabilities can be checked.  You may use #ifdef to test at compile time
  * whether the runtime on the current platform understands the capability.
- * This does not mean that the runtime implements the capability, however.  
+ * This does not mean that the runtime implements the capability, however.
  *
  * A copy of this file exists for compatibility in GNUstep's Objective-C
  * framework.  When using this framework in conjunction with the GNU
@@ -10,7 +10,7 @@
  * even if the corresponding macros are available at compile time.
  * Additionally, several are compile-time options in the GNUstep runtime, so
  * although they are present in the header and understood by the runtime, they
- * may not be supported by the installed runtime.  
+ * may not be supported by the installed runtime.
  */
 #include "Availability.h"
 
@@ -22,7 +22,7 @@ extern "C" {
 #endif
 
 /**
- * The runtime supports zero-cost exceptions.  
+ * The runtime supports zero-cost exceptions.
  */
 #define OBJC_CAP_EXCEPTIONS              0
 /**
@@ -42,12 +42,12 @@ extern "C" {
  */
 #define OBJC_CAP_OPTIONAL_PROTOCOLS      4
 /**
- * The runtime supports non-fragile instance variables.  
+ * The runtime supports non-fragile instance variables.
  */
 #define OBJC_CAP_NONFRAGILE_IVARS        5
 /**
  * The runtime supports making method lookup dependent on the types, as well as
- * the name, of the selector.  
+ * the name, of the selector.
  */
 #define OBJC_CAP_TYPE_DEPENDENT_DISPATCH 6
 /**
@@ -72,6 +72,14 @@ extern "C" {
  * they are thrown from C++ throw of Objective-C @throw statements.
  */
 #define OBJC_UNIFIED_EXCEPTION_MODEL     9
+
+/**
+ * The runtime provides a hook that allows the compiler to register class
+ * aliases declared with the @compatibility_alias keyword. This allows the
+ * runtime to resolve the alias, e.g. if objc_getClass() is called with an
+ * alias as the argument.
+ */
+#define OBJC_CAP_REGISTERED_COMPATIBILITY_ALIASES	10
 
 /**
  * Macro used to require the existence of a specific capability.  This creates

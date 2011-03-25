@@ -17,7 +17,7 @@ extern "C" {
 #include "Availability.h"
 
 // Undo GNUstep substitutions
-#ifdef class_setVersion 
+#ifdef class_setVersion
 #	undef class_setVersion
 #endif
 #ifdef class_getClassMethod
@@ -57,7 +57,7 @@ typedef struct objc_selector *SEL;
 typedef struct objc_class *Class;
 
 /**
- * Type for Objective-C objects.  
+ * Type for Objective-C objects.
  */
 typedef struct objc_object
 {
@@ -96,7 +96,7 @@ typedef id (*IMP)(id, SEL, ...);
 typedef struct objc_method *Method;
 
 /**
- * Objective-C boolean type.  
+ * Objective-C boolean type.
  */
 #	ifdef STRICT_APPLE_COMPATIBILITY
 typedef signed char BOOL;
@@ -148,7 +148,7 @@ struct objc_method_description
 #ifndef YES
 #	define YES ((BOOL)1)
 #endif
-#ifndef NO 
+#ifndef NO
 #	define NO ((BOOL)0)
 #endif
 
@@ -182,7 +182,7 @@ BOOL class_addIvar(Class cls,
                    const char *types);
 
 /**
- * Adds a method to the class.  
+ * Adds a method to the class.
  */
 BOOL class_addMethod(Class cls, SEL name, IMP imp, const char *types);
 
@@ -313,6 +313,13 @@ const char *class_getWeakIvarLayout(Class cls);
  * with object_getClass() for differentiating between objects and classes.
  */
 BOOL class_isMetaClass(Class cls);
+
+/**
+ * Registers an alias for the class. Returns YES if the alias could be
+ * registered successfully.
+ */
+OBJC_NONPORTABLE
+BOOL class_registerAlias_np(Class cls, const char *alias);
 
 /**
  * Replaces the named method with a new implementation.  Note: the GNUstep
