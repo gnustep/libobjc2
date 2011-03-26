@@ -10,8 +10,6 @@
 
 void objc_send_initialize(id object);
 
-__thread id objc_msg_sender;
-
 static id nil_method(id self, SEL _cmd) { return nil; }
 
 static struct objc_slot nil_slot = { Nil, Nil, "", 1, (IMP)nil_method };
