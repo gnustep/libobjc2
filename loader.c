@@ -15,6 +15,7 @@ void __objc_init_selector_tables(void);
 void __objc_init_protocol_table(void);
 void __objc_init_class_tables(void);
 void __objc_init_dispatch_tables(void);
+void __objc_init_alias_table(void);
 void objc_send_load_message(Class class);
 
 /* Number of threads that are alive.  */
@@ -51,6 +52,7 @@ void __objc_exec_class(struct objc_module_abi_8 *module)
 		__objc_init_protocol_table();
 		__objc_init_class_tables();
 		__objc_init_dispatch_tables();
+		__objc_init_alias_table();
 		first_run = NO;
 	}
 
