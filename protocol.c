@@ -248,7 +248,7 @@ BOOL protocol_conformsToProtocol(Protocol *p1, Protocol *p2)
 BOOL class_conformsToProtocol(Class cls, Protocol *protocol)
 {
 	if (Nil == cls || NULL == protocol) { return NO; }
-	while (cls)
+	for ( ; Nil != cls ; cls = class_getSuperclass(cls))
 	{
 		for (struct objc_protocol_list *protocols = cls->protocols;
 			protocols != NULL ; protocols = protocols->next)
@@ -262,7 +262,6 @@ BOOL class_conformsToProtocol(Class cls, Protocol *protocol)
 				}
 			}
 		}
-		cls = cls->super_class;
 	}
 	return NO;
 }
