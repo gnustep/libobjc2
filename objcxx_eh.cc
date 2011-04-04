@@ -132,12 +132,20 @@ bool gnustep::libobjc::__objc_id_type_info::__do_catch(const type_info *thrownTy
 	return false;
 };
 
-//static gnustep::libobjc::__objc_id_type_info objc_id_type_info;
+/**
+ * Public interface to the Objective-C++ exception mechanism
+ */
 extern "C"
 {
-//gnustep::libobjc::__objc_id_type_info *__objc_id_type_info = &objc_id_type_info;
+/**
+ * The public symbol that the compiler uses to indicate the Objective-C id type.
+ */
 gnustep::libobjc::__objc_id_type_info __objc_id_type_info;
 
+/**
+ * Exception cleanup function for C++ exceptions that wrap Objective-C
+ * exceptions.
+ */
 static void exception_cleanup(_Unwind_Reason_Code reason,
                               struct _Unwind_Exception *ex)
 {
