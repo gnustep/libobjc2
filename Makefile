@@ -49,11 +49,11 @@ all: libobjc.so.$(VERSION) libobjc.a
 
 libobjc.so.$(VERSION): $(OBJECTS)
 	@echo Linking shared library...
-	@ld -shared -o $@ $(OBJECTS)
+	@$(CXX) -Wl,-shared -o $@ $(OBJECTS)
 
 libobjc.a: $(OBJECTS)
 	@echo Linking static library...
-	@ld -r -s -o $@ $(OBJECTS)
+	@ld -Ur -s -o $@ $(OBJECTS)
 
 .cc.o:
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
