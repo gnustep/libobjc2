@@ -75,7 +75,11 @@ ifneq ($(tdd), no)
 libobjc_CPPFLAGS += -DTYPE_DEPENDENT_DISPATCH
 endif
 
+ifeq ($(findstring openbsd, $(GNUSTEP_HOST_OS)), openbsd)
+libobjc_LIBRARIES_DEPEND_UPON += -pthread 
+else
 libobjc_LIBRARIES_DEPEND_UPON += -lpthread 
+endif
 
 # Deprecated functions are only deprecated for external use, not for us because
 # we are special, precious, little flowers.
