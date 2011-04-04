@@ -1,12 +1,13 @@
 .POSIX:
 
-.SUFFIXES: .c .m .o
+.SUFFIXES: .cc .c .m .o
 
-VERSION = 4
+MAJOR_VERSION = 1
+MINOR_VERSION = 3
+SUBMINOR_VERSION = 0
+VERSION = $(MAJOR_VERSION).$(MINOR_VERSION).$(SUBMINOR_VERSION)
 
-#CC=clang
-
-CFLAGS += -std=c99 -fPIC
+CFLAGS += -std=gnu99 -fPIC
 CPPFLAGS += -DTYPE_DEPENDENT_DISPATCH -DGNUSTEP
 CPPFLAGS += -D__OBJC_RUNTIME_INTERNAL__=1 -D_XOPEN_SOURCE=500
 
@@ -32,6 +33,7 @@ OBJECTS = \
 	legacy_malloc.o\
 	loader.o\
 	mutation.o\
+	objcxx_eh.o\
 	properties.o\
 	protocol.o\
 	runtime.o\
@@ -51,6 +53,9 @@ libobjc.a: $(OBJECTS)
 	@echo Linking static library...
 	@ld -r -s -o $@ $(OBJECTS)
 
+.cc.o:
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
+
 .c.o:
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
@@ -61,6 +66,8 @@ install: all
 	install -m 444 libobjc.so.$(VERSION) $(LIB_DIR)
 	install -m 444 libobjc.a $(LIB_DIR)
 	ln -sf $(LIB_DIR)/libobjc.so.$(VERSION) $(LIB_DIR)/libobjc.so
+	ln -sf $(LIB_DIR)/libobjc.so.$(VERSION) $(LIB_DIR)/libobjc.so.$(MAJOR_VERSION)
+	ln -sf $(LIB_DIR)/libobjc.so.$(VERSION) $(LIB_DIR)/libobjc.so.$(MAJOR_VERSION).$(MINOR_VERSION)
 	install -d $(HEADER_DIR)/objc
 	install -m 444 objc/*.h $(HEADER_DIR)/objc
 
