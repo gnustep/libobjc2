@@ -41,7 +41,8 @@ OBJECTS = \
 	selector_table.o\
 	sendmsg2.o\
 	statics_loader.o\
-	sync.o
+	sync.o\
+	toydispatch.o
 
 all: libobjc.so.$(VERSION) libobjc.a
 

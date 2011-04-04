@@ -92,7 +92,6 @@ libobjc_CCFLAGS += -std=c++98 -g -fexceptions #-fvisibility=hidden
 #libobjc_CFLAGS += -fno-inline
 libobjc_OBJCFLAGS += $(libobjc_CFLAGS) $(libobjc_CFLAGS)
 libobjc_LDFLAGS += -g
-libobjc_LIB_DIRS += -L toydispatch/obj
 
 libobjc_CFLAGS +=  -O3
 

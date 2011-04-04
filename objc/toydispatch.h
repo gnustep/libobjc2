@@ -29,15 +29,15 @@ typedef struct dispatch_queue * dispatch_queue_t;
 /**
  * Create a new queue.  Both parameters are ignored by toydispatch.
  */
-dispatch_queue_t dispatch_queue_create(const char *label,
-		void *attr);
+dispatch_queue_t dispatch_queue_create(const char *label, void *attr);
 
 #define dispatch_async_f toy_dispatch_async_f
 /**
  * Add a function to the queue.  
  */
-void dispatch_async_f(dispatch_queue_t queue, void *context,
-		dispatch_function_t work);
+void dispatch_async_f(dispatch_queue_t queue,
+                      void *context,
+                      dispatch_function_t work);
 
 #define dispatch_release toy_dispatch_release
 void dispatch_release(dispatch_queue_t queue);
