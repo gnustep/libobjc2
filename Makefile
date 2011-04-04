@@ -63,6 +63,7 @@ libobjc.a: $(OBJECTS)
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
 install: all
+	install -d $(LIB_DIR)
 	install -m 444 libobjc.so.$(VERSION) $(LIB_DIR)
 	install -m 444 libobjc.a $(LIB_DIR)
 	ln -sf $(LIB_DIR)/libobjc.so.$(VERSION) $(LIB_DIR)/libobjc.so
