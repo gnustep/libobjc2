@@ -7,7 +7,7 @@ SVN_TAG_NAME=objc2
 
 include $(GNUSTEP_MAKEFILES)/common.make
 
-LIBRARY_NAME = libobjc
+LIBRARY_NAME = libobjc libobjcxx
 
 libobjc_VERSION = 4
 
@@ -41,12 +41,8 @@ libobjc_C_FILES = \
 	statics_loader.c\
 	toydispatch.c
 
-ifneq ($(objective-cxx), no)
-libobjc_CC_FILES = objcxx_eh.cc
-libobjc_LDFLAGS = -lstdc++
-else
-libobjc_CFLAGS += -DNO_OBJCXX
-endif
+libobjcxx_CC_FILES = objcxx_eh.cc
+libobjcxx_LDFLAGS = -lstdc++ -lobjc
 
 ifneq ($(enable_legacy), no)
 libobjc_C_FILES += legacy_malloc.c

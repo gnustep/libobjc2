@@ -368,8 +368,6 @@ _Unwind_Reason_Code  __gnu_objc_personality_v0(int version,
 	return _URC_INSTALL_CONTEXT;
 }
 
-#ifndef NO_OBJCXX
-
 _Unwind_Reason_Code  __gnustep_objcxx_personality_v0(int version,
                                                      _Unwind_Action actions,
                                                      uint64_t exceptionClass,
@@ -398,4 +396,3 @@ _Unwind_Reason_Code  __gnustep_objcxx_personality_v0(int version,
 			exceptionObject, context);
 }
 
-#endif

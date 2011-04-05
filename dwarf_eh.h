@@ -280,6 +280,7 @@ struct dwarf_eh_action
 /**
  * Look up the landing pad that corresponds to the current invoke.
  */
+__attribute__((unused))
 static struct dwarf_eh_action 
 	dwarf_eh_find_callsite(struct _Unwind_Context *context, struct dwarf_eh_lsda *lsda)
 {
