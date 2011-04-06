@@ -67,6 +67,7 @@ libobjc_HEADER_FILES = \
 	toydispatch.h
 endif
 
+# Disable type dependent dispatch if tdd=no is specified
 ifneq ($(tdd), no)
 libobjc_CPPFLAGS += -DTYPE_DEPENDENT_DISPATCH
 endif
@@ -77,6 +78,12 @@ else
 libobjc_LIBRARIES_DEPEND_UPON += -lpthread 
 endif
 
+# If we're doing a release build, don't tell people that the code that they're
+# using is rubbish - they complain.
+#CPPFLAGS += -DNO_SELECTOR_MISMATCH_WARNINGS
+
+libobjc_CFLAGS +=  -O3
+
 # Deprecated functions are only deprecated for external use, not for us because
 # we are special, precious, little flowers.
 libobjc_CPPFLAGS += -D__OBJC_RUNTIME_INTERNAL__=1 -D_XOPEN_SOURCE=500
@@ -84,16 +91,13 @@ libobjc_CPPFLAGS += -D__OBJC_RUNTIME_INTERNAL__=1 -D_XOPEN_SOURCE=500
 # useful on compilers that support C99 (currently only clang), so there is no
 # benefit from supporting platforms with no C99 compiler.
 libobjc_CFLAGS += -std=gnu99 -g -fexceptions #-fvisibility=hidden
-libobjc_CFLAGS += -Wno-unused-function
 libobjc_CCFLAGS += -std=c++98 -g -fexceptions #-fvisibility=hidden
+libobjc_CFLAGS += -Wno-unused-function
 
 # Uncomment this when debugging - it makes everything slow, but means that the
 # debugger actually works...
 #libobjc_CFLAGS += -fno-inline
 libobjc_OBJCFLAGS += $(libobjc_CFLAGS) $(libobjc_CFLAGS)
-libobjc_LDFLAGS += -g
-
-libobjc_CFLAGS +=  -O3
 
 ifneq ($(findstring gcc, $(CC)),)
   # Hack to get the __sync_* GCC builtins to work with GCC
