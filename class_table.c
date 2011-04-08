@@ -375,6 +375,7 @@ void objc_load_class(struct objc_class *class)
 			fprintf(stderr,
 				"Loading two versions of %s.  The class that will be used is undefined\n",
 				class->name);
+			return;
 		}
 		reload_class(class, existingClass);
 		return;

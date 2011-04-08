@@ -46,6 +46,7 @@ libobjcxx_LDFLAGS = -lstdc++ -lobjc
 
 ifneq ($(enable_legacy), no)
 libobjc_C_FILES += legacy_malloc.c
+libobjc_CPPFLAGS += -DNO_LEGACY
 endif
 
 libobjc_HEADER_FILES_DIR = objc
