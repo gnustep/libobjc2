@@ -42,7 +42,7 @@ libobjc_C_FILES = \
 	toydispatch.c
 
 libobjcxx_CC_FILES = objcxx_eh.cc
-libobjcxx_LDFLAGS = -lstdc++ -lobjc
+libobjcxx_LDFLAGS = -L./obj/$(GNUSTEP_TARGET_LDIR)/ -lstdc++ -lobjc
 
 ifneq ($(enable_legacy), no)
 libobjc_C_FILES += legacy_malloc.c
