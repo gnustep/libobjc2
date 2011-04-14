@@ -1,6 +1,6 @@
 
 PACKAGE_NAME = gnustep-objc2
-VERSION=1.3.0
+VERSION=1.4.0
 SVN_MODULE_NAME = libobjc2
 SVN_BASE_URL = svn+ssh://svn.gna.org/svn/gnustep/libs
 SVN_TAG_NAME=objc2
@@ -81,7 +81,7 @@ endif
 
 # If we're doing a release build, don't tell people that the code that they're
 # using is rubbish - they complain.
-CPPFLAGS += -DNO_SELECTOR_MISMATCH_WARNINGS
+#CPPFLAGS += -DNO_SELECTOR_MISMATCH_WARNINGS
 
 libobjc_CFLAGS +=  -O3
 
