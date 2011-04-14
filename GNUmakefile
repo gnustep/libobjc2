@@ -81,7 +81,7 @@ endif
 
 # If we're doing a release build, don't tell people that the code that they're
 # using is rubbish - they complain.
-#CPPFLAGS += -DNO_SELECTOR_MISMATCH_WARNINGS
+CPPFLAGS += -DNO_SELECTOR_MISMATCH_WARNINGS
 
 libobjc_CFLAGS +=  -O3
 
