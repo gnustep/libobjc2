@@ -13,8 +13,8 @@
 /**
  * Class of exceptions to distinguish between this and other exception types.
  */
-const uint64_t objc_exception_class = EXCEPTION_CLASS('G','N','U','C','O','B','J','C');
-const uint64_t cxx_exception_class = EXCEPTION_CLASS('G','N','U','C','C','+','+','\0');
+static const uint64_t objc_exception_class = EXCEPTION_CLASS('G','N','U','C','O','B','J','C');
+static const uint64_t cxx_exception_class = EXCEPTION_CLASS('G','N','U','C','C','+','+','\0');
 
 /**
  * Structure used as a header on thrown exceptions.  
@@ -96,9 +96,9 @@ void objc_exception_throw(id object)
 	abort();
 }
 
-Class get_type_table_entry(struct _Unwind_Context *context,
-                           struct dwarf_eh_lsda *lsda,
-                           int filter)
+static Class get_type_table_entry(struct _Unwind_Context *context,
+                                  struct dwarf_eh_lsda *lsda,
+                                  int filter)
 {
 	dw_eh_ptr_t record = lsda->type_table -
 		dwarf_size_of_fixed_size_field(lsda->type_table_encoding)*filter;

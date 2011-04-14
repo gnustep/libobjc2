@@ -14,6 +14,7 @@
 #include "method_list.h"
 #include "class.h"
 #include "selector.h"
+#include "visibility.h"
 
 #ifdef TYPE_DEPENDENT_DISPATCH
 #	define TDD(x) x
@@ -219,7 +220,7 @@ void objc_resize_dtables(uint32_t);
 /**
  * Create data structures to store selectors.
  */
-void __objc_init_selector_tables()
+PRIVATE void __objc_init_selector_tables()
 {
 	selector_list = SparseArrayNew();
 	INIT_LOCK(selector_table_lock);
@@ -296,7 +297,7 @@ static inline void register_selector_locked(SEL aSel)
 /**
  * Registers a selector.  This assumes that the argument is never deallocated.
  */
-SEL objc_register_selector(SEL aSel)
+PRIVATE SEL objc_register_selector(SEL aSel)
 {
 	if (isSelRegistered(aSel))
 	{
@@ -479,7 +480,7 @@ unsigned sel_copyTypedSelectors_np(const char *selName, SEL *const sels, unsigne
 	return found;
 }
 
-void objc_register_selectors_from_list(struct objc_method_list *l)
+PRIVATE void objc_register_selectors_from_list(struct objc_method_list *l)
 {
 	for (int i=0 ; i<l->count ; i++)
 	{
@@ -491,14 +492,14 @@ void objc_register_selectors_from_list(struct objc_method_list *l)
 /**
  * Register all of the (unregistered) selectors that are used in a class.
  */
-void objc_register_selectors_from_class(Class class)
+PRIVATE void objc_register_selectors_from_class(Class class)
 {
 	for (struct objc_method_list *l=class->methods ; NULL!=l ; l=l->next)
 	{
 		objc_register_selectors_from_list(l);
 	}
 }
-void objc_register_selector_array(SEL selectors, unsigned long count)
+PRIVATE void objc_register_selector_array(SEL selectors, unsigned long count)
 {
 	// GCC is broken and always sets the count to 0, so we ignore count until
 	// we can throw stupid and buggy compilers in the bin.
@@ -515,7 +516,7 @@ void objc_register_selector_array(SEL selectors, unsigned long count)
  * All of the functions in this section are deprecated and should not be used
  * in new code.
  */
-
+#ifdef NO_LEGACY
 SEL sel_get_typed_uid (const char *name, const char *types)
 {
 	if (NULL == name) { return NULL; }
@@ -589,6 +590,8 @@ BOOL sel_eq(SEL s1, SEL s2)
 {
 	return sel_isEqual(s1, s2);
 }
+
+#endif // NO_LEGACY
 
 /*
  * Some simple sanity tests.

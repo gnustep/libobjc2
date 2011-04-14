@@ -3,11 +3,12 @@
 #include "objc/runtime.h"
 #include "class.h"
 #include "ivar.h"
+#include "visibility.h"
 
 ptrdiff_t objc_alignof_type(const char *);
 ptrdiff_t objc_sizeof_type(const char *);
 
-void objc_compute_ivar_offsets(Class class)
+PRIVATE void objc_compute_ivar_offsets(Class class)
 {
 	int i = 0;
 	/* If this class was compiled with support for late-bound ivars, the

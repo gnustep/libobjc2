@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include "objc/runtime.h"
+#include "visibility.h"
 #include "loader.h"
 
 #define BUFFER_TYPE struct objc_category
@@ -53,7 +54,7 @@ static BOOL try_load_category(struct objc_category *cat)
  * Attaches a category to its class, if the class is already loaded.  Buffers
  * it for future resolution if not.
  */
-void objc_try_load_category(struct objc_category *cat)
+PRIVATE void objc_try_load_category(struct objc_category *cat)
 {
 	if (!try_load_category(cat))
 	{
@@ -61,7 +62,7 @@ void objc_try_load_category(struct objc_category *cat)
 	}
 }
 
-void objc_load_buffered_categories(void)
+PRIVATE void objc_load_buffered_categories(void)
 {
 	BOOL shouldReshuffle = NO;
 

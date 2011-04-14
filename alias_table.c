@@ -23,6 +23,7 @@
    THE SOFTWARE.
 */
 
+#include "visibility.h"
 #include "objc/runtime.h"
 #include "class.h"
 #include "lock.h"
@@ -61,7 +62,7 @@ static alias_table_internal_table *alias_table;
 #include "pool.h"
 
 
-void __objc_init_alias_table(void)
+PRIVATE void __objc_init_alias_table(void)
 {
 	alias_table = alias_table_internal_create(128);
 }
@@ -90,7 +91,7 @@ Class alias_getClass(const char *alias_name)
 	return alias->class;
 }
 
-void alias_table_insert(Alias alias)
+PRIVATE void alias_table_insert(Alias alias)
 {
 	alias_table_internal_insert(alias_table, alias);
 }

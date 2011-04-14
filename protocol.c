@@ -3,6 +3,7 @@
 #include "properties.h"
 #include "class.h"
 #include "lock.h"
+#include "visibility.h"
 #include <stdlib.h>
 
 #define BUFFER_TYPE struct objc_protocol_list
@@ -191,7 +192,7 @@ static BOOL init_protocols(struct objc_protocol_list *protocols)
 	return YES;
 }
 
-void objc_init_protocols(struct objc_protocol_list *protocols)
+PRIVATE void objc_init_protocols(struct objc_protocol_list *protocols)
 {
 	if (!init_protocols(protocols))
 	{

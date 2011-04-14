@@ -3,6 +3,7 @@
 #include "objc/runtime.h"
 #include "module.h"
 #include "constant_string.h"
+#include "visibility.h"
 
 #define BUFFER_TYPE struct objc_static_instance_list
 #include "buffer.h"
@@ -39,7 +40,7 @@ static BOOL try_init_statics(struct objc_static_instance_list *statics)
 	}
 	return YES;
 }
-void objc_init_statics(struct objc_static_instance_list *statics)
+PRIVATE void objc_init_statics(struct objc_static_instance_list *statics)
 {
 	if (!try_init_statics(statics))
 	{
@@ -47,7 +48,7 @@ void objc_init_statics(struct objc_static_instance_list *statics)
 	}
 }
 
-void objc_init_buffered_statics(void)
+PRIVATE void objc_init_buffered_statics(void)
 {
 	BOOL shouldReshuffle = NO;
 

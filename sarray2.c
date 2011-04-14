@@ -4,6 +4,7 @@
 #include <assert.h>
 
 #include "sarray2.h"
+#include "visibility.h"
 
 static void *EmptyArrayData[256];
 static SparseArray EmptyArray = { 0xff, 0, 0, (void**)&EmptyArrayData};
@@ -27,7 +28,7 @@ static void init_pointers(SparseArray * sarray)
 		}
 	}
 }
-SparseArray * SparseArrayNewWithDepth(uint32_t depth)
+PRIVATE SparseArray * SparseArrayNewWithDepth(uint32_t depth)
 {
 	SparseArray * sarray = calloc(1, sizeof(SparseArray));
 	sarray->refCount = 1;
@@ -37,11 +38,11 @@ SparseArray * SparseArrayNewWithDepth(uint32_t depth)
 	return sarray;
 }
 
-SparseArray *SparseArrayNew()
+PRIVATE SparseArray *SparseArrayNew()
 {
 	return SparseArrayNewWithDepth(32);
 }
-SparseArray *SparseArrayExpandingArray(SparseArray *sarray)
+PRIVATE SparseArray *SparseArrayExpandingArray(SparseArray *sarray)
 {
 	// Expanding a child sarray has undefined results.
 	assert(sarray->refCount == 1);
@@ -113,13 +114,13 @@ static void *SparseArrayFind(SparseArray * sarray, uint32_t * index)
 	return SARRAY_EMPTY;
 }
 
-void *SparseArrayNext(SparseArray * sarray, uint32_t * idx)
+PRIVATE void *SparseArrayNext(SparseArray * sarray, uint32_t * idx)
 {
 	(*idx)++;
 	return SparseArrayFind(sarray, idx);
 }
 
-void SparseArrayInsert(SparseArray * sarray, uint32_t index, void *value)
+PRIVATE void SparseArrayInsert(SparseArray * sarray, uint32_t index, void *value)
 {
 	if (sarray->shift > 0)
 	{
@@ -158,7 +159,7 @@ void SparseArrayInsert(SparseArray * sarray, uint32_t index, void *value)
 	}
 }
 
-SparseArray *SparseArrayCopy(SparseArray * sarray)
+PRIVATE SparseArray *SparseArrayCopy(SparseArray * sarray)
 {
 	SparseArray *copy = calloc(1, sizeof(SparseArray));
 	copy->refCount = 1;
@@ -180,7 +181,7 @@ SparseArray *SparseArrayCopy(SparseArray * sarray)
 	return copy;
 }
 
-void SparseArrayDestroy(SparseArray * sarray)
+PRIVATE void SparseArrayDestroy(SparseArray * sarray)
 {
 	// Don't really delete this sarray if its ref count is > 0
 	if (sarray == &EmptyArray || 

@@ -1,3 +1,4 @@
+#include "visibility.h"
 #include "objc/runtime.h"
 #include "module.h"
 #include <assert.h>
@@ -49,7 +50,7 @@ static int known_abi_count =
 	}\
 } while(0)
 
-BOOL objc_check_abi_version(unsigned long version, unsigned long module_size)
+PRIVATE BOOL objc_check_abi_version(unsigned long version, unsigned long module_size)
 {
 	struct objc_abi_version *v = NULL;
 	for (int i=0 ; i<known_abi_count ; i++)

@@ -8,12 +8,13 @@
 #include "method_list.h"
 #include "slot_pool.h"
 #include "dtable.h"
+#include "visibility.h"
 
-dtable_t __objc_uninstalled_dtable;
+PRIVATE dtable_t __objc_uninstalled_dtable;
 
 /** Head of the list of temporary dtables.  Protected by initialize_lock. */
-InitializingDtable *temporary_dtables;
-mutex_t initialize_lock;
+PRIVATE InitializingDtable *temporary_dtables;
+PRIVATE mutex_t initialize_lock;
 static uint32_t dtable_depth = 8;
 
 
@@ -55,14 +56,14 @@ struct objc_dtable
 	mutex_t lock;
 };
 
-void __objc_init_dispatch_tables ()
+PRIVATE void __objc_init_dispatch_tables ()
 {
 	INIT_LOCK(initialize_lock);
 }
 
 Class class_getSuperclass(Class);
 
-void __objc_update_dispatch_table_for_class(Class cls)
+PRIVATE void __objc_update_dispatch_table_for_class(Class cls)
 {
 	static BOOL warned = NO;
 	if (!warned)
@@ -95,7 +96,7 @@ static dtable_t create_dtable_for_class(Class class)
 }
 
 
-void objc_resize_dtables(uint32_t newSize)
+PRIVATE void objc_resize_dtables(uint32_t newSize)
 {
 	if (1<<dtable_depth > newSize) { return; }
 	dtable_depth <<= 1;
@@ -223,7 +224,7 @@ static void update_dtable(dtable_t dtable)
 	SparseArrayDestroy(methods);
 }
 
-void objc_update_dtable_for_class(Class cls)
+PRIVATE void objc_update_dtable_for_class(Class cls)
 {
 	dtable_t dtable = dtable_for_class(cls);
 	// Be lazy about constructing the slot list - don't do it unless we actually
@@ -236,7 +237,7 @@ void objc_update_dtable_for_class(Class cls)
 
 }
 
-struct objc_slot* objc_dtable_lookup(dtable_t dtable, uint32_t uid)
+PRIVATE struct objc_slot* objc_dtable_lookup(dtable_t dtable, uint32_t uid)
 {
 	if (NULL == dtable) { return NULL; }
 
@@ -273,7 +274,7 @@ struct objc_slot* objc_dtable_lookup(dtable_t dtable, uint32_t uid)
 	}
 	return NULL;
 }
-dtable_t objc_copy_dtable_for_class(dtable_t old, Class cls)
+PRIVATE dtable_t objc_copy_dtable_for_class(dtable_t old, Class cls)
 {
 	dtable_t dtable = calloc(1, sizeof(struct objc_dtable));
 	dtable->cls = cls;
@@ -284,7 +285,7 @@ dtable_t objc_copy_dtable_for_class(dtable_t old, Class cls)
 #else
 
 
-void __objc_init_dispatch_tables ()
+PRIVATE void __objc_init_dispatch_tables ()
 {
 	INIT_LOCK(initialize_lock);
 	__objc_uninstalled_dtable = SparseArrayNewWithDepth(dtable_depth);
@@ -393,7 +394,7 @@ static void mergeMethodsFromSuperclass(Class super, Class cls, SparseArray *meth
 
 Class class_getSuperclass(Class);
 
-void objc_update_dtable_for_class(Class cls)
+PRIVATE void objc_update_dtable_for_class(Class cls)
 {
 	// Only update real dtables
 	if (!classHasDtable(cls)) { return; }
@@ -409,7 +410,7 @@ void objc_update_dtable_for_class(Class cls)
 	mergeMethodsFromSuperclass(cls, cls, methods);
 	SparseArrayDestroy(methods);
 }
-void __objc_update_dispatch_table_for_class(Class cls)
+PRIVATE void __objc_update_dispatch_table_for_class(Class cls)
 {
 	static BOOL warned = NO;
 	if (!warned)
@@ -472,7 +473,7 @@ static SparseArray *create_dtable_for_class(Class class)
 
 Class class_table_next(void **e);
 
-void objc_resize_dtables(uint32_t newSize)
+PRIVATE void objc_resize_dtables(uint32_t newSize)
 {
 	// If dtables already have enough space to store all registered selectors, do nothing
 	if (1<<dtable_depth > newSize) { return; }
@@ -498,7 +499,7 @@ void objc_resize_dtables(uint32_t newSize)
 	}
 }
 
-dtable_t objc_copy_dtable_for_class(dtable_t old, Class cls)
+PRIVATE dtable_t objc_copy_dtable_for_class(dtable_t old, Class cls)
 {
 	return SparseArrayCopy(old);
 }
@@ -510,7 +511,7 @@ void objc_resolve_class(Class);
 /**
  * Send a +initialize message to the receiver, if required.  
  */
-void objc_send_initialize(id object)
+PRIVATE void objc_send_initialize(id object)
 {
 	Class class = object->isa;
 	// If the first message is sent to an instance (weird, but possible and

@@ -8,6 +8,7 @@
 #include "lock.h"
 #include "ivar.h"
 #include "dtable.h"
+#include "visibility.h"
 #include <stdlib.h>
 #include <assert.h>
 
@@ -36,13 +37,13 @@ static load_messages_table *load_table;
 
 SEL loadSel;
 
-void objc_init_load_messages_table(void)
+PRIVATE void objc_init_load_messages_table(void)
 {
 	load_table  = load_messages_create(4096);
 	loadSel = sel_registerName("load");
 }
 
-void objc_send_load_message(Class class)
+PRIVATE void objc_send_load_message(Class class)
 {
 	Class meta = class->isa;
 	for (struct objc_method_list *l=meta->methods ; NULL!=l ; l=l->next)
@@ -105,7 +106,7 @@ void objc_setDeveloperMode_np(enum objc_developer_mode_np newMode)
 // Class table manipulation
 ////////////////////////////////////////////////////////////////////////////////
 
-void class_table_insert(Class class)
+PRIVATE void class_table_insert(Class class)
 {
 	if (!objc_test_class_flag(class, objc_class_flag_resolved))
 	{
@@ -119,19 +120,19 @@ void class_table_insert(Class class)
 	class_table_internal_insert(class_table, class);
 }
 
-Class class_table_get_safe(const char *class_name)
+PRIVATE Class class_table_get_safe(const char *class_name)
 {
 	if (NULL == class_name) { return Nil; }
 	return class_table_internal_table_get(class_table, class_name);
 }
 
-Class class_table_next(void **e)
+PRIVATE Class class_table_next(void **e)
 {
 	return class_table_internal_next(class_table,
 			(struct class_table_internal_table_enumerator**)e);
 }
 
-void __objc_init_class_tables(void)
+PRIVATE void __objc_init_class_tables(void)
 {
 	class_table = class_table_internal_create(4096);
 	objc_init_load_messages_table();
@@ -141,7 +142,7 @@ void __objc_init_class_tables(void)
 // Loader functions
 ////////////////////////////////////////////////////////////////////////////////
 
-BOOL objc_resolve_class(Class cls)
+PRIVATE BOOL objc_resolve_class(Class cls)
 {
 	// Skip this if the class is already resolved.
 	if (objc_test_class_flag(cls, objc_class_flag_resolved)) { return YES; }
@@ -245,7 +246,7 @@ BOOL objc_resolve_class(Class cls)
 	return YES;
 }
 
-void objc_resolve_class_links(void)
+PRIVATE void objc_resolve_class_links(void)
 {
 	LOCK_UNTIL_RETURN(__objc_runtime_mutex);
 	Class class = unresolved_class_list;
@@ -365,7 +366,7 @@ static void reload_class(struct objc_class *class, struct objc_class *old)
 /**
  * Loads a class.  This function assumes that the runtime mutex is locked.
  */
-void objc_load_class(struct objc_class *class)
+PRIVATE void objc_load_class(struct objc_class *class)
 {
 	struct objc_class *existingClass = class_table_get_safe(class->name);
 	if (Nil != existingClass)

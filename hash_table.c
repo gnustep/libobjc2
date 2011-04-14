@@ -1,10 +1,11 @@
 #include "objc/toydispatch.h"
 #include "lock.h"
+#include "visibility.h"
 
 
 static dispatch_queue_t garbage_queue;
 
-void objc_collect_garbage_data(void(*cleanup)(void*), void *garbage)
+PRIVATE void objc_collect_garbage_data(void(*cleanup)(void*), void *garbage)
 {
 	if (0 == garbage_queue)
 	{
