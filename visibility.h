@@ -5,4 +5,9 @@
 #	define PUBLIC __attribute__ ((visibility("default")))
 #	define PRIVATE  __attribute__ ((visibility("hidden")))
 #endif
+#ifdef NO_LEGACY
+#	define LEGACY PRIVATE
+#else
+#	define LEGACY PUBLIC
+#endif
 

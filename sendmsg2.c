@@ -63,7 +63,7 @@ retry:;
 		Class class = (*receiver)->isa;
 		dtable_t dtable = dtable_for_class(class);
 		/* Install the dtable if it hasn't already been initialized. */
-		if (dtable == __objc_uninstalled_dtable)
+		if (dtable == uninstalled_dtable)
 		{
 			objc_send_initialize(*receiver);
 			dtable = dtable_for_class(class);
@@ -157,7 +157,7 @@ Slot_t objc_slot_lookup_super(struct objc_super *super, SEL selector)
 		if (0 == result)
 		{
 			// Dtable should always be installed in the superclass
-			assert(dtable_for_class(class) != __objc_uninstalled_dtable);
+			assert(dtable_for_class(class) != uninstalled_dtable);
 			result = &nil_slot;
 		}
 		return result;
@@ -192,7 +192,7 @@ struct profile_info
 	IMP method;
 };
 
-static void __objc_profile_init(void)
+static void profile_init(void)
 {
 	INIT_LOCK(profileLock);
 	profileSymbols = fopen("objc_profile.symbols", "a");
@@ -207,12 +207,11 @@ void objc_profile_write_symbols(char **symbols)
 {
 	if (NULL == profileData)
 	{
-		LOCK(__objc_runtime_mutex);
+		LOCK_RUNTIME_FOR_SCOPE();
 		if (NULL == profileData)
 		{
-			__objc_profile_init();
+			profile_init();
 		}
-		UNLOCK(__objc_runtime_mutex);
 	}
 	LOCK(&profileLock);
 	while(*symbols)
@@ -239,12 +238,11 @@ void objc_msg_profile(id receiver, IMP method,
 	// when we are not profiling.
 	if (NULL == profileData)
 	{
-		LOCK(__objc_runtime_mutex);
+		LOCK_RUNTIME_FOR_SCOPE();
 		if (NULL == profileData)
 		{
-			__objc_profile_init();
+			profile_init();
 		}
-		UNLOCK(__objc_runtime_mutex);
 	}
 	struct profile_info profile_data = { module, callsite, method };
 	fwrite(&profile_data, sizeof(profile_data), 1, profileData);
@@ -260,7 +258,7 @@ Slot_t objc_get_slot(Class cls, SEL selector)
 	{
 		void *dtable = dtable_for_class(cls);
 		/* Install the dtable if it hasn't already been initialized. */
-		if (dtable == __objc_uninstalled_dtable)
+		if (dtable == uninstalled_dtable)
 		{
 			//objc_send_initialize((id)cls);
 			dtable = dtable_for_class(cls);
@@ -316,6 +314,7 @@ IMP class_getMethodImplementation_stret(Class cls, SEL name)
 // Legacy compatibility
 ////////////////////////////////////////////////////////////////////////////////
 
+#ifndef NO_LEGACY
 /**
  * Legacy message lookup function.
  */
@@ -328,6 +327,17 @@ IMP get_imp(Class cls, SEL selector)
 {
 	return class_getMethodImplementation(cls, selector);
 }
+
+/**
+ * Message send function that only ever worked on a small subset of compiler /
+ * architecture combinations.
+ */
+void *objc_msg_sendv(void)
+{
+	fprintf(stderr, "objc_msg_sendv() never worked correctly.  Don't use it.\n");
+	abort();
+}
+#endif
 /**
  * Legacy message lookup function.  Does not support fast proxies or safe IMP
  * caching.
@@ -348,13 +358,4 @@ IMP objc_msg_lookup(id receiver, SEL selector)
 IMP objc_msg_lookup_super(struct objc_super *super, SEL selector)
 {
 	return objc_slot_lookup_super(super, selector)->method;
-}
-/**
- * Message send function that only ever worked on a small subset of compiler /
- * architecture combinations.
- */
-void *objc_msg_sendv(void)
-{
-	fprintf(stderr, "objc_msg_sendv() never worked correctly.  Don't use it.\n");
-	abort();
 }

@@ -559,10 +559,11 @@ void objc_disposeClassPair(Class cls)
 	Class meta = ((id)cls)->isa;
 	// Remove from the runtime system so nothing tries updating the dtable
 	// while we are freeing the class.
-	LOCK(__objc_runtime_mutex);
-	safe_remove_from_subclass_list(meta);
-	safe_remove_from_subclass_list(cls);
-	UNLOCK(__objc_runtime_mutex);
+	{
+		LOCK_RUNTIME_FOR_SCOPE();
+		safe_remove_from_subclass_list(meta);
+		safe_remove_from_subclass_list(cls);
+	}
 
 	// Free the method and ivar lists.
 	freeMethodLists(cls);
@@ -594,7 +595,7 @@ Class objc_allocateClassPair(Class superclass, const char *name, size_t extraByt
 	metaClass->name = strdup(name);
 	metaClass->info = objc_class_flag_meta | objc_class_flag_user_created |
 		objc_class_flag_new_abi;
-	metaClass->dtable = __objc_uninstalled_dtable;
+	metaClass->dtable = uninstalled_dtable;
 	metaClass->instance_size = sizeof(struct objc_class);
 
 	// Set up the new class
@@ -605,7 +606,7 @@ Class objc_allocateClassPair(Class superclass, const char *name, size_t extraByt
 	newClass->name = strdup(name);
 	newClass->info = objc_class_flag_class | objc_class_flag_user_created |
 		objc_class_flag_new_abi;
-	newClass->dtable = __objc_uninstalled_dtable;
+	newClass->dtable = uninstalled_dtable;
 	newClass->instance_size = superclass->instance_size;
 
 	return newClass;
@@ -658,6 +659,6 @@ const char *object_getClassName(id obj)
 
 void objc_registerClassPair(Class cls)
 {
-	LOCK_UNTIL_RETURN(__objc_runtime_mutex);
+	LOCK_RUNTIME_FOR_SCOPE();
 	class_table_insert(cls);
 }

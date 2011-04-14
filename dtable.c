@@ -10,7 +10,7 @@
 #include "dtable.h"
 #include "visibility.h"
 
-PRIVATE dtable_t __objc_uninstalled_dtable;
+PRIVATE dtable_t uninstalled_dtable;
 
 /** Head of the list of temporary dtables.  Protected by initialize_lock. */
 PRIVATE InitializingDtable *temporary_dtables;
@@ -56,14 +56,14 @@ struct objc_dtable
 	mutex_t lock;
 };
 
-PRIVATE void __objc_init_dispatch_tables ()
+PRIVATE void init_dispatch_tables ()
 {
 	INIT_LOCK(initialize_lock);
 }
 
 Class class_getSuperclass(Class);
 
-PRIVATE void __objc_update_dispatch_table_for_class(Class cls)
+PRIVATE void update_dispatch_table_for_class(Class cls)
 {
 	static BOOL warned = NO;
 	if (!warned)
@@ -79,7 +79,7 @@ static dtable_t create_dtable_for_class(Class class)
 	// Don't create a dtable for a class that already has one
 	if (classHasDtable(class)) { return dtable_for_class(class); }
 
-	LOCK_UNTIL_RETURN(__objc_runtime_mutex);
+	LOCK_RUNTIME_FOR_SCOPE();
 
 	// Make sure that another thread didn't create the dtable while we were
 	// waiting on the lock.
@@ -231,7 +231,7 @@ PRIVATE void objc_update_dtable_for_class(Class cls)
 	// need to access it
 	if ((NULL == dtable) || (NULL == dtable->slots)) { return; }
 
-	LOCK_UNTIL_RETURN(&dtable->lock);
+	LOCK_FOR_SCOPE(&dtable->lock);
 
 	update_dtable(dtable);
 
@@ -248,7 +248,7 @@ PRIVATE struct objc_slot* objc_dtable_lookup(dtable_t dtable, uint32_t uid)
 		return slot;
 	}
 
-	LOCK_UNTIL_RETURN(&dtable->lock);
+	LOCK_FOR_SCOPE(&dtable->lock);
 	if (NULL == dtable->slots)
 	{
 		update_dtable(dtable);
@@ -285,10 +285,10 @@ PRIVATE dtable_t objc_copy_dtable_for_class(dtable_t old, Class cls)
 #else
 
 
-PRIVATE void __objc_init_dispatch_tables ()
+PRIVATE void init_dispatch_tables ()
 {
 	INIT_LOCK(initialize_lock);
-	__objc_uninstalled_dtable = SparseArrayNewWithDepth(dtable_depth);
+	uninstalled_dtable = SparseArrayNewWithDepth(dtable_depth);
 }
 
 static BOOL installMethodInDtable(Class class,
@@ -297,7 +297,7 @@ static BOOL installMethodInDtable(Class class,
                                   struct objc_method *method,
                                   BOOL replaceExisting)
 {
-	assert(__objc_uninstalled_dtable != dtable);
+	assert(uninstalled_dtable != dtable);
 	uint32_t sel_id = method->selector->index;
 	struct objc_slot *slot = SparseArrayLookup(dtable, sel_id);
 	if (NULL != slot)
@@ -357,7 +357,7 @@ static void installMethodsInClass(Class cls,
                                   BOOL replaceExisting)
 {
 	SparseArray *dtable = dtable_for_class(cls);
-	assert(__objc_uninstalled_dtable != dtable);
+	assert(uninstalled_dtable != dtable);
 
 	uint32_t idx = 0;
 	struct objc_method *m;
@@ -400,7 +400,7 @@ PRIVATE void objc_update_dtable_for_class(Class cls)
 	if (!classHasDtable(cls)) { return; }
 	//fprintf(stderr, "Updating dtable for %s\n", cls->name);
 
-	LOCK_UNTIL_RETURN(__objc_runtime_mutex);
+	LOCK_RUNTIME_FOR_SCOPE();
 
 	//fprintf(stderr, "Adding methods to %s\n", cls->name);
 	SparseArray *methods = SparseArrayNewWithDepth(dtable_depth);
@@ -410,7 +410,7 @@ PRIVATE void objc_update_dtable_for_class(Class cls)
 	mergeMethodsFromSuperclass(cls, cls, methods);
 	SparseArrayDestroy(methods);
 }
-PRIVATE void __objc_update_dispatch_table_for_class(Class cls)
+PRIVATE void update_dispatch_table_for_class(Class cls)
 {
 	static BOOL warned = NO;
 	if (!warned)
@@ -427,7 +427,7 @@ static SparseArray *create_dtable_for_class(Class class)
 	// Don't create a dtable for a class that already has one
 	if (classHasDtable(class)) { return dtable_for_class(class); }
 
-	LOCK_UNTIL_RETURN(__objc_runtime_mutex);
+	LOCK_RUNTIME_FOR_SCOPE();
 
 	// Make sure that another thread didn't create the dtable while we were
 	// waiting on the lock.
@@ -444,7 +444,7 @@ static SparseArray *create_dtable_for_class(Class class)
 	else
 	{
 		dtable_t super_dtable = dtable_for_class(super);
-		if (super_dtable == __objc_uninstalled_dtable)
+		if (super_dtable == uninstalled_dtable)
 		{
 			super_dtable = create_dtable_for_class(super);
 		}
@@ -478,19 +478,19 @@ PRIVATE void objc_resize_dtables(uint32_t newSize)
 	// If dtables already have enough space to store all registered selectors, do nothing
 	if (1<<dtable_depth > newSize) { return; }
 
-	LOCK_UNTIL_RETURN(__objc_runtime_mutex);
+	LOCK_RUNTIME_FOR_SCOPE();
 
 	dtable_depth <<= 1;
 
-	uint32_t oldMask = __objc_uninstalled_dtable->mask;
+	uint32_t oldMask = uninstalled_dtable->mask;
 
-	SparseArrayExpandingArray(__objc_uninstalled_dtable);
+	SparseArrayExpandingArray(uninstalled_dtable);
 	// Resize all existing dtables
 	void *e = NULL;
 	struct objc_class *next;
 	while ((next = class_table_next(&e)))
 	{
-		if (next->dtable != (void*)__objc_uninstalled_dtable && 
+		if (next->dtable != (void*)uninstalled_dtable && 
 			NULL != next->dtable &&
 			((SparseArray*)next->dtable)->mask == oldMask)
 		{
@@ -532,7 +532,7 @@ PRIVATE void objc_send_initialize(id object)
 	// NOTE: Ideally, we would actually lock on the class object using
 	// objc_sync_enter().  This should be fixed once sync.m contains a (fast)
 	// special case for classes.
-	LOCK_UNTIL_RETURN(&initialize_lock);
+	LOCK_FOR_SCOPE(&initialize_lock);
 
 	// Make sure that the class is resolved.
 	objc_resolve_class(class);

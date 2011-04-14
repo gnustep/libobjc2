@@ -9,12 +9,11 @@ PRIVATE void objc_collect_garbage_data(void(*cleanup)(void*), void *garbage)
 {
 	if (0 == garbage_queue)
 	{
-		LOCK(__objc_runtime_mutex);
+		LOCK_RUNTIME_FOR_SCOPE();
 		if (0 == garbage_queue)
 		{
 			garbage_queue = dispatch_queue_create("ObjC deferred free queue", 0);
 		}
-		UNLOCK(__objc_runtime_mutex);
 	}
 	dispatch_async_f(garbage_queue, garbage, cleanup);
 }

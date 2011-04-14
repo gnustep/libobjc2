@@ -29,7 +29,7 @@ static int protocol_hash(const struct objc_protocol2 *protocol)
 
 static protocol_table *known_protocol_table;
 
-void __objc_init_protocol_table(void)
+void init_protocol_table(void)
 {
 	known_protocol_table = protocol_create(128);
 }  

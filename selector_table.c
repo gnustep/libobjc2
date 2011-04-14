@@ -220,7 +220,7 @@ void objc_resize_dtables(uint32_t);
 /**
  * Create data structures to store selectors.
  */
-PRIVATE void __objc_init_selector_tables()
+PRIVATE void init_selector_tables()
 {
 	selector_list = SparseArrayNew();
 	INIT_LOCK(selector_table_lock);
@@ -329,7 +329,7 @@ static SEL objc_register_selector_copy(SEL aSel, BOOL copyArgs)
 	//fprintf(stderr, "Not adding new copy\n");
 		return copy;
 	}
-	LOCK_UNTIL_RETURN(&selector_table_lock);
+	LOCK_FOR_SCOPE(&selector_table_lock);
 	copy = selector_lookup(aSel->name, aSel->types);
 	if (NULL != copy && selector_identical(aSel, copy))
 	{
@@ -516,7 +516,7 @@ PRIVATE void objc_register_selector_array(SEL selectors, unsigned long count)
  * All of the functions in this section are deprecated and should not be used
  * in new code.
  */
-#ifdef NO_LEGACY
+#ifndef NO_LEGACY
 SEL sel_get_typed_uid (const char *name, const char *types)
 {
 	if (NULL == name) { return NULL; }
@@ -592,45 +592,3 @@ BOOL sel_eq(SEL s1, SEL s2)
 }
 
 #endif // NO_LEGACY
-
-/*
- * Some simple sanity tests.
- */
-#ifdef SEL_TEST
-static void logSelector(SEL sel)
-{
-	fprintf(stderr, "%s = {%p, %s}\n", sel_getNameNonUnique(sel), sel->name, sel_getType_np(sel));
-}
-void objc_resize_dtables(uint32_t ignored) {}
-
-int main(void)
-{
-	__objc_init_selector_tables();
-	SEL a = sel_registerTypedName_np("foo:", "1234");
-	logSelector(a);
-	a = sel_registerName("bar:");
-	a = sel_registerName("foo:");
-	logSelector(a);
-	logSelector(sel_get_any_typed_uid("foo:"));
-	a = sel_registerTypedName_np("foo:", "1234");
-	logSelector(a);
-	logSelector(sel_get_any_typed_uid("foo:"));
-	a = sel_registerTypedName_np("foo:", "456");
-	logSelector(a);
-	unsigned count = sel_copyTypes("foo:", NULL, 0);
-	const char *types[count];
-	sel_copyTypes("foo:", types, count);
-	for (unsigned i=0 ; i<count ; i++)
-	{
-		fprintf(stderr, "Found type %s\n", types[i]);
-	}
-	uint32_t idx=0;
-	struct sel_type_list *type;
-	while ((type= SparseArrayNext(selector_list, &idx)))
-	{
-		fprintf(stderr, "Idx: %d, sel: %s (%s)\n", idx, type->value, ((struct sel_type_list *)SparseArrayLookup(selector_list, idx))->value);
-	}
-	fprintf(stderr, "Number of types: %d\n", count);
-	SEL sel;
-}
-#endif

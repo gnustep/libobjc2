@@ -2,6 +2,7 @@
 #include "class.h"
 #include "sarray2.h"
 #include "objc/slot.h"
+#include "visibility.h"
 #include <stdint.h>
 
 #ifdef __OBJC_LOW_MEMORY__
@@ -15,7 +16,7 @@ typedef SparseArray* dtable_t;
 /**
  * Pointer to the sparse array representing the pretend (uninstalled) dtable.
  */
-extern dtable_t __objc_uninstalled_dtable;
+PRIVATE extern dtable_t uninstalled_dtable;
 /**
  * Structure for maintaining a linked list of temporary dtables.  When sending
  * an +initialize message to a class, we create a temporary dtables and store
@@ -41,7 +42,7 @@ extern mutex_t initialize_lock;
  */
 static inline int classHasInstalledDtable(struct objc_class *cls)
 {
-	return (cls->dtable != __objc_uninstalled_dtable);
+	return (cls->dtable != uninstalled_dtable);
 }
 
 /**
@@ -55,7 +56,7 @@ static inline dtable_t dtable_for_class(Class cls)
 	{
 		return cls->dtable;
 	}
-	LOCK_UNTIL_RETURN(&initialize_lock);
+	LOCK_FOR_SCOPE(&initialize_lock);
 	if (classHasInstalledDtable(cls))
 	{
 		return cls->dtable;
@@ -64,7 +65,7 @@ static inline dtable_t dtable_for_class(Class cls)
 	* O(n) where n is the number of +initialize methods on the stack.  In
 	* practice, this is a very small number.  Profiling with GNUstep showed that
 	* this peaks at 8. */
-	dtable_t dtable = __objc_uninstalled_dtable;
+	dtable_t dtable = uninstalled_dtable;
 	InitializingDtable *buffer = temporary_dtables;
 	while (NULL != buffer)
 	{
@@ -77,7 +78,7 @@ static inline dtable_t dtable_for_class(Class cls)
 	}
 	if (dtable == 0)
 	{
-		dtable = __objc_uninstalled_dtable;
+		dtable = uninstalled_dtable;
 	}
 	return dtable;
 }
@@ -88,7 +89,7 @@ static inline dtable_t dtable_for_class(Class cls)
  */
 static inline int classHasDtable(struct objc_class *cls)
 {
-	return (dtable_for_class(cls) != __objc_uninstalled_dtable);
+	return (dtable_for_class(cls) != uninstalled_dtable);
 }
 
 /**

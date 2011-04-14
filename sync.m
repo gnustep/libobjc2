@@ -20,7 +20,7 @@ int snprintf(char *restrict s, size_t n, const char *restrict format, ...);
 
 static mutex_t at_sync_init_lock;
 
-void __objc_sync_init(void)
+PRIVATE void sync_init(void)
 {
 	INIT_LOCK(at_sync_init_lock);
 }

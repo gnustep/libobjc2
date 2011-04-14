@@ -6,7 +6,6 @@
 
 #ifndef __LIBOBJC_LOCK_H_INCLUDED__
 #define __LIBOBJC_LOCK_H_INCLUDED__
-
 #ifdef WIN32
 #	include <windows.h>
 typedef HANDLE mutex_t;
@@ -52,7 +51,7 @@ __attribute__((unused)) static void objc_release_lock(void *x)
  * Acquires the lock and automatically releases it at the end of the current
  * scope.
  */
-#define LOCK_UNTIL_RETURN(lock) \
+#define LOCK_FOR_SCOPE(lock) \
 	__attribute__((cleanup(objc_release_lock)))\
 	__attribute__((unused)) mutex_t *lock_pointer = lock;\
 	LOCK(lock)
@@ -60,6 +59,10 @@ __attribute__((unused)) static void objc_release_lock(void *x)
 /**
  * The global runtime mutex.
  */
-extern void *__objc_runtime_mutex;
+extern mutex_t runtime_mutex;
+
+#define LOCK_RUNTIME() LOCK(&runtime_mutex)
+#define UNLOCK_RUNTIME() UNLOCK(&runtime_mutex)
+#define LOCK_RUNTIME_FOR_SCOPE() LOCK_FOR_SCOPE(&runtime_mutex)
 
 #endif // __LIBOBJC_LOCK_H_INCLUDED__

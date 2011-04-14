@@ -132,7 +132,7 @@ PRIVATE Class class_table_next(void **e)
 			(struct class_table_internal_table_enumerator**)e);
 }
 
-PRIVATE void __objc_init_class_tables(void)
+PRIVATE void init_class_tables(void)
 {
 	class_table = class_table_internal_create(4096);
 	objc_init_load_messages_table();
@@ -248,7 +248,7 @@ PRIVATE BOOL objc_resolve_class(Class cls)
 
 PRIVATE void objc_resolve_class_links(void)
 {
-	LOCK_UNTIL_RETURN(__objc_runtime_mutex);
+	LOCK_RUNTIME_FOR_SCOPE();
 	Class class = unresolved_class_list;
 	BOOL resolvedClass;
 	do
@@ -347,8 +347,8 @@ static void reload_class(struct objc_class *class, struct objc_class *old)
 	objc_register_selectors_from_class(class->isa);
 
 	// Set the uninstalled dtable.  The compiler could do this as well.
-	class->dtable = __objc_uninstalled_dtable;
-	class->isa->dtable = __objc_uninstalled_dtable;
+	class->dtable = uninstalled_dtable;
+	class->isa->dtable = uninstalled_dtable;
 
 	// If this is a root class, make the class into the metaclass's superclass.
 	// This means that all instance methods will be available to the class.
@@ -401,8 +401,8 @@ PRIVATE void objc_load_class(struct objc_class *class)
 	objc_register_selectors_from_class(class->isa);
 
 	// Set the uninstalled dtable.  The compiler could do this as well.
-	class->dtable = __objc_uninstalled_dtable;
-	class->isa->dtable = __objc_uninstalled_dtable;
+	class->dtable = uninstalled_dtable;
+	class->isa->dtable = uninstalled_dtable;
 
 	// If this is a root class, make the class into the metaclass's superclass.
 	// This means that all instance methods will be available to the class.

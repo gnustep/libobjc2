@@ -62,7 +62,7 @@ static alias_table_internal_table *alias_table;
 #include "pool.h"
 
 
-PRIVATE void __objc_init_alias_table(void)
+PRIVATE void init_alias_table(void)
 {
 	alias_table = alias_table_internal_create(128);
 }
