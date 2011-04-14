@@ -10,7 +10,10 @@ model, providing the same features as Apple's Modern runtime for Objective-C++
 code, specifically the ability to throw Objective-C objects with @throw() or
 throw() and catch them with @catch() or catch().  The new unified exception
 model is supported by Clang 2.9 and is compatible with Apple's Objective-C++
-exception behaviour.  
+exception behaviour.  Another enhancement in this release is the addition of
+support for class aliases.  This provides a run-time equivalent of
+@compatibility_alias, allowing a class to show up in class lookup searching for
+its alias.
 
 You may obtain the code for this release from subversion at the following
 subversion branch:
