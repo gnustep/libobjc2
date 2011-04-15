@@ -74,9 +74,9 @@ struct objc_class
 	 */
 	struct objc_protocol_list *protocols;
 	/**
-	 * Pointer used by the Boehm GC.
+	 * Linked list of extra data attached to this class.
 	 */
-	void                      *gc_object_type;
+	struct class_annotation  *extra_data;
 	/**
 	* New ABI.  The following fields are only available with classes compiled to
 	* support the new ABI.  You may test whether any given class supports this
@@ -182,9 +182,9 @@ enum objc_class_flags
 	 */
 	objc_class_flag_hidden_class = (1<<7),
 	/**
-	 * This class is a hidden class used to implement @synchronized()
+	 * This class is a hidden class used to store associated values.
 	 */
-	objc_class_flag_lock_class = (1<<8)
+	objc_class_flag_assoc_class = (1<<8)
 };
 
 static inline void objc_set_class_flag(struct objc_class *aClass,

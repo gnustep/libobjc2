@@ -11,7 +11,6 @@
 PRIVATE mutex_t runtime_mutex;
 LEGACY void *__objc_runtime_mutex = &runtime_mutex;
 
-void sync_init(void);
 void init_selector_tables(void);
 void init_protocol_table(void);
 void init_class_tables(void);
@@ -44,10 +43,6 @@ void __objc_exec_class(struct objc_module_abi_8 *module)
 		// call dlopen() or equivalent, and the platform's implementation of
 		// this does not perform any synchronization.
 		INIT_LOCK(runtime_mutex);
-		// Create the lock used to protect the creation of hidden classes by
-		// @synchronized()
-		sync_init();
-
 		// Create the various tables that the runtime needs.
 		init_selector_tables();
 		init_protocol_table();

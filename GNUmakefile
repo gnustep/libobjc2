@@ -14,6 +14,7 @@ libobjc_VERSION = 4
 libobjc_OBJC_FILES = \
 	NSBlocks.m\
 	Protocol2.m\
+	associate.m\
 	blocks_runtime.m\
 	mutation.m\
 	properties.m\

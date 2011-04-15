@@ -61,4 +61,15 @@ BOOL sel_is_mapped(SEL selector);
  */
 SEL objc_register_selector(SEL aSel);
 
+/**
+ * SELECTOR() macro to work around the fact that GCC hard-codes the type of
+ * selectors.  This is functionally equivalent to @selector(), but it ensures
+ * that the selector has the type that the runtime uses for selectors.
+ */
+#ifdef __clang__
+#define SELECTOR(x) @selector(x)
+#else
+#define SELECTOR(x) (SEL)@selector(x)
+#endif
+
 #endif // OBJC_SELECTOR_H_INCLUDED
