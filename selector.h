@@ -54,7 +54,8 @@ static uint32_t get_untyped_idx(SEL aSel)
 /**
  * Returns whether a selector is mapped.  
  */
-BOOL sel_is_mapped(SEL selector);
+BOOL isSelRegistered(SEL sel);
+
 /**
  * Registers the selector.  This selector may be returned later, so it must not
  * be freed.

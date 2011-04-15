@@ -46,8 +46,7 @@ static SparseArray *selector_list  = NULL;
 // Get the functions for string hashing
 #include "string_hash.h"
 
-
-inline static BOOL isSelRegistered(SEL sel)
+PRIVATE inline BOOL isSelRegistered(SEL sel)
 {
 	if ((uintptr_t)sel->name < (uintptr_t)selector_count)
 	{

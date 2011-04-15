@@ -77,7 +77,7 @@ retry:;
 		}
 		if (0 == result)
 		{
-			if (!sel_is_mapped(selector))
+			if (!isSelRegistered(selector))
 			{
 				objc_register_selector(selector);
 				// This should be a tail call, but GCC is stupid and won't let
@@ -272,7 +272,7 @@ Slot_t objc_get_slot(Class cls, SEL selector)
 		}
 		if (NULL == result)
 		{
-			if (!sel_is_mapped(selector))
+			if (!isSelRegistered(selector))
 			{
 				objc_register_selector(selector);
 				return objc_get_slot(cls, selector);
