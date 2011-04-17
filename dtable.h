@@ -4,6 +4,7 @@
 #include "objc/slot.h"
 #include "visibility.h"
 #include <stdint.h>
+#include <stdio.h>
 
 #ifdef __OBJC_LOW_MEMORY__
 typedef struct objc_dtable* dtable_t;
@@ -56,6 +57,7 @@ static inline dtable_t dtable_for_class(Class cls)
 	{
 		return cls->dtable;
 	}
+
 	LOCK_FOR_SCOPE(&initialize_lock);
 	if (classHasInstalledDtable(cls))
 	{

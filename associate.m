@@ -181,12 +181,12 @@ static Class allocateHiddenClass(Class superclass)
 	// Set the superclass pointer to the name.  The runtime will fix this when
 	// the class links are resolved.
 	newClass->name = superclass->name;
-	newClass->info = objc_class_flag_resolved | objc_class_flag_initialized |
+	newClass->info = objc_class_flag_resolved | 
 		objc_class_flag_class | objc_class_flag_user_created |
 		objc_class_flag_new_abi | objc_class_flag_hidden_class |
 		objc_class_flag_assoc_class;
 	newClass->super_class = superclass;
-	newClass->dtable = objc_copy_dtable_for_class(superclass->dtable, newClass);
+	newClass->dtable = uninstalled_dtable;
 	newClass->instance_size = superclass->instance_size;
 	if (objc_test_class_flag(superclass, objc_class_flag_meta))
 	{
@@ -235,13 +235,25 @@ static void deallocHiddenClass(id obj, SEL _cmd)
 	free(hiddenClass);
 }
 
-void objc_setAssociatedObject(id object,
-                              void *key,
-                              id value,
-                              objc_AssociationPolicy policy)
+static struct reference_list* referenceListForObject(id object, BOOL create)
 {
+	if (class_isMetaClass(object->isa))
+	{
+		Class cls = (Class)object;
+		if ((NULL == cls->extra_data) && create)
+		{
+			int *lock = lock_for_pointer(cls);
+			lock_spinlock(lock);
+			if (NULL == cls->extra_data)
+			{
+				cls->extra_data = calloc(1, sizeof(struct reference_list));
+			}
+			unlock_spinlock(lock);
+		}
+		return cls->extra_data;
+	}
 	Class hiddenClass = findHiddenClass(object);
-	if (NULL == hiddenClass)
+	if ((NULL == hiddenClass) && create)
 	{
 		int *lock = lock_for_pointer(object);
 		lock_spinlock(lock);
@@ -252,15 +264,22 @@ void objc_setAssociatedObject(id object,
 		}
 		unlock_spinlock(lock);
 	}
-	struct reference_list *list = object_getIndexedIvars(hiddenClass);
+	return hiddenClass ? object_getIndexedIvars(hiddenClass) : NULL;
+}
+
+void objc_setAssociatedObject(id object,
+                              void *key,
+                              id value,
+                              objc_AssociationPolicy policy)
+{
+	struct reference_list *list = referenceListForObject(object, YES);
 	setReference(list, key, value, policy);
 }
 
 id objc_getAssociatedObject(id object, void *key)
 {
-	Class hiddenClass = findHiddenClass(object);
-	if (NULL == hiddenClass) { return nil; }
-	struct reference_list *list = object_getIndexedIvars(hiddenClass);
+	struct reference_list *list = referenceListForObject(object, NO);
+	if (NULL == list) { return nil; }
 	struct reference *r = findReference(list, key);
 	return r ? r->object : nil;
 }
@@ -268,8 +287,5 @@ id objc_getAssociatedObject(id object, void *key)
 
 void objc_removeAssociatedObjects(id object)
 {
-	Class hiddenClass = findHiddenClass(object);
-	if (NULL == hiddenClass) { return; }
-	struct reference_list *list = object_getIndexedIvars(hiddenClass);
-	cleanupReferenceList(list);
+	cleanupReferenceList(referenceListForObject(object, NO));
 }

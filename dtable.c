@@ -28,7 +28,6 @@ static void collectMethodsForMethodListToSparseArray(
 	}
 	for (unsigned i=0 ; i<list->count ; i++)
 	{
-		//fprintf(stderr, "Adding method %s (%d)\n", sel_getName(list->methods[i].selector), PTR_TO_IDX(list->methods[i].selector->name));
 		SparseArrayInsert(sarray, list->methods[i].selector->index,
 				(void*)&list->methods[i]);
 	}
@@ -74,7 +73,7 @@ PRIVATE void update_dispatch_table_for_class(Class cls)
 	}
 }
 
-static dtable_t create_dtable_for_class(Class class)
+static SparseArray *create_dtable_for_class(Class class, dtable_t root_dtable)
 {
 	// Don't create a dtable for a class that already has one
 	if (classHasDtable(class)) { return dtable_for_class(class); }
@@ -84,8 +83,6 @@ static dtable_t create_dtable_for_class(Class class)
 	// Make sure that another thread didn't create the dtable while we were
 	// waiting on the lock.
 	if (classHasDtable(class)) { return dtable_for_class(class); }
-
-	Class super = class_getSuperclass(class);
 
 	/* Allocate dtable if necessary */
 	dtable_t dtable = calloc(1, sizeof(struct objc_dtable));
@@ -179,7 +176,6 @@ static void insert_slot(dtable_t dtable, struct objc_slot *slot, uint32_t idx)
 
 static void update_dtable(dtable_t dtable)
 {
-	//fprintf(stderr, "Updating dtable for %s! %d\n", dtable->cls->name, dtable_depth);
 	Class cls = dtable->cls;
 
 	if (NULL == cls->methods) { return; }
@@ -253,7 +249,6 @@ PRIVATE struct objc_slot* objc_dtable_lookup(dtable_t dtable, uint32_t uid)
 	{
 		update_dtable(dtable);
 	}
-	//fprintf(stderr, "Using slow path: %d entries in table for %s\n", dtable->slot_count, dtable->cls->name);
 	struct slots_list *s = find_slot(uid, dtable->slots, dtable->slot_count);
 	if (NULL != s)
 	{
@@ -302,7 +297,6 @@ static BOOL installMethodInDtable(Class class,
 	struct objc_slot *slot = SparseArrayLookup(dtable, sel_id);
 	if (NULL != slot)
 	{
-		//fprintf(stderr, "Slot already exists...\n");
 		// If this method is the one already installed, pretend to install it again.
 		if (slot->method == method->imp) { return NO; }
 
@@ -314,7 +308,6 @@ static BOOL installMethodInDtable(Class class,
 			// Don't replace methods if we're not meant to (if they're from
 			// later in a method list, for example)
 			if (!replaceExisting) { return NO; }
-			//fprintf(stderr, "Replacing method %p %s in %s with %p\n", slot->method, sel_getName(method->selector), class->name, method->imp);
 			slot->method = method->imp;
 			return YES;
 		}
@@ -328,13 +321,11 @@ static BOOL installMethodInDtable(Class class,
 		{
 			if (installedFor == owner)
 			{
-		//fprintf(stderr, "Not installing %s from %s in %s - already overridden from %s\n", sel_getName(method->selector), owner->name, class->name, slot->owner->name);
 				return NO;
 			}
 		}
 	}
 	struct objc_slot *oldSlot = slot;
-	//fprintf(stderr, "Installing method %p (%d) %s in %s (previous slot owned by %s)\n", method->imp, sel_id, sel_getName(method->selector), class->name, slot? oldSlot->owner->name: "(no one)");
 	slot = new_slot_for_method_in_class((void*)method, owner);
 	SparseArrayInsert(dtable, sel_id, slot);
 	// In TDD mode, we also register the first typed method that we
@@ -345,7 +336,6 @@ static BOOL installMethodInDtable(Class class,
 	// Invalidate the old slot, if there is one.
 	if (NULL != oldSlot)
 	{
-		//fprintf(stderr, "Overriding method %p %s from %s in %s with %x\n", slot->method, sel_getName(method->selector), oldSlot->owner->name, class->name, method->imp);
 		oldSlot->version++;
 	}
 	return YES;
@@ -398,11 +388,9 @@ PRIVATE void objc_update_dtable_for_class(Class cls)
 {
 	// Only update real dtables
 	if (!classHasDtable(cls)) { return; }
-	//fprintf(stderr, "Updating dtable for %s\n", cls->name);
 
 	LOCK_RUNTIME_FOR_SCOPE();
 
-	//fprintf(stderr, "Adding methods to %s\n", cls->name);
 	SparseArray *methods = SparseArrayNewWithDepth(dtable_depth);
 	collectMethodsForMethodListToSparseArray((void*)cls->methods, methods);
 	installMethodsInClass(cls, cls, methods, YES);
@@ -422,7 +410,7 @@ PRIVATE void update_dispatch_table_for_class(Class cls)
 	objc_update_dtable_for_class(cls);
 }
 
-static SparseArray *create_dtable_for_class(Class class)
+static SparseArray *create_dtable_for_class(Class class, dtable_t root_dtable)
 {
 	// Don't create a dtable for a class that already has one
 	if (classHasDtable(class)) { return dtable_for_class(class); }
@@ -446,9 +434,16 @@ static SparseArray *create_dtable_for_class(Class class)
 		dtable_t super_dtable = dtable_for_class(super);
 		if (super_dtable == uninstalled_dtable)
 		{
-			super_dtable = create_dtable_for_class(super);
+			if (super->isa == class)
+			{
+				super_dtable = root_dtable;
+			}
+			else
+			{
+				abort();
+			}
 		}
-		dtable = SparseArrayCopy(dtable_for_class(super));
+		dtable = SparseArrayCopy(super_dtable);
 	}
 
 	// When constructing the initial dtable for a class, we iterate along the
@@ -508,6 +503,19 @@ PRIVATE dtable_t objc_copy_dtable_for_class(dtable_t old, Class cls)
 
 void objc_resolve_class(Class);
 
+int objc_sync_enter(id);
+int objc_sync_exit(id);
+
+__attribute__((unused)) static void objc_release_object_lock(id *x)
+{
+	objc_sync_exit(*x);
+}
+#define LOCK_OBJECT_FOR_SCOPE(obj) \
+	__attribute__((cleanup(objc_release_object_lock)))\
+	__attribute__((unused)) id lock_object_pointer = obj;\
+	objc_sync_enter(obj);
+
+
 /**
  * Send a +initialize message to the receiver, if required.  
  */
@@ -532,7 +540,6 @@ PRIVATE void objc_send_initialize(id object)
 	// NOTE: Ideally, we would actually lock on the class object using
 	// objc_sync_enter().  This should be fixed once sync.m contains a (fast)
 	// special case for classes.
-	LOCK_FOR_SCOPE(&initialize_lock);
 
 	// Make sure that the class is resolved.
 	objc_resolve_class(class);
@@ -543,19 +550,48 @@ PRIVATE void objc_send_initialize(id object)
 		objc_send_initialize((id)class->super_class);
 	}
 
+	LOCK(&initialize_lock);
+
 	// Superclass +initialize might possibly send a message to this class, in
 	// which case this method would be called again.  See NSObject and
 	// NSAutoreleasePool +initialize interaction in GNUstep.
-	if (objc_test_class_flag(class, objc_class_flag_initialized)) { return; }
+	if (objc_test_class_flag(class, objc_class_flag_initialized))
+	{
+		UNLOCK(&initialize_lock);
+		return;
+	}
 
 	// Set the initialized flag on both this class and its metaclass, to make
 	// sure that +initialize is only ever sent once.
 	objc_set_class_flag(class, objc_class_flag_initialized);
 	objc_set_class_flag(meta, objc_class_flag_initialized);
 
+	dtable_t class_dtable = create_dtable_for_class(class, uninstalled_dtable);
+	dtable_t dtable = create_dtable_for_class(meta, class_dtable);
+
+	static SEL initializeSel = 0;
+	if (0 == initializeSel)
+	{
+		initializeSel = sel_registerName("initialize");
+	}
+
+	struct objc_slot *initializeSlot = 
+		objc_dtable_lookup(dtable, initializeSel->index);
+
+	// If there's no initialize method, then don't bother installing and
+	// removing the initialize dtable, just install both dtables correctly now
+	if (0 == initializeSlot || initializeSlot->owner != meta)
+	{
+		meta->dtable = dtable;
+		class->dtable = class_dtable;
+		UNLOCK(&initialize_lock);
+		return;
+	}
+
+	LOCK_OBJECT_FOR_SCOPE((id)class);
+
 
 	// Create a temporary dtable, to be installed later.
-	dtable_t class_dtable = create_dtable_for_class(class);
 	InitializingDtable buffer = { class, class_dtable, temporary_dtables };
 	temporary_dtables = &buffer;
 
@@ -563,9 +599,9 @@ PRIVATE void objc_send_initialize(id object)
 	// a message to this class in future, the lookup function will check this
 	// buffer if the receiver's dtable is not installed, and block if
 	// attempting to send a message to this class.
-	dtable_t dtable = create_dtable_for_class(meta);
 	InitializingDtable meta_buffer = { meta, dtable, temporary_dtables };
 	temporary_dtables = &meta_buffer;
+	UNLOCK(&initialize_lock);
 
 	// Store the buffer in the temporary dtables list.  Note that it is safe to
 	// insert it into a global list, even though it's a temporary variable,
@@ -573,44 +609,15 @@ PRIVATE void objc_send_initialize(id object)
 	//
 	// FIXME: This will actually break if +initialize throws an exception...
 
-	static SEL initializeSel = 0;
-	if (0 == initializeSel)
-	{
-		initializeSel = sel_registerName("initialize");
-	}
-	struct objc_slot *initializeSlot = 
-		objc_dtable_lookup(dtable, initializeSel->index);
+	initializeSlot->method((id)class, initializeSel);
 
-	if (0 != initializeSlot)
-	{
-		if (Nil != class->super_class)
-		{
-			// The dtable to use for sending messages to the superclass.  This
-			// is the superclass's metaclass' dtable.
-			dtable_t super_dtable = dtable_for_class(class->super_class->isa);
-			struct objc_slot *superSlot = objc_dtable_lookup(super_dtable,
-					initializeSel->index);
-			// Check that this IMP comes from the class, not from its
-			// superclass.  We still have to use dtable_for_class() here
-			// because our +initialize call might be in response to a message
-			// sent from a subclass (e.g. NSObject +initialize sending a
-			// message to NSAutoreleasePool: NSObject's dtable won't have been
-			// installed at this point.
-			if (0 == superSlot || superSlot->method != initializeSlot->method)
-			{
-				initializeSlot->method((id)class, initializeSel);
-			}
-		}
-		else
-		{
-			initializeSlot->method((id)class, initializeSel);
-		}
-	}
-
-	// Install the real dtable for both the class and the metaclass.
+	// Install the real dtable for both the class and the metaclass.  We can do
+	// this without the lock, because now both ways of accessing the dtable are
+	// safe.  We only need the lock when we remove the cached version.
 	meta->dtable = dtable;
 	class->dtable = class_dtable;
 
+	LOCK(&initialize_lock);
 	// Remove the look-aside buffer entry.
 	if (temporary_dtables == &meta_buffer)
 	{
@@ -625,4 +632,5 @@ PRIVATE void objc_send_initialize(id object)
 		}
 		prev->next = buffer.next;
 	}
+	UNLOCK(&initialize_lock);
 }

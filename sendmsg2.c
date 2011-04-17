@@ -116,7 +116,6 @@ Slot_t (*objc_plane_lookup)(id *receiver, SEL op, id sender) =
  */
 Slot_t objc_msg_lookup_sender(id *receiver, SEL selector, id sender)
 {
-	//fprintf(stderr, "Looking up slot %s\n", sel_get_name(selector));
 	// Returning a nil slot allows the caller to cache the lookup for nil too,
 	// although this is not particularly useful because the nil method can be
 	// inlined trivially.
@@ -140,7 +139,6 @@ Slot_t objc_msg_lookup_sender(id *receiver, SEL selector, id sender)
 	void *receiverPlaneID = *((void**)receiver - 1);
 	if (senderPlaneID == receiverPlaneID)
 	{
-		//fprintf(stderr, "Intraplane message\n");
 		return objc_msg_lookup_internal(receiver, selector, sender);
 	}
 	return objc_plane_lookup(receiver, selector, sender);
@@ -260,7 +258,6 @@ Slot_t objc_get_slot(Class cls, SEL selector)
 		/* Install the dtable if it hasn't already been initialized. */
 		if (dtable == uninstalled_dtable)
 		{
-			//objc_send_initialize((id)cls);
 			dtable = dtable_for_class(cls);
 			result = objc_dtable_lookup(dtable, selector->index);
 		}
@@ -270,6 +267,7 @@ Slot_t objc_get_slot(Class cls, SEL selector)
 			// weren't looking
 			result = objc_dtable_lookup(dtable, selector->index);
 		}
+		Class class = cls;
 		if (NULL == result)
 		{
 			if (!isSelRegistered(selector))
