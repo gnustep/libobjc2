@@ -76,7 +76,7 @@ struct objc_class
 	/**
 	 * Linked list of extra data attached to this class.
 	 */
-	struct reference_list      *extra_data;
+	struct reference_list     *extra_data;
 	/**
 	* New ABI.  The following fields are only available with classes compiled to
 	* support the new ABI.  You may test whether any given class supports this
