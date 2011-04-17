@@ -27,6 +27,7 @@ OBJECTS = \
 	Protocol2.o\
 	abi_version.o\
 	alias_table.o\
+	associate.o\
 	blocks_runtime.o\
 	caps.o\
 	category_loader.o\
@@ -47,7 +48,6 @@ OBJECTS = \
 	selector_table.o\
 	sendmsg2.o\
 	statics_loader.o\
-	sync.o\
 	toydispatch.o
 
 all: libobjc.a libobjcxx.so.$(VERSION)

@@ -267,7 +267,6 @@ Slot_t objc_get_slot(Class cls, SEL selector)
 			// weren't looking
 			result = objc_dtable_lookup(dtable, selector->index);
 		}
-		Class class = cls;
 		if (NULL == result)
 		{
 			if (!isSelRegistered(selector))

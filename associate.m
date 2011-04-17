@@ -7,6 +7,7 @@
 #include "class.h"
 #include "dtable.h"
 #include "selector.h"
+#include "lock.h"
 
 /**
  * A single associative reference.  Contains the key, value, and association
@@ -44,6 +45,11 @@ struct reference_list
 	 * 10 references associated with an object, which seems highly unlikely.
 	 */
 	struct reference_list *next;
+	/**
+	 * Mutex.  Only set for the first reference list in a chain.  Used for
+	 * @syncronize().
+	 */
+	mutex_t lock;
 	/**
 	 * Array of references.
 	 */
@@ -288,4 +294,22 @@ id objc_getAssociatedObject(id object, void *key)
 void objc_removeAssociatedObjects(id object)
 {
 	cleanupReferenceList(referenceListForObject(object, NO));
+}
+
+int objc_sync_enter(id object)
+{
+	struct reference_list *list = referenceListForObject(object, YES);
+	LOCK(&list->lock);
+	return 0;
+}
+
+int objc_sync_exit(id object)
+{
+	struct reference_list *list = referenceListForObject(object, NO);
+	if (NULL != list)
+	{
+		UNLOCK(&list->lock);
+		return 0;
+	}
+	return 1;
 }

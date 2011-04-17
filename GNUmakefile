@@ -17,8 +17,7 @@ libobjc_OBJC_FILES = \
 	associate.m\
 	blocks_runtime.m\
 	mutation.m\
-	properties.m\
-	sync.m
+	properties.m
 
 
 libobjc_C_FILES = \
