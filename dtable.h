@@ -46,6 +46,8 @@ static inline int classHasInstalledDtable(struct objc_class *cls)
 	return (cls->dtable != uninstalled_dtable);
 }
 
+int objc_sync_enter(id object);
+int objc_sync_exit(id object);
 /**
  * Returns the dtable for a given class.  If we are currently in an +initialize
  * method then this will block if called from a thread other than the one
@@ -58,29 +60,43 @@ static inline dtable_t dtable_for_class(Class cls)
 		return cls->dtable;
 	}
 
-	LOCK_FOR_SCOPE(&initialize_lock);
-	if (classHasInstalledDtable(cls))
-	{
-		return cls->dtable;
-	}
-	/* This is a linear search, and so, in theory, could be very slow.  It is
-	* O(n) where n is the number of +initialize methods on the stack.  In
-	* practice, this is a very small number.  Profiling with GNUstep showed that
-	* this peaks at 8. */
 	dtable_t dtable = uninstalled_dtable;
-	InitializingDtable *buffer = temporary_dtables;
-	while (NULL != buffer)
+
 	{
-		if (buffer->class == cls)
+		LOCK_FOR_SCOPE(&initialize_lock);
+		if (classHasInstalledDtable(cls))
 		{
-			dtable = buffer->dtable;
-			break;
+			return cls->dtable;
 		}
-		buffer = buffer->next;
+		/* This is a linear search, and so, in theory, could be very slow.  It
+		 * is O(n) where n is the number of +initialize methods on the stack.
+		 * In practice, this is a very small number.  Profiling with GNUstep
+		 * showed that this peaks at 8. */
+		InitializingDtable *buffer = temporary_dtables;
+		while (NULL != buffer)
+		{
+			if (buffer->class == cls)
+			{
+				dtable = buffer->dtable;
+				break;
+			}
+			buffer = buffer->next;
+		}
 	}
-	if (dtable == 0)
+
+	if (dtable != uninstalled_dtable)
 	{
-		dtable = uninstalled_dtable;
+		// Make sure that we block if +initialize is still running.  We do this
+		// after we've released the initialize lock, so that the real dtable
+		// can be installed.  This acquires / releases a recursive mutex, so if
+		// this mutex is already held by this thread then this will proceed
+		// immediately.  If it's held by another thread (i.e. the one running
+		// +initialize) then we block here until it's run.  We don't need to do
+		// this if the dtable is the uninstalled dtable, because that means
+		// +initialize has not yet been sent, so we can wait until something
+		// triggers it before needing any synchronisation.
+		objc_sync_enter((id)cls);
+		objc_sync_exit((id)cls);
 	}
 	return dtable;
 }

@@ -2,6 +2,7 @@
 #include "objc/runtime.h"
 #include "visibility.h"
 #include "loader.h"
+#include "dtable.h"
 
 #define BUFFER_TYPE struct objc_category
 #include "buffer.h"
@@ -17,10 +18,16 @@ static void register_methods(struct objc_class *cls, struct objc_method_list *l)
 	// Add the method list at the head of the list of lists.
 	l->next = cls->methods;
 	cls->methods = l;
-	// Update the dtable to catch the new methods.
-	// FIXME: We can make this more efficient by simply passing the new method
-	// list to the dtable and telling it only to update those methods.
-	objc_update_dtable_for_class(cls);
+	// Update the dtable to catch the new methods, if the dtable has been
+	// created (don't bother creating dtables for classes when categories are
+	// loaded if the class hasn't received any messages yet.
+	if (classHasDtable(cls))
+	{
+		fprintf(stderr, "Updating dtable for %s\n", class_getName(cls));
+		// FIXME: We can make this more efficient by simply passing the new method
+		// list to the dtable and telling it only to update those methods.
+		objc_update_dtable_for_class(cls);
+	}
 }
 
 static void load_category(struct objc_category *cat, struct objc_class *class)

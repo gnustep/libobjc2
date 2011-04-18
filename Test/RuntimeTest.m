@@ -252,6 +252,32 @@ void testRegisterAlias()
   printf("testRegisterAlias() ran\n");
 }
 
+@interface SlowInit1
++ (void)doNothing;
+@end
+@interface SlowInit2
++ (void)doNothing;
+@end
+@implementation SlowInit1
++ (void)initialize
+{
+	sleep(1);
+	[SlowInit2 doNothing];
+}
++ (void)doNothing {}
+@end
+static int initCount;
+@implementation SlowInit1
++ (void)initialize
+{
+	sleep(1);
+	__sync_fetch_and_add(&initCount, 1);
+}
++ (void)doNothing {}
+@end
+
+
+
 int main (int argc, const char * argv[])
 {
   testInvalidArguments();
