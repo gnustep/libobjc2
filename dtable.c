@@ -20,11 +20,12 @@ static uint32_t dtable_depth = 8;
 
 static void collectMethodsForMethodListToSparseArray(
 		struct objc_method_list *list,
-		SparseArray *sarray)
+		SparseArray *sarray,
+		BOOL recurse)
 {
-	if (NULL != list->next)
+	if (recurse && (NULL != list->next))
 	{
-		collectMethodsForMethodListToSparseArray(list->next, sarray);
+		collectMethodsForMethodListToSparseArray(list->next, sarray, YES);
 	}
 	for (unsigned i=0 ; i<list->count ; i++)
 	{
@@ -62,18 +63,8 @@ PRIVATE void init_dispatch_tables ()
 
 Class class_getSuperclass(Class);
 
-PRIVATE void update_dispatch_table_for_class(Class cls)
-{
-	static BOOL warned = NO;
-	if (!warned)
-	{
-		fprintf(stderr, 
-			"Warning: Calling deprecated private ObjC runtime function %s\n", __func__);
-		warned = YES;
-	}
-}
 
-static SparseArray *create_dtable_for_class(Class class, dtable_t root_dtable)
+static dtable_t create_dtable_for_class(Class class, dtable_t root_dtable)
 {
 	// Don't create a dtable for a class that already has one
 	if (classHasDtable(class)) { return dtable_for_class(class); }
@@ -181,7 +172,7 @@ static void update_dtable(dtable_t dtable)
 	if (NULL == cls->methods) { return; }
 
 	SparseArray *methods = SparseArrayNewWithDepth(dtable_depth);
-	collectMethodsForMethodListToSparseArray((void*)cls->methods, methods);
+	collectMethodsForMethodListToSparseArray((void*)cls->methods, methods, YES);
 
 	if (NULL == dtable->slots)
 	{
@@ -392,25 +383,30 @@ PRIVATE void objc_update_dtable_for_class(Class cls)
 	LOCK_RUNTIME_FOR_SCOPE();
 
 	SparseArray *methods = SparseArrayNewWithDepth(dtable_depth);
-	collectMethodsForMethodListToSparseArray((void*)cls->methods, methods);
+	collectMethodsForMethodListToSparseArray((void*)cls->methods, methods, YES);
 	installMethodsInClass(cls, cls, methods, YES);
 	// Methods now contains only the new methods for this class.
 	mergeMethodsFromSuperclass(cls, cls, methods);
 	SparseArrayDestroy(methods);
 }
-PRIVATE void update_dispatch_table_for_class(Class cls)
+
+PRIVATE void add_method_list_to_class(Class cls,
+                                      struct objc_method_list *list)
 {
-	static BOOL warned = NO;
-	if (!warned)
-	{
-		fprintf(stderr, 
-			"Warning: Calling deprecated private ObjC runtime function %s\n", __func__);
-		warned = YES;
-	}
-	objc_update_dtable_for_class(cls);
+	// Only update real dtables
+	if (!classHasDtable(cls)) { return; }
+
+	LOCK_RUNTIME_FOR_SCOPE();
+
+	SparseArray *methods = SparseArrayNewWithDepth(dtable_depth);
+	collectMethodsForMethodListToSparseArray(list, methods, NO);
+	installMethodsInClass(cls, cls, methods, YES);
+	// Methods now contains only the new methods for this class.
+	mergeMethodsFromSuperclass(cls, cls, methods);
+	SparseArrayDestroy(methods);
 }
 
-static SparseArray *create_dtable_for_class(Class class, dtable_t root_dtable)
+static dtable_t create_dtable_for_class(Class class, dtable_t root_dtable)
 {
 	// Don't create a dtable for a class that already has one
 	if (classHasDtable(class)) { return dtable_for_class(class); }
@@ -501,6 +497,18 @@ PRIVATE dtable_t objc_copy_dtable_for_class(dtable_t old, Class cls)
 
 #endif // __OBJC_LOW_MEMORY__
 
+LEGACY void update_dispatch_table_for_class(Class cls)
+{
+	static BOOL warned = NO;
+	if (!warned)
+	{
+		fprintf(stderr, 
+			"Warning: Calling deprecated private ObjC runtime function %s\n", __func__);
+		warned = YES;
+	}
+	objc_update_dtable_for_class(cls);
+}
+
 void objc_resolve_class(Class);
 
 int objc_sync_enter(id);
@@ -510,11 +518,39 @@ __attribute__((unused)) static void objc_release_object_lock(id *x)
 {
 	objc_sync_exit(*x);
 }
+/**
+ * Macro that is equivalent to @synchronize, for use in C code.
+ */
 #define LOCK_OBJECT_FOR_SCOPE(obj) \
 	__attribute__((cleanup(objc_release_object_lock)))\
 	__attribute__((unused)) id lock_object_pointer = obj;\
 	objc_sync_enter(obj);
 
+/**
+ * Remove a buffer from an entry in the initializing dtables list.  This is
+ * called as a cleanup to ensure that it runs even if +initialize throws an
+ * exception.
+ */
+static void remove_dtable(InitializingDtable* meta_buffer)
+{
+	LOCK(&initialize_lock);
+	InitializingDtable *buffer = meta_buffer->next;
+	// Remove the look-aside buffer entry.
+	if (temporary_dtables == meta_buffer)
+	{
+		temporary_dtables = buffer->next;
+	}
+	else
+	{
+		InitializingDtable *prev = temporary_dtables;
+		while (prev->next->class != meta_buffer->class)
+		{
+			prev = prev->next;
+		}
+		prev->next = buffer->next;
+	}
+	UNLOCK(&initialize_lock);
+}
 
 /**
  * Send a +initialize message to the receiver, if required.  
@@ -591,24 +627,19 @@ PRIVATE void objc_send_initialize(id object)
 	LOCK_OBJECT_FOR_SCOPE((id)class);
 
 
-	// Create a temporary dtable, to be installed later.
-	InitializingDtable buffer = { class, class_dtable, temporary_dtables };
-	temporary_dtables = &buffer;
-
 	// Create an entry in the dtable look-aside buffer for this.  When sending
 	// a message to this class in future, the lookup function will check this
 	// buffer if the receiver's dtable is not installed, and block if
 	// attempting to send a message to this class.
-	InitializingDtable meta_buffer = { meta, dtable, temporary_dtables };
+	InitializingDtable buffer = { class, class_dtable, temporary_dtables };
+	__attribute__((cleanup(remove_dtable)))
+	InitializingDtable meta_buffer = { meta, dtable, &buffer };
 	temporary_dtables = &meta_buffer;
 	UNLOCK(&initialize_lock);
 
 	// Store the buffer in the temporary dtables list.  Note that it is safe to
 	// insert it into a global list, even though it's a temporary variable,
 	// because we will clean it up after this function.
-	//
-	// FIXME: This will actually break if +initialize throws an exception...
-
 	initializeSlot->method((id)class, initializeSel);
 
 	// Install the real dtable for both the class and the metaclass.  We can do
@@ -617,20 +648,4 @@ PRIVATE void objc_send_initialize(id object)
 	meta->dtable = dtable;
 	class->dtable = class_dtable;
 
-	LOCK(&initialize_lock);
-	// Remove the look-aside buffer entry.
-	if (temporary_dtables == &meta_buffer)
-	{
-		temporary_dtables = buffer.next;
-	}
-	else
-	{
-		InitializingDtable *prev = temporary_dtables;
-		while (prev->next->class != meta)
-		{
-			prev = prev->next;
-		}
-		prev->next = buffer.next;
-	}
-	UNLOCK(&initialize_lock);
 }

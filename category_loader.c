@@ -25,7 +25,7 @@ static void register_methods(struct objc_class *cls, struct objc_method_list *l)
 	{
 		// FIXME: We can make this more efficient by simply passing the new method
 		// list to the dtable and telling it only to update those methods.
-		objc_update_dtable_for_class(cls);
+		add_method_list_to_class(cls, l);
 	}
 }
 

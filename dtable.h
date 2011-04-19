@@ -115,6 +115,12 @@ static inline int classHasDtable(struct objc_class *cls)
  * modifying a class's method list.
  */
 void objc_update_dtable_for_class(Class);
+/**
+ * Adds a single method list to a class.  This is used when loading categories,
+ * and is faster than completely rebuilding the dtable.
+ */
+void add_method_list_to_class(Class cls,
+                              struct objc_method_list *list);
 
 /**
  * Creates a copy of the class's dispatch table.
