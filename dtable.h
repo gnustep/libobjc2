@@ -123,6 +123,6 @@ void add_method_list_to_class(Class cls,
                               struct objc_method_list *list);
 
 /**
- * Creates a copy of the class's dispatch table.
+ * Destroys a dtable.
  */
-dtable_t objc_copy_dtable_for_class(dtable_t old, Class cls);
+void free_dtable(dtable_t dtable);

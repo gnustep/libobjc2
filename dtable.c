@@ -268,6 +268,16 @@ PRIVATE dtable_t objc_copy_dtable_for_class(dtable_t old, Class cls)
 	return dtable;
 }
 
+PRIVATE void free_dtable(dtable_t dtable)
+{
+	if (NULL != dtable->slots)
+	{
+		free(dtable->slots);
+	}
+	DESTROY_LOCK(dtable->lock);
+	free(dtable);
+}
+
 #else
 
 
@@ -493,6 +503,11 @@ PRIVATE void objc_resize_dtables(uint32_t newSize)
 PRIVATE dtable_t objc_copy_dtable_for_class(dtable_t old, Class cls)
 {
 	return SparseArrayCopy(old);
+}
+
+PRIVATE void free_dtable(dtable_t dtable)
+{
+	SparseArrayDestroy(dtable);
 }
 
 #endif // __OBJC_LOW_MEMORY__

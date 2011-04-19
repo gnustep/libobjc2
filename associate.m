@@ -234,8 +234,7 @@ static void deallocHiddenClass(id obj, SEL _cmd)
 	struct reference_list *list = object_getIndexedIvars(hiddenClass);
 	cleanupReferenceList(list);
 
-	// FIXME: Low memory profile.
-	SparseArrayDestroy(hiddenClass->dtable);
+	free_dtable(hiddenClass->dtable);
 
 	// Free the class
 	free(hiddenClass);

@@ -138,7 +138,7 @@ BOOL class_addMethod(Class cls, SEL name, IMP imp, const char *types)
 
 	if (objc_test_class_flag(cls, objc_class_flag_resolved))
 	{
-		objc_update_dtable_for_class(cls);
+		add_method_list_to_class(cls, methods);
 	}
 
 	return YES;
@@ -569,6 +569,8 @@ void objc_disposeClassPair(Class cls)
 	freeMethodLists(cls);
 	freeMethodLists(meta);
 	freeIvarLists(cls);
+	free_dtable(cls->dtable);
+	free_dtable(meta->dtable);
 
 	// Free the class and metaclass
 	free(meta);
