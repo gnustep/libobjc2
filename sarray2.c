@@ -143,7 +143,7 @@ PRIVATE void SparseArrayInsert(SparseArray * sarray, uint32_t index, void *value
 			init_pointers(newsarray);
 			sarray->data[i] = newsarray;
 			child = newsarray;
-		}// FIXME: Concurrency (don't CoW twice)
+		}
 		else if (child->refCount > 1)
 		{
 			// Copy the copy-on-write part of the tree

@@ -283,7 +283,6 @@ static const char *alignof_type(const char *type, size_t *align)
 		case '[':
 		{
 			const char *t = type;
-			// FIXME: aligned size
 			parse_array(&t, (type_parser)alignof_type, &align);
 			return t;
 		}
