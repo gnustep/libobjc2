@@ -73,6 +73,10 @@ ifneq ($(tdd), no)
 libobjc_CPPFLAGS += -DTYPE_DEPENDENT_DISPATCH
 endif
 
+ifeq ($(low_memory), yes)
+libobjc_CPPFLAGS += -D__OBJC_LOW_MEMORY__
+endif
+
 ifeq ($(findstring openbsd, $(GNUSTEP_HOST_OS)), openbsd)
 libobjc_LIBRARIES_DEPEND_UPON += -pthread 
 else
