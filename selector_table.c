@@ -189,8 +189,24 @@ static inline uint32_t hash_selector(const void *s)
 	{
 		hash = hash * 33 + c;
 	}
-	// FIXME: We might want to make the hash dependent on the types, since not
-	// doing so increases the number of potential hash collisions.
+#ifdef TYPE_DEPENDENT_DISPATCH
+	// We can't use all of the values in the type encoding for the hash,
+	// because our equality test is a bit more complex than simple string
+	// encoding (for example, * and ^C have to be considered equivalent, since
+	// they are both used as encodings for C strings in different situations)
+	if ((str = sel_getType_np(sel)))
+	{
+		while((c = (uint32_t)*str++))
+		{
+			switch (c)
+			{
+				case '0'...'9':
+				case '@': case 'i': case 'I': case 'l': case 'L':
+				hash = hash * 33 + c;
+			}
+		}
+	}
+#endif
 	return hash;
 }
 
