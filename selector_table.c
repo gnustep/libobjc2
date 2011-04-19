@@ -61,7 +61,7 @@ static const char *sel_getNameNonUnique(SEL sel)
 	if (isSelRegistered(sel))
 	{
 		struct sel_type_list * list =
-			SparseArrayLookup(selector_list, (uint32_t)(uintptr_t)sel->name);
+			SparseArrayLookup(selector_list, sel->index);
 		name = (list == NULL) ? NULL : list->value;
 	}
 	if (NULL == name)
