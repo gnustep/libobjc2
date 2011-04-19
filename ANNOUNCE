@@ -6,8 +6,18 @@ libobjc2).  This runtime was designed to support the features of Objective-C 2
 for use with GNUstep and other Objective-C programs.  Highlights of this
 release include:
 
-- Support for the associated reference APIs introduced with OS X 10.6
-- Better hiding of local symbols
+- Support for the associated reference APIs introduced with OS X 10.6.  This
+  allows storing arbitrary objects associated with another object.
+- Concurrent, thread-safe, +initialize.  The runtime will now send +initialize
+  messages to different classes concurrently in multiple threads, but still
+  ensures that no class receives another message until it has returned from
+  +initialize.  Exceptions can now safely propagate out of +initialize methods.
+- Better hiding of local symbols.  Now the internal runtime functions are not
+  visible from outside of the runtime.
+- Dispatch table updates have been improved.  Category loading no longer
+  triggers dtable creation and partial dtable updates are faster.  
+- Improvements to the low memory profile.  Uses 5-10% less memory running Gorm,
+  and now passes the entire GNUstep and EtoileFoundation test suites.
 
 You may obtain the code for this release from subversion at the following
 subversion branch:

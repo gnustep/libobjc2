@@ -1,3 +1,4 @@
+#define __BSD_VISIBLE 1
 #include <stdio.h>
 #include <stdlib.h>
 #include "objc/runtime.h"
@@ -165,6 +166,29 @@ static void insert_slot(dtable_t dtable, struct objc_slot *slot, uint32_t idx)
 	dtable->slots[dtable->slot_count++].idx = idx;
 }
 
+static void add_slot_to_dtable(uint32_t idx, dtable_t dtable, uint32_t
+		old_slot_count, struct objc_method *m, Class cls)
+{
+		struct slots_list *s = find_slot(idx, dtable->slots, old_slot_count);
+		if (NULL != s)
+		{
+			s->slot->method = m->imp;
+			s->slot->version++;
+		}
+		else
+		{
+			struct objc_slot *slot = new_slot_for_method_in_class(m, cls);
+			insert_slot(dtable, slot, idx);
+			if (Nil != cls->super_class)
+			{
+				slot = objc_dtable_lookup(dtable_for_class(cls->super_class), idx);
+				if (NULL != slot)
+				{
+					slot->version++;
+				}
+			}
+		}
+}
 static void update_dtable(dtable_t dtable)
 {
 	Class cls = dtable->cls;
@@ -185,26 +209,10 @@ static void update_dtable(dtable_t dtable)
 	uint32_t idx = 0;
 	while ((m = SparseArrayNext(methods, &idx)))
 	{
-		uint32_t idx = m->selector->index;
-		struct slots_list *s = find_slot(idx, dtable->slots, old_slot_count);
-		if (NULL != s)
-		{
-			s->slot->method = m->imp;
-			s->slot->version++;
-		}
-		else
-		{
-			struct objc_slot *slot = new_slot_for_method_in_class(m, cls);
-			insert_slot(dtable, slot, idx);
-			if (Nil != cls->super_class)
-			{
-				slot = objc_dtable_lookup(dtable_for_class(cls->super_class), idx);
-				if (NULL != slot)
-				{
-					slot->version++;
-				}
-			}
-		}
+		add_slot_to_dtable(m->selector->index, dtable, old_slot_count, m, cls);
+#ifdef TYPE_DEPENDENT_DISPATCH
+		add_slot_to_dtable(get_untyped_idx(m->selector), dtable, old_slot_count, m, cls);
+#endif
 	}
 	mergesort(dtable->slots, dtable->slot_count, sizeof(struct slots_list),
 			slot_cmp);
@@ -222,6 +230,11 @@ PRIVATE void objc_update_dtable_for_class(Class cls)
 
 	update_dtable(dtable);
 
+}
+PRIVATE void add_method_list_to_class(Class cls,
+                                      struct objc_method_list *list)
+{
+	objc_update_dtable_for_class(cls);
 }
 
 PRIVATE struct objc_slot* objc_dtable_lookup(dtable_t dtable, uint32_t uid)
@@ -246,17 +259,21 @@ PRIVATE struct objc_slot* objc_dtable_lookup(dtable_t dtable, uint32_t uid)
 		slot = s->slot;
 		int i = HASH_UID(uid);
 		volatile struct cache_line *cache = &dtable->cache[i];
-		cache->idx = 0;
+		// Simplified multiword atomic exchange.  First we write a value that
+		// is an invalid but recognisable UID and then a memory barrier.  Then
+		// we complete the update and set the index pointer if and only if
+		// there have been no other modifications in the meantime
+		cache->idx = -uid;
+		__sync_synchronize();
 		cache->version = slot->version;
 		cache->slot = slot;
-		__sync_synchronize();
-		cache->idx = uid;
+		__sync_bool_compare_and_swap(&cache->idx, -uid, uid);
 		return slot;
 	}
 
 	if (NULL != dtable->cls->super_class)
 	{
-		return objc_dtable_lookup(dtable->cls->super_class->dtable, uid);
+		return objc_dtable_lookup(dtable_for_class(dtable->cls->super_class), uid);
 	}
 	return NULL;
 }
@@ -274,7 +291,7 @@ PRIVATE void free_dtable(dtable_t dtable)
 	{
 		free(dtable->slots);
 	}
-	DESTROY_LOCK(dtable->lock);
+	DESTROY_LOCK(&dtable->lock);
 	free(dtable);
 }
 
@@ -584,13 +601,6 @@ PRIVATE void objc_send_initialize(id object)
 
 	// If this class is already initialized (e.g. in another thread), give up.
 	if (objc_test_class_flag(class, objc_class_flag_initialized)) { return; }
-
-	// Grab a lock to make sure we are only sending one +initialize message at
-	// once.  
-	//
-	// NOTE: Ideally, we would actually lock on the class object using
-	// objc_sync_enter().  This should be fixed once sync.m contains a (fast)
-	// special case for classes.
 
 	// Make sure that the class is resolved.
 	objc_resolve_class(class);
