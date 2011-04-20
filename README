@@ -21,6 +21,7 @@ Both ABIs support the following feature above and beyond the GCC runtime:
 - Efficient support for @synchronized()
 - Type-dependent dispatch, eliminating stack corruption from mismatched
   selectors.
+- Support for the associated reference APIs introduced with Mac OS X 10.6.
 
 History
 -------
@@ -35,7 +36,7 @@ Since then, all of the GCC code has been removed, leaving the remaining files
 all MIT licensed, and allowing the entire work to be MIT licensed.  
 
 The exception handling code uses a header file implementing the generic parts
-of the Itanium EH ABI.  This file comes from PathScale's libc++rt.  PathScale
+of the Itanium EH ABI.  This file comes from PathScale's libcxxrt.  PathScale
 kindly allowed it to be MIT licensed for inclusion here.
 
 Non-Fragile Instance Variables
@@ -365,11 +366,17 @@ sends are to a small number of methods.  For example, an NSMutableDictionary is
 most often sent -objectForKey: and -setObject:forKey:.  If these two methods
 are in the cache, then the O(n) algorithm is almost never used.
 
+The GNUstep runtime's low memory profile stores the slots in a sorted array.
+This means that the worst case performance is O(log(n)) in terms of the number
+of methods, as the uncached lookup proceeds using a binary search.
+
 If you compile the GNUstep runtime with the low memory profile, it uses a
 similar strategy.  The caches use the same slot-caching mechanism described
 above and can be combined with caching at the call site.  The runtime will not
 create dispatch tables, which can save a few MB of RAM in projects with a lot
 of classes, but can make message sending a lot slower in the worst case.
+
+To enable the low memory profile, add low_memory=yes to your make command line.
 
 Objective-C 2 Features
 ----------------------
