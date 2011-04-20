@@ -543,9 +543,6 @@ LEGACY void update_dispatch_table_for_class(Class cls)
 
 void objc_resolve_class(Class);
 
-int objc_sync_enter(id);
-int objc_sync_exit(id);
-
 __attribute__((unused)) static void objc_release_object_lock(id *x)
 {
 	objc_sync_exit(*x);
@@ -649,7 +646,7 @@ PRIVATE void objc_send_initialize(id object)
 		return;
 	}
 
-	LOCK_OBJECT_FOR_SCOPE((id)class);
+	LOCK_OBJECT_FOR_SCOPE((id)meta);
 
 
 	// Create an entry in the dtable look-aside buffer for this.  When sending
