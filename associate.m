@@ -82,6 +82,8 @@ static void cleanupReferenceList(struct reference_list *list)
 {
 	if (NULL == list) { return; }
 
+	cleanupReferenceList(list->next);
+
 	for (int i=0 ; i<REFERENCE_LIST_SIZE ; i++)
 	{
 		struct reference *r = &list->list[i];
@@ -99,6 +101,13 @@ static void cleanupReferenceList(struct reference_list *list)
 			r->policy = 0;
 		}
 	}
+}
+
+static void freeReferenceList(struct reference_list *l)
+{
+	if (NULL == l) { return; }
+	freeReferenceList(l->next);
+	free(l);
 }
 
 static void setReference(struct reference_list *list,
@@ -232,7 +241,9 @@ static void deallocHiddenClass(id obj, SEL _cmd)
 	// After calling [super dealloc], the object will no longer exist.
 	// Free the hidden
 	struct reference_list *list = object_getIndexedIvars(hiddenClass);
+	DESTROY_LOCK(&list->lock);
 	cleanupReferenceList(list);
+	freeReferenceList(list->next);
 
 	free_dtable(hiddenClass->dtable);
 
@@ -252,6 +263,7 @@ static struct reference_list* referenceListForObject(id object, BOOL create)
 			if (NULL == cls->extra_data)
 			{
 				cls->extra_data = calloc(1, sizeof(struct reference_list));
+				INIT_LOCK(cls->extra_data->lock);
 			}
 			unlock_spinlock(lock);
 		}
@@ -266,6 +278,8 @@ static struct reference_list* referenceListForObject(id object, BOOL create)
 		if (NULL == hiddenClass)
 		{
 			hiddenClass = initHiddenClassForObject(object);
+			struct reference_list *list = object_getIndexedIvars(hiddenClass);
+			INIT_LOCK(list->lock);
 		}
 		unlock_spinlock(lock);
 	}
