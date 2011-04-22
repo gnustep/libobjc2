@@ -36,7 +36,7 @@ namespace
 
     public:
     static char ID;
-    ClassMethodInliner() : ModulePass((intptr_t)&ID) {}
+    ClassMethodInliner() : ModulePass(ID) {}
 
     virtual bool runOnModule(Module &M) {
       unsigned MessageSendMDKind = M.getContext().getMDKindID("GNUObjCMessageSend");
@@ -59,7 +59,7 @@ namespace
             i != end ; ++i) {
           for (BasicBlock::iterator b=i->begin(), last=i->end() ;
               b != last ; ++b) {
-            CallSite call = CallSite::get(b);
+            CallSite call(b);
             if (call.getInstruction() && !call.getCalledFunction()) {
               MDNode *messageType = call->getMetadata(MessageSendMDKind);
               if (0 == messageType) { continue; }

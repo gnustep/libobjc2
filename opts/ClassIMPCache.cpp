@@ -22,7 +22,7 @@ namespace
 
     public:
     static char ID;
-    ClassIMPCachePass() : ModulePass((intptr_t)&ID) {}
+    ClassIMPCachePass() : ModulePass(ID) {}
 
     virtual bool runOnModule(Module &M) {
       GNUstep::IMPCacher cacher = GNUstep::IMPCacher(M.getContext(), this);
@@ -44,7 +44,7 @@ namespace
             i != end ; ++i) {
           for (BasicBlock::iterator b=i->begin(), last=i->end() ;
               b != last ; ++b) {
-            CallSite call = CallSite::get(b);
+            CallSite call(b);
             if (call.getInstruction()) {
               Value *callee = call.getCalledValue()->stripPointerCasts();
               if (Function *func = dyn_cast<Function>(callee)) {

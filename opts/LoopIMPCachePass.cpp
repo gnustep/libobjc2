@@ -20,7 +20,7 @@ namespace
 
     public:
     static char ID;
-    GNULoopIMPCachePass() : FunctionPass((intptr_t)&ID) {}
+    GNULoopIMPCachePass() : FunctionPass(ID) {}
     ~GNULoopIMPCachePass() { delete cacher; }
 
     virtual bool doInitialization(Module &Mod) {

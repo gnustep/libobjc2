@@ -25,7 +25,7 @@ namespace {
 
     public:
 
-    GNUObjCTypeFeedbackDrivenInliner() : ModulePass(&ID), callsiteCount(0) {}
+    GNUObjCTypeFeedbackDrivenInliner() : ModulePass(ID), callsiteCount(0) {}
 
     virtual bool runOnModule(Module &M)
     {
@@ -51,7 +51,7 @@ namespace {
             i != end ; ++i) {
           for (BasicBlock::iterator b=i->begin(), last=i->end() ;
               b != last ; ++b) {
-            CallSite call = CallSite::get(b);
+            CallSite call(b);
             if (call.getInstruction() && !call.getCalledFunction()) {
               messages.push_back(call);
             }

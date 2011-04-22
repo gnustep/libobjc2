@@ -17,7 +17,7 @@ namespace
 
     public:
     static char ID;
-    GNUNonfragileIvarPass() : FunctionPass((intptr_t)&ID) {}
+    GNUNonfragileIvarPass() : FunctionPass(ID) {}
 
     Module *M;
     size_t PointerSize;
@@ -31,7 +31,8 @@ namespace
 
     std::string getSuperName(Constant *ClsStruct) {
       GlobalVariable *name =
-        cast<GlobalVariable>(ClsStruct->getOperand(1)->getOperand(0));
+        cast<GlobalVariable>(
+            cast<Instruction>(ClsStruct->getOperand(1))->getOperand(0));
       return cast<ConstantArray>(name->getInitializer())->getAsString();
     }
 
@@ -62,7 +63,8 @@ namespace
       for (int i=0 ; i<ivarCount ; i++) {
         Constant *ivar = cast<Constant>(ivars->getOperand(i));
         GlobalVariable *name =
-          cast<GlobalVariable>(ivar->getOperand(0)->getOperand(0));
+          cast<GlobalVariable>(
+              cast<Instruction>(ivar->getOperand(0))->getOperand(0));
         std::string ivarNameStr = 
           cast<ConstantArray>(name->getInitializer())->getAsString();
         if (ivarNameStr.compare(0, ivarName.size(), ivarName.str()) == 0)

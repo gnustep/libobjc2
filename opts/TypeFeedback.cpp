@@ -18,7 +18,7 @@ namespace {
       static char ID;
     uint32_t callsiteCount;
     const IntegerType *Int32Ty;
-      GNUObjCTypeFeedback() : ModulePass(&ID), callsiteCount(0) {}
+      GNUObjCTypeFeedback() : ModulePass(ID), callsiteCount(0) {}
 
     void profileFunction(Function &F, Constant *ModuleID) {
       for (Function::iterator i=F.begin(), e=F.end() ;
@@ -29,7 +29,7 @@ namespace {
         for (BasicBlock::iterator b=i->begin(), last=i->end() ;
             b != last ; ++b) {
 
-          CallSite call = CallSite::get(b);
+          CallSite call(b);
           if (call.getInstruction() && !call.getCalledFunction()) {
             llvm::Value *args[] = { call->getOperand(1), call->getOperand(0),
               ModuleID, ConstantInt::get(Int32Ty, callsiteCount++) };

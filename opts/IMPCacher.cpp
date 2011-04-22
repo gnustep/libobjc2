@@ -172,7 +172,7 @@ void GNUstep::IMPCacher::SpeculativelyInline(Instruction *call, Function
   // Unify the return values
   if (call->getType() != Type::getVoidTy(Context)) {
     B.SetInsertPoint(afterCallBB, afterCallBB->begin());
-    PHINode *phi = B.CreatePHI(call->getType());
+    PHINode *phi = B.CreatePHI(call->getType(), 2);
     call->replaceAllUsesWith(phi);
     phi->addIncoming(call, callBB);
     phi->addIncoming(inlineResult, inlineBB);
