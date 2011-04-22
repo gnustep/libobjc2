@@ -31,8 +31,8 @@ struct objc_slot
 	 * to the same object and sharing a cached slot then it may also improve
 	 * cache hits.  Profiling is probably required here. */
 	Class cachedFor;
-	/** The type encoding for the method identified by this slot. */
-	const char *types;
+	/** The (typed) selector for the method identified by this slot. */
+	SEL selector;
 	/** The current version.  This changes if the method changes or if a
 	 * subclass overrides this method, potentially invalidating this cache. */
 	int version;

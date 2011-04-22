@@ -302,7 +302,7 @@ Method class_getInstanceMethod(Class aClass, SEL aSelector)
 	if (NULL == slot) { return NULL; }
 
 	// Now find the typed variant of the selector, with the correct types.
-	aSelector = sel_registerTypedName_np(sel_getName(aSelector), slot->types);
+	aSelector = slot->selector;
 	
 	// Then do the slow lookup to find the method.
 	return class_getInstanceMethodNonrecursive(slot->owner, aSelector);

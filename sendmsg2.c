@@ -12,7 +12,7 @@ void objc_send_initialize(id object);
 
 static id nil_method(id self, SEL _cmd) { return nil; }
 
-static struct objc_slot nil_slot = { Nil, Nil, "", 1, (IMP)nil_method };
+static struct objc_slot nil_slot = { Nil, Nil, 0, 1, (IMP)nil_method };
 
 typedef struct objc_slot *Slot_t;
 
