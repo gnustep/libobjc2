@@ -128,7 +128,7 @@ namespace
     virtual bool runOnModule(Module &Mod) {
       statics.empty();
       M = &Mod;
-      bool modified;
+      bool modified = false;
 
       for (Module::iterator F=Mod.begin(), fend=Mod.end() ;
           F != fend ; ++F) {
