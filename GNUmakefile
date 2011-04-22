@@ -44,9 +44,10 @@ libobjc_C_FILES = \
 libobjcxx_CC_FILES = objcxx_eh.cc
 libobjcxx_LDFLAGS = -L./obj/$(GNUSTEP_TARGET_LDIR)/ -lstdc++ -lobjc
 
-ifneq ($(enable_legacy), no)
-libobjc_C_FILES += legacy_malloc.c
+ifeq ($(disable_legacy), yes)
 libobjc_CPPFLAGS += -DNO_LEGACY
+else
+libobjc_C_FILES += legacy_malloc.c
 endif
 
 libobjc_HEADER_FILES_DIR = objc
