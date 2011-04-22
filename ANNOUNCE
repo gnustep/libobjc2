@@ -26,6 +26,15 @@ release include:
   profile trades some CPU time for memory usage, so don't use it for CPU-bound
   tasks.
 
+- The class lookup cache optimisation (LLVM) now caches lookups irrespective of
+  the ABI.  It will insert direct references to the class structures if
+  possible (i.e. if the symbol is visible).  If not, then it will cache the
+  result of objc_class_lookup().  The cache is shared across the module (the
+  library, if run as a link-time optimisation), so the lookup only needs to be
+  run once.  This eliminates the need for explicit class lookup caching in the
+  source code (when using LLVM-based compilers, such as Clang, LanguageKit, or
+  DragonEgg).
+
 You may obtain the code for this release from subversion at the following
 subversion branch:
 

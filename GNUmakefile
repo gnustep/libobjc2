@@ -118,3 +118,12 @@ endif
 
 include $(GNUSTEP_MAKEFILES)/aggregate.make
 include $(GNUSTEP_MAKEFILES)/library.make
+
+all::
+	sh build_opts.sh $(MAKE) all
+
+install::
+	sh build_opts.sh $(MAKE) install
+
+clean::
+	sh build_opts.sh $(MAKE) clean
