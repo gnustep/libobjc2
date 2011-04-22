@@ -44,7 +44,7 @@ libobjc_C_FILES = \
 libobjcxx_CC_FILES = objcxx_eh.cc
 libobjcxx_LDFLAGS = -L./obj/$(GNUSTEP_TARGET_LDIR)/ -lstdc++ -lobjc
 
-ifneq ($(enable_legacy), yes)
+ifeq ($(enable_legacy), no)
 libobjc_C_FILES += legacy_malloc.c
 libobjc_CPPFLAGS += -DNO_LEGACY
 endif
@@ -120,10 +120,13 @@ include $(GNUSTEP_MAKEFILES)/aggregate.make
 include $(GNUSTEP_MAKEFILES)/library.make
 
 all::
-	sh build_opts.sh $(MAKE) all
+	@echo Building LLVM optimisation passes...
+	@sh build_opts.sh $(MAKE) all
 
 install::
-	sh build_opts.sh $(MAKE) install
+	@echo Installing LLVM optimisation passes...
+	@sh build_opts.sh $(MAKE) install
 
 clean::
-	sh build_opts.sh $(MAKE) clean
+	@echo Cleaning LLVM optimisation passes...
+	@sh build_opts.sh $(MAKE) clean
