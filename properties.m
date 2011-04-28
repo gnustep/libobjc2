@@ -199,5 +199,105 @@ objc_property_t* class_copyPropertyList(Class cls, unsigned int *outCount)
 
 const char *property_getName(objc_property_t property)
 {
-	return property->name;
+	if (NULL == property) { return NULL; }
+
+	const char *name = property->name;
+	if (name[0] == 0)
+	{
+		name += name[1];
+	}
+	return name;
 }
+
+PRIVATE size_t lengthOfTypeEncoding(const char *types);
+
+const char *property_getAttributes(objc_property_t property)
+{
+	if (NULL == property) { return NULL; }
+
+	char *name = (char*)property->name;
+	if (name[0] == 0)
+	{
+		return name + 2;
+	}
+
+	size_t typeSize = lengthOfTypeEncoding(property->getter_types);
+	size_t nameSize = strlen(property->name);
+	// Encoding is T{type},V{name}, so 4 bytes for the "T,V" that we always
+	// need.  We also need two bytes for the leading null and the length.
+	size_t encodingSize = typeSize + nameSize + 6;
+	char flags[16];
+	size_t i = 0;
+	// Flags that are a comma then a character
+	if ((property->attributes & OBJC_PR_readonly) == OBJC_PR_readonly)
+	{
+		flags[i++] = ',';
+		flags[i++] = 'R';
+	}
+	if ((property->attributes & OBJC_PR_copy) == OBJC_PR_copy)
+	{
+		flags[i++] = ',';
+		flags[i++] = 'C';
+	}
+	if ((property->attributes & OBJC_PR_retain) == OBJC_PR_retain)
+	{
+		flags[i++] = ',';
+		flags[i++] = '&';
+	}
+	if ((property->attributes & OBJC_PR_nonatomic) == OBJC_PR_nonatomic)
+	{
+		flags[i++] = ',';
+		flags[i++] = 'N';
+	}
+	encodingSize += i;
+	flags[i] = '\0';
+	size_t setterLength = 0;
+	size_t getterLength = 0;
+	if ((property->attributes & OBJC_PR_getter) == OBJC_PR_getter)
+	{
+		getterLength = strlen(property->getter_name);
+		encodingSize += 2 + getterLength;
+	}
+	if ((property->attributes & OBJC_PR_setter) == OBJC_PR_setter)
+	{
+		setterLength = strlen(property->setter_name);
+		encodingSize += 2 + setterLength;
+	}
+	name = malloc(encodingSize);
+	// Set the leading 0 and the offset of the name
+	char *insert = name;
+	*(insert++) = 0;
+	*(insert++) = 0;
+	// Set the type encoding
+	*(insert++) = 'T';
+	memcpy(insert, property->getter_types, typeSize);
+	insert += typeSize;
+	// Set the flags
+	memcpy(insert, flags, i);
+	insert += i;
+	if ((property->attributes & OBJC_PR_getter) == OBJC_PR_getter)
+	{
+		*(insert++) = ',';
+		*(insert++) = 'G';
+		memcpy(insert, property->getter_name, getterLength);
+		insert += getterLength;
+	}
+	if ((property->attributes & OBJC_PR_setter) == OBJC_PR_setter)
+	{
+		*(insert++) = ',';
+		*(insert++) = 'S';
+		memcpy(insert, property->setter_name, setterLength);
+		insert += setterLength;
+	}
+	*(insert++) = ',';
+	*(insert++) = 'V';
+	name[1] = (char)(uintptr_t)(insert - name);
+	memcpy(insert, property->name, nameSize);
+	insert += nameSize;
+	*insert = '\0';
+	//FIXME: Don't leak if this is called simultaneously from two threads.
+	//Should be an atomic CAS
+	property->name = name;
+	return name + 2;
+}
+

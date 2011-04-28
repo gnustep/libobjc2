@@ -5,6 +5,7 @@
 
 #include "objc/runtime.h"
 #include "method_list.h"
+#include "visibility.h"
 
 size_t objc_alignof_type (const char *type);
 
@@ -38,7 +39,7 @@ const char *objc_skip_argspec(const char *type)
 	return type;
 }
 
-static size_t lengthOfTypeEncoding(const char *types)
+PRIVATE size_t lengthOfTypeEncoding(const char *types)
 {
 	const char *end = objc_skip_typespec(types);
 	size_t length = end - types;

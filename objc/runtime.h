@@ -574,6 +574,14 @@ const char *object_getClassName(id obj);
 const char *property_getName(objc_property_t property);
 
 /**
+ * Returns the attributes for the specified property.  This is similar to an
+ * Objective-C type encoding, but contains some extra information.  A full
+ * description of the format for this string may be found in Apple's
+ * Objective-C Runtime Programming Guide.
+ */
+const char *property_getAttributes(objc_property_t property);
+
+/**
  * Testswhether a protocol conforms to another protocol.
  */
 BOOL protocol_conformsToProtocol(Protocol *p, Protocol *other);
