@@ -601,6 +601,15 @@ objc_property_t *protocol_copyPropertyList(Protocol *p, unsigned int *count);
 Protocol **protocol_copyProtocolList(Protocol *p, unsigned int *count);
 
 /**
+ * Returns all of the protocols that the runtime is aware of.  Note that
+ * protocols compiled by GCC and not attacked to classes may not have been
+ * registered with the runtime.  The number of protocols returned is stored at
+ * the address indicated by the pointer argument.
+ *
+ * The caller is responsible for freeing the returned array.
+ */
+Protocol **objc_copyProtocolList(unsigned int *outCount);
+/**
  * Returns the method description for the specified method within a given
  * protocol.
  */
