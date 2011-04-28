@@ -267,6 +267,30 @@ size_t class_getInstanceSize(Class cls);
 Ivar class_getInstanceVariable(Class cls, const char* name);
 
 /**
+ * Sets the object value of a specified instance variable.
+ */
+void object_setIvar(id object, Ivar ivar, id value);
+/**
+ * Sets a named instance variable to the value specified by *value.  Note that
+ * the instance variable must be a pointer-sized quantity.
+ */
+Ivar object_setInstanceVariable(id obj, const char *name, void *value);
+
+/**
+ * Returns the value of the named instance variable.  This should not be used
+ * with instance variables that are not pointers.
+ */
+id object_getIvar(id object, Ivar ivar);
+
+/**
+ * Returns a named instance variable via the final parameter.  Note that
+ * calling object_getIvar() on the value returned from this function is faster.
+ *
+ * Note that the instance variable must be a pointer-sized quantity.
+ */
+Ivar object_getInstanceVariable(id obj, const char *name, void **outValue);
+
+/**
  * Returns a pointer to the function used to handle the specified message.  If
  * the receiver does not have a method corresponding to this message then this
  * function may return a runtime function that performs forwarding.
