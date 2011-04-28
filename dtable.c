@@ -46,16 +46,14 @@ struct objc_dtable
 		uint32_t version;
 		struct objc_slot *slot;
 	} cache[8];
-	Class cls;
-	struct slots_list
-	{
-		uint32_t idx;
-		struct objc_slot *slot;
-	} *slots;
+	mutex_t lock;
+	struct objc_slot **slots;
 	int slot_count;
 	int slot_size;
-	mutex_t lock;
+	Class cls;
 };
+
+static void update_dtable(dtable_t dtable);
 
 PRIVATE void init_dispatch_tables ()
 {
@@ -76,10 +74,13 @@ static dtable_t create_dtable_for_class(Class class, dtable_t root_dtable)
 	// waiting on the lock.
 	if (classHasDtable(class)) { return dtable_for_class(class); }
 
-	/* Allocate dtable if necessary */
+	// Allocate the dtable
 	dtable_t dtable = calloc(1, sizeof(struct objc_dtable));
 	dtable->cls = class;
 	INIT_LOCK(dtable->lock);
+
+	// Initialise it
+	update_dtable(dtable);
 
 	return dtable;
 }
@@ -119,29 +120,29 @@ static struct objc_slot* check_cache(dtable_t dtable, uint32_t uid)
 	return (idx == uid) && (slot->version == version) ? slot : NULL;
 }
 
-static struct slots_list *find_slot(uint32_t uid, 
-		struct slots_list *slots, int slot_count)
+static struct objc_slot *find_slot(uint32_t uid, 
+		struct objc_slot **slots, int slot_count)
 {
 	if (slot_count == 0) { return NULL; }
 	int idx = slot_count >> 1;
-	struct slots_list *slot = &slots[idx];
+	struct objc_slot *slot = slots[idx];
 	if (slot_count == 1)
 	{
-		if (slot->idx == uid)
+		if (slot->selector->index == uid)
 		{
 			return slot;
 		}
 		return NULL;
 	}
-	if (slot->idx > uid)
+	if (slot->selector->index > uid)
 	{
 		return find_slot(uid, slots, idx);
 	}
-	if (slot->idx < uid)
+	if (slot->selector->index < uid)
 	{
 		return find_slot(uid, slots+idx, slot_count - idx);
 	}
-	if (slot->idx == uid)
+	if (slot->selector->index == uid)
 	{
 		return slot;
 	}
@@ -150,7 +151,8 @@ static struct slots_list *find_slot(uint32_t uid,
 
 static int slot_cmp(const void *l, const void *r)
 {
-	return (((struct slots_list*)l)->idx - ((struct slots_list*)r)->idx);
+	return (*(struct objc_slot**)l)->selector->index
+	       - (*(struct objc_slot**)r)->selector->index;
 }
 
 static void insert_slot(dtable_t dtable, struct objc_slot *slot, uint32_t idx)
@@ -159,35 +161,36 @@ static void insert_slot(dtable_t dtable, struct objc_slot *slot, uint32_t idx)
 	{
 		dtable->slot_size += 16;
 		dtable->slots = realloc(dtable->slots, dtable->slot_size *
-				sizeof(struct slots_list));
+				sizeof(struct objc_slot));
 		assert(NULL != dtable->slots && "Out of memory!");
 	}
-	dtable->slots[dtable->slot_count].slot = slot;
-	dtable->slots[dtable->slot_count++].idx = idx;
+	dtable->slots[dtable->slot_count++] = slot;
 }
 
-static void add_slot_to_dtable(uint32_t idx, dtable_t dtable, uint32_t
+static void add_slot_to_dtable(SEL sel, dtable_t dtable, uint32_t
 		old_slot_count, struct objc_method *m, Class cls)
 {
-		struct slots_list *s = find_slot(idx, dtable->slots, old_slot_count);
-		if (NULL != s)
+	uint32_t idx = sel->index;
+	struct objc_slot *s = find_slot(idx, dtable->slots, old_slot_count);
+	if (NULL != s)
+	{
+		s->method = m->imp;
+		s->version++;
+	}
+	else
+	{
+		struct objc_slot *slot = new_slot_for_method_in_class(m, cls);
+		slot->selector = sel;
+		insert_slot(dtable, slot, idx);
+		if (Nil != cls->super_class)
 		{
-			s->slot->method = m->imp;
-			s->slot->version++;
-		}
-		else
-		{
-			struct objc_slot *slot = new_slot_for_method_in_class(m, cls);
-			insert_slot(dtable, slot, idx);
-			if (Nil != cls->super_class)
+			slot = objc_dtable_lookup(dtable_for_class(cls->super_class), idx);
+			if (NULL != slot)
 			{
-				slot = objc_dtable_lookup(dtable_for_class(cls->super_class), idx);
-				if (NULL != slot)
-				{
-					slot->version++;
-				}
+				slot->version++;
 			}
 		}
+	}
 }
 static void update_dtable(dtable_t dtable)
 {
@@ -200,7 +203,7 @@ static void update_dtable(dtable_t dtable)
 
 	if (NULL == dtable->slots)
 	{
-		dtable->slots = calloc(sizeof(struct slots_list), 16);
+		dtable->slots = calloc(sizeof(struct objc_slot), 16);
 		dtable->slot_size = 16;
 	}
 
@@ -209,12 +212,12 @@ static void update_dtable(dtable_t dtable)
 	uint32_t idx = 0;
 	while ((m = SparseArrayNext(methods, &idx)))
 	{
-		add_slot_to_dtable(m->selector->index, dtable, old_slot_count, m, cls);
+		add_slot_to_dtable(m->selector, dtable, old_slot_count, m, cls);
 #ifdef TYPE_DEPENDENT_DISPATCH
-		add_slot_to_dtable(get_untyped_idx(m->selector), dtable, old_slot_count, m, cls);
+		add_slot_to_dtable(sel_getUntyped(m->selector), dtable, old_slot_count, m, cls);
 #endif
 	}
-	mergesort(dtable->slots, dtable->slot_count, sizeof(struct slots_list),
+	mergesort(dtable->slots, dtable->slot_count, sizeof(struct objc_slot*),
 			slot_cmp);
 	SparseArrayDestroy(methods);
 }
@@ -253,10 +256,9 @@ PRIVATE struct objc_slot* objc_dtable_lookup(dtable_t dtable, uint32_t uid)
 	{
 		update_dtable(dtable);
 	}
-	struct slots_list *s = find_slot(uid, dtable->slots, dtable->slot_count);
-	if (NULL != s)
+	slot = find_slot(uid, dtable->slots, dtable->slot_count);
+	if (NULL != slot)
 	{
-		slot = s->slot;
 		int i = HASH_UID(uid);
 		volatile struct cache_line *cache = &dtable->cache[i];
 		// Simplified multiword atomic exchange.  First we write a value that

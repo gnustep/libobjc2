@@ -41,7 +41,7 @@ static uint32_t selector_count = 1;
 /**
  * Mapping from selector numbers to selector names.
  */
-static SparseArray *selector_list  = NULL;
+PRIVATE SparseArray *selector_list  = NULL;
 
 // Get the functions for string hashing
 #include "string_hash.h"
@@ -301,7 +301,7 @@ static inline void register_selector_locked(SEL aSel)
 	// This is quite horrible.  Most selectors will only have one type
 	// encoding, so we're wasting a lot of memory like this.
 	struct sel_type_list *typeListHead =
-		SparseArrayLookup(selector_list, (uint32_t)(uintptr_t)untyped->name);
+		SparseArrayLookup(selector_list, untyped->index);
 	struct sel_type_list *typeList =
 		(struct sel_type_list *)selector_pool_alloc();
 	typeList->value = aSel->types;
@@ -360,6 +360,29 @@ static SEL objc_register_selector_copy(SEL aSel, BOOL copyArgs)
 	return copy;
 }
 
+PRIVATE uint32_t sel_nextTypeIndex(uint32_t untypedIdx, uint32_t idx)
+{
+	struct sel_type_list *list =
+		SparseArrayLookup(selector_list, untypedIdx);
+
+	if (NULL == list) { return 0; }
+
+	const char *selName = list->value;
+	list = list->next;
+	BOOL found = untypedIdx == idx;
+	while (NULL != list)
+	{
+		SEL sel = selector_lookup(selName, list->value);
+		if (sel->index == untypedIdx) { return 0; }
+		if (found)
+		{
+			return sel->index;
+		}
+		found = (sel->index == idx);
+	}
+	return 0;
+}
+
 /**
  * Public API functions.
  */
@@ -371,7 +394,7 @@ const char *sel_getName(SEL sel)
 	if (isSelRegistered(sel))
 	{
 		struct sel_type_list * list =
-			SparseArrayLookup(selector_list, (uint32_t)(uintptr_t)sel->name);
+			SparseArrayLookup(selector_list, sel->index);
 		name = (list == NULL) ? NULL : list->value;
 	}
 	else

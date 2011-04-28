@@ -102,7 +102,7 @@ libobjc_CFLAGS += -Wno-unused-function
 
 # Uncomment this when debugging - it makes everything slow, but means that the
 # debugger actually works...
-#libobjc_CFLAGS += -fno-inline
+libobjc_CFLAGS += -fno-inline
 libobjc_OBJCFLAGS += $(libobjc_CFLAGS) $(libobjc_CFLAGS)
 
 ifneq ($(findstring gcc, $(CC)),)

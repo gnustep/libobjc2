@@ -48,7 +48,13 @@ __attribute__((unused))
 static uint32_t get_untyped_idx(SEL aSel)
 {
 	SEL untyped = sel_registerTypedName_np(sel_getName(aSel), 0);
-	return (uint32_t)(uintptr_t)untyped->name;
+	return untyped->index;
+}
+
+__attribute__((unused))
+static SEL sel_getUntyped(SEL aSel)
+{
+	return sel_registerTypedName_np(sel_getName(aSel), 0);
 }
 
 /**
