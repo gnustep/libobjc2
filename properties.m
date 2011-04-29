@@ -300,7 +300,7 @@ const char *property_getAttributes(objc_property_t property)
 	if (!__sync_bool_compare_and_swap(&(property->name), name, encoding))
 	{
 		free(encoding);
-		return name + 2;
+		return property->name + 2;
 	}
 	return (const char*)(encoding + 2);
 }
