@@ -215,7 +215,7 @@ const char *property_getAttributes(objc_property_t property)
 {
 	if (NULL == property) { return NULL; }
 
-	char *name = (char*)property->name;
+	const char *name = (char*)property->name;
 	if (name[0] == 0)
 	{
 		return name + 2;
@@ -263,9 +263,9 @@ const char *property_getAttributes(objc_property_t property)
 		setterLength = strlen(property->setter_name);
 		encodingSize += 2 + setterLength;
 	}
-	name = malloc(encodingSize);
+	unsigned char *encoding = malloc(encodingSize);
 	// Set the leading 0 and the offset of the name
-	char *insert = name;
+	unsigned char *insert = encoding;
 	*(insert++) = 0;
 	*(insert++) = 0;
 	// Set the type encoding
@@ -291,13 +291,17 @@ const char *property_getAttributes(objc_property_t property)
 	}
 	*(insert++) = ',';
 	*(insert++) = 'V';
-	name[1] = (char)(uintptr_t)(insert - name);
+	encoding[1] = (unsigned char)(uintptr_t)(insert - encoding);
 	memcpy(insert, property->name, nameSize);
 	insert += nameSize;
 	*insert = '\0';
-	//FIXME: Don't leak if this is called simultaneously from two threads.
-	//Should be an atomic CAS
-	property->name = name;
-	return name + 2;
+	// If another thread installed the encoding string while we were computing
+	// it, then discard the one that we created and return theirs.
+	if (!__sync_bool_compare_and_swap(&(property->name), name, encoding))
+	{
+		free(encoding);
+		return name + 2;
+	}
+	return (const char*)(encoding + 2);
 }
 
