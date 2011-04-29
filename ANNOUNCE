@@ -35,6 +35,12 @@ release include:
   source code (when using LLVM-based compilers, such as Clang, LanguageKit, or
   DragonEgg).
 
+- Added some missing runtime API functions, such as those for setting and
+  getting instance variables.  These are required by PyObjC, although using
+  them safely is not actually possible with the non-fragile ABI (also true on
+  OS X), since instance variables are no longer uniquely identified by name.
+  Also added support for accessing property type encodings.
+
 You may obtain the code for this release from subversion at the following
 subversion branch:
 
