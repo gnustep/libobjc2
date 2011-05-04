@@ -534,6 +534,8 @@ static void freeIvarLists(Class aClass)
  */
 static inline void safe_remove_from_subclass_list(Class cls)
 {
+	// If this class hasn't been added to the class hierarchy, then this is easy
+	if (!objc_test_class_flag(cls, objc_class_flag_resolved)) { return; }
 	Class sub = cls->super_class->subclass_list;
 	if (sub == cls)
 	{
@@ -569,8 +571,14 @@ void objc_disposeClassPair(Class cls)
 	freeMethodLists(cls);
 	freeMethodLists(meta);
 	freeIvarLists(cls);
-	free_dtable(cls->dtable);
-	free_dtable(meta->dtable);
+	if (cls->dtable != uninstalled_dtable)
+	{
+		free_dtable(cls->dtable);
+	}
+	if (meta->dtable != uninstalled_dtable)
+	{
+		free_dtable(meta->dtable);
+	}
 
 	// Free the class and metaclass
 	free(meta);

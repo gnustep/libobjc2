@@ -120,14 +120,14 @@ endif
 include $(GNUSTEP_MAKEFILES)/aggregate.make
 include $(GNUSTEP_MAKEFILES)/library.make
 
-all::
+build-opts:
 	@echo Building LLVM optimisation passes...
 	@sh build_opts.sh $(MAKE) all
 
-install::
+install-opts: build_opts
 	@echo Installing LLVM optimisation passes...
 	@sh build_opts.sh $(MAKE) install
 
-clean::
+clean-opts:
 	@echo Cleaning LLVM optimisation passes...
 	@sh build_opts.sh $(MAKE) clean
