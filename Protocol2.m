@@ -20,6 +20,8 @@
 	return self;
 }
 - (void)release {}
++ (Class)class { return self; }
+- (id)self { return self; }
 @end
 @implementation Protocol2 
 + (void)load
