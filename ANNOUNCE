@@ -12,19 +12,26 @@ release include:
 - Concurrent, thread-safe, +initialize.  The runtime will now send +initialize
   messages to different classes concurrently in multiple threads, but still
   ensures that no class receives another message until it has returned from
-  +initialize.  Exceptions can now safely propagate out of +initialize methods.
+  +initialize.  This mirrors OS X behaviour.  Care must be taken that
+  +initialize methods do not deadlock - if two classes are simultaneously
+  initialised from two different threads, and there +initialize methods call
+  methods in the other class, then deadlock will result.
+  
+- Exceptions can now safely propagate out of +initialize methods.
 
 - Better hiding of local symbols.  Now the internal runtime functions are not
-  visible from outside of the runtime.
+  visible from outside of the runtime.  This may break code that attempts to
+  use private APIs, but means that it is now impossible to accidentally use
+  private APIs.
 
-- Dispatch table updates have been improved.  Category loading no longer
+- Dispatch table updates have been improved.  Category loading now longer
   triggers dtable creation and partial dtable updates are faster.  
 
-- Improvements to the low memory profile.  Uses 5-10% less memory running Gorm,
-  and now passes the entire GNUstep and EtoileFoundation test suites.  Build
-  with [g]make low_memory=yes to enable this mode.  Note that the low memory
-  profile trades some CPU time for memory usage, so don't use it for CPU-bound
-  tasks.
+- Improvements to the low memory profile.  Uses 5-10% less (total) memory
+  running Gorm, and now passes the entire GNUstep and EtoileFoundation test
+  suites.  Build with [g]make low_memory=yes to enable this mode.  Note that
+  the low memory profile trades some CPU time for memory usage, so don't use it
+  for CPU-bound tasks.
 
 - The class lookup cache optimisation (LLVM) now caches lookups irrespective of
   the ABI.  It will insert direct references to the class structures if
@@ -36,10 +43,15 @@ release include:
   DragonEgg).
 
 - Added some missing runtime API functions, such as those for setting and
-  getting instance variables.  These are required by PyObjC, although using
-  them safely is not actually possible with the non-fragile ABI (also true on
-  OS X), since instance variables are no longer uniquely identified by name.
-  Also added support for accessing property type encodings.
+  getting instance variables.  These are required by some language bridges,
+  although using them safely is not actually possible with the non-fragile ABI
+  (also true on OS X), since instance variables are no longer uniquely
+  identified by name. 
+  
+- Added support for accessing property type encodings.  These are extended type
+  encodings, allowing code introspecting the properties to learn if they are
+  read-only, their assignment policy, the methods used to implement them, and
+  so on.
 
 You may obtain the code for this release from subversion at the following
 subversion branch:
