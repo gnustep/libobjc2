@@ -38,7 +38,6 @@ namespace
         if (F->isDeclaration()) { continue; }
 
         SmallVector<std::pair<CallSite, bool>, 16> Lookups;
-        BasicBlock *entry = &F->getEntryBlock();
 
         for (Function::iterator i=F->begin(), end=F->end() ;
             i != end ; ++i) {
@@ -62,7 +61,6 @@ namespace
             }
           }
         }
-        IRBuilder<> B = IRBuilder<>(entry);
         for (SmallVectorImpl<std::pair<CallSite, bool> >::iterator
             i=Lookups.begin(), e=Lookups.end() ; e!=i ; i++) {
           Instruction *call = i->first.getInstruction();

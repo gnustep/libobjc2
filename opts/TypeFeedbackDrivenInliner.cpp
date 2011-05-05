@@ -65,7 +65,6 @@ namespace {
 
         if (Entry->size() == 1) {
 
-          TypeInfoProvider::CallSiteEntry::iterator iterator = Entry->begin();
           Function *method = M.getFunction(Entry->begin()->getKey());
           if (0 == method || method->isDeclaration()) { continue; }
 

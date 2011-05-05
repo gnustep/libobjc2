@@ -11,6 +11,8 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 
+#include "LLVMCompat.h"
+
 GNUstep::IMPCacher::IMPCacher(LLVMContext &C, Pass *owner) : Context(C),
   Owner(owner) {
 
@@ -19,7 +21,7 @@ GNUstep::IMPCacher::IMPCacher(LLVMContext &C, Pass *owner) : Context(C),
   IntTy = Type::getInt32Ty(Context);
   IdTy = PointerType::getUnqual(PtrTy);
   Value *AlreadyCachedFlagValue = MDString::get(C, "IMPCached");
-  AlreadyCachedFlag = MDNode::get(C, &AlreadyCachedFlagValue, 1);
+  AlreadyCachedFlag = CreateMDNode(C, AlreadyCachedFlagValue);
   IMPCacheFlagKind = Context.getMDKindID("IMPCache");
 }
 
@@ -171,8 +173,7 @@ void GNUstep::IMPCacher::SpeculativelyInline(Instruction *call, Function
 
   // Unify the return values
   if (call->getType() != Type::getVoidTy(Context)) {
-    B.SetInsertPoint(afterCallBB, afterCallBB->begin());
-    PHINode *phi = B.CreatePHI(call->getType(), 2);
+    PHINode *phi = CreatePHI(call->getType(), 2, 0, afterCallBB->begin());
     call->replaceAllUsesWith(phi);
     phi->addIncoming(call, callBB);
     phi->addIncoming(inlineResult, inlineBB);

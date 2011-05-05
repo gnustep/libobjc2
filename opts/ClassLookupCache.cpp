@@ -11,6 +11,7 @@
 #include <string>
 
 #include "IMPCacher.h"
+#include "LLVMCompat.h"
 
 using namespace llvm;
 using namespace GNUstep;
@@ -98,8 +99,7 @@ namespace
           removeTerminator(beforeLookupBB);
           removeTerminator(lookupBB);
 
-          PHINode *phi =
-            PHINode::Create(clsTy, 2, cls, afterLookupBB->begin());
+		  PHINode *phi = CreatePHI(clsTy, 2, cls, afterLookupBB->begin());
           // We replace all of the existing uses with the PHI node now, because
           // we're going to add some more uses later that we don't want
           // replaced.
