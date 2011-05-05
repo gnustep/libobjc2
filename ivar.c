@@ -115,7 +115,7 @@ PRIVATE void objc_compute_ivar_offsets(Class class)
 
 void object_setIvar(id object, Ivar ivar, id value)
 {
-	char *addr = (char*)&object;
+	char *addr = (char*)object;
 	addr += ivar_getOffset(ivar);
 	*(id*)addr = value;
 }
@@ -129,7 +129,7 @@ Ivar object_setInstanceVariable(id obj, const char *name, void *value)
 
 id object_getIvar(id object, Ivar ivar)
 {
-	return *(id*)(((char*)&object) + ivar_getOffset(ivar));
+	return *(id*)(((char*)object) + ivar_getOffset(ivar));
 }
 
 Ivar object_getInstanceVariable(id obj, const char *name, void **outValue)
