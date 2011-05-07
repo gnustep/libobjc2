@@ -200,8 +200,8 @@ static inline uint32_t hash_selector(const void *s)
 		{
 			switch (c)
 			{
-				case '0'...'9':
 				case '@': case 'i': case 'I': case 'l': case 'L':
+				case 'q': case 'Q': case 's': case 'S': 
 				hash = hash * 33 + c;
 			}
 		}
