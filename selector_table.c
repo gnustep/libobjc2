@@ -354,7 +354,7 @@ static SEL objc_register_selector_copy(SEL aSel, BOOL copyArgs)
 	copy = selector_pool_alloc();
 	copy->name = copyArgs ? strdup(aSel->name) : aSel->name;
 	copy->types = (NULL == aSel->types) ? NULL :
-	                 (copy ? strdup(aSel->types) : aSel->types);
+	                 (copyArgs ? strdup(aSel->types) : aSel->types);
 	// Try to register the copy as the authoritative version
 	register_selector_locked(copy);
 	return copy;
