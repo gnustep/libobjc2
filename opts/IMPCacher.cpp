@@ -93,18 +93,15 @@ void GNUstep::IMPCacher::CacheLookup(Instruction *lookup, Value *slot, Value
       lookupBB->getParent());
 
   // Don't store the cached lookup if we are doing forwarding tricks.
-  B.CreateBr(storeCacheBB);
-  /*
   B.CreateCondBr(B.CreateICmpEQ(receiver, newReceiver), storeCacheBB,
       afterLookupBB);
-      */
   B.SetInsertPoint(storeCacheBB);
 
   // Store it even if the version is 0, because we always check that the
   // version is not 0 at the start and an occasional redundant store is
   // probably better than a branch every time.
   B.CreateStore(lookup, slot);
-  //B.CreateStore(B.CreateLoad(B.CreateStructGEP(lookup, 3)), version);
+  B.CreateStore(B.CreateLoad(B.CreateStructGEP(lookup, 3)), version);
   cls = B.CreateLoad(B.CreateBitCast(receiver, IdTy));
   B.CreateStore(cls, B.CreateStructGEP(lookup, 1));
   B.CreateBr(afterLookupBB);
