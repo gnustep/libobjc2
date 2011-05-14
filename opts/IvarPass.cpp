@@ -50,8 +50,13 @@ namespace {
       GlobalVariable *Cls = M->getGlobalVariable("_OBJC_CLASS_" + className);
       if (!Cls) return 0;
       Constant *ClsStruct = Cls->getInitializer();
-      // Size is initialized to be negative.
+      // Size is initialized to be negative for the non-fragile ABI.
       ConstantInt *Size = cast<ConstantInt>(ClsStruct->getOperand(5));
+      int s = Size->getSExtValue();
+      // If we find a fragile class in the hierarchy, don't perform the
+      // simplification.  This means that we're the mixed ABI, so we need the
+      // extra indirection.
+      if (s > 0) return 0;
       return sizeOfClass(getSuperName(ClsStruct)) - Size->getSExtValue();
     }
 
@@ -73,7 +78,9 @@ namespace {
               cast<User>(ivar->getOperand(0))->getOperand(0));
         std::string ivarNameStr = 
           cast<ConstantArray>(name->getInitializer())->getAsString();
-        if (ivarNameStr.compare(0, ivarName.size(), ivarName.str()) == 0)
+        // Remove the NULL terminator from the metadata string
+        ivarNameStr.resize(ivarNameStr.size() - 1);
+        if (ivarNameStr == ivarName.str())
           return superSize +
             cast<ConstantInt>(ivar->getOperand(2))->getSExtValue();
       }
