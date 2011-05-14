@@ -43,7 +43,6 @@ namespace
 
     bool runOnFunction(Function &F) {
       bool modified = false;
-      return false;
       SmallVector<ClassLookup, 16> Lookups;
 
       for (Function::iterator i=F.begin(), end=F.end() ;
