@@ -1,3 +1,4 @@
+#include "llvm/LLVMContext.h"
 #include "llvm/Pass.h"
 #include "llvm/Function.h"
 #include "llvm/Module.h"
@@ -5,9 +6,13 @@
 #include "llvm/Constants.h"
 #include "llvm/Support/IRBuilder.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/Verifier.h"
+#include "llvm/DefaultPasses.h"
+#include "ObjectiveCOpts.h"
 #include "IMPCacher.h"
 #include <string>
 
+using namespace GNUstep;
 using namespace llvm;
 using std::string;
 
@@ -17,6 +22,7 @@ namespace
   {
     GNUstep::IMPCacher *cacher;
     const IntegerType *IntTy;
+    Module *M;
 
     public:
     static char ID;
@@ -25,8 +31,9 @@ namespace
 
     virtual bool doInitialization(Module &Mod) {
       cacher = new GNUstep::IMPCacher(Mod.getContext(), this);
-      // FIXME: ILP64
-      IntTy = Type::getInt32Ty(Mod.getContext());
+      IntTy = (sizeof(int) == 4 ) ? Type::getInt32Ty(Mod.getContext()) :
+          Type::getInt64Ty(Mod.getContext()) ;
+      M = &Mod;
       return false;  
     }
 
@@ -66,10 +73,12 @@ namespace
         Value *slot = B.CreateAlloca(SlotPtrTy, 0, "slot");
         Value *version = B.CreateAlloca(IntTy, 0, "slot_version");
 
-        B.SetInsertPoint(entry, entry->getTerminator());
         B.CreateStore(Constant::getNullValue(SlotPtrTy), slot);
         B.CreateStore(Constant::getNullValue(IntTy), version);
         cacher->CacheLookup(*i, slot, version);
+      }
+      if (modified){
+          verifyFunction(F);
       }
       return modified;
     }
@@ -78,6 +87,14 @@ namespace
   char GNULoopIMPCachePass::ID = 0;
   RegisterPass<GNULoopIMPCachePass> X("gnu-loop-imp-cache", 
           "Cache IMPs in loops pass");
+#if LLVM_MAJOR > 2
+  StandardPass::RegisterStandardPass<GNULoopIMPCachePass> D(
+        StandardPass::Module, &NonfragileIvarID,
+        StandardPass::OptimzationFlags(1), &LoopIMPCacheID);
+  StandardPass::RegisterStandardPass<GNULoopIMPCachePass> L(StandardPass::LTO,
+      &NonfragileIvarID, StandardPass::OptimzationFlags(0),
+      &LoopIMPCacheID);
+#endif
 }
 
 FunctionPass *createGNULoopIMPCachePass(void)

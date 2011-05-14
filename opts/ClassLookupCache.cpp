@@ -8,6 +8,8 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/DefaultPasses.h"
+#include "ObjectiveCOpts.h"
 #include <string>
 
 #include "IMPCacher.h"
@@ -41,6 +43,7 @@ namespace
 
     bool runOnFunction(Function &F) {
       bool modified = false;
+      return false;
       SmallVector<ClassLookup, 16> Lookups;
 
       for (Function::iterator i=F.begin(), end=F.end() ;
@@ -145,6 +148,14 @@ namespace
   char ClassLookupCachePass::ID = 0;
   RegisterPass<ClassLookupCachePass> X("gnu-class-lookup-cache", 
           "Cache class lookups");
+#if LLVM_MAJOR > 2
+  StandardPass::RegisterStandardPass<ClassLookupCachePass> D(
+        StandardPass::Module, &LoopIMPCacheID,
+        StandardPass::OptimzationFlags(1), &ClassLookupCacheID);
+  StandardPass::RegisterStandardPass<ClassLookupCachePass> L(StandardPass::LTO,
+      &LoopIMPCacheID, StandardPass::OptimzationFlags(0),
+      &ClassLookupCacheID);
+#endif
 }
 
 ModulePass *createClassLookupCachePass(void)

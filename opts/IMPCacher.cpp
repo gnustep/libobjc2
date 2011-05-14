@@ -17,8 +17,7 @@ GNUstep::IMPCacher::IMPCacher(LLVMContext &C, Pass *owner) : Context(C),
   Owner(owner) {
 
   PtrTy = Type::getInt8PtrTy(Context);
-  // FIXME: 64-bit.
-  IntTy = Type::getInt32Ty(Context);
+  IntTy = (sizeof(int) == 4 ) ? Type::getInt32Ty(C) : Type::getInt64Ty(C);
   IdTy = PointerType::getUnqual(PtrTy);
   Value *AlreadyCachedFlagValue = MDString::get(C, "IMPCached");
   AlreadyCachedFlag = CreateMDNode(C, AlreadyCachedFlagValue);
@@ -45,16 +44,14 @@ void GNUstep::IMPCacher::CacheLookup(Instruction *lookup, Value *slot, Value
   // Load the slot and check that neither it nor the version is 0.
   Value *slotValue = B.CreateLoad(slot);
   Value *versionValue = B.CreateLoad(version);
-  Value *receiverPtr = lookup->getOperand(1);
+  Value *receiverPtr = lookup->getOperand(0);
   Value *receiver = receiverPtr;
   if (!isSuperMessage) {
     receiver = B.CreateLoad(receiverPtr);
   }
 
   Value *isCacheEmpty = 
-        B.CreateOr(versionValue, B.CreatePtrToInt(slotValue, IntTy));
-  isCacheEmpty = 
-    B.CreateICmpEQ(isCacheEmpty, Constant::getNullValue(IntTy));
+    B.CreateICmpEQ(versionValue, Constant::getNullValue(IntTy));
   Value *receiverNotNil =
      B.CreateICmpNE(receiver, Constant::getNullValue(receiver->getType()));
   isCacheEmpty = B.CreateAnd(isCacheEmpty, receiverNotNil);
@@ -96,15 +93,18 @@ void GNUstep::IMPCacher::CacheLookup(Instruction *lookup, Value *slot, Value
       lookupBB->getParent());
 
   // Don't store the cached lookup if we are doing forwarding tricks.
+  B.CreateBr(storeCacheBB);
+  /*
   B.CreateCondBr(B.CreateICmpEQ(receiver, newReceiver), storeCacheBB,
       afterLookupBB);
+      */
   B.SetInsertPoint(storeCacheBB);
 
   // Store it even if the version is 0, because we always check that the
   // version is not 0 at the start and an occasional redundant store is
   // probably better than a branch every time.
   B.CreateStore(lookup, slot);
-  B.CreateStore(B.CreateLoad(B.CreateStructGEP(lookup, 3)), version);
+  //B.CreateStore(B.CreateLoad(B.CreateStructGEP(lookup, 3)), version);
   cls = B.CreateLoad(B.CreateBitCast(receiver, IdTy));
   B.CreateStore(cls, B.CreateStructGEP(lookup, 1));
   B.CreateBr(afterLookupBB);
@@ -129,7 +129,8 @@ void GNUstep::IMPCacher::SpeculativelyInline(Instruction *call, Function
   // Put a branch before the call, testing whether the callee really is the
   // function
   IRBuilder<> B = IRBuilder<>(beforeCallBB);
-  Value *callee = call->getOperand(0);
+  Value *callee = isa<CallInst>(call) ? cast<CallInst>(call)->getCalledValue()
+      : cast<InvokeInst>(call)->getCalledValue();
 
   const FunctionType *FTy = function->getFunctionType();
   const FunctionType *calleeTy = cast<FunctionType>(
@@ -146,7 +147,6 @@ void GNUstep::IMPCacher::SpeculativelyInline(Instruction *call, Function
   Instruction *inlineCall = call->clone();
   Value *inlineResult= inlineCall;
   inlineBB->getInstList().push_back(inlineCall);
-  inlineCall->setOperand(0, function);
 
   B.SetInsertPoint(inlineBB);
 
@@ -155,8 +155,8 @@ void GNUstep::IMPCacher::SpeculativelyInline(Instruction *call, Function
       const Type *callType = calleeTy->getParamType(i);
       const Type *argType = FTy->getParamType(i);
       if (callType != argType) {
-        inlineCall->setOperand(i+1, new
-            BitCastInst(inlineCall->getOperand(i+1), argType, "", inlineCall));
+        inlineCall->setOperand(i, new
+            BitCastInst(inlineCall->getOperand(i), argType, "", inlineCall));
       }
     }
     if (FTy->getReturnType() != calleeTy->getReturnType()) {
@@ -173,7 +173,7 @@ void GNUstep::IMPCacher::SpeculativelyInline(Instruction *call, Function
 
   // Unify the return values
   if (call->getType() != Type::getVoidTy(Context)) {
-    PHINode *phi = CreatePHI(call->getType(), 2, 0, afterCallBB->begin());
+    PHINode *phi = CreatePHI(call->getType(), 2, "", afterCallBB->begin());
     call->replaceAllUsesWith(phi);
     phi->addIncoming(call, callBB);
     phi->addIncoming(inlineResult, inlineBB);
@@ -182,8 +182,10 @@ void GNUstep::IMPCacher::SpeculativelyInline(Instruction *call, Function
   // Really do the real inlining
   InlineFunctionInfo IFI(0, 0);
   if (CallInst *c = dyn_cast<CallInst>(inlineCall)) {
+    c->setCalledFunction(function);
     InlineFunction(c, IFI);
   } else if (InvokeInst *c = dyn_cast<InvokeInst>(inlineCall)) {
+    c->setCalledFunction(function);
     InlineFunction(c, IFI);
   }
 }

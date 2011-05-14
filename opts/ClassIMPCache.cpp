@@ -25,9 +25,10 @@ namespace
     ClassIMPCachePass() : ModulePass(ID) {}
 
     virtual bool runOnModule(Module &M) {
+        return false;
       GNUstep::IMPCacher cacher = GNUstep::IMPCacher(M.getContext(), this);
-      // FIXME: ILP64
-      IntTy = Type::getInt32Ty(M.getContext());
+      IntTy = (sizeof(int) == 4 ) ? Type::getInt32Ty(M.getContext()) :
+          Type::getInt64Ty(M.getContext()) ;
       bool modified = false;
 
       unsigned MessageSendMDKind = M.getContext().getMDKindID("GNUObjCMessageSend");

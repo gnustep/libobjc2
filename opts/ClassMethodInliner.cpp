@@ -9,10 +9,13 @@
 #include "llvm/Support/IRBuilder.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/InlineCost.h"
+#include "llvm/DefaultPasses.h"
+#include "ObjectiveCOpts.h"
 #include "IMPCacher.h"
 #include <string>
 
 using namespace llvm;
+using namespace GNUstep;
 using std::string;
 
 // Mangle a method name
@@ -39,13 +42,14 @@ namespace
     ClassMethodInliner() : ModulePass(ID) {}
 
     virtual bool runOnModule(Module &M) {
+        return false;
       unsigned MessageSendMDKind = M.getContext().getMDKindID("GNUObjCMessageSend");
       InlineCostAnalyzer CA;
       SmallPtrSet<const Function *, 16> NeverInline;
 
       GNUstep::IMPCacher cacher = GNUstep::IMPCacher(M.getContext(), this);
-      // FIXME: ILP64
-      IntTy = Type::getInt32Ty(M.getContext());
+      IntTy = (sizeof(int) == 4 ) ? Type::getInt32Ty(M.getContext()) :
+          Type::getInt64Ty(M.getContext()) ;
       bool modified = false;
 
       for (Module::iterator F=M.begin(), fend=M.end() ;
@@ -98,6 +102,14 @@ namespace
   char ClassMethodInliner::ID = 0;
   RegisterPass<ClassMethodInliner> X("gnu-class-method-inline", 
           "Inline class methods and message sends to super");
+#if LLVM_MAJOR > 2
+  StandardPass::RegisterStandardPass<ClassMethodInliner> D(
+        StandardPass::Module, &ClassLookupCacheID,
+        StandardPass::OptimzationFlags(1), &ClassMethodInlinerID);
+  StandardPass::RegisterStandardPass<ClassMethodInliner> L(StandardPass::LTO,
+      &ClassLookupCacheID, StandardPass::OptimzationFlags(0),
+      &ClassMethodInlinerID);
+#endif
 }
 
 ModulePass *createClassMethodInliner(void)

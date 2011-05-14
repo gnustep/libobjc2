@@ -7,7 +7,7 @@ using namespace llvm;
 namespace 
 {
   class ObjectiveCOpts : public ModulePass {
-    ModulePass *IMPCachePass;
+    ModulePass *ClassIMPCachePass;
     ModulePass *ClassLookupCachePass;
     ModulePass *ClassMethodInliner;
     FunctionPass *GNUNonfragileIvarPass;
@@ -16,14 +16,14 @@ namespace
     public:
     static char ID;
     ObjectiveCOpts() : ModulePass(ID) {
-      IMPCachePass = createClassIMPCachePass();
+      ClassIMPCachePass = createClassIMPCachePass();
       ClassLookupCachePass = createClassLookupCachePass();
       ClassMethodInliner = createClassMethodInliner();
       GNUNonfragileIvarPass = createGNUNonfragileIvarPass();
       GNULoopIMPCachePass = createGNULoopIMPCachePass();
     }
     virtual ~ObjectiveCOpts() {
-      delete IMPCachePass;
+      delete ClassIMPCachePass;
       delete ClassMethodInliner;
       delete ClassLookupCachePass;
       delete GNULoopIMPCachePass;
@@ -32,7 +32,7 @@ namespace
 
     virtual bool runOnModule(Module &Mod) {
       bool modified;
-      modified = IMPCachePass->runOnModule(Mod);
+      modified = ClassIMPCachePass->runOnModule(Mod);
       modified |= ClassLookupCachePass->runOnModule(Mod);
       modified |= ClassMethodInliner->runOnModule(Mod);
 
@@ -51,4 +51,11 @@ namespace
   char ObjectiveCOpts::ID = 0;
   RegisterPass<ObjectiveCOpts> X("gnu-objc", 
           "Run all of the GNUstep Objective-C runtimm optimisations");
+
 }
+
+unsigned char GNUstep::ClassIMPCacheID;
+unsigned char GNUstep::ClassMethodInlinerID;
+unsigned char GNUstep::ClassLookupCacheID;
+unsigned char GNUstep::LoopIMPCacheID;
+unsigned char GNUstep::NonfragileIvarID;
