@@ -8,9 +8,12 @@
 #include "llvm/Support/CallSite.h"
 #include "llvm/Support/IRBuilder.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/DefaultPasses.h"
+#include "ObjectiveCOpts.h"
 #include "IMPCacher.h"
 #include <string>
 
+using namespace GNUstep;
 using namespace llvm;
 using std::string;
 
@@ -83,6 +86,15 @@ namespace
   char ClassIMPCachePass::ID = 0;
   RegisterPass<ClassIMPCachePass> X("gnu-class-imp-cache", 
           "Cache IMPs for class messages");
+#if LLVM_MAJOR > 2
+  StandardPass::RegisterStandardPass<ClassIMPCachePass> D(
+        StandardPass::Module, &NonfragileIvarID,
+        StandardPass::OptimzationFlags(2, 0, 0, StandardPass::OptimizeSize),
+        &ClassIMPCacheID);
+  StandardPass::RegisterStandardPass<ClassIMPCachePass> L(StandardPass::LTO,
+      &NonfragileIvarID, StandardPass::OptimzationFlags(0),
+      &ClassIMPCacheID);
+#endif
 }
 
 ModulePass *createClassIMPCachePass(void)

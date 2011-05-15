@@ -101,7 +101,7 @@ namespace
           removeTerminator(beforeLookupBB);
           removeTerminator(lookupBB);
 
-		  PHINode *phi = CreatePHI(clsTy, 2, cls, afterLookupBB->begin());
+          PHINode *phi = CreatePHI(clsTy, 2, cls, afterLookupBB->begin());
           // We replace all of the existing uses with the PHI node now, because
           // we're going to add some more uses later that we don't want
           // replaced.
@@ -150,7 +150,8 @@ namespace
 #if LLVM_MAJOR > 2
   StandardPass::RegisterStandardPass<ClassLookupCachePass> D(
         StandardPass::Module, &LoopIMPCacheID,
-        StandardPass::OptimzationFlags(1), &ClassLookupCacheID);
+        StandardPass::OptimzationFlags(1, 0, 0, StandardPass::OptimizeSize),
+        &ClassLookupCacheID);
   StandardPass::RegisterStandardPass<ClassLookupCachePass> L(StandardPass::LTO,
       &LoopIMPCacheID, StandardPass::OptimzationFlags(0),
       &ClassLookupCacheID);

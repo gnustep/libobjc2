@@ -42,7 +42,6 @@ namespace
     ClassMethodInliner() : ModulePass(ID) {}
 
     virtual bool runOnModule(Module &M) {
-        return false;
       unsigned MessageSendMDKind = M.getContext().getMDKindID("GNUObjCMessageSend");
       InlineCostAnalyzer CA;
       SmallPtrSet<const Function *, 16> NeverInline;
@@ -105,7 +104,8 @@ namespace
 #if LLVM_MAJOR > 2
   StandardPass::RegisterStandardPass<ClassMethodInliner> D(
         StandardPass::Module, &ClassLookupCacheID,
-        StandardPass::OptimzationFlags(1), &ClassMethodInlinerID);
+        StandardPass::OptimzationFlags(3, 0, 0, StandardPass::OptimizeSize),
+        &ClassMethodInlinerID);
   StandardPass::RegisterStandardPass<ClassMethodInliner> L(StandardPass::LTO,
       &ClassLookupCacheID, StandardPass::OptimzationFlags(0),
       &ClassMethodInlinerID);

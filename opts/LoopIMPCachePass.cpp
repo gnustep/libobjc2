@@ -89,10 +89,11 @@ namespace
           "Cache IMPs in loops pass");
 #if LLVM_MAJOR > 2
   StandardPass::RegisterStandardPass<GNULoopIMPCachePass> D(
-        StandardPass::Module, &NonfragileIvarID,
-        StandardPass::OptimzationFlags(1), &LoopIMPCacheID);
+        StandardPass::Module, &ClassIMPCacheID,
+        StandardPass::OptimzationFlags(2, 0, 0, StandardPass::OptimizeSize),
+        &LoopIMPCacheID);
   StandardPass::RegisterStandardPass<GNULoopIMPCachePass> L(StandardPass::LTO,
-      &NonfragileIvarID, StandardPass::OptimzationFlags(0),
+      &ClassIMPCacheID, StandardPass::OptimzationFlags(0),
       &LoopIMPCacheID);
 #endif
 }
