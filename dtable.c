@@ -1,6 +1,7 @@
 #define __BSD_VISIBLE 1
 #include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
 #include "objc/runtime.h"
 #include "sarray2.h"
 #include "selector.h"
@@ -312,7 +313,7 @@ static BOOL installMethodInDtable(Class class,
                                   struct objc_method *method,
                                   BOOL replaceExisting)
 {
-	assert(uninstalled_dtable != dtable);
+	ASSERT(uninstalled_dtable != dtable);
 	uint32_t sel_id = method->selector->index;
 	struct objc_slot *slot = SparseArrayLookup(dtable, sel_id);
 	if (NULL != slot)

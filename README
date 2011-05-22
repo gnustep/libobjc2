@@ -105,7 +105,7 @@ Blocks
 ------
 
 The GNUstep runtime provides the run time support required for Apple's blocks
-(closures) extension to C.  
+(closures) extension to C.  This follows the same ABI as OS X 10.6.
 
 Fast Proxies and Cacheable Lookups
 ----------------------------------

@@ -29,6 +29,7 @@ libobjc_C_FILES = \
 	dtable.c\
 	eh_personality.c\
 	encoding2.c\
+	gc_none.c\
 	hash_table.c\
 	hooks.c\
 	ivar.c\
@@ -78,6 +79,14 @@ ifeq ($(low_memory), yes)
 libobjc_CPPFLAGS += -D__OBJC_LOW_MEMORY__
 endif
 
+ifeq ($(boehm_gc), yes)
+libobjc_C_FILES += gc_boehm.c
+libobjc_LIBRARIES_DEPEND_UPON += -lgc-threaded
+libobjc_OBJCFLAGS += -fobjc-gc
+endif
+
+
+
 ifeq ($(findstring openbsd, $(GNUSTEP_HOST_OS)), openbsd)
 libobjc_LIBRARIES_DEPEND_UPON += -pthread 
 else
@@ -102,7 +111,7 @@ libobjc_CFLAGS += -Wno-unused-function
 
 # Uncomment this when debugging - it makes everything slow, but means that the
 # debugger actually works...
-libobjc_CFLAGS += -fno-inline
+#libobjc_CFLAGS += -fno-inline
 libobjc_OBJCFLAGS += $(libobjc_CFLAGS) $(libobjc_CFLAGS)
 
 ifneq ($(findstring gcc, $(CC)),)

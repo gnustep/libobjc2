@@ -72,6 +72,19 @@ struct objc_module_abi_8
 	struct objc_symbol_table_abi_8 *symbol_table;
 };
 
+struct objc_module_abi_10
+{
+	/**
+	 * Inherited fields from version 8 of the ABI.
+	 */
+	struct objc_module_abi_8 old;
+	/**
+	 * GC mode.  GC_Optional code can be mixed with anything, but GC_None code
+	 * can't be mixed with GC_Required code.
+	 */
+	int gc_mode;
+};
+
 /**
  * List of static instances of a named class provided in this module.
  */

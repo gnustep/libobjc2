@@ -1,6 +1,7 @@
 #include "visibility.h"
 #include "objc/runtime.h"
 #include "module.h"
+#include "gc_ops.h"
 #include <assert.h>
 #include <stdio.h>
 
@@ -28,15 +29,24 @@ struct objc_abi_version
 	unsigned long module_size;
 };
 
+enum
+{
+	gcc_abi = 8,
+	gnustep_abi = 9,
+	gc_abi = 10
+};
+
 /**
  * List of supported ABIs.
  */
 static struct objc_abi_version known_abis[] =
 {
 	/* GCC ABI. */
-	{8, 8, 9, sizeof(struct objc_module_abi_8)},
-	/* Clang ABI. */
-	{9, 8, 9, sizeof(struct objc_module_abi_8)}
+	{gcc_abi, gcc_abi, gnustep_abi, sizeof(struct objc_module_abi_8)},
+	/* Non-fragile ABI. */
+	{gnustep_abi, gcc_abi, gc_abi, sizeof(struct objc_module_abi_8)},
+	/* GC ABI.  Adds a field describing the GC mode. */
+	{gc_abi, gcc_abi, gc_abi, sizeof(struct objc_module_abi_10)}
 };
 
 static int known_abi_count =
@@ -50,8 +60,14 @@ static int known_abi_count =
 	}\
 } while(0)
 
-PRIVATE BOOL objc_check_abi_version(unsigned long version, unsigned long module_size)
+static enum objc_gc_mode current_gc_mode = GC_Optional;
+
+PRIVATE BOOL objc_check_abi_version(struct objc_module_abi_8 *module)
 {
+	unsigned long version = module->version;
+	unsigned long module_size = module->size;
+	enum objc_gc_mode gc_mode = (version < gc_abi) ? GC_None
+	                            : ((struct objc_module_abi_10*)module)->gc_mode;
 	struct objc_abi_version *v = NULL;
 	for (int i=0 ; i<known_abi_count ; i++)
 	{
@@ -84,5 +100,20 @@ PRIVATE BOOL objc_check_abi_version(unsigned long version, unsigned long module_
 		min_loaded_version = version;
 		max_loaded_version = version;
 	}
+
+	// If we're currently in GC-optional mode, then fall to one side or the
+	// other if this module requires / doesn't support GC
+	if (current_gc_mode == GC_Optional && (gc_mode != current_gc_mode))
+	{
+		current_gc_mode = gc_mode;
+		if (gc_mode != GC_None)
+		{
+			enableGC(NO);
+		}
+	}
+	// We can't mix GC_None and GC_Required code, but we can mix any other
+	// combination
+	FAIL_IF((gc_mode != GC_Optional) && (gc_mode != current_gc_mode),
+	        "Attempting to mix GC and non-GC code!");
 	return YES;
 }

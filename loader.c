@@ -28,7 +28,7 @@ void __objc_exec_class(struct objc_module_abi_8 *module)
 	// Check that this module uses an ABI version that we recognise.  
 	// In future, we should pass the ABI version to the class / category load
 	// functions so that we can change various structures more easily.
-	assert(objc_check_abi_version(module->version, module->size));
+	assert(objc_check_abi_version(module));
 
 	if (first_run)
 	{

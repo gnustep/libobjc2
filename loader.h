@@ -11,7 +11,7 @@
  * module size.  This depends on whether another module with an incompatible
  * ABI has already been loaded.
  */
-BOOL objc_check_abi_version(unsigned long version, unsigned long module_size);
+BOOL objc_check_abi_version(struct objc_module_abi_8 *module);
 /**
  * Initializes a protocol list, uniquing the protocols in the list.
  */

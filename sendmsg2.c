@@ -58,7 +58,7 @@ Slot_t objc_msg_lookup_internal(id *receiver,
 retry:;
 	Slot_t result = objc_dtable_lookup((*receiver)->isa->dtable,
 			selector->index);
-	if (0 == result)
+	if (UNLIKELY(0 == result))
 	{
 		Class class = (*receiver)->isa;
 		dtable_t dtable = dtable_for_class(class);
@@ -110,6 +110,11 @@ retry:;
 Slot_t (*objc_plane_lookup)(id *receiver, SEL op, id sender) =
 	objc_msg_lookup_internal;
 
+Slot_t objc_msg_lookup_sender_non_nil(id *receiver, SEL selector, id sender)
+{
+	return objc_msg_lookup_internal(receiver, selector, sender);
+}
+
 /**
  * New Objective-C lookup function.  This permits the lookup to modify the
  * receiver and also supports multi-dimensional dispatch based on the sender.  
@@ -119,7 +124,7 @@ Slot_t objc_msg_lookup_sender(id *receiver, SEL selector, id sender)
 	// Returning a nil slot allows the caller to cache the lookup for nil too,
 	// although this is not particularly useful because the nil method can be
 	// inlined trivially.
-	if(*receiver == nil)
+	if (UNLIKELY(*receiver == nil))
 	{
 		return &nil_slot;
 	}
@@ -155,7 +160,7 @@ Slot_t objc_slot_lookup_super(struct objc_super *super, SEL selector)
 		if (0 == result)
 		{
 			// Dtable should always be installed in the superclass
-			assert(dtable_for_class(class) != uninstalled_dtable);
+			ASSERT(dtable_for_class(class) != uninstalled_dtable);
 			result = &nil_slot;
 		}
 		return result;

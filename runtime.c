@@ -6,6 +6,7 @@
 #include "method_list.h"
 #include "lock.h"
 #include "dtable.h"
+#include "gc_ops.h"
 
 /* Make glibc export strdup() */
 
@@ -274,7 +275,7 @@ id class_createInstance(Class cls, size_t extraBytes)
 {
 	CHECK_ARG(cls);
 	if (Nil == cls)	{ return nil; }
-	id obj = calloc(cls->instance_size + extraBytes, 1);
+	id obj = gc->allocate_class(cls, extraBytes);
 	obj->isa = cls;
 	return obj;
 }

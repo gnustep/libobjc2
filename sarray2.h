@@ -11,7 +11,7 @@
 #define _SARRAY_H_INCLUDED_
 #include <stdint.h>
 #include <stdlib.h>
-#include <assert.h>
+#include "visibility.h"
 
 /**
  * Sparse arrays, used to implement dispatch tables.  Current implementation is
@@ -70,7 +70,7 @@ static inline void* SparseArrayLookup(SparseArray * sarray, uint32_t index)
 	uint32_t i = index;
 	switch (sarray->shift)
 	{
-		default: assert(0 && "broken sarray");
+		default: UNREACHABLE("broken sarray");
 		case 0:
 			return sarray->data[i & 0xff];
 		case 8:
