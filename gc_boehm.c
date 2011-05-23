@@ -370,7 +370,9 @@ void objc_finalizeOnMainThread(Class cls) {}
 PRIVATE struct gc_ops gc_ops_boehm = 
 {
 	.allocate_class = allocate_class,
-	.init = init
+	.malloc         = GC_malloc_uncollectable,
+	.free           = GC_free,
+	.init           = init
 };
 
 PRIVATE void enableGC(BOOL exclude)

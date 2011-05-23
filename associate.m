@@ -8,6 +8,7 @@
 #include "dtable.h"
 #include "selector.h"
 #include "lock.h"
+#include "gc_ops.h"
 
 /**
  * A single associative reference.  Contains the key, value, and association
@@ -107,7 +108,7 @@ static void freeReferenceList(struct reference_list *l)
 {
 	if (NULL == l) { return; }
 	freeReferenceList(l->next);
-	free(l);
+	gc->free(l);
 }
 
 static void setReference(struct reference_list *list,
@@ -145,7 +146,7 @@ static void setReference(struct reference_list *list,
 
 			while (NULL != l->next) { l = l->next; }
 
-			l->next = calloc(1, sizeof(struct reference_list));
+			l->next = gc->malloc(sizeof(struct reference_list));
 			r = &l->next->list[0];
 		}
 		r->key = key;
@@ -262,7 +263,7 @@ static struct reference_list* referenceListForObject(id object, BOOL create)
 			lock_spinlock(lock);
 			if (NULL == cls->extra_data)
 			{
-				cls->extra_data = calloc(1, sizeof(struct reference_list));
+				cls->extra_data = gc->malloc(sizeof(struct reference_list));
 				INIT_LOCK(cls->extra_data->lock);
 			}
 			unlock_spinlock(lock);

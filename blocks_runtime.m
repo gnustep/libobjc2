@@ -25,6 +25,7 @@
  */
 #import "objc/blocks_runtime.h"
 #import "objc/runtime.h"
+#include "gc_ops.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -314,7 +315,7 @@ void _Block_object_assign(void *destAddr, const void *object, const int flags)
 			
 			if ((src->flags & BLOCK_REFCOUNT_MASK) == 0)
 			{
-				*dst = malloc(src->size);
+				*dst = gc->malloc(src->size);
 				fprintf(stderr, "Copying %d bytes to %p\n", src->size, *dst);
 				memcpy(*dst, src, src->size);
 				(*dst)->isa = _HeapBlockByRef;
@@ -340,7 +341,7 @@ void _Block_object_assign(void *destAddr, const void *object, const int flags)
 					{
 						src->byref_dispose(*dst);
 					}
-					free(*dst);
+					gc->free(*dst);
 					*dst = src->forwarding;
 				}
 			}
@@ -402,7 +403,7 @@ void _Block_object_dispose(const void *object, const int flags)
 					{
 						src->byref_dispose(src);
 					}
-					free(src);
+					gc->free(src);
 				}
 			}
 			else
@@ -458,7 +459,7 @@ void *_Block_copy(void *src)
 		fprintf(stderr, "block flags: %d\n", self->flags);
 		if(self->reserved == 0)
 		{
-			ret = malloc(self->descriptor->size);
+			ret = gc->malloc(self->descriptor->size);
 			memcpy(ret, self, self->descriptor->size);
 			if(self->flags & BLOCK_HAS_COPY_DISPOSE)
 			{
@@ -486,7 +487,7 @@ void _Block_release(void *src)
 		{
 			if(self->flags & BLOCK_HAS_COPY_DISPOSE)
 				self->descriptor->dispose_helper(self);
-			free(self);
+			gc->free(self);
 		}
 	}
 }

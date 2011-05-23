@@ -1,3 +1,4 @@
+
 /**
  * Garbage collection operations.
  */
@@ -11,6 +12,17 @@ struct gc_ops
 	 * Allocates enough space for a class, followed by some extra bytes.
 	 */
 	id (*allocate_class)(Class, size_t);
+	/**
+	 * Allocates some memory that can be used to store pointers.  This must be
+	 * used instead of malloc() for internal data structures that will store
+	 * pointers passed in from outside.  The function is expected to zero the
+	 * memory that it returns.
+	 */
+	void* (*malloc)(size_t);
+	/**
+	 * Frees some memory that was previously used to store pointers.
+	 */
+	void (*free)(void*);
 };
 
 /**
@@ -19,7 +31,7 @@ struct gc_ops
  * If the exclusive flag is set, then this will ensure that all -retain /
  * -release / -autorelease messages become no-ops.
  */
-PRIVATE void enableGC(BOOL exclusive);
+void enableGC(BOOL exclusive);
 /**
  * The mode for garbage collection
  */
