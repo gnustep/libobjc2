@@ -231,6 +231,8 @@ static inline Class initHiddenClassForObject(id obj)
 						SELECTOR(dealloc)));
 		class_addMethod(hiddenClass, SELECTOR(dealloc), (IMP)deallocHiddenClass,
 				types);
+		class_addMethod(hiddenClass, SELECTOR(finalize), (IMP)deallocHiddenClass,
+				types);
 		obj->isa = hiddenClass;
 	}
 	return hiddenClass;
@@ -243,7 +245,7 @@ static void deallocHiddenClass(id obj, SEL _cmd)
 	// Call the real -dealloc method (this ordering is required in case the
 	// user does @synchronized(self) in -dealloc)
 	struct objc_super super = {obj, realClass};
-	objc_msg_lookup_super(&super, SELECTOR(dealloc))(obj, SELECTOR(dealloc));
+	objc_msg_lookup_super(&super, _cmd)(obj, _cmd);
 	// After calling [super dealloc], the object will no longer exist.
 	// Free the hidden
 	struct reference_list *list = object_getIndexedIvars(hiddenClass);
