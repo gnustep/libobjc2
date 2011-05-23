@@ -173,7 +173,8 @@ void objc_registerThreadWithCollector(void);
 void objc_unregisterThreadWithCollector(void);
 /**
  * Registers the current thread with the garbage collector and aborts if the
- * registration failed.
+ * registration failed.  The thread is expected to have already been
+ * registered.  This will print a warning message if it has not been.
  */
 void objc_assertRegisteredThreadWithCollector();
 

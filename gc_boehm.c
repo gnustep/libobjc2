@@ -1,4 +1,7 @@
 #include "objc/runtime.h"
+#include "class.h"
+#include "ivar.h"
+#include "lock.h"
 #include "objc/objc-auto.h"
 #include "visibility.h"
 #include <stdlib.h>
@@ -12,6 +15,9 @@
 #ifndef __clang__
 #define __sync_swap __sync_lock_test_and_set
 #endif
+
+GC_descr gc_typeForClass(Class cls);
+void gc_setTypeForClass(Class cls, GC_descr type);
 
 static unsigned long collectionType(unsigned options)
 {
@@ -112,9 +118,11 @@ id objc_assign_strongCast(id val, id *ptr)
 
 id objc_assign_global(id val, id *ptr)
 {
+	GC_add_roots(ptr, ptr+1);
 	*ptr = val;
 	return val;
 }
+
 id objc_assign_ivar(id val, id dest, ptrdiff_t offset)
 {
 	GC_change_stubborn(dest);
@@ -184,9 +192,58 @@ static void runFinalize(void *addr, void *context)
 	objc_msg_lookup(addr, finalize)(addr, finalize);
 }
 
+static void collectIvarForClass(Class cls, GC_word *bitmap)
+{
+	for (unsigned i=0 ; i<cls->ivars->count ; i++)
+	{
+		struct objc_ivar *ivar = &cls->ivars->ivar_list[i];
+		size_t start = ivar->offset;
+		size_t end = i+1 < cls->ivars->count ? cls->ivars->ivar_list[i+1].offset
+		                                     : cls->instance_size;
+		switch (ivar->type[0])
+		{
+			// Explicit pointer types
+			case '^': case '@':
+			// We treat collections as pointer types for now, because people
+			// tend to do ugly things with them (especially unions!).
+			case '[': case '{': case '(':
+				for (unsigned b=(start / sizeof(void*)) ; b<(end/sizeof(void*)) ; b++)
+				{
+					GC_set_bit(bitmap, b);
+				}
+		}
+	}
+	if (cls->super_class)
+	{
+		collectIvarForClass(cls->super_class, bitmap);
+	}
+}
+
+static GC_descr descriptor_for_class(Class cls)
+{
+	GC_descr descr = gc_typeForClass(cls);
+
+	if (0 != descr) { return descr; }
+
+	LOCK_RUNTIME_FOR_SCOPE();
+
+	descr = (GC_descr)gc_typeForClass(cls);
+	if (0 != descr) { return descr; }
+
+	size_t size = cls->instance_size / 8 + 1;
+	GC_word bitmap[size];
+	memset(bitmap, 0, size);
+	collectIvarForClass(cls, bitmap);
+	descr = GC_make_descriptor(bitmap, cls->instance_size);
+	gc_setTypeForClass(cls, descr);
+	return descr;
+}
+
 static id allocate_class(Class cls, size_t extra)
 {
 	id obj;
+	// If there are some extra bytes, they may contain pointers, so we ignore
+	// the type
 	if (extra > 0)
 	{
 		// FIXME: Overflow checking!
@@ -194,7 +251,8 @@ static id allocate_class(Class cls, size_t extra)
 	}
 	else
 	{
-		obj = GC_malloc_stubborn(class_getInstanceSize(cls));
+		GC_descr d = descriptor_for_class(cls);
+		obj = GC_malloc_explicitly_typed(class_getInstanceSize(cls), d);
 	}
 	GC_register_finalizer_no_order(obj, runFinalize, 0, 0, 0);
 	return obj;
@@ -340,6 +398,7 @@ static void init(void)
 	refcounts = refcount_create(4096);
 	GC_word bitmap = 0;
 	UnscannedDescr = GC_make_descriptor(&bitmap, 1);
+	GC_clear_roots();
 }
 
 BOOL objc_collecting_enabled(void)

@@ -52,6 +52,11 @@ struct reference_list
 	 */
 	mutex_t lock;
 	/**
+	 * Garbage collection type.  This stores the location of all of the
+	 * instance variables in the object that may contain pointers.
+	 */
+	void *gc_type;
+	/**
 	 * Array of references.
 	 */
 	struct reference list[REFERENCE_LIST_SIZE];
@@ -308,6 +313,17 @@ id objc_getAssociatedObject(id object, void *key)
 void objc_removeAssociatedObjects(id object)
 {
 	cleanupReferenceList(referenceListForObject(object, NO));
+}
+
+PRIVATE void *gc_typeForClass(Class cls)
+{
+	struct reference_list *list = referenceListForObject(cls, YES);
+	return list->gc_type;
+}
+PRIVATE void gc_setTypeForClass(Class cls, void *type)
+{
+	struct reference_list *list = referenceListForObject(cls, YES);
+	list->gc_type = type;
 }
 
 int objc_sync_enter(id object)

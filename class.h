@@ -1,6 +1,5 @@
 #ifndef __OBJC_CLASS_H_INCLUDED
 #define __OBJC_CLASS_H_INCLUDED
-#ifndef __objc_runtime_INCLUDE_GNU
 struct objc_class
 {
 	/**
@@ -134,7 +133,6 @@ struct legacy_abi_objc_class
 	void                      *gc_object_type;
 };
 
-#endif
 
 /**
  * An enumerated type describing all of the valid flags that may be used in the
