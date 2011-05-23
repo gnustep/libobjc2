@@ -6,6 +6,7 @@
 #include "gc_ops.h"
 #define I_HIDE_POINTERS
 #include <gc.h>
+#include <gc/gc_typed.h>
 
 #ifndef __clang__
 #define __sync_swap __sync_lock_test_and_set
@@ -296,10 +297,24 @@ void objc_gc_release_np(id object)
 	}
 }
 
+static GC_descr UnscannedDescr;
+
+void* objc_gc_allocate_collectible(size_t size, BOOL isScanned)
+{
+	if (isScanned)
+	{
+		return GC_malloc(size);
+	}
+	return GC_malloc_explicitly_typed(size, UnscannedDescr);
+}
+
+
 
 static void init(void)
 {
 	refcounts = refcount_create(4096);
+	GC_word bitmap = 0;
+	UnscannedDescr = GC_make_descriptor(&bitmap, 1);
 }
 
 // FIXME: These are all stub implementations that should be replaced with
