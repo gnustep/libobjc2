@@ -1,4 +1,5 @@
 #include "objc/runtime.h"
+#include "objc/objc-auto.h"
 #include "visibility.h"
 #include <stdlib.h>
 #include <string.h>
@@ -12,37 +13,60 @@
 #define __sync_swap __sync_lock_test_and_set
 #endif
 
-enum
-{
-	OBJC_RATIO_COLLECTION        = 0,
-	OBJC_GENERATIONAL_COLLECTION = 1,
-	OBJC_FULL_COLLECTION         = 2,
-	OBJC_EXHAUSTIVE_COLLECTION   = 3,
-	OBJC_COLLECT_IF_NEEDED       = (1 << 3),
-	OBJC_WAIT_UNTIL_DONE         = (1 << 4),
-};
-
-enum
-{
-	OBJC_CLEAR_RESIDENT_STACK = 1
-};
-
 static unsigned long collectionType(unsigned options)
 {
 	// Low 2 bits in GC options are used for the 
 	return options & 3;
 }
 
+static size_t CollectRatio     = 0x10000;
+static size_t CollectThreshold = 0x10000;
+
+void objc_set_collection_threshold(size_t threshold)
+{
+	CollectThreshold = threshold;
+}
+void objc_set_collection_ratio(size_t ratio)
+{
+	CollectRatio = ratio;
+}
 
 void objc_collect(unsigned long options)
 {
-	if (OBJC_FULL_COLLECTION == collectionType(options))
+	size_t newAllocations = GC_get_bytes_since_gc();
+	// Skip collection if we haven't allocated much memory and this is a
+	// collect if needed collection
+	if ((options & OBJC_COLLECT_IF_NEEDED) && (newAllocations < CollectThreshold))
 	{
-		GC_gcollect();
+		return;
 	}
-	else
+	switch (collectionType(options))
 	{
-		GC_collect_a_little();
+		case OBJC_RATIO_COLLECTION:
+			if (newAllocations >= CollectRatio)
+			{
+				GC_gcollect();
+			}
+			else
+			{
+				GC_collect_a_little();
+			}
+			break;
+		case OBJC_GENERATIONAL_COLLECTION:
+			GC_collect_a_little();
+			break;
+		case OBJC_FULL_COLLECTION:
+			GC_gcollect();
+			break;
+		case OBJC_EXHAUSTIVE_COLLECTION:
+		{
+			size_t freeBytes = 0;
+			while (GC_get_free_bytes() != freeBytes)
+			{
+				freeBytes = GC_get_free_bytes();
+				GC_gcollect();
+			}
+		}
 	}
 }
 
@@ -251,7 +275,7 @@ static uint32_t refcount_hash(const struct gc_refcount *rc)
 
 static refcount_table *refcounts;
 
-id objc_gc_retain_np(id object)
+id objc_gc_retain(id object)
 {
 	struct gc_refcount *refcount = refcount_table_get(refcounts, object);
 	if (NULL == refcount)
@@ -270,7 +294,7 @@ id objc_gc_retain_np(id object)
 	__sync_fetch_and_add(&(refcount->refCount), 1);
 	return object;
 }
-void objc_gc_release_np(id object)
+void objc_gc_release(id object)
 {
 	struct gc_refcount *refcount = refcount_table_get(refcounts, object);
 	// This object has not been explicitly retained, don't release it
@@ -312,14 +336,22 @@ void* objc_gc_allocate_collectible(size_t size, BOOL isScanned)
 
 static void init(void)
 {
+	GC_init();
 	refcounts = refcount_create(4096);
 	GC_word bitmap = 0;
 	UnscannedDescr = GC_make_descriptor(&bitmap, 1);
 }
 
-// FIXME: These are all stub implementations that should be replaced with
-// something better
-BOOL objc_is_finalized(void *ptr) { return NO; }
+BOOL objc_collecting_enabled(void)
+{
+	return current_gc_mode != GC_None;
+}
+
+void objc_startCollectorThread(void)
+{
+	enableGC(NO);
+}
+
 void objc_clear_stack(unsigned long options)
 {
 	// This isn't a very good implementation - we should really be working out
@@ -328,13 +360,11 @@ void objc_clear_stack(unsigned long options)
 	int i[1024];
 	memset(&i, 0, 1024);
 }
-BOOL objc_collecting_enabled(void) { return NO; }
-void objc_set_collection_threshold(size_t threshold) {}
-void objc_set_collection_ratio(size_t ratio) {} 
+// FIXME: These are all stub implementations that should be replaced with
+// something better
+BOOL objc_is_finalized(void *ptr) { return NO; }
 void objc_start_collector_thread(void) {}
 void objc_finalizeOnMainThread(Class cls) {}
-void objc_setCollectionThreshold(size_t threshold) {}
-void objc_startCollectorThread(void) {}
 
 
 PRIVATE struct gc_ops gc_ops_boehm = 

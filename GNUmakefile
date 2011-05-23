@@ -67,6 +67,7 @@ libobjc_HEADER_FILES = \
 	slot.h\
 	objc.h\
 	objc-api.h\
+	objc-auto.h\
 	toydispatch.h
 endif
 

@@ -60,7 +60,7 @@ static int known_abi_count =
 	}\
 } while(0)
 
-static enum objc_gc_mode current_gc_mode = GC_Optional;
+PRIVATE enum objc_gc_mode current_gc_mode = GC_Optional;
 
 PRIVATE BOOL objc_check_abi_version(struct objc_module_abi_8 *module)
 {
