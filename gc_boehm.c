@@ -323,7 +323,7 @@ void objc_gc_release(id object)
 
 static GC_descr UnscannedDescr;
 
-void* objc_gc_allocate_collectible(size_t size, BOOL isScanned)
+void* objc_gc_allocate_collectable(size_t size, BOOL isScanned)
 {
 	if (isScanned)
 	{

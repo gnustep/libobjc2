@@ -201,5 +201,5 @@ void objc_gc_release(id object);
  *
  * This function is intended to be used to implement NSAllocateCollectable().
  */
-void* objc_gc_allocate_collectible(size_t size, BOOL isScanned);
+void* objc_gc_allocate_collectable(size_t size, BOOL isScanned);
 
