@@ -110,9 +110,7 @@ BOOL objc_atomicCompareAndSwapInstanceVariableBarrier(id predicate, id replaceme
 
 id objc_assign_strongCast(id val, id *ptr)
 {
-	GC_change_stubborn(ptr);
 	*ptr = val;
-	GC_end_stubborn_change(ptr);
 	return val;
 }
 
@@ -125,9 +123,7 @@ id objc_assign_global(id val, id *ptr)
 
 id objc_assign_ivar(id val, id dest, ptrdiff_t offset)
 {
-	GC_change_stubborn(dest);
 	*(id*)((char*)dest+offset) = val;
-	GC_end_stubborn_change(dest);
 	return val;
 }
 void *objc_memmove_collectable(void *dst, const void *src, size_t size)
