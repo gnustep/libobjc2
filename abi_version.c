@@ -4,6 +4,7 @@
 #include "gc_ops.h"
 #include <assert.h>
 #include <stdio.h>
+#include <string.h>
 
 /**
  * The smallest ABI version number of loaded modules.
@@ -62,8 +63,29 @@ static int known_abi_count =
 
 PRIVATE enum objc_gc_mode current_gc_mode = GC_Optional;
 
+static BOOL endsWith(const char *string, const char *suffix)
+{
+	char *interior = strstr(string, suffix);
+	return (interior && (strlen(string) == strlen(interior)));
+}
+
 PRIVATE BOOL objc_check_abi_version(struct objc_module_abi_8 *module)
 {
+	static int runtime_modules = 3;
+	// As a quick and ugly hack, skip these three tests for the .m files in the
+	// runtime.  They should (in theory, at least) be aware of the GC mode and
+	// behave accordingly.
+	if (runtime_modules > 0)
+	{
+		if (endsWith(module->name, "properties.m") ||
+		    endsWith(module->name, "associate.m") ||
+		    endsWith(module->name, "Protocol2.m"))
+		{
+			runtime_modules--;
+			return YES;
+		}
+	}
+	fprintf(stderr, "Loading module %s\n", module->name);
 	unsigned long version = module->version;
 	unsigned long module_size = module->size;
 	enum objc_gc_mode gc_mode = (version < gc_abi) ? GC_None

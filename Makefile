@@ -35,6 +35,7 @@ OBJECTS = \
 	dtable.o\
 	eh_personality.o\
 	encoding2.o\
+	gc_none.o\
 	hash_table.o\
 	hooks.o\
 	ivar.o\
