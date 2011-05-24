@@ -178,6 +178,23 @@ void objc_unregisterThreadWithCollector(void);
  */
 void objc_assertRegisteredThreadWithCollector();
 
+////////////////////////////////////////////////////////////////////////////////
+// Functions below this line are extensions to the OS X GC API, intended to
+// allow implementation of the higher-level public APIs
+////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Disables the garbage collector until it is reenabled with objc_gc_enable.
+ */
+void objc_gc_disable(void);
+/**
+ * Enables the garbage collector, if it has been previously disabled with a
+ * call to objc_gc_disable().  These calls store an internal count.  If
+ * objc_gc_disable() is called twice, then collection will not resume until
+ * objc_gc_enable() has also been called twice.
+ */
+void objc_gc_enable(void);
+
 /**
  * Increments the reference count of objects.  This is intended to be used to
  * implement CFRetain().  Reference counts should only be used when storing

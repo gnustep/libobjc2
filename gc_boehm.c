@@ -78,7 +78,16 @@ void objc_collect(unsigned long options)
 
 BOOL objc_collectingEnabled(void)
 {
-	return YES;
+	return GC_dont_gc == 0;
+}
+
+void objc_gc_disable(void)
+{
+	GC_disable();
+}
+void objc_gc_enable(void)
+{
+	GC_enable();
 }
 
 BOOL objc_atomicCompareAndSwapPtr(id predicate, id replacement, volatile id *objectLocation)
@@ -181,9 +190,15 @@ id objc_assign_weak(id value, id *location)
 static void runFinalize(void *addr, void *context)
 {
 	static SEL finalize;
+	static SEL cxx_destruct;
 	if (UNLIKELY(0 == finalize))
 	{
 		finalize = sel_registerName("finalize");
+		cxx_destruct = sel_registerName(".cxx_destruct");
+	}
+	if (class_respondsToSelector(aClass, cxx_destruct))
+	{
+		objc_msg_lookup(addr, cxx_destruct)(addr, cxx_destruct);
 	}
 	objc_msg_lookup(addr, finalize)(addr, finalize);
 }
