@@ -213,6 +213,12 @@ id objc_gc_retain(id object);
  */
 void objc_gc_release(id object);
 /**
+ * Returns the retain count of an object.  This is 0 for objects that have not
+ * had objc_gc_retain() called on them, which should be most objects in a
+ * garbage-collected program.
+ */
+int objc_gc_retain_count(id object);
+/**
  * Allocates a buffer of memory, which will be automatically deallocated by the
  * collector.  If isScanned is true, then this memory may contain pointers.  If
  * not, then pointers stored in the returned region will be ignored.

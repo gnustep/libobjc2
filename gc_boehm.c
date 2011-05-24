@@ -389,6 +389,11 @@ void objc_gc_release(id object)
 		}
 	}
 }
+int objc_gc_retain_count(id object)
+{
+	struct gc_refcount *refcount = refcount_table_get(refcounts, object);
+	return (0 == refcount) ? 0 : refcount->refCount;
+}
 
 static GC_descr UnscannedDescr;
 
