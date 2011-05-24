@@ -85,7 +85,6 @@ PRIVATE BOOL objc_check_abi_version(struct objc_module_abi_8 *module)
 			return YES;
 		}
 	}
-	fprintf(stderr, "Loading module %s\n", module->name);
 	unsigned long version = module->version;
 	unsigned long module_size = module->size;
 	enum objc_gc_mode gc_mode = (version < gc_abi) ? GC_None
@@ -125,7 +124,7 @@ PRIVATE BOOL objc_check_abi_version(struct objc_module_abi_8 *module)
 
 	// If we're currently in GC-optional mode, then fall to one side or the
 	// other if this module requires / doesn't support GC
-	if (current_gc_mode == GC_Optional && (gc_mode != current_gc_mode))
+	if (current_gc_mode == GC_Optional)
 	{
 		current_gc_mode = gc_mode;
 		if (gc_mode != GC_None)
