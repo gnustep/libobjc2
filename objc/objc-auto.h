@@ -221,3 +221,8 @@ void objc_gc_release(id object);
  */
 void* objc_gc_allocate_collectable(size_t size, BOOL isScanned);
 
+/**
+ * Reallocates a block of collectable memory.
+ */
+void* objc_gc_reallocate_collectable(void *ptr, size_t size, BOOL isScanned);
+

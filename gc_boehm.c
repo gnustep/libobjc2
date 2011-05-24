@@ -196,7 +196,7 @@ static void runFinalize(void *addr, void *context)
 		finalize = sel_registerName("finalize");
 		cxx_destruct = sel_registerName(".cxx_destruct");
 	}
-	if (class_respondsToSelector(aClass, cxx_destruct))
+	if (class_respondsToSelector(((id)addr)->isa, cxx_destruct))
 	{
 		objc_msg_lookup(addr, cxx_destruct)(addr, cxx_destruct);
 	}
@@ -399,6 +399,25 @@ void* objc_gc_allocate_collectable(size_t size, BOOL isScanned)
 		return GC_malloc(size);
 	}
 	return GC_malloc_explicitly_typed(size, UnscannedDescr);
+}
+void* objc_gc_reallocate_collectable(void *ptr, size_t size, BOOL isScanned)
+{
+	if (0 == size) { return 0; }
+
+	void *new = objc_gc_allocate_collectable(size, isScanned);
+
+	if (0 == new) { return 0; }
+
+	if (NULL != ptr)
+	{
+		size_t oldSize = GC_size(ptr);
+		if (oldSize < size)
+		{
+			size = oldSize;
+		}
+		memcpy(new, ptr, oldSize);
+	}
+	return new;
 }
 
 
