@@ -204,7 +204,10 @@ static void runFinalize(void *addr, void *context)
 	{
 		objc_msg_lookup(addr, cxx_destruct)(addr, cxx_destruct);
 	}
-	objc_msg_lookup(addr, finalize)(addr, finalize);
+	if (class_respondsToSelector(((id)addr)->isa, finalize))
+	{
+		objc_msg_lookup(addr, finalize)(addr, finalize);
+	}
 	*(void**)addr = (void*)(intptr_t)-1;//objc_lookup_class("NSZombie");
 }
 
