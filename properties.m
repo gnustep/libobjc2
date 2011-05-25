@@ -8,6 +8,7 @@
 #include "spinlock.h"
 #include "visibility.h"
 #include "nsobject.h"
+#include "gc_ops.h"
 
 PRIVATE int spinlocks[spinlock_count];
 
@@ -19,6 +20,10 @@ id objc_getProperty(id obj, SEL _cmd, ptrdiff_t offset, BOOL isAtomic)
 	if (nil == obj) { return nil; }
 	char *addr = (char*)obj;
 	addr += offset;
+	if (current_gc_mode == GC_Required)
+	{
+		return *(id*)addr;
+	}
 	id ret;
 	if (isAtomic)
 	{
@@ -39,6 +44,18 @@ id objc_getProperty(id obj, SEL _cmd, ptrdiff_t offset, BOOL isAtomic)
 void objc_setProperty(id obj, SEL _cmd, ptrdiff_t offset, id arg, BOOL isAtomic, BOOL isCopy)
 {
 	if (nil == obj) { return; }
+	char *addr = (char*)obj;
+	addr += offset;
+
+	if (current_gc_mode == GC_Required)
+	{
+		if (isCopy)
+		{
+			arg = [arg copy];
+		}
+		*(id*)addr = arg;
+		return;
+	}
 	if (isCopy)
 	{
 		arg = [arg copy];
@@ -47,8 +64,6 @@ void objc_setProperty(id obj, SEL _cmd, ptrdiff_t offset, id arg, BOOL isAtomic,
 	{
 		arg = [arg retain];
 	}
-	char *addr = (char*)obj;
-	addr += offset;
 	id old;
 	if (isAtomic)
 	{
