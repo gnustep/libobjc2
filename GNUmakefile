@@ -84,6 +84,7 @@ ifeq ($(boehm_gc), yes)
 libobjc_C_FILES += gc_boehm.c
 libobjc_LIBRARIES_DEPEND_UPON += -lgc-threaded
 libobjc_OBJCFLAGS += -fobjc-gc
+libobjc_CPPFLAGS += -DENABLE_GC
 endif
 
 

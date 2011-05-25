@@ -10,7 +10,7 @@
 #include <stdio.h>
 #include "gc_ops.h"
 #define I_HIDE_POINTERS
-#include <gc.h>
+#include <gc/gc.h>
 #include <gc/gc_typed.h>
 
 #ifndef __clang__

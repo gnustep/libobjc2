@@ -3,6 +3,7 @@
 #include "gc_ops.h"
 #include "class.h"
 #include <stdlib.h>
+#include <stdio.h>
 
 static id allocate_class(Class cls, size_t extraBytes)
 {
@@ -24,3 +25,12 @@ PRIVATE struct gc_ops *gc = &gc_ops_none;
 
 PRIVATE BOOL isGCEnabled = NO;
 
+#ifndef ENABLE_GC
+PRIVATE void enableGC(BOOL exclusive)
+{
+	fprintf(stderr, "Attempting to enable garbage collection, but your"
+			"Objective-C runtime was built without garbage collection"
+			"support\n");
+	abort();
+}
+#endif

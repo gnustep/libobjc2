@@ -32,6 +32,7 @@ struct gc_ops
  * -release / -autorelease messages become no-ops.
  */
 void enableGC(BOOL exclusive);
+
 /**
  * The mode for garbage collection
  */
