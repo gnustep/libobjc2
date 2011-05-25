@@ -56,7 +56,7 @@ static int known_abi_count =
 #define FAIL_IF(x, msg) do {\
 	if (x)\
 	{\
-		fprintf(stderr, "Objective-C ABI Error: %s\n", msg);\
+		fprintf(stderr, "Objective-C ABI Error: %s while loading %s\n", msg, module->name);\
 		return NO;\
 	}\
 } while(0)

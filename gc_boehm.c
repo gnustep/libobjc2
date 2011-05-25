@@ -1,3 +1,4 @@
+#define GNUSTEP_LIBOBJC_NO_LEGACY
 #include "objc/runtime.h"
 #include "class.h"
 #include "ivar.h"
@@ -15,6 +16,8 @@
 #ifndef __clang__
 #define __sync_swap __sync_lock_test_and_set
 #endif
+
+Class objc_lookup_class(const char*);
 
 GC_descr gc_typeForClass(Class cls);
 void gc_setTypeForClass(Class cls, GC_descr type);
@@ -83,10 +86,12 @@ BOOL objc_collectingEnabled(void)
 
 void objc_gc_disable(void)
 {
+	fprintf(stderr, "Disabled collecting\n");
 	GC_disable();
 }
 void objc_gc_enable(void)
 {
+	fprintf(stderr, "Enabled collecting\n");
 	GC_enable();
 }
 
@@ -180,15 +185,12 @@ id objc_assign_weak(id value, id *location)
 	{
 		return objc_assign_weak(value, location);
 	}
-	else
-	{
-		//fprintf(stderr, "Done weak assignment\n");
-	}
 	return value;
 }
 
 static void runFinalize(void *addr, void *context)
 {
+	//fprintf(stderr, "FINALIZING %p\n", addr);
 	static SEL finalize;
 	static SEL cxx_destruct;
 	if (UNLIKELY(0 == finalize))
@@ -196,16 +198,19 @@ static void runFinalize(void *addr, void *context)
 		finalize = sel_registerName("finalize");
 		cxx_destruct = sel_registerName(".cxx_destruct");
 	}
+	if (Nil == ((id)addr)->isa) { return; }
+
 	if (class_respondsToSelector(((id)addr)->isa, cxx_destruct))
 	{
 		objc_msg_lookup(addr, cxx_destruct)(addr, cxx_destruct);
 	}
 	objc_msg_lookup(addr, finalize)(addr, finalize);
+	*(void**)addr = (void*)(intptr_t)-1;//objc_lookup_class("NSZombie");
 }
 
 static void collectIvarForClass(Class cls, GC_word *bitmap)
 {
-	for (unsigned i=0 ; i<cls->ivars->count ; i++)
+	for (unsigned i=0 ; (cls->ivars != 0) && (i<cls->ivars->count) ; i++)
 	{
 		struct objc_ivar *ivar = &cls->ivars->ivar_list[i];
 		size_t start = ivar->offset;
@@ -266,6 +271,7 @@ static id allocate_class(Class cls, size_t extra)
 		obj = GC_malloc_explicitly_typed(class_getInstanceSize(cls), d);
 	}
 	GC_register_finalizer_no_order(obj, runFinalize, 0, 0, 0);
+	//fprintf(stderr, "Allocating %p (%p + %d)\n", obj, cls, extra);
 	return obj;
 }
 
@@ -330,7 +336,7 @@ static uint32_t ptr_hash(const void *ptr)
 {
 	// Bit-rotate right 4, since the lowest few bits in an object pointer will
 	// always be 0, which is not so useful for a hash value
-	return ((uintptr_t)ptr >> 4) | ((uintptr_t)ptr << (sizeof(id) * 8) - 4);
+	return ((uintptr_t)ptr >> 4) | ((uintptr_t)ptr << ((sizeof(id) * 8) - 4));
 }
 static uint32_t refcount_hash(const struct gc_refcount *rc)
 {
@@ -397,11 +403,25 @@ int objc_gc_retain_count(id object)
 
 static GC_descr UnscannedDescr;
 
+static void finalizeBuffer(void *addr, void *context)
+{
+	fprintf(stderr, "FINALIZING: %p\n", addr);
+}
+
 void* objc_gc_allocate_collectable(size_t size, BOOL isScanned)
 {
-	if (isScanned)
+	size_t allocSize = size;
+	//if ((size > 20) )
 	{
-		return GC_malloc(size);
+		//allocSize += 450;
+		//allocSize *= 8;
+	}
+	if (1 || isScanned)
+	{
+		void *buf = GC_malloc(allocSize);
+		//if (size != allocSize)
+		//	fprintf(stderr, "Allocating %p (%d %d)\n", buf, size, allocSize);
+		return buf;
 	}
 	return GC_malloc_explicitly_typed(size, UnscannedDescr);
 }
@@ -420,7 +440,7 @@ void* objc_gc_reallocate_collectable(void *ptr, size_t size, BOOL isScanned)
 		{
 			size = oldSize;
 		}
-		memcpy(new, ptr, oldSize);
+		memcpy(new, ptr, size);
 	}
 	return new;
 }
@@ -430,6 +450,8 @@ void* objc_gc_reallocate_collectable(void *ptr, size_t size, BOOL isScanned)
 static void init(void)
 {
 	GC_init();
+	// Dump GC stats on exit - uncomment when debugging.
+	//atexit(GC_dump);
 	refcounts = refcount_create(4096);
 	GC_word bitmap = 0;
 	UnscannedDescr = GC_make_descriptor(&bitmap, 1);
