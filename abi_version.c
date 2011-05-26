@@ -67,12 +67,12 @@ static BOOL endsWith(const char *string, const char *suffix)
 {
 	if (NULL == string) { return NO; }
 	char *interior = strstr(string, suffix);
-	return (interior && (strlen(string) == strlen(interior)));
+	return (interior && (strlen(suffix) == strlen(interior)));
 }
 
 PRIVATE BOOL objc_check_abi_version(struct objc_module_abi_8 *module)
 {
-	static int runtime_modules = 3;
+	static int runtime_modules = 4;
 	// As a quick and ugly hack, skip these three tests for the .m files in the
 	// runtime.  They should (in theory, at least) be aware of the GC mode and
 	// behave accordingly.
@@ -80,6 +80,7 @@ PRIVATE BOOL objc_check_abi_version(struct objc_module_abi_8 *module)
 	{
 		if (endsWith(module->name, "properties.m") ||
 		    endsWith(module->name, "associate.m") ||
+		    endsWith(module->name, "blocks_runtime.m") ||
 		    endsWith(module->name, "Protocol2.m"))
 		{
 			runtime_modules--;
