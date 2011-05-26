@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <signal.h>
 #include "gc_ops.h"
 #define I_HIDE_POINTERS
 #include <gc/gc.h>
@@ -454,10 +455,16 @@ void* objc_gc_reallocate_collectable(void *ptr, size_t size, BOOL isScanned)
 static void init(void)
 {
 	GC_INIT();
+	char *sigNumber;
 	// Dump GC stats on exit - uncomment when debugging.
 	if (getenv("LIBOBJC_DUMP_GC_STATUS_ON_EXIT"))
 	{
 		atexit(GC_dump);
+	}
+	if ((sigNumber = getenv("LIBOBJC_DUMP_GC_STATUS_ON_SIGNAL")))
+	{
+		int s = sigNumber[0] ? (int)strtol(sigNumber, NULL, 10) : SIGUSR2;
+		signal(s, (void(*)(int))GC_dump);
 	}
 	refcounts = refcount_create(4096);
 	GC_clear_roots();
