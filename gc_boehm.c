@@ -225,11 +225,16 @@ static void collectIvarForClass(Class cls, GC_word *bitmap)
 		                                     : cls->instance_size;
 		switch (ivar->type[0])
 		{
+			case '[': case '{': case '(':
+				// If the structure / array / union type doesn't contain any
+				// pointers, then skip it.  We still need to be careful of packed
+				if ((strchr(ivar->type, '^') == 0) &&
+				    (strchr(ivar->type, '@') == 0))
+				{
+					break;
+				}
 			// Explicit pointer types
 			case '^': case '@':
-			// We treat collections as pointer types for now, because people
-			// tend to do ugly things with them (especially unions!).
-			case '[': case '{': case '(':
 				for (unsigned b=(start / sizeof(void*)) ; b<(end/sizeof(void*)) ; b++)
 				{
 					GC_set_bit(bitmap, b);
