@@ -190,27 +190,29 @@ id objc_assign_weak(id value, id *location)
 	return value;
 }
 
+static SEL finalize;
+static SEL cxx_destruct;
+
+Class zombie_class;
+
+struct objc_slot* objc_get_slot(Class cls, SEL selector);
+
 static void runFinalize(void *addr, void *context)
 {
+	id obj = addr;
 	//fprintf(stderr, "FINALIZING %p (%s)\n", addr, ((id)addr)->isa->name);
-	static SEL finalize;
-	static SEL cxx_destruct;
-	if (UNLIKELY(0 == finalize))
-	{
-		finalize = sel_registerName("finalize");
-		cxx_destruct = sel_registerName(".cxx_destruct");
-	}
 	if (Nil == ((id)addr)->isa) { return; }
-
-	if (class_respondsToSelector(((id)addr)->isa, cxx_destruct))
+	struct objc_slot *slot = objc_get_slot(obj->isa, cxx_destruct);
+	if (NULL != slot)
 	{
-		objc_msg_lookup(addr, cxx_destruct)(addr, cxx_destruct);
+		slot->method(obj, cxx_destruct);
 	}
-	if (class_respondsToSelector(((id)addr)->isa, finalize))
+	slot = objc_get_slot(obj->isa, finalize);
+	if (NULL != slot)
 	{
-		objc_msg_lookup(addr, finalize)(addr, finalize);
+		slot->method(obj, finalize);
 	}
-	*(void**)addr = objc_lookup_class("NSZombie");
+	*(void**)addr = zombie_class;
 }
 
 static void collectIvarForClass(Class cls, GC_word *bitmap)
@@ -454,6 +456,8 @@ static void init(void)
 	}
 	refcounts = refcount_create(4096);
 	GC_clear_roots();
+	finalize = sel_registerName("finalize");
+	cxx_destruct = sel_registerName(".cxx_destruct");
 }
 
 BOOL objc_collecting_enabled(void)

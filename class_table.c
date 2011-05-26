@@ -106,6 +106,8 @@ void objc_setDeveloperMode_np(enum objc_developer_mode_np newMode)
 // Class table manipulation
 ////////////////////////////////////////////////////////////////////////////////
 
+PRIVATE Class zombie_class;
+
 PRIVATE void class_table_insert(Class class)
 {
 	if (!objc_test_class_flag(class, objc_class_flag_resolved))
@@ -116,6 +118,10 @@ PRIVATE void class_table_insert(Class class)
 		}
 		class->unresolved_class_next = unresolved_class_list;
 		unresolved_class_list = class;
+	}
+	if ((0 == zombie_class) && (strcmp("NSZombie", class->name) == 0))
+	{
+		zombie_class = class;
 	}
 	class_table_internal_insert(class_table, class);
 }
