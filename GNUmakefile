@@ -80,10 +80,10 @@ ifeq ($(low_memory), yes)
 libobjc_CPPFLAGS += -D__OBJC_LOW_MEMORY__
 endif
 
-ifeq ($(boehm_gc), yes)
+ifneq ($(boehm_gc), no)
 libobjc_C_FILES += gc_boehm.c
 libobjc_LIBRARIES_DEPEND_UPON += -lgc-threaded
-libobjc_OBJCFLAGS += -fobjc-gc
+#libobjc_OBJCFLAGS += -fobjc-gc
 libobjc_CPPFLAGS += -DENABLE_GC
 endif
 
