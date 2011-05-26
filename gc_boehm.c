@@ -411,33 +411,22 @@ int objc_gc_retain_count(id object)
 	return (0 == refcount) ? 0 : refcount->refCount;
 }
 
-static GC_descr UnscannedDescr;
-
-static void finalizeBuffer(void *addr, void *context)
-{
-	fprintf(stderr, "FINALIZING: %p\n", addr);
-}
 
 void* objc_gc_allocate_collectable(size_t size, BOOL isScanned)
 {
-	size_t allocSize = size;
-	if (1 || isScanned)
+	if ( isScanned)
 	{
-		//void *buf = GC_malloc(allocSize);
-		//void *buf = GC_MALLOC(allocSize);
-		void *buf = GC_MALLOC_UNCOLLECTABLE(allocSize);
-		//if (size != allocSize)
-		//fprintf(stderr, "Allocating %p (%d %d)\n", buf, size, allocSize);
-		//GC_REGISTER_FINALIZER(buf, finalizeBuffer, 0, 0, 0);
-		return buf;
+		return GC_MALLOC(size);
 	}
-	return GC_MALLOC_EXPLICITLY_TYPED(size, UnscannedDescr);
+	void *buf = GC_MALLOC_ATOMIC(size);
+	memset(buf, 0, size);
+	return buf;
 }
 void* objc_gc_reallocate_collectable(void *ptr, size_t size, BOOL isScanned)
 {
 	if (0 == size) { return 0; }
 
-	void *new = objc_gc_allocate_collectable(size, isScanned);
+	void *new = isScanned ? GC_MALLOC(size) : GC_MALLOC_ATOMIC(size);
 
 	if (0 == new) { return 0; }
 
@@ -461,8 +450,6 @@ static void init(void)
 	// Dump GC stats on exit - uncomment when debugging.
 	//atexit(GC_dump);
 	refcounts = refcount_create(4096);
-	GC_word bitmap = 0;
-	UnscannedDescr = GC_make_descriptor(&bitmap, 1);
 	GC_clear_roots();
 }
 
