@@ -448,7 +448,10 @@ static void init(void)
 {
 	GC_INIT();
 	// Dump GC stats on exit - uncomment when debugging.
-	//atexit(GC_dump);
+	if (getenv("LIBOBJC_DUMP_GC_STATUS_ON_EXIT"))
+	{
+		atexit(GC_dump);
+	}
 	refcounts = refcount_create(4096);
 	GC_clear_roots();
 }
