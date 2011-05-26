@@ -1,3 +1,4 @@
+//#define GC_DEBUG
 #define GNUSTEP_LIBOBJC_NO_LEGACY
 #include "objc/runtime.h"
 #include "class.h"
@@ -16,6 +17,8 @@
 #ifndef __clang__
 #define __sync_swap __sync_lock_test_and_set
 #endif
+
+Class dead_class;
 
 Class objc_lookup_class(const char*);
 
@@ -86,12 +89,10 @@ BOOL objc_collectingEnabled(void)
 
 void objc_gc_disable(void)
 {
-	fprintf(stderr, "Disabled collecting\n");
 	GC_disable();
 }
 void objc_gc_enable(void)
 {
-	fprintf(stderr, "Enabled collecting\n");
 	GC_enable();
 }
 
@@ -130,6 +131,7 @@ id objc_assign_strongCast(id val, id *ptr)
 
 id objc_assign_global(id val, id *ptr)
 {
+	//fprintf(stderr, "Storign %p in global %p\n", val, ptr);
 	GC_add_roots(ptr, ptr+1);
 	*ptr = val;
 	return val;
@@ -190,7 +192,7 @@ id objc_assign_weak(id value, id *location)
 
 static void runFinalize(void *addr, void *context)
 {
-	//fprintf(stderr, "FINALIZING %p\n", addr);
+	//fprintf(stderr, "FINALIZING %p (%s)\n", addr, ((id)addr)->isa->name);
 	static SEL finalize;
 	static SEL cxx_destruct;
 	if (UNLIKELY(0 == finalize))
@@ -208,7 +210,7 @@ static void runFinalize(void *addr, void *context)
 	{
 		objc_msg_lookup(addr, finalize)(addr, finalize);
 	}
-	*(void**)addr = (void*)(intptr_t)-1;//objc_lookup_class("NSZombie");
+	*(void**)addr = objc_lookup_class("NSZombie");
 }
 
 static void collectIvarForClass(Class cls, GC_word *bitmap)
@@ -253,28 +255,33 @@ static GC_descr descriptor_for_class(Class cls)
 	GC_word bitmap[size];
 	memset(bitmap, 0, size);
 	collectIvarForClass(cls, bitmap);
-	descr = GC_make_descriptor(bitmap, cls->instance_size);
+	// It's safe to round down here - if a class ends with an ivar that is
+	// smaller than a pointer, then it can't possibly be a pointer.
+	//fprintf(stderr, "Class is %d byes, %d words\n", cls->instance_size, cls->instance_size/sizeof(void*));
+	descr = GC_make_descriptor(bitmap, cls->instance_size / sizeof(void*));
 	gc_setTypeForClass(cls, descr);
 	return descr;
 }
 
 static id allocate_class(Class cls, size_t extra)
 {
-	id obj;
+		GC_collect_a_little();
+	id obj = 0;
 	// If there are some extra bytes, they may contain pointers, so we ignore
 	// the type
 	if (extra > 0)
 	{
 		// FIXME: Overflow checking!
-		obj = GC_malloc(class_getInstanceSize(cls) + extra);
+		//obj = GC_malloc(class_getInstanceSize(cls) + extra);
+		obj = GC_MALLOC(class_getInstanceSize(cls) + extra);
 	}
 	else
 	{
 		GC_descr d = descriptor_for_class(cls);
-		obj = GC_malloc_explicitly_typed(class_getInstanceSize(cls), d);
+		obj = GC_MALLOC_EXPLICITLY_TYPED(class_getInstanceSize(cls), d);
 	}
-	GC_register_finalizer_no_order(obj, runFinalize, 0, 0, 0);
-	//fprintf(stderr, "Allocating %p (%p + %d)\n", obj, cls, extra);
+	//fprintf(stderr, "Allocating %p (%p + %d).  Base is %p\n", obj, cls, extra, GC_base(obj));
+	GC_REGISTER_FINALIZER_NO_ORDER(obj, runFinalize, 0, 0, 0);
 	return obj;
 }
 
@@ -362,7 +369,7 @@ id objc_gc_retain(id object)
 		refcount = refcount_table_get(refcounts, object);
 		if (NULL == refcount)
 		{
-			refcount = GC_malloc_uncollectable(sizeof(struct gc_refcount));
+			refcount = GC_MALLOC_UNCOLLECTABLE(sizeof(struct gc_refcount));
 			refcount->ptr = object;
 			refcount->refCount = 1;
 			refcount_insert(refcounts, refcount);
@@ -414,19 +421,17 @@ static void finalizeBuffer(void *addr, void *context)
 void* objc_gc_allocate_collectable(size_t size, BOOL isScanned)
 {
 	size_t allocSize = size;
-	//if ((size > 20) )
-	{
-		//allocSize += 450;
-		//allocSize *= 8;
-	}
 	if (1 || isScanned)
 	{
-		void *buf = GC_malloc(allocSize);
+		//void *buf = GC_malloc(allocSize);
+		//void *buf = GC_MALLOC(allocSize);
+		void *buf = GC_MALLOC_UNCOLLECTABLE(allocSize);
 		//if (size != allocSize)
-		//	fprintf(stderr, "Allocating %p (%d %d)\n", buf, size, allocSize);
+		//fprintf(stderr, "Allocating %p (%d %d)\n", buf, size, allocSize);
+		//GC_REGISTER_FINALIZER(buf, finalizeBuffer, 0, 0, 0);
 		return buf;
 	}
-	return GC_malloc_explicitly_typed(size, UnscannedDescr);
+	return GC_MALLOC_EXPLICITLY_TYPED(size, UnscannedDescr);
 }
 void* objc_gc_reallocate_collectable(void *ptr, size_t size, BOOL isScanned)
 {
@@ -452,7 +457,7 @@ void* objc_gc_reallocate_collectable(void *ptr, size_t size, BOOL isScanned)
 
 static void init(void)
 {
-	GC_init();
+	GC_INIT();
 	// Dump GC stats on exit - uncomment when debugging.
 	//atexit(GC_dump);
 	refcounts = refcount_create(4096);
@@ -485,12 +490,20 @@ BOOL objc_is_finalized(void *ptr) { return NO; }
 void objc_start_collector_thread(void) {}
 void objc_finalizeOnMainThread(Class cls) {}
 
+static void *debug_malloc(size_t s)
+{
+	return GC_MALLOC_UNCOLLECTABLE(s);
+}
+static void debug_free(void *ptr)
+{
+	GC_FREE(ptr);
+}
 
 PRIVATE struct gc_ops gc_ops_boehm = 
 {
 	.allocate_class = allocate_class,
-	.malloc         = GC_malloc_uncollectable,
-	.free           = GC_free,
+	.malloc         = debug_malloc,
+	.free           = debug_free,
 	.init           = init
 };
 

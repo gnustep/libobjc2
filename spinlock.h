@@ -26,7 +26,7 @@ extern int spinlocks[spinlock_count];
  * contention between the same property in different objects, so we can't just
  * use the ivar offset.
  */
-static inline int *lock_for_pointer(void *ptr)
+static inline volatile int *lock_for_pointer(void *ptr)
 {
 	intptr_t hash = (intptr_t)ptr;
 	// Most properties will be pointers, so disregard the lowest few bits
@@ -44,8 +44,9 @@ static inline int *lock_for_pointer(void *ptr)
  * no possibility of contention among calls to this, because it may only be
  * called by the thread owning the spin lock.
  */
-inline static void unlock_spinlock(int *spinlock)
+inline static void unlock_spinlock(volatile int *spinlock)
 {
+	__sync_synchronize();
 	*spinlock = 0;
 }
 /**
@@ -62,7 +63,7 @@ inline static void unlock_spinlock(int *spinlock)
  * using atomic accessors is a terrible idea, but in the common case it should
  * be very fast.
  */
-inline static void lock_spinlock(int *spinlock)
+inline static void lock_spinlock(volatile int *spinlock)
 {
 	int count = 0;
 	// Set the spin lock value to 1 if it is 0.

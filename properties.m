@@ -27,7 +27,7 @@ id objc_getProperty(id obj, SEL _cmd, ptrdiff_t offset, BOOL isAtomic)
 	id ret;
 	if (isAtomic)
 	{
-		int *lock = lock_for_pointer(addr);
+		volatile int *lock = lock_for_pointer(addr);
 		lock_spinlock(lock);
 		ret = *(id*)addr;
 		ret = [ret retain];
@@ -67,7 +67,7 @@ void objc_setProperty(id obj, SEL _cmd, ptrdiff_t offset, id arg, BOOL isAtomic,
 	id old;
 	if (isAtomic)
 	{
-		int *lock = lock_for_pointer(addr);
+		volatile int *lock = lock_for_pointer(addr);
 		lock_spinlock(lock);
 		old = *(id*)addr;
 		*(id*)addr = arg;
@@ -96,8 +96,8 @@ void objc_copyPropertyStruct(void *dest,
 {
 	if (atomic)
 	{
-		int *lock = lock_for_pointer(src);
-		int *lock2 = lock_for_pointer(src);
+		volatile int *lock = lock_for_pointer(src);
+		volatile int *lock2 = lock_for_pointer(src);
 		lock_spinlock(lock);
 		lock_spinlock(lock2);
 		memcpy(dest, src, size);
@@ -122,7 +122,7 @@ void objc_getPropertyStruct(void *dest,
 {
 	if (atomic)
 	{
-		int *lock = lock_for_pointer(src);
+		volatile int *lock = lock_for_pointer(src);
 		lock_spinlock(lock);
 		memcpy(dest, src, size);
 		unlock_spinlock(lock);
@@ -145,7 +145,7 @@ void objc_setPropertyStruct(void *dest,
 {
 	if (atomic)
 	{
-		int *lock = lock_for_pointer(dest);
+		volatile int *lock = lock_for_pointer(dest);
 		lock_spinlock(lock);
 		memcpy(dest, src, size);
 		unlock_spinlock(lock);

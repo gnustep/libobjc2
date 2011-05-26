@@ -65,6 +65,7 @@ PRIVATE enum objc_gc_mode current_gc_mode = GC_Optional;
 
 static BOOL endsWith(const char *string, const char *suffix)
 {
+	if (NULL == string) { return NO; }
 	char *interior = strstr(string, suffix);
 	return (interior && (strlen(string) == strlen(interior)));
 }
