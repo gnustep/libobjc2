@@ -12,6 +12,23 @@
 #include <signal.h>
 #include "gc_ops.h"
 #define I_HIDE_POINTERS
+
+/*
+ * Citing boehm-gc's README.linux:
+ *
+ * 3a) Every file that makes thread calls should define GC_LINUX_THREADS and
+ *  _REENTRANT and then include gc.h.  Gc.h redefines some of the
+ *  pthread primitives as macros which also provide the collector with
+ *  information it requires.
+ */
+#ifdef __linux__
+# define GC_LINUX_THREADS
+
+# ifndef _REENTRANT
+#  define _REENTRANT
+# endif
+
+#endif
 #include <gc/gc.h>
 #include <gc/gc_typed.h>
 
@@ -28,7 +45,7 @@ void gc_setTypeForClass(Class cls, GC_descr type);
 
 static unsigned long collectionType(unsigned options)
 {
-	// Low 2 bits in GC options are used for the 
+	// Low 2 bits in GC options are used for the
 	return options & 3;
 }
 
@@ -392,7 +409,7 @@ void objc_gc_release(id object)
 	struct gc_refcount *refcount = refcount_table_get(refcounts, object);
 	// This object has not been explicitly retained, don't release it
 	if (0 == refcount) { return; }
-	
+
 	if (0 == __sync_sub_and_fetch(&(refcount->refCount), 1))
 	{
 		LOCK_FOR_SCOPE(&(refcounts->lock));
@@ -509,7 +526,7 @@ static void debug_free(void *ptr)
 	GC_FREE(ptr);
 }
 
-PRIVATE struct gc_ops gc_ops_boehm = 
+PRIVATE struct gc_ops gc_ops_boehm =
 {
 	.allocate_class = allocate_class,
 	.malloc         = debug_malloc,
