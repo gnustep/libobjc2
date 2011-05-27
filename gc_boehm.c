@@ -1,4 +1,3 @@
-//#define GC_DEBUG
 #define GNUSTEP_LIBOBJC_NO_LEGACY
 #include "objc/runtime.h"
 #include "class.h"
@@ -468,6 +467,11 @@ void* objc_gc_reallocate_collectable(void *ptr, size_t size, BOOL isScanned)
 	return new;
 }
 
+static void collectAndDumpStats(int signalNo)
+{
+	objc_collect(OBJC_EXHAUSTIVE_COLLECTION);
+	GC_dump();
+}
 
 
 static void init(void)
@@ -482,7 +486,7 @@ static void init(void)
 	if ((sigNumber = getenv("LIBOBJC_DUMP_GC_STATUS_ON_SIGNAL")))
 	{
 		int s = sigNumber[0] ? (int)strtol(sigNumber, NULL, 10) : SIGUSR2;
-		signal(s, (void(*)(int))GC_dump);
+		signal(s, collectAndDumpStats);
 	}
 	refcounts = refcount_create(4096);
 	GC_clear_roots();
