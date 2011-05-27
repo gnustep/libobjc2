@@ -1,3 +1,4 @@
+#ifndef ENABLE_GC
 #include "objc/toydispatch.h"
 #include "lock.h"
 #include "visibility.h"
@@ -17,3 +18,5 @@ PRIVATE void objc_collect_garbage_data(void(*cleanup)(void*), void *garbage)
 	}
 	dispatch_async_f(garbage_queue, garbage, cleanup);
 }
+
+#endif
