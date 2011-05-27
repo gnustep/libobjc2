@@ -489,6 +489,10 @@ void objc_clear_stack(unsigned long options)
 	// portably.
 	int i[1024];
 	memset(&i, 0, 1024);
+	// Tell the compiler that something that it doesn't know about is touching
+	// this memory, so it shouldn't optimise the allocation and memset away.
+	__asm__  volatile ("" : : "m"(i) : "memory");
+
 }
 // FIXME: These are all stub implementations that should be replaced with
 // something better
