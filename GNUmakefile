@@ -82,7 +82,11 @@ endif
 
 ifneq ($(boehm_gc), no)
 libobjc_C_FILES += gc_boehm.c
+ifneq ($(findstring linux, $(GNUSTEP_TARGET_OS)), linux)
 libobjc_LIBRARIES_DEPEND_UPON += -lgc-threaded
+else
+libobjc_LIBRARIES_DEPEND_UPON += -lgc
+endif
 #libobjc_OBJCFLAGS += -fobjc-gc
 libobjc_CPPFLAGS += -DENABLE_GC
 endif
