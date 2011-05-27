@@ -355,17 +355,17 @@ void objc_assertRegisteredThreadWithCollector()
 /**
  * Structure stored for each GC
  */
-struct gc_refcount
+static struct gc_refcount
 {
 	/** Reference count */
-	int refCount;
+	intptr_t refCount;
 	/** Strong pointer */
 	id ptr;
-};
+} null_refcount = {0};
 
-static int refcount_compare(const void *ptr, const struct gc_refcount *rc)
+static int refcount_compare(const void *ptr, struct gc_refcount rc)
 {
-	return ptr == rc->ptr;
+	return ptr == rc.ptr;
 }
 static uint32_t ptr_hash(const void *ptr)
 {
@@ -373,14 +373,23 @@ static uint32_t ptr_hash(const void *ptr)
 	// always be 0, which is not so useful for a hash value
 	return ((uintptr_t)ptr >> 4) | ((uintptr_t)ptr << ((sizeof(id) * 8) - 4));
 }
-static uint32_t refcount_hash(const struct gc_refcount *rc)
+static uint32_t refcount_hash(struct gc_refcount rc)
 {
-	return ptr_hash(rc->ptr);
+	return ptr_hash(rc.ptr);
 }
+static int isEmpty(struct gc_refcount rc)
+{
+	return rc.ptr == NULL;
+}
+#define MAP_TABLE_VALUE_NULL isEmpty
 #define MAP_TABLE_NAME refcount
 #define MAP_TABLE_COMPARE_FUNCTION refcount_compare
 #define MAP_TABLE_HASH_KEY ptr_hash
 #define MAP_TABLE_HASH_VALUE refcount_hash
+#define MAP_TABLE_VALUE_TYPE struct gc_refcount
+#define MAP_TABLE_VALUE_PLACEHOLDER null_refcount
+#define MAP_TABLE_TYPES_BITMAP (1<<(offsetof(struct gc_refcount, ptr) / sizeof(void*)))
+#define MAP_TABLE_ACCESS_BY_REFERENCE
 #include "hash_table.h"
 
 static refcount_table *refcounts;
@@ -394,10 +403,8 @@ id objc_gc_retain(id object)
 		refcount = refcount_table_get(refcounts, object);
 		if (NULL == refcount)
 		{
-			refcount = GC_MALLOC_UNCOLLECTABLE(sizeof(struct gc_refcount));
-			refcount->ptr = object;
-			refcount->refCount = 1;
-			refcount_insert(refcounts, refcount);
+			struct gc_refcount rc = { 1, object};
+			refcount_insert(refcounts, rc);
 			return object;
 		}
 	}
@@ -413,20 +420,14 @@ void objc_gc_release(id object)
 	if (0 == __sync_sub_and_fetch(&(refcount->refCount), 1))
 	{
 		LOCK_FOR_SCOPE(&(refcounts->lock));
-		refcount_remove(refcounts, object);
+		refcount->ptr = 0;
 		__sync_synchronize();
 		// If another thread has incremented the reference count while we were
 		// doing this, then we need to add the count back into the table,
 		// otherwise we can carry on.
-		if (__sync_bool_compare_and_swap(&(refcount->refCount), 0, 0))
+		if (!__sync_bool_compare_and_swap(&(refcount->refCount), 0, 0))
 		{
-			// This doesn't free the object, it just removes the explicit
-			// reference
-			GC_free(refcount);
-		}
-		else
-		{
-			refcount_insert(refcounts, refcount);
+			refcount->ptr = object;
 		}
 	}
 }

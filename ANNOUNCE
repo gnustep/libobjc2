@@ -11,6 +11,9 @@ release include:
   collected environment.  This uses the Boehm garbage collector and is enabled
   by default.  To build without garbage collection specify the boehm_gc=no
   option when building.
+- The runtime will now use Boehm GC for several internal data structures, if it
+  is built with GC enabled.  This avoids the need for defensive programming
+  with respect to thread safety in several places.
 - This is the first release to provide a superset of the functionality provided
   by the Mac Objective-C runtime, as shipped with OS X 10.6.
 - The LLVM optimisation passes have been improved and better tested.  Code

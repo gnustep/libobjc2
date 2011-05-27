@@ -25,11 +25,14 @@
 
 #ifdef ENABLE_GC
 #	include <gc/gc.h>
+#	include <gc/gc_typed.h>
 #	define CALLOC(x,y) GC_MALLOC(x*y)
 #	define IF_NO_GC(x)
+#	define IF_GC(x) x
 #else
 #	define CALLOC(x,y) calloc(x,y)
 #	define IF_NO_GC(x) x
+#	define IF_GC(x)
 #endif
 
 #ifndef MAP_TABLE_NAME
@@ -72,6 +75,7 @@ static BOOL PREFIX(_is_null)(void *value)
 {
 	return value == NULL;
 }
+#	define MAP_TABLE_TYPES_BITMAP 1
 #	define MAP_TABLE_VALUE_NULL PREFIX(_is_null)
 #	define MAP_TABLE_VALUE_PLACEHOLDER NULL
 #endif
@@ -105,9 +109,23 @@ typedef struct PREFIX(_table_struct)
 	unsigned int table_size;
 	unsigned int table_used;
 	IF_NO_GC(unsigned int enumerator_count;)
+#	if defined(ENABLE_GC) && defined(MAP_TABLE_TYPES_BITMAP)
+	GC_descr descr;
+#	endif 
 	struct PREFIX(_table_struct) *old;
 	struct PREFIX(_table_cell_struct) *table;
 } PREFIX(_table);
+
+struct PREFIX(_table_cell_struct) *PREFIX(alloc_cells)(PREFIX(_table) *table, int count)
+{
+#	if defined(ENABLE_GC) && defined(MAP_TABLE_TYPES_BITMAP)
+	return GC_CALLOC_EXPLICITLY_TYPED(count,
+			sizeof(struct PREFIX(_table_cell_struct)), table->descr);
+#	else
+	return CALLOC(count, sizeof(struct PREFIX(_table_cell_struct)));
+#	endif
+}
+
 
 PREFIX(_table) *PREFIX(_create)(uint32_t capacity)
 {
@@ -115,7 +133,13 @@ PREFIX(_table) *PREFIX(_create)(uint32_t capacity)
 #	ifndef MAP_TABLE_NO_LOCK
 	INIT_LOCK(table->lock);
 #	endif
-	table->table = calloc(capacity, sizeof(struct PREFIX(_table_cell_struct)));
+#	if defined(ENABLE_GC) && defined(MAP_TABLE_TYPES_BITMAP)
+	// The low word in the bitmap stores the offsets of the next entries
+	GC_word bitmap = (MAP_TABLE_TYPES_BITMAP << 1);
+	table->descr = GC_make_descriptor(&bitmap,
+			sizeof(struct PREFIX(_table_cell_struct)) / sizeof (void*));
+#	endif
+	table->table = PREFIX(alloc_cells)(table, capacity);
 	table->table_size = capacity;
 	return table;
 }
@@ -170,11 +194,8 @@ static int PREFIX(_insert)(PREFIX(_table) *table, MAP_TABLE_VALUE_TYPE value);
 
 static int PREFIX(_table_resize)(PREFIX(_table) *table)
 {
-	// Note: We multiply the table size, rather than the count, by two so that
-	// we get overflow checking in calloc.  Two times the size of a cell will
-	// never overflow, but two times the table size might.
-	struct PREFIX(_table_cell_struct) *newArray = CALLOC(table->table_size, 2 *
-			sizeof(struct PREFIX(_table_cell_struct)));
+	struct PREFIX(_table_cell_struct) *newArray =
+		PREFIX(alloc_cells)(table, table->table_size * 2);
 	if (NULL == newArray) { return 0; }
 
 	// Allocate a new table structure and move the array into that.  Now
@@ -565,3 +586,5 @@ PREFIX(_current)(PREFIX(_table) *table,
 
 #undef CALLOC
 #undef IF_NO_GC
+#undef IF_GC
+#undef MAP_TABLE_TYPES_BITMAP
