@@ -531,6 +531,9 @@ static void init(void)
 
 BOOL objc_collecting_enabled(void)
 {
+	// Lock the GC in the current state once it's been queried.  This prevents
+	// the loading of any modules with an incompatible GC mode.
+	current_gc_mode = isGCEnabled ? GC_Required : GC_None;
 	return isGCEnabled;
 }
 

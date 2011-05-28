@@ -54,6 +54,10 @@ enum objc_gc_mode
 /**
  * The current Objective-C garbage collection mode.
  */
+extern enum objc_gc_mode current_gc_mode;
+/**
+ * Have we loaded any code that triggers the ObjC GC support?
+ */
 extern BOOL isGCEnabled;
 
 /**
