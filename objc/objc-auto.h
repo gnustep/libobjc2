@@ -54,9 +54,16 @@ enum
 void objc_collect(unsigned long options);
 
 /**
- * Returns YES if running in GC mode, NO otherwise.
+ * Returns yes if the connector is currently running, i.e. if every call to
+ * objc_gc_disable() has been balanced with a corresponding call to
+ * objc_gc_enable().
  */
 BOOL objc_collectingEnabled(void);
+
+/**
+ * Returns YES if running in GC mode, NO otherwise.
+ */
+BOOL objc_collecting_enabled(void);
 
 /**
  * Starts concurrent collection.  This is currently unimplemented.
