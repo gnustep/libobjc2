@@ -4,6 +4,9 @@
 #include "lock.h"
 #include "loader.h"
 #include "visibility.h"
+#ifdef ENABLE_GC
+#include <gc/gc.h>
+#endif
 
 /**
  * Runtime lock.  This is exposed in 
@@ -32,6 +35,9 @@ void __objc_exec_class(struct objc_module_abi_8 *module)
 
 	if (first_run)
 	{
+#if ENABLE_GC
+		GC_INIT();
+#endif
 		// Create the main runtime lock.  This is not safe in theory, but in
 		// practice the first time that this function is called will be in the
 		// loader, from the main thread.  Future loaders may run concurrently,

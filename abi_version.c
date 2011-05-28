@@ -61,7 +61,7 @@ static int known_abi_count =
 	}\
 } while(0)
 
-PRIVATE enum objc_gc_mode current_gc_mode = GC_Optional;
+static enum objc_gc_mode current_gc_mode = GC_Optional;
 
 static BOOL endsWith(const char *string, const char *suffix)
 {

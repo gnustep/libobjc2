@@ -511,7 +511,6 @@ static void runFinalizers(void)
 
 static void init(void)
 {
-	GC_INIT();
 	char *sigNumber;
 	// Dump GC stats on exit - uncomment when debugging.
 	if (getenv("LIBOBJC_DUMP_GC_STATUS_ON_EXIT"))
@@ -532,7 +531,7 @@ static void init(void)
 
 BOOL objc_collecting_enabled(void)
 {
-	return current_gc_mode != GC_None;
+	return isGCEnabled;
 }
 
 void objc_startCollectorThread(void)
@@ -580,6 +579,7 @@ PRIVATE struct gc_ops gc_ops_boehm =
 
 PRIVATE void enableGC(BOOL exclude)
 {
+	isGCEnabled = YES;
 	if (__sync_bool_compare_and_swap(&gc, &gc_ops_none, &gc_ops_boehm))
 	{
 		gc->init();
