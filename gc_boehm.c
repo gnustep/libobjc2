@@ -1,5 +1,6 @@
 #define GNUSTEP_LIBOBJC_NO_LEGACY
 #include "objc/runtime.h"
+#include "objc/toydispatch.h"
 #include "class.h"
 #include "ivar.h"
 #include "lock.h"
@@ -11,6 +12,17 @@
 #include <signal.h>
 #include "gc_ops.h"
 #define I_HIDE_POINTERS
+
+
+/**
+ * Dispatch queue used to invoke finalizers.
+ */
+static dispatch_queue_t finalizer_queue;
+/**
+ * Should finalizers be invoked in their own thread?
+ */
+static BOOL finalizeThreaded;
+
 
 /*
  * Citing boehm-gc's README.linux:
@@ -305,10 +317,13 @@ static id allocate_class(Class cls, size_t extra)
 	}
 	else
 	{
-		GC_descr d = descriptor_for_class(cls);
-		obj = GC_MALLOC_EXPLICITLY_TYPED(class_getInstanceSize(cls), d);
+		obj = GC_MALLOC_EXPLICITLY_TYPED(class_getInstanceSize(cls), 
+			descriptor_for_class(cls));
 	}
 	//fprintf(stderr, "Allocating %p (%s + %d).  Base is %p\n", obj, cls->name, extra, GC_base(obj));
+	// It would be nice not to register a finaliser if the object didn't
+	// implement finalize or .cxx_destruct methods.  Unfortunately, this is not
+	// possible, because a class may add a finalize method as it runs.
 	GC_REGISTER_FINALIZER_NO_ORDER(obj, runFinalize, 0, 0, 0);
 	return obj;
 }
@@ -477,6 +492,22 @@ static void collectAndDumpStats(int signalNo)
 	GC_dump();
 }
 
+static void deferredFinalizer(void)
+{
+	GC_invoke_finalizers();
+}
+
+static void runFinalizers(void)
+{
+	if (finalizeThreaded)
+	{
+		dispatch_async_f(finalizer_queue, deferredFinalizer, NULL);
+	}
+	else
+	{
+		GC_invoke_finalizers();
+	}
+}
 
 static void init(void)
 {
@@ -496,6 +527,7 @@ static void init(void)
 	GC_clear_roots();
 	finalize = sel_registerName("finalize");
 	cxx_destruct = sel_registerName(".cxx_destruct");
+	GC_finalizer_notifier = runFinalizers;
 }
 
 BOOL objc_collecting_enabled(void)
@@ -505,7 +537,9 @@ BOOL objc_collecting_enabled(void)
 
 void objc_startCollectorThread(void)
 {
-	enableGC(NO);
+	if (YES == finalizeThreaded) { return; }
+	finalizer_queue = dispatch_queue_create("ObjC finalizeation thread", 0);
+	finalizeThreaded = YES;
 }
 
 void objc_clear_stack(unsigned long options)
