@@ -188,14 +188,19 @@ id objc_read_weak(id *location)
 
 id objc_assign_weak(id value, id *location)
 {
-
 	// Temporarily zero this pointer and get the old value
 	id old = __sync_swap(location, 0);
 	if (0 != old)
 	{
 		GC_unregister_disappearing_link((void**)location);
 	}
-	GC_general_register_disappearing_link((void**)location, value);
+	// If the value is not GC'd memory (e.g. a class), the collector will crash
+	// trying to collect it when you add it as the target of a disappearing
+	// link.
+	if (0 != GC_base(value))
+	{
+		GC_GENERAL_REGISTER_DISAPPEARING_LINK((void**)location, value);
+	}
 	// If some other thread has modified this, then we may have two different
 	// objects registered to make this pointer 0 if either is destroyed.  This
 	// would be bad, so we need to make sure that we unregister them and
@@ -289,7 +294,6 @@ static GC_descr descriptor_for_class(Class cls)
 
 static id allocate_class(Class cls, size_t extra)
 {
-		GC_collect_a_little();
 	id obj = 0;
 	// If there are some extra bytes, they may contain pointers, so we ignore
 	// the type
@@ -304,7 +308,7 @@ static id allocate_class(Class cls, size_t extra)
 		GC_descr d = descriptor_for_class(cls);
 		obj = GC_MALLOC_EXPLICITLY_TYPED(class_getInstanceSize(cls), d);
 	}
-	//fprintf(stderr, "Allocating %p (%p + %d).  Base is %p\n", obj, cls, extra, GC_base(obj));
+	//fprintf(stderr, "Allocating %p (%s + %d).  Base is %p\n", obj, cls->name, extra, GC_base(obj));
 	GC_REGISTER_FINALIZER_NO_ORDER(obj, runFinalize, 0, 0, 0);
 	return obj;
 }
