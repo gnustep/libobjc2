@@ -363,8 +363,12 @@ void _Block_object_assign(void *destAddr, const void *object, const int flags)
 		{
 			fprintf(stderr, "-retain\n");
 			id src = (id)object;
-			id *dst = destAddr;
-			*dst = [src retain];
+			void **dst = destAddr;
+			*dst = src;
+			if (!isGCEnabled)
+			{
+				*dst = [src retain];
+			}
 		}
 	}
 }
@@ -436,7 +440,10 @@ void _Block_object_dispose(const void *object, const int flags)
 		else if((flags & BLOCK_FIELD_IS_OBJECT) == BLOCK_FIELD_IS_OBJECT)
 		{
 			id src = (id)object;
-			[src release];
+			if (!isGCEnabled)
+			{
+				[src release];
+			}
 		}
 	}
 }
