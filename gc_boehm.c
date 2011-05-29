@@ -23,6 +23,7 @@ static dispatch_queue_t finalizer_queue;
  */
 static BOOL finalizeThreaded;
 
+struct objc_slot* objc_get_slot(Class cls, SEL selector);
 
 /*
  * Citing boehm-gc's README.linux:
@@ -151,23 +152,45 @@ BOOL objc_atomicCompareAndSwapInstanceVariableBarrier(id predicate, id replaceme
 	return objc_atomicCompareAndSwapPtr(predicate, replacement, objectLocation);
 }
 
+SEL copy;
+
+static inline id copy_to_heap(id val)
+{
+	if ((0 == val) || ((1 & (intptr_t)val) == 1) || (0 == val->isa)) { return val; }
+	struct objc_object a;
+	if (((&a - 2048) < val) && ((&a + 2048) > val))
+	{
+		struct objc_slot *slot = objc_msg_lookup_sender(&val, copy, nil);
+		if (NULL != slot)
+		{
+			val = slot->method(val, copy);
+		}
+	}
+	return val;
+}
 
 id objc_assign_strongCast(id val, id *ptr)
 {
+	val = copy_to_heap(val);
 	*ptr = val;
 	return val;
 }
 
 id objc_assign_global(id val, id *ptr)
 {
+	val = copy_to_heap(val);
 	//fprintf(stderr, "Storign %p in global %p\n", val, ptr);
-	GC_add_roots(ptr, ptr+1);
+	if (isGCEnabled)
+	{
+		GC_add_roots(ptr, ptr+1);
+	}
 	*ptr = val;
 	return val;
 }
 
 id objc_assign_ivar(id val, id dest, ptrdiff_t offset)
 {
+	val = copy_to_heap(val);
 	*(id*)((char*)dest+offset) = val;
 	return val;
 }
@@ -195,11 +218,20 @@ static void *readWeakLocked(void *ptr)
 
 id objc_read_weak(id *location)
 {
+	if (!isGCEnabled)
+	{
+		return *location;
+	}
 	return GC_call_with_alloc_lock(readWeakLocked, location);
 }
 
 id objc_assign_weak(id value, id *location)
 {
+	if (!isGCEnabled)
+	{
+		*location = value;
+		return value;
+	}
 	// Temporarily zero this pointer and get the old value
 	id old = __sync_swap(location, 0);
 	if (0 != old)
@@ -229,7 +261,6 @@ static SEL cxx_destruct;
 
 Class zombie_class;
 
-struct objc_slot* objc_get_slot(Class cls, SEL selector);
 
 static void runFinalize(void *addr, void *context)
 {
@@ -526,6 +557,7 @@ static void init(void)
 	GC_clear_roots();
 	finalize = sel_registerName("finalize");
 	cxx_destruct = sel_registerName(".cxx_destruct");
+	copy = sel_registerName("copy");
 	GC_finalizer_notifier = runFinalizers;
 }
 
