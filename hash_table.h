@@ -126,10 +126,18 @@ struct PREFIX(_table_cell_struct) *PREFIX(alloc_cells)(PREFIX(_table) *table, in
 #	endif
 }
 
+static void PREFIX(delete_table)(void *table, void *unused)
+{
+	fprintf(stderr, "finalizing table %p\n", table);
+}
 
 PREFIX(_table) *PREFIX(_create)(uint32_t capacity)
 {
 	PREFIX(_table) *table = CALLOC(1, sizeof(PREFIX(_table)));
+	fprintf(stderr, "Allocated hash table %p \n", table);
+#ifdef ENABLE_GC
+	GC_REGISTER_FINALIZER_NO_ORDER(table, PREFIX(delete_table), 0, 0, 0);
+#endif
 #	ifndef MAP_TABLE_NO_LOCK
 	INIT_LOCK(table->lock);
 #	endif
@@ -143,6 +151,15 @@ PREFIX(_table) *PREFIX(_create)(uint32_t capacity)
 	table->table_size = capacity;
 	return table;
 }
+
+void PREFIX(_initialize)(PREFIX(_table) **table, uint32_t capacity)
+{
+#ifdef ENABLE_GC
+	GC_add_roots(table, table+1);
+#endif
+	*table = PREFIX(_create)(capacity);
+}
+
 #	define TABLE_SIZE(x) (x->table_size)
 #endif
 

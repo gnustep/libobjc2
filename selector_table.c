@@ -239,7 +239,7 @@ PRIVATE void init_selector_tables()
 {
 	selector_list = SparseArrayNew();
 	INIT_LOCK(selector_table_lock);
-	sel_table = selector_create(4096);
+	selector_initialize(&sel_table, 4096);
 }
 
 static SEL selector_lookup(const char *name, const char *types)

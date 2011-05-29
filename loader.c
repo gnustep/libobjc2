@@ -7,6 +7,7 @@
 #ifdef ENABLE_GC
 #include <gc/gc.h>
 #endif
+#include <stdio.h>
 
 /**
  * Runtime lock.  This is exposed in 
@@ -19,6 +20,7 @@ void init_protocol_table(void);
 void init_class_tables(void);
 void init_dispatch_tables(void);
 void init_alias_table(void);
+void init_gc(void);
 void objc_send_load_message(Class class);
 
 /* Number of threads that are alive.  */
@@ -28,6 +30,7 @@ void __objc_exec_class(struct objc_module_abi_8 *module)
 {
 	static BOOL first_run = YES;
 
+	fprintf(stderr, "Loading %s\n", module->name);
 	// Check that this module uses an ABI version that we recognise.  
 	// In future, we should pass the ABI version to the class / category load
 	// functions so that we can change various structures more easily.
@@ -36,7 +39,7 @@ void __objc_exec_class(struct objc_module_abi_8 *module)
 	if (first_run)
 	{
 #if ENABLE_GC
-		GC_INIT();
+		init_gc();
 #endif
 		// Create the main runtime lock.  This is not safe in theory, but in
 		// practice the first time that this function is called will be in the

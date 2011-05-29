@@ -31,7 +31,7 @@ static protocol_table *known_protocol_table;
 
 void init_protocol_table(void)
 {
-	known_protocol_table = protocol_create(128);
+	protocol_initialize(&known_protocol_table, 128);
 }  
 
 static void protocol_table_insert(const struct objc_protocol2 *protocol)

@@ -39,7 +39,7 @@ SEL loadSel;
 
 PRIVATE void objc_init_load_messages_table(void)
 {
-	load_table  = load_messages_create(4096);
+	load_messages_initialize(&load_table, 4096);
 	loadSel = sel_registerName("load");
 }
 
@@ -140,7 +140,7 @@ PRIVATE Class class_table_next(void **e)
 
 PRIVATE void init_class_tables(void)
 {
-	class_table = class_table_internal_create(4096);
+	class_table_internal_initialize(&class_table, 4096);
 	objc_init_load_messages_table();
 }
 

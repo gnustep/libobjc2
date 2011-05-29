@@ -540,8 +540,9 @@ static void runFinalizers(void)
 	}
 }
 
-static void init(void)
+PRIVATE void init_gc(void)
 {
+	GC_INIT();
 	char *sigNumber;
 	// Dump GC stats on exit - uncomment when debugging.
 	if (getenv("LIBOBJC_DUMP_GC_STATUS_ON_EXIT"))
@@ -553,12 +554,7 @@ static void init(void)
 		int s = sigNumber[0] ? (int)strtol(sigNumber, NULL, 10) : SIGUSR2;
 		signal(s, collectAndDumpStats);
 	}
-	refcounts = refcount_create(4096);
 	GC_clear_roots();
-	finalize = sel_registerName("finalize");
-	cxx_destruct = sel_registerName(".cxx_destruct");
-	copy = sel_registerName("copy");
-	GC_finalizer_notifier = runFinalizers;
 }
 
 BOOL objc_collecting_enabled(void)
@@ -609,14 +605,14 @@ PRIVATE struct gc_ops gc_ops_boehm =
 	.allocate_class = allocate_class,
 	.malloc         = debug_malloc,
 	.free           = debug_free,
-	.init           = init
 };
 
 PRIVATE void enableGC(BOOL exclude)
 {
 	isGCEnabled = YES;
-	if (__sync_bool_compare_and_swap(&gc, &gc_ops_none, &gc_ops_boehm))
-	{
-		gc->init();
-	}
+	refcounts = refcount_create(4096);
+	finalize = sel_registerName("finalize");
+	cxx_destruct = sel_registerName(".cxx_destruct");
+	copy = sel_registerName("copy");
+	GC_finalizer_notifier = runFinalizers;
 }

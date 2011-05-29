@@ -64,7 +64,7 @@ static alias_table_internal_table *alias_table;
 
 PRIVATE void init_alias_table(void)
 {
-	alias_table = alias_table_internal_create(128);
+	alias_table_internal_initialize(&alias_table, 128);
 }
 
 
