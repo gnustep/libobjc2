@@ -244,3 +244,11 @@ void* objc_gc_reallocate_collectable(void *ptr, size_t size, BOOL isScanned);
  * the start of this region.  Otherwise, returns NULL.
  */
 void* objc_gc_collectable_address(void* ptr);
+
+/**
+ * Registers a class that should be copied on assignment to heap locations.
+ * For performance reasons, the runtime only permits a small number of classes
+ * to be registered.  These will always be copied when they are assigned, using
+ * the function specified in the second argument.
+ */
+BOOL objc_register_stack_class(Class cls, IMP copyFunction);

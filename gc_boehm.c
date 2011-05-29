@@ -182,21 +182,32 @@ BOOL objc_atomicCompareAndSwapInstanceVariableBarrier(id predicate, id replaceme
 }
 
 SEL copy;
-
+static const int MaxStackClasses = 16;
+static Class StackClasses[MaxStackClasses];
+static IMP StackCopyFunctions[MaxStackClasses];
+static int StackClassCount;
+                             
 static inline id copy_to_heap(id val)
 {
-	return val;
-	if ((0 == val) || ((1 & (intptr_t)val) == 1) || (0 == val->isa)) { return val; }
-	struct objc_object a;
-	if (((&a - 2048) < val) && ((&a + 2048) > val))
+	if ((0 == val) || ((1 & (intptr_t)val) == 1)) { return val; }
+	for (unsigned int i=0 ; i<StackClassCount ; i++)
 	{
-		struct objc_slot *slot = objc_msg_lookup_sender(&val, copy, nil);
-		if (NULL != slot)
+		if (val->isa == StackClasses[i])
 		{
-			val = slot->method(val, copy);
+			return StackCopyFunctions[i](val, copy);
 		}
 	}
 	return val;
+}
+
+BOOL objc_register_stack_class(Class cls, IMP copyFunction)
+{
+	LOCK_RUNTIME_FOR_SCOPE();
+	if (StackClassCount+1 >= MaxStackClasses) { return NO; }
+	StackClasses[StackClassCount] = cls;
+	StackCopyFunctions[StackClassCount] = copyFunction;
+	StackClassCount++;
+	return YES;
 }
 
 id objc_assign_strongCast(id val, id *ptr)
@@ -712,6 +723,9 @@ PRIVATE struct gc_ops gc_ops_boehm =
 	.free           = debug_free,
 };
 
+extern struct objc_class _NSConcreteStackBlock;
+void *_Block_copy(void *src);
+
 PRIVATE void enableGC(BOOL exclude)
 {
 	isGCEnabled = YES;
@@ -721,4 +735,5 @@ PRIVATE void enableGC(BOOL exclude)
 	cxx_destruct = sel_registerName(".cxx_destruct");
 	copy = sel_registerName("copy");
 	GC_finalizer_notifier = runFinalizers;
+	objc_register_stack_class(&_NSConcreteStackBlock, (IMP)_Block_copy);
 }
