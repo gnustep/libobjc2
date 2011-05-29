@@ -30,7 +30,6 @@ void __objc_exec_class(struct objc_module_abi_8 *module)
 {
 	static BOOL first_run = YES;
 
-	fprintf(stderr, "Loading %s\n", module->name);
 	// Check that this module uses an ABI version that we recognise.  
 	// In future, we should pass the ABI version to the class / category load
 	// functions so that we can change various structures more easily.
