@@ -27,6 +27,11 @@ static BOOL finalizeThreaded;
  */
 static size_t canarySize;
 /**
+ * The canary value.  Used to check for overruns.  When an allocation is
+ * finalized, we check whether it ends with this value.
+ */
+static uint32_t canary;
+/**
  * Destination to write allocation log to.  This can be used to implement the
  * equivalent of malloc_history
  */
@@ -58,15 +63,15 @@ struct objc_slot* objc_get_slot(Class cls, SEL selector);
 #endif
 
 #ifdef NO_EXECINFO
-static inline void dump_stack(void *addr) {}
+static inline void dump_stack(char *msg, void *addr) {}
 #else 
 #include <execinfo.h>
-static inline void dump_stack(void *addr)
+static inline void dump_stack(char *msg, void *addr)
 {
 	if (NULL == allocationLog) { return; }
 	void *array[30];
 	int frames = backtrace(array, 30);
-	fprintf(allocationLog, "Allocating %p\n", addr);
+	fprintf(allocationLog, "%s %p\n", msg, addr);
 	fflush(allocationLog);
 	backtrace_symbols_fd(array, frames, fileno(allocationLog));
 	fflush(allocationLog);
@@ -340,7 +345,19 @@ Class zombie_class;
 
 static void runFinalize(void *addr, void *context)
 {
+	dump_stack("Freeing Object: ", addr);
 	id obj = addr;
+	size_t size = (uintptr_t)context;
+	if ((canarySize > 0) &&
+		(*(uint32_t*)((char*)obj + size) != canary))
+	{
+		fprintf(stderr, "Something wrote past the end of %p\n", addr);
+		if (obj->isa != Nil)
+		{
+			fprintf(stderr, "Instance of %s\n", obj->isa->name);
+		}
+		abort();
+	}
 	//fprintf(stderr, "FINALIZING %p (%s)\n", addr, ((id)addr)->isa->name);
 	if (Nil == ((id)addr)->isa) { return; }
 	struct objc_slot *slot = objc_get_slot(obj->isa, cxx_destruct);
@@ -413,25 +430,35 @@ static GC_descr descriptor_for_class(Class cls)
 
 static id allocate_class(Class cls, size_t extra)
 {
+	size_t size = class_getInstanceSize(cls);
+	if (canarySize)
+	{
+		extra += 4;
+	}
 	id obj = 0;
 	// If there are some extra bytes, they may contain pointers, so we ignore
 	// the type
 	if (extra > 0)
 	{
+		size += extra;
 		// FIXME: Overflow checking!
-		obj = GC_MALLOC(class_getInstanceSize(cls) + extra);
+		obj = GC_MALLOC(size);
 	}
 	else
 	{
-		obj = GC_MALLOC_EXPLICITLY_TYPED(class_getInstanceSize(cls), 
-			descriptor_for_class(cls));
+		obj = GC_MALLOC_EXPLICITLY_TYPED(size, descriptor_for_class(cls));
 	}
 	//fprintf(stderr, "Allocating %p (%s + %d).  Base is %p\n", obj, cls->name, extra, GC_base(obj));
 	// It would be nice not to register a finaliser if the object didn't
 	// implement finalize or .cxx_destruct methods.  Unfortunately, this is not
 	// possible, because a class may add a finalize method as it runs.
-	GC_REGISTER_FINALIZER_NO_ORDER(obj, runFinalize, 0, 0, 0);
-	dump_stack(obj);
+	GC_REGISTER_FINALIZER_NO_ORDER(obj, runFinalize,
+			(void*)(uintptr_t)size-canarySize, 0, 0);
+	if (canarySize > 0)
+	{
+		*(uint32_t*)((char*)obj + size - canarySize) = canary;
+	}
+	dump_stack("Allocating object", obj);
 	return obj;
 }
 
@@ -562,10 +589,10 @@ int objc_gc_retain_count(id object)
 	return (0 == refcount) ? 0 : refcount->refCount;
 }
 
-static uint32_t canary;
 
 static void nuke_buffer(void *addr, void *s)
 {
+	dump_stack("Freeing allocation: ", addr);
 	uintptr_t size = (uintptr_t)s;
 	if (canary != *(uint32_t*)((char*)addr + size - 4))
 	{
@@ -596,7 +623,7 @@ void* objc_gc_allocate_collectable(size_t size, BOOL isScanned)
 		GC_REGISTER_FINALIZER_NO_ORDER(buffer, nuke_buffer,
 				(void*)(uintptr_t)size, 0, 0);
 	}
-	dump_stack(buffer);
+	dump_stack("Allocating memory", buffer);
 	return buffer;
 }
 void* objc_gc_reallocate_collectable(void *ptr, size_t size, BOOL isScanned)
@@ -615,7 +642,7 @@ void* objc_gc_reallocate_collectable(void *ptr, size_t size, BOOL isScanned)
 		}
 		memcpy(new, ptr, size);
 	}
-	dump_stack(new);
+	dump_stack("New allocation from realloc: ", new);
 	return new;
 }
 
