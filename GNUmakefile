@@ -83,7 +83,7 @@ endif
 ifneq ($(boehm_gc), no)
 libobjc_C_FILES += gc_boehm.c
 ifneq ($(findstring linux, $(GNUSTEP_TARGET_OS)), linux)
-libobjc_LIBRARIES_DEPEND_UPON += -lgc-threaded
+libobjc_LIBRARIES_DEPEND_UPON += -lgc-threaded -lexecinfo
 else
 libobjc_LIBRARIES_DEPEND_UPON += -lgc
 endif

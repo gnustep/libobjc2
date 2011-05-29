@@ -22,6 +22,15 @@ static dispatch_queue_t finalizer_queue;
  * Should finalizers be invoked in their own thread?
  */
 static BOOL finalizeThreaded;
+/**
+ * Should we do some (not 100% reliable) buffer overflow checking.
+ */
+static size_t canarySize;
+/**
+ * Destination to write allocation log to.  This can be used to implement the
+ * equivalent of malloc_history
+ */
+static FILE *allocationLog;
 
 struct objc_slot* objc_get_slot(Class cls, SEL selector);
 
@@ -34,11 +43,11 @@ struct objc_slot* objc_get_slot(Class cls, SEL selector);
  *  information it requires.
  */
 #ifdef __linux__
-# define GC_LINUX_THREADS
+#	define GC_LINUX_THREADS
 
-# ifndef _REENTRANT
-#  define _REENTRANT
-# endif
+#	ifndef _REENTRANT
+#		define _REENTRANT
+#	endif
 
 #endif
 #include <gc/gc.h>
@@ -46,6 +55,22 @@ struct objc_slot* objc_get_slot(Class cls, SEL selector);
 
 #ifndef __clang__
 #define __sync_swap __sync_lock_test_and_set
+#endif
+
+#ifdef NO_EXECINFO
+static inline void dump_stack(void *addr) {}
+#else 
+#include <execinfo.h>
+static inline void dump_stack(void *addr)
+{
+	if (NULL == allocationLog) { return; }
+	void *array[30];
+	int frames = backtrace(array, 30);
+	fprintf(allocationLog, "Allocating %p\n", addr);
+	fflush(allocationLog);
+	backtrace_symbols_fd(array, frames, fileno(allocationLog));
+	fflush(allocationLog);
+}
 #endif
 
 Class dead_class;
@@ -125,6 +150,10 @@ void objc_gc_enable(void)
 {
 	GC_enable();
 }
+void* objc_gc_collectable_address(void* ptr)
+{
+	return GC_base(ptr);
+}
 
 BOOL objc_atomicCompareAndSwapPtr(id predicate, id replacement, volatile id *objectLocation)
 {
@@ -156,6 +185,7 @@ SEL copy;
 
 static inline id copy_to_heap(id val)
 {
+	return val;
 	if ((0 == val) || ((1 & (intptr_t)val) == 1) || (0 == val->isa)) { return val; }
 	struct objc_object a;
 	if (((&a - 2048) < val) && ((&a + 2048) > val))
@@ -179,7 +209,6 @@ id objc_assign_strongCast(id val, id *ptr)
 id objc_assign_global(id val, id *ptr)
 {
 	val = copy_to_heap(val);
-	//fprintf(stderr, "Storign %p in global %p\n", val, ptr);
 	if (isGCEnabled)
 	{
 		GC_add_roots(ptr, ptr+1);
@@ -194,11 +223,47 @@ id objc_assign_ivar(id val, id dest, ptrdiff_t offset)
 	*(id*)((char*)dest+offset) = val;
 	return val;
 }
+
+struct memmove_args
+{
+	void *dst;
+	const void *src;
+	size_t size;
+};
+
+static void* callMemmove(void *args)
+{
+	struct memmove_args *a = args;
+	memmove(a->dst, a->src, a->size);
+	return a->dst;
+}
+
 void *objc_memmove_collectable(void *dst, const void *src, size_t size)
 {
-	// FIXME: Does this need to be called with the allocation lock held?
-	memmove(dst, src, size);
-	return dst;
+	// For small copies, we copy onto the stack then copy from the stack.  This
+	// ensures that pointers are always present in a scanned region.  For
+	// larger copies, we just lock the GC to prevent it from freeing the memory
+	// while the system memmove() does the real copy.  The first case avoids
+	// the need to acquire the lock, but will perform worse for very large
+	// copies since we are copying the data twice (and because stack space is
+	// relatively scarce).
+	if (size < 128)
+	{
+		char buffer[128];
+		memcpy(buffer, src, size);
+		__sync_synchronize();
+		memcpy(dst, buffer, size);
+		// In theory, we should zero the on-stack buffer here to prevent the GC
+		// from seeing spurious pointers, but it's not really important because
+		// the contents of the buffer is duplicated on the heap and overwriting
+		// it will typically involve another copy to this function.  This will
+		// not be the case if we are storing in a dead object, but that's
+		// probably sufficiently infrequent that we shouldn't worry about
+		// optimising for that case.
+		return dst;
+	}
+	struct memmove_args args = {dst, src, size};
+	return GC_call_with_alloc_lock(callMemmove, &args);
 }
 /**
  * Weak Pointers:
@@ -343,7 +408,6 @@ static id allocate_class(Class cls, size_t extra)
 	if (extra > 0)
 	{
 		// FIXME: Overflow checking!
-		//obj = GC_malloc(class_getInstanceSize(cls) + extra);
 		obj = GC_MALLOC(class_getInstanceSize(cls) + extra);
 	}
 	else
@@ -356,6 +420,7 @@ static id allocate_class(Class cls, size_t extra)
 	// implement finalize or .cxx_destruct methods.  Unfortunately, this is not
 	// possible, because a class may add a finalize method as it runs.
 	GC_REGISTER_FINALIZER_NO_ORDER(obj, runFinalize, 0, 0, 0);
+	dump_stack(obj);
 	return obj;
 }
 
@@ -486,21 +551,46 @@ int objc_gc_retain_count(id object)
 	return (0 == refcount) ? 0 : refcount->refCount;
 }
 
+static uint32_t canary;
+
+static void nuke_buffer(void *addr, void *s)
+{
+	uintptr_t size = (uintptr_t)s;
+	if (canary != *(uint32_t*)((char*)addr + size - 4))
+	{
+		fprintf(stderr,
+		        "Something wrote past the end of memory allocation %p\n",
+		        addr);
+		abort();
+	}
+	memset(addr, 0, size);
+}
 
 void* objc_gc_allocate_collectable(size_t size, BOOL isScanned)
 {
-	if ( isScanned)
+	size += 12;
+	void *buffer;
+	if (isScanned)
 	{
-		return GC_MALLOC(size);
+		buffer = GC_MALLOC(size+canarySize);
 	}
-	void *buf = GC_MALLOC_ATOMIC(size);
-	memset(buf, 0, size);
-	return buf;
+	else
+	{
+		buffer = GC_MALLOC_ATOMIC(size+canarySize);
+		memset(buffer, 0, size);
+	}
+	if (canarySize > 0)
+	{
+		*(uint32_t*)((char*)buffer + size) = canary;
+		GC_REGISTER_FINALIZER_NO_ORDER(buffer, nuke_buffer,
+				(void*)(uintptr_t)size, 0, 0);
+	}
+	dump_stack(buffer);
+	return buffer;
 }
 void* objc_gc_reallocate_collectable(void *ptr, size_t size, BOOL isScanned)
 {
 	if (0 == size) { return 0; }
-
 	void *new = isScanned ? GC_MALLOC(size) : GC_MALLOC_ATOMIC(size);
 
 	if (0 == new) { return 0; }
@@ -514,6 +604,7 @@ void* objc_gc_reallocate_collectable(void *ptr, size_t size, BOOL isScanned)
 		}
 		memcpy(new, ptr, size);
 	}
+	dump_stack(new);
 	return new;
 }
 
@@ -530,6 +621,7 @@ static void deferredFinalizer(void)
 
 static void runFinalizers(void)
 {
+	//fprintf(stderr, "RUNNING FINALIZERS\n");
 	if (finalizeThreaded)
 	{
 		dispatch_async_f(finalizer_queue, deferredFinalizer, NULL);
@@ -542,16 +634,29 @@ static void runFinalizers(void)
 
 PRIVATE void init_gc(void)
 {
+	GC_no_dls = 1;
+	GC_enable_incremental();
 	GC_INIT();
-	char *sigNumber;
+	char *envValue;
 	// Dump GC stats on exit - uncomment when debugging.
 	if (getenv("LIBOBJC_DUMP_GC_STATUS_ON_EXIT"))
 	{
 		atexit(GC_dump);
 	}
-	if ((sigNumber = getenv("LIBOBJC_DUMP_GC_STATUS_ON_SIGNAL")))
+	if ((envValue = getenv("LIBOBJC_LOG_ALLOCATIONS")))
 	{
-		int s = sigNumber[0] ? (int)strtol(sigNumber, NULL, 10) : SIGUSR2;
+		allocationLog = fopen(envValue, "a");
+	}
+	if ((envValue = getenv("LIBOBJC_CANARIES")))
+	{
+		unsigned s = envValue[0] ? strtol(envValue, NULL, 10) : 123;
+		srandom(s);
+		canarySize = sizeof(uint32_t);
+		canary = random();
+	}
+	if ((envValue = getenv("LIBOBJC_DUMP_GC_STATUS_ON_SIGNAL")))
+	{
+		int s = envValue[0] ? (int)strtol(envValue, NULL, 10) : SIGUSR2;
 		signal(s, collectAndDumpStats);
 	}
 	GC_clear_roots();
@@ -610,7 +715,8 @@ PRIVATE struct gc_ops gc_ops_boehm =
 PRIVATE void enableGC(BOOL exclude)
 {
 	isGCEnabled = YES;
-	refcounts = refcount_create(4096);
+	gc = &gc_ops_boehm;
+	refcount_initialize(&refcounts, 4096);
 	finalize = sel_registerName("finalize");
 	cxx_destruct = sel_registerName(".cxx_destruct");
 	copy = sel_registerName("copy");

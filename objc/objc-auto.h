@@ -239,3 +239,8 @@ void* objc_gc_allocate_collectable(size_t size, BOOL isScanned);
  */
 void* objc_gc_reallocate_collectable(void *ptr, size_t size, BOOL isScanned);
 
+/**
+ * If the pointer lies in a collectible memory region, returns the address at
+ * the start of this region.  Otherwise, returns NULL.
+ */
+void* objc_gc_collectable_address(void* ptr);
