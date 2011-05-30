@@ -606,7 +606,6 @@ static void nuke_buffer(void *addr, void *s)
 
 void* objc_gc_allocate_collectable(size_t size, BOOL isScanned)
 {
-	size += 12;
 	void *buffer;
 	if (isScanned)
 	{
@@ -672,7 +671,7 @@ static void runFinalizers(void)
 
 PRIVATE void init_gc(void)
 {
-	GC_no_dls = 1;
+	//GC_no_dls = 1;
 	GC_enable_incremental();
 	GC_INIT();
 	char *envValue;
