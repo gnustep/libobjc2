@@ -592,9 +592,10 @@ int objc_gc_retain_count(id object)
 
 static void nuke_buffer(void *addr, void *s)
 {
+	return;
 	dump_stack("Freeing allocation: ", addr);
 	uintptr_t size = (uintptr_t)s;
-	if (canary != *(uint32_t*)((char*)addr + size - 4))
+	if (canary != *(uint32_t*)((char*)addr + size))
 	{
 		fprintf(stderr,
 		        "Something wrote past the end of memory allocation %p\n",
