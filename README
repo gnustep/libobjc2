@@ -384,3 +384,46 @@ Objective-C 2 Features
 The runtime now provides implementations of the functions required for the
 @synchronized directive, for property accessors, and for fast enumeration.  The
 public runtime function interfaces now match those of OS X.
+
+Garbage Collection
+------------------
+
+As of version 1.5, the runtime support Apple-compatible garbage collection
+semantics.  The `objc/objc-auto.h` header describes the interfaces to garbage
+collection.  This contains some extensions to Apple's API, required to
+implement parts of Cocoa that rely on private interfaces between Cocoa, Apple
+libobjc, and Autozone.
+
+Garbage collection is implemented using the Boehm-Demers-Weiser garbage
+collector.  If built with boehm_gc=no, this support will not be compiled into
+the runtime.  When built with GC support, the runtime will use garbage
+collection for its internal tables, irrespective of whether linked Objective-C
+code is using it.
+
+Zeroing weak references are implemented by storing the bit-flipped version of
+the value (making it invisible to the collector) at the designated address.
+The read barrier reads the value while holding the collector lock.  This
+ensures that reads of weak variables never point to finalised objects.
+
+The runtime uses the objc_assign_global() write barrier to add static roots.
+Currently, GNUstep crashes if the collector relies on every write of a pointer
+to a static location being through this write barrier, so this requirement is
+relaxed.  It will be enabled at some point in the future.
+
+Several environment variables can be used for debugging programs
+
+- LIBOBJC_DUMP_GC_STATUS_ON_EXIT.  I this is set, then the program will dump
+  information about the garbage collector when it exits.
+- LIBOBJC_DUMP_GC_STATUS_ON_SIGNAL.  This should be set to a signal number.
+  The program will dump GC statistics when it receives the corresponding signal
+  (SIGUSR2 if this environment variable is set to something that is not a
+  number).
+- LIBOBJC_LOG_ALLOCATIONS.  This may be set to the name of a file.  The runtime
+  will dump a stack trace on every allocation and finalisation to the named
+  file.  This can be used to implement tools like Apple's malloc_history().
+  Note: Enabling this causes a significant speed decrease.
+- LIBOBJC_CANARIES.  If this environment variable is set, then every allocation
+  of garbage-collected memory will have a canary value appended to it.  On
+  finalisation, the runtime will check that this value has not been modified,
+  and abort if it has.  This can help to catch heap buffer overflows.  It is
+  most useful when debugging.
