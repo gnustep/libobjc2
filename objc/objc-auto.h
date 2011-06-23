@@ -66,13 +66,14 @@ BOOL objc_collectingEnabled(void);
 BOOL objc_collecting_enabled(void);
 
 /**
- * Starts concurrent collection.  This is currently unimplemented.
+ * Starts concurrent collection.  If this has been called, then finalizers will
+ * run in a separate thread.
  */
 void objc_startCollectorThread(void);
 
 /**
- * Causes all finalizers to be run on the main thread.  This is currently
- * unimplemented.
+ * Causes all finalizers for instances of the specified class to be run on the
+ * main thread.  This is currently unimplemented.
  */
 void objc_finalizeOnMainThread(Class cls);
 
@@ -82,7 +83,7 @@ void objc_finalizeOnMainThread(Class cls);
 void objc_clear_stack(unsigned long options);
 
 /**
- * Returns yes if an object has been finalized.  Currently unimplemented.
+ * Returns YES if an object has been finalized.  
  */
 BOOL objc_is_finalized(void *ptr);
 

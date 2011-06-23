@@ -728,10 +728,11 @@ void objc_clear_stack(unsigned long options)
 	__asm__  volatile ("" :  : "m"(addr) : "memory");
 
 }
-// FIXME: These are all stub implementations that should be replaced with
-// something better
-BOOL objc_is_finalized(void *ptr) { return NO; }
-void objc_start_collector_thread(void) {}
+BOOL objc_is_finalized(void *ptr)
+{
+	return *(Class*)ptr == zombie_class;
+}
+// FIXME: Stub implementation that should be replaced with something better
 void objc_finalizeOnMainThread(Class cls) {}
 
 static void *debug_malloc(size_t s)
