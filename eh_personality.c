@@ -1,5 +1,4 @@
 #include <stdlib.h>
-#include <dlfcn.h>
 #include <stdio.h>
 #include <string.h>
 #include "dwarf_eh.h"
