@@ -5,7 +5,6 @@
 #include "loader.h"
 #include "objc/hooks.h"
 #include <stdint.h>
-#include <dlfcn.h>
 #include <stdio.h>
 
 void objc_send_initialize(id object);
