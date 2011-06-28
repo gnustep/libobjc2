@@ -186,45 +186,14 @@ BOOL objc_atomicCompareAndSwapInstanceVariableBarrier(id predicate, id replaceme
 	return objc_atomicCompareAndSwapPtr(predicate, replacement, objectLocation);
 }
 
-SEL copy;
-static const int MaxStackClasses = 16;
-static Class StackClasses[MaxStackClasses];
-static IMP StackCopyFunctions[MaxStackClasses];
-static int StackClassCount;
-                             
-static inline id copy_to_heap(id val)
-{
-	if ((0 == val) || ((1 & (intptr_t)val) == 1)) { return val; }
-	for (unsigned int i=0 ; i<StackClassCount ; i++)
-	{
-		if (val->isa == StackClasses[i])
-		{
-			return StackCopyFunctions[i](val, copy);
-		}
-	}
-	return val;
-}
-
-BOOL objc_register_stack_class(Class cls, IMP copyFunction)
-{
-	LOCK_RUNTIME_FOR_SCOPE();
-	if (StackClassCount+1 >= MaxStackClasses) { return NO; }
-	StackClasses[StackClassCount] = cls;
-	StackCopyFunctions[StackClassCount] = copyFunction;
-	StackClassCount++;
-	return YES;
-}
-
 id objc_assign_strongCast(id val, id *ptr)
 {
-	val = copy_to_heap(val);
 	*ptr = val;
 	return val;
 }
 
 id objc_assign_global(id val, id *ptr)
 {
-	val = copy_to_heap(val);
 	if (isGCEnabled)
 	{
 		GC_add_roots(ptr, ptr+1);
@@ -235,7 +204,6 @@ id objc_assign_global(id val, id *ptr)
 
 id objc_assign_ivar(id val, id dest, ptrdiff_t offset)
 {
-	val = copy_to_heap(val);
 	*(id*)((char*)dest+offset) = val;
 	return val;
 }
@@ -697,7 +665,7 @@ PRIVATE void init_gc(void)
 		int s = envValue[0] ? (int)strtol(envValue, NULL, 10) : SIGUSR2;
 		signal(s, collectAndDumpStats);
 	}
-	GC_clear_roots();
+	//GC_clear_roots();
 }
 
 BOOL objc_collecting_enabled(void)
@@ -761,7 +729,5 @@ PRIVATE void enableGC(BOOL exclude)
 	refcount_initialize(&refcounts, 4096);
 	finalize = sel_registerName("finalize");
 	cxx_destruct = sel_registerName(".cxx_destruct");
-	copy = sel_registerName("copy");
 	GC_finalizer_notifier = runFinalizers;
-	objc_register_stack_class(&_NSConcreteStackBlock, (IMP)_Block_copy);
 }

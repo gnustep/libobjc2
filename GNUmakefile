@@ -18,6 +18,7 @@ ${LIBOBJC}_VERSION = 4
 ${LIBOBJC}_OBJC_FILES = \
 	NSBlocks.m\
 	Protocol2.m\
+	arc.m\
 	associate.m\
 	blocks_runtime.m\
 	mutation.m\
