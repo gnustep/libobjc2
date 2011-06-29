@@ -235,7 +235,7 @@ Method * class_copyMethodList(Class cls, unsigned int *outCount)
 	return list;
 }
 
-Protocol*const* class_copyProtocolList(Class cls, unsigned int *outCount)
+Protocol*__unsafe_unretained* class_copyProtocolList(Class cls, unsigned int *outCount)
 { 
 	CHECK_ARG(cls);
 	struct objc_protocol_list *protocolList = NULL;

@@ -329,7 +329,7 @@ struct objc_method_description *protocol_copyMethodDescriptionList(Protocol *p,
 	return out;
 }
 
-Protocol*const* protocol_copyProtocolList(Protocol *p, unsigned int *count)
+Protocol*__unsafe_unretained* protocol_copyProtocolList(Protocol *p, unsigned int *count)
 {
 	if (NULL == p) { return NULL; }
 	*count = 0;
@@ -474,7 +474,7 @@ BOOL protocol_isEqual(Protocol *p, Protocol *other)
 	return NO;
 }
 
-Protocol*const* objc_copyProtocolList(unsigned int *outCount)
+Protocol*__unsafe_unretained* objc_copyProtocolList(unsigned int *outCount)
 {
 	unsigned int total = known_protocol_table->table_used;
 	Protocol **p = calloc(sizeof(Protocol*), known_protocol_table->table_used);

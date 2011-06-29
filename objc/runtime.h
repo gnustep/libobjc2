@@ -231,7 +231,7 @@ objc_property_t* class_copyPropertyList(Class cls, unsigned int *outCount);
  * outCount argument is set to the number of protocols returned.  The caller is
  * responsible for freeing the returned buffer.
  */
-Protocol *const* class_copyProtocolList(Class cls, unsigned int *outCount);
+Protocol *__unsafe_unretained* class_copyProtocolList(Class cls, unsigned int *outCount);
 
 /**
  * Creates an instance of this class, allocating memory using malloc.
@@ -613,7 +613,7 @@ objc_property_t *protocol_copyPropertyList(Protocol *p, unsigned int *count);
  * number of protocols in the array being returned via the last argument.  The
  * caller is responsible for freeing this array.
  */
-Protocol *const*protocol_copyProtocolList(Protocol *p, unsigned int *count);
+Protocol *__unsafe_unretained*protocol_copyProtocolList(Protocol *p, unsigned int *count);
 
 /**
  * Returns all of the protocols that the runtime is aware of.  Note that
@@ -623,7 +623,7 @@ Protocol *const*protocol_copyProtocolList(Protocol *p, unsigned int *count);
  *
  * The caller is responsible for freeing the returned array.
  */
-Protocol *const*objc_copyProtocolList(unsigned int *outCount);
+Protocol *__unsafe_unretained*objc_copyProtocolList(unsigned int *outCount);
 /**
  * Returns the method description for the specified method within a given
  * protocol.
