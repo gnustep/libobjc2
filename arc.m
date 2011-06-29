@@ -86,12 +86,23 @@ id objc_storeStrong(id *object, id value)
 ////////////////////////////////////////////////////////////////////////////////
 //
 //FIXME: These are all stubs!
-#if 0
 
-id objc_storeWeak(id*addr, id obj) { return obj;}
+struct
+{
+	id *ref[4];
+	struct weakRef *next;
+} weakRef;
+
+id objc_storeWeak(id *addr, id obj)
+{
+	id old = *addr;
+	if (
+	return obj;
+}
 
 id objc_loadWeakRetained(id* obj)
 {
+	
 }
 
 id objc_loadWeak(id* object)
@@ -99,14 +110,16 @@ id objc_loadWeak(id* object)
 	return objc_autorelease(objc_loadWeakRetained(object));
 }
 
-
-void objc_moveWeak(id *dest, id *src)
-{
-}
-
 void objc_copyWeak(id *dest, id *src)
 {
 	objc_release(objc_initWeak(dest, objc_loadWeakRetained(src)));
+}
+
+void objc_moveWeak(id *dest, id *src)
+{
+	// FIXME: src can be zero'd here, removing the relationship between the
+	// object and the pointer, which can be cheaper.
+	objc_moveWeak(dest, src);
 }
 
 void objc_destroyWeak(id* obj)
@@ -114,10 +127,8 @@ void objc_destroyWeak(id* obj)
 	objc_storeWeak(object, nil);
 }
 
-id objc_initWeak(id*, id)
+id objc_initWeak(id *object, id value)
 {
 	*object = nil;
 	return objc_storeWeak(object, value);
 }
-
-#endif

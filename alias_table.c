@@ -37,30 +37,33 @@ struct objc_alias
 	Class class;
 };
 
-typedef struct objc_alias *Alias;
+typedef struct objc_alias Alias;
 
 static int alias_compare(const char *name, const Alias alias)
 {
-	return string_compare(name, alias->name);
+	return string_compare(name, alias.name);
 }
 
 static int alias_hash(const Alias alias)
 {
-	return string_hash(alias->name);
+	return string_hash(alias.name);
 }
+static int alias_is_null(const Alias alias)
+{
+	return alias.name == NULL;
+}
+static Alias NullAlias;
 #define MAP_TABLE_NAME alias_table_internal
 #define MAP_TABLE_COMPARE_FUNCTION alias_compare
 #define MAP_TABLE_HASH_KEY string_hash
 #define MAP_TABLE_HASH_VALUE alias_hash
+#define MAP_TABLE_VALUE_TYPE struct objc_alias
+#define MAP_TABLE_VALUE_NULL alias_is_null
+#define MAP_TABLE_VALUE_PLACEHOLDER NullAlias
 
 #include "hash_table.h"
 
 static alias_table_internal_table *alias_table;
-
-#define POOL_NAME alias
-#define POOL_TYPE struct objc_alias
-#include "pool.h"
-
 
 PRIVATE void init_alias_table(void)
 {
@@ -83,12 +86,12 @@ Class alias_getClass(const char *alias_name)
 
 	Alias alias = alias_table_get_safe(alias_name);
 
-	if (NULL == alias)
+	if (NULL == alias.name)
 	{
 		return NULL;
 	}
 
-	return alias->class;
+	return alias.class;
 }
 
 PRIVATE void alias_table_insert(Alias alias)
@@ -117,10 +120,7 @@ BOOL class_registerAlias_np(Class class, const char *alias)
 		 */
 		return (class == existingClass);
 	}
-
-	Alias newAlias = alias_pool_alloc();
-	newAlias->name = strdup(alias);
-	newAlias->class = class;
+	Alias newAlias = { strdup(alias), class };
 	alias_table_insert(newAlias);
 	return 1;
 }
