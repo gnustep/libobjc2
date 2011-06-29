@@ -306,12 +306,14 @@ void _Block_object_assign(void *destAddr, const void *object, const int flags)
 		fprintf(stderr, "BLOCK_FIELD_IS_BLOCK: %d\n", (flags & BLOCK_FIELD_IS_BLOCK) == BLOCK_FIELD_IS_BLOCK);
 		fprintf(stderr, "BLOCK_FIELD_IS_BYREF: %d\n", (flags & BLOCK_FIELD_IS_BYREF) == BLOCK_FIELD_IS_BYREF);
 		fprintf(stderr, "BLOCK_FIELD_IS_WEAK: %d\n", (flags & BLOCK_FIELD_IS_WEAK) == BLOCK_FIELD_IS_WEAK);
-		if(flags & BLOCK_FIELD_IS_BYREF)
+		if (IS_SET(flags, BLOCK_FIELD_IS_BYREF))
 		{
 			struct block_byref_obj *src = (struct block_byref_obj *)object;
 			struct block_byref_obj **dst = destAddr;
 			fprintf(stderr, "Copy dispose? %d\n", (src->flags & BLOCK_HAS_COPY_DISPOSE) == BLOCK_HAS_COPY_DISPOSE);
 			fprintf(stderr, "Retain Count? %x %x\n", src->flags & BLOCK_REFCOUNT_MASK, BLOCK_REFCOUNT_MASK);
+			fprintf(stderr, "Forwarding: %p -> %p\n", src, src->forwarding);
+			src = src->forwarding;
 			
 			if ((src->flags & BLOCK_REFCOUNT_MASK) == 0)
 			{
@@ -352,16 +354,17 @@ void _Block_object_assign(void *destAddr, const void *object, const int flags)
 				fprintf(stderr, "Flags for block: %p: %d (refcount %x)\n", *dst, (*dst)->flags, (*dst)->flags & BLOCK_REFCOUNT_MASK);
 			}
 		}
-		else if((flags & BLOCK_FIELD_IS_BLOCK) == BLOCK_FIELD_IS_BLOCK)
+		else if (IS_SET(flags, BLOCK_FIELD_IS_BLOCK))
 		{
 			struct block_literal *src = (struct block_literal*)object;
 			struct block_literal **dst = destAddr;
 			
 			*dst = Block_copy(src);
 		}
-		else if ((flags & BLOCK_FIELD_IS_OBJECT) == BLOCK_FIELD_IS_OBJECT)
+		else if (IS_SET(flags, BLOCK_FIELD_IS_OBJECT) &&
+		         !IS_SET(flags, BLOCK_BYREF_CALLER))
 		{
-			fprintf(stderr, "-retain\n");
+			fprintf(stderr, "[%p -retain]\n", object);
 			id src = (id)object;
 			void **dst = destAddr;
 			*dst = src;
@@ -392,7 +395,7 @@ void _Block_object_dispose(const void *object, const int flags)
 	}
 	//else
 	{
-		if(flags & BLOCK_FIELD_IS_BYREF)
+		if (IS_SET(flags, BLOCK_FIELD_IS_BYREF))
 		{
 			struct block_byref_obj *src = 
 				(struct block_byref_obj*)object;
@@ -405,8 +408,10 @@ void _Block_object_dispose(const void *object, const int flags)
 				{
 					if (0 != src->byref_dispose)
 					{
+						fprintf(stderr, "Calling byref dispose\n");
 						src->byref_dispose(src);
 					}
+					fprintf(stderr, "Freeing %p\n", src);
 					gc->free(src);
 				}
 			}
@@ -432,16 +437,18 @@ void _Block_object_dispose(const void *object, const int flags)
 				}
 			}
 		}
-		else if ((flags & BLOCK_FIELD_IS_BLOCK) == BLOCK_FIELD_IS_BLOCK)
+		else if (IS_SET(flags, BLOCK_FIELD_IS_BLOCK))
 		{
 			struct block_literal *src = (struct block_literal*)object;
 			Block_release(src);
 		}
-		else if((flags & BLOCK_FIELD_IS_OBJECT) == BLOCK_FIELD_IS_OBJECT)
+		else if (IS_SET(flags, BLOCK_FIELD_IS_OBJECT) &&
+		         !IS_SET(flags, BLOCK_BYREF_CALLER))
 		{
 			id src = (id)object;
 			if (!isGCEnabled)
 			{
+				fprintf(stderr, "Sending release message to %p\n", src);
 				[src release];
 			}
 		}
