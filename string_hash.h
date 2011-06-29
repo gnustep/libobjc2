@@ -7,7 +7,7 @@
 __attribute__((unused))
 static uint32_t string_hash(const char *str)
 {
-	uint32_t hash = 33;
+	uint32_t hash = 0;
 	int32_t c;
 	while ((c = *str++))
 	{

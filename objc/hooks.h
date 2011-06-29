@@ -64,3 +64,11 @@ OBJC_HOOK Class (*_objc_class_for_boxing_foreign_exception)(int64_t exceptionCla
  */
 extern struct objc_slot* (*_objc_selector_type_mismatch)(Class cls, 
        SEL selector, struct objc_slot *result);
+
+/**
+ * Returns the object if it is not currently in the process of being
+ * deallocated.  Returns nil otherwise.  
+ *
+ * This hook must be set for weak references to work with automatic reference counting.
+ */
+OBJC_HOOK id (*_objc_weak_load)(id object);

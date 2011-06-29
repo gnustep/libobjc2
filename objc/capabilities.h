@@ -80,6 +80,11 @@ extern "C" {
  * alias as the argument.
  */
 #define OBJC_CAP_REGISTERED_COMPATIBILITY_ALIASES	10
+/**
+ * The runtime supports automatic reference counting, including support for
+ * __weak references.
+ */
+#define OBJC_CAP_ARC 11
 
 /**
  * Macro used to require the existence of a specific capability.  This creates
