@@ -16,6 +16,8 @@ release include:
   with respect to thread safety in several places.
 - This is the first release to provide a superset of the functionality provided
   by the Mac Objective-C runtime, as shipped with OS X 10.6.
+- Full support for Automatic Reference Counting (ARC), compatible with OS X
+  10.7 and iOS 5.
 - The LLVM optimisation passes have been improved and better tested.  Code
   compiled with them now passes the EtoileFoundation test suite.
 
