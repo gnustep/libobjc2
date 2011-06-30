@@ -6,9 +6,22 @@
 #import "objc/hooks.h"
 #import "objc/objc-arc.h"
 
+#ifndef NO_PTHREADS
+#include <pthread.h>
+pthread_key_t ReturnRetained;
+#endif
+
+
+@interface NSAutoreleasePool
++ (Class)class;
++ (id)new;
+- (void)release;
+@end
+
 static Class AutoreleasePool;
 static IMP NewAutoreleasePool;
 static IMP DeleteAutoreleasePool;
+
 
 void *objc_autoreleasePoolPush(void)
 {
@@ -17,11 +30,13 @@ void *objc_autoreleasePoolPush(void)
 	if (Nil == AutoreleasePool)
 	{
 		AutoreleasePool = objc_getRequiredClass("NSAutoreleasePool");
+		[AutoreleasePool class];
 		NewAutoreleasePool = class_getMethodImplementation(
 				object_getClass(AutoreleasePool),
+				//AutoreleasePool,
 				SELECTOR(new));
 		DeleteAutoreleasePool = class_getMethodImplementation(
-				object_getClass(AutoreleasePool),
+				AutoreleasePool,
 				SELECTOR(release));
 	}
 	return NewAutoreleasePool(AutoreleasePool, SELECTOR(new));
@@ -40,8 +55,25 @@ id objc_autorelease(id obj)
 
 id objc_autoreleaseReturnValue(id obj)
 {
-	// TODO: Fast path for allowing this to be popped from the pool.
+#ifdef NO_PTHREADS
 	return [obj autorelease];
+#else
+	id old = pthread_getspecific(ReturnRetained);
+	objc_release(old);
+	pthread_setspecific(ReturnRetained, obj);
+	return old;
+#endif
+}
+
+id objc_retainAutoreleasedReturnValue(id obj)
+{
+#ifdef NO_PTHREADS
+	return objc_retain(obj);
+#else
+	id old = pthread_getspecific(ReturnRetained);
+	pthread_setspecific(ReturnRetained, NULL);
+	return old;
+#endif
 }
 
 id objc_retain(id obj)
@@ -59,11 +91,6 @@ id objc_retainAutoreleaseReturnValue(id obj)
 	return objc_autoreleaseReturnValue(objc_retain(obj));
 }
 
-id objc_retainAutoreleasedReturnValue(id obj)
-{
-	// TODO: Fast path popping this from the autorelease pool
-	return objc_retain(obj);
-}
 
 id objc_retainBlock(id b)
 {
@@ -137,6 +164,9 @@ PRIVATE void init_arc(void)
 {
 	weak_ref_initialize(&weakRefs, 128);
 	INIT_LOCK(weakRefLock);
+#ifndef NO_PTHREADS
+	pthread_key_create(&ReturnRetained, (void(*)(void*))objc_release);
+#endif
 }
 
 id objc_storeWeak(id *addr, id obj)
