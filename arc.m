@@ -71,8 +71,12 @@ id objc_retainAutoreleasedReturnValue(id obj)
 	return objc_retain(obj);
 #else
 	id old = pthread_getspecific(ReturnRetained);
-	pthread_setspecific(ReturnRetained, NULL);
-	return old;
+	if (obj != old)
+	{
+		objc_autorelease(old);
+		objc_retain(obj);
+	}
+	return obj;
 #endif
 }
 
