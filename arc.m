@@ -1,3 +1,4 @@
+#import "stdio.h"
 #import "objc/runtime.h"
 #import "objc/blocks_runtime.h"
 #import "nsobject.h"
@@ -21,6 +22,7 @@ pthread_key_t ReturnRetained;
 static Class AutoreleasePool;
 static IMP NewAutoreleasePool;
 static IMP DeleteAutoreleasePool;
+static IMP AutoreleaseAdd;
 
 
 void *objc_autoreleasePoolPush(void)
@@ -33,11 +35,13 @@ void *objc_autoreleasePoolPush(void)
 		[AutoreleasePool class];
 		NewAutoreleasePool = class_getMethodImplementation(
 				object_getClass(AutoreleasePool),
-				//AutoreleasePool,
 				SELECTOR(new));
 		DeleteAutoreleasePool = class_getMethodImplementation(
 				AutoreleasePool,
 				SELECTOR(release));
+		AutoreleaseAdd = class_getMethodImplementation(
+				object_getClass(AutoreleasePool),
+				SELECTOR(addObject:));
 	}
 	return NewAutoreleasePool(AutoreleasePool, SELECTOR(new));
 }
@@ -51,6 +55,11 @@ void objc_autoreleasePoolPop(void *pool)
 id objc_autorelease(id obj)
 {
 	return [obj autorelease];
+	if (nil != obj)
+	{
+		AutoreleaseAdd(AutoreleasePool, SELECTOR(addObject:), obj);
+	}
+	return obj;
 }
 
 id objc_autoreleaseReturnValue(id obj)
@@ -59,7 +68,7 @@ id objc_autoreleaseReturnValue(id obj)
 	return [obj autorelease];
 #else
 	id old = pthread_getspecific(ReturnRetained);
-	objc_release(old);
+	objc_autorelease(old);
 	pthread_setspecific(ReturnRetained, obj);
 	return old;
 #endif
@@ -71,6 +80,15 @@ id objc_retainAutoreleasedReturnValue(id obj)
 	return objc_retain(obj);
 #else
 	id old = pthread_getspecific(ReturnRetained);
+	pthread_setspecific(ReturnRetained, NULL);
+	// If the previous object was released  with objc_autoreleaseReturnValue()
+	// just before return, then it will not have actually been autoreleased.
+	// Instead, it will have been stored in TLS.  We just remove it from TLS
+	// and undo the fake autorelease.
+	//
+	// If the object was not returned with objc_autoreleaseReturnValue() then
+	// we actually autorelease the fake object. and then retain the argument.
+	// In tis case, this is equivalent to objc_retain().
 	if (obj != old)
 	{
 		objc_autorelease(old);
