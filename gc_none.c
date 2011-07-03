@@ -7,7 +7,8 @@
 
 static id allocate_class(Class cls, size_t extraBytes)
 {
-	return calloc(cls->instance_size + extraBytes, 1);
+	intptr_t *addr = calloc(cls->instance_size + extraBytes + sizeof(intptr_t), 1);
+	return (id)(addr + 1);
 }
 
 static void *alloc(size_t size)

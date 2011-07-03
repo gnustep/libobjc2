@@ -2,6 +2,7 @@
 #import "objc/runtime.h"
 #import "objc/blocks_runtime.h"
 #import "nsobject.h"
+#import "class.h"
 #import "selector.h"
 #import "visibility.h"
 #import "objc/hooks.h"
@@ -23,6 +24,46 @@ static Class AutoreleasePool;
 static IMP NewAutoreleasePool;
 static IMP DeleteAutoreleasePool;
 static IMP AutoreleaseAdd;
+
+extern BOOL FastARCRetain;
+extern BOOL FastARCRelease;
+extern BOOL FastARCAutorelease;
+
+static inline id retain(id obj)
+{
+	if (objc_test_class_flag(obj->isa, objc_class_flag_fast_arc))
+	{
+		intptr_t *refCount = ((intptr_t*)obj) - 1;
+		__sync_fetch_and_add(refCount, 1);
+		return obj;
+	}
+	return [obj retain];
+}
+
+static inline void release(id obj)
+{
+	if (objc_test_class_flag(obj->isa, objc_class_flag_fast_arc))
+	{
+		intptr_t *refCount = ((intptr_t*)obj) - 1;
+		if (__sync_fetch_and_sub(refCount, 1) < 0)
+		{
+			objc_delete_weak_refs(obj);
+			[obj dealloc];
+		}
+		return;
+	}
+	[obj release];
+}
+
+static inline id autorelease(id obj)
+{
+	if (objc_test_class_flag(obj->isa, objc_class_flag_fast_arc))
+	{
+		AutoreleaseAdd(AutoreleasePool, SELECTOR(addObject:), obj);
+		return obj;
+	}
+	return [obj autorelease];
+}
 
 
 void *objc_autoreleasePoolPush(void)
@@ -54,10 +95,9 @@ void objc_autoreleasePoolPop(void *pool)
 
 id objc_autorelease(id obj)
 {
-	return [obj autorelease];
 	if (nil != obj)
 	{
-		AutoreleaseAdd(AutoreleasePool, SELECTOR(addObject:), obj);
+		obj = autorelease(obj);
 	}
 	return obj;
 }
@@ -100,7 +140,8 @@ id objc_retainAutoreleasedReturnValue(id obj)
 
 id objc_retain(id obj)
 {
-	return [obj retain];
+	if (nil == obj) { return nil; }
+	return retain(obj);
 }
 
 id objc_retainAutorelease(id obj)
@@ -121,15 +162,16 @@ id objc_retainBlock(id b)
 
 void objc_release(id obj)
 {
-	[obj release];
+	if (nil == obj) { return; }
+	release(obj);
 }
 
-id objc_storeStrong(id *object, id value)
+id objc_storeStrong(id *addr, id value)
 {
-	value = [value retain];
-	id oldValue = *object;
-	*object = value;
-	[oldValue release];
+	value = objc_retain(value);
+	id oldValue = *addr;
+	*addr = value;
+	objc_release(oldValue);
 	return value;
 }
 

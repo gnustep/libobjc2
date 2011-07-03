@@ -16,9 +16,62 @@ PRIVATE dtable_t uninstalled_dtable;
 
 /** Head of the list of temporary dtables.  Protected by initialize_lock. */
 PRIVATE InitializingDtable *temporary_dtables;
+/** Lock used to protect the temporary dtables list. */
 PRIVATE mutex_t initialize_lock;
+/** The size of the largest dtable, rounded up to the nearest power of two. */
 static uint32_t dtable_depth = 8;
 
+struct objc_slot* objc_get_slot(Class cls, SEL selector);
+
+/**
+ * Returns YES if the class implements a method for the specified selector, NO
+ * otherwise.
+ */
+static BOOL ownsMethod(Class cls, SEL sel)
+{
+	struct objc_slot *slot = objc_get_slot(cls, sel);
+	if ((NULL != slot) && (slot->owner == cls))
+	{
+		return YES;
+	}
+	return NO;
+}
+
+/**
+ * Checks whether the class implements memory management methods, and whether
+ * they are safe to use with ARC.
+ */
+static void checkARCAccessors(Class cls)
+{
+	static SEL retain, release, autorelease, isARC;
+	if (NULL == retain)
+	{
+		retain = sel_registerName("retain");
+		release = sel_registerName("release");
+		autorelease = sel_registerName("autorelease");
+		isARC = sel_registerName("_ARCCompliantRetainRelease");
+	}
+	if (ownsMethod(cls, isARC))
+	{
+		objc_set_class_flag(cls, objc_class_flag_fast_arc);
+		return;
+	}
+	struct objc_slot *slot = objc_get_slot(cls, retain);
+	if (!ownsMethod(slot->owner, isARC))
+	{
+		objc_clear_class_flag(cls, objc_class_flag_fast_arc);
+	}
+	slot = objc_get_slot(cls, release);
+	if (!ownsMethod(slot->owner, isARC))
+	{
+		objc_clear_class_flag(cls, objc_class_flag_fast_arc);
+	}
+	slot = objc_get_slot(cls, autorelease);
+	if (!ownsMethod(slot->owner, isARC))
+	{
+		objc_clear_class_flag(cls, objc_class_flag_fast_arc);
+	}
+}
 
 static void collectMethodsForMethodListToSparseArray(
 		struct objc_method_list *list,
@@ -418,6 +471,7 @@ PRIVATE void objc_update_dtable_for_class(Class cls)
 	// Methods now contains only the new methods for this class.
 	mergeMethodsFromSuperclass(cls, cls, methods);
 	SparseArrayDestroy(methods);
+	checkARCAccessors(cls);
 }
 
 PRIVATE void add_method_list_to_class(Class cls,
@@ -434,6 +488,7 @@ PRIVATE void add_method_list_to_class(Class cls,
 	// Methods now contains only the new methods for this class.
 	mergeMethodsFromSuperclass(cls, cls, methods);
 	SparseArrayDestroy(methods);
+	checkARCAccessors(cls);
 }
 
 static dtable_t create_dtable_for_class(Class class, dtable_t root_dtable)
@@ -645,6 +700,7 @@ PRIVATE void objc_send_initialize(id object)
 	{
 		meta->dtable = dtable;
 		class->dtable = class_dtable;
+		checkARCAccessors(class);
 		UNLOCK(&initialize_lock);
 		return;
 	}
@@ -661,6 +717,8 @@ PRIVATE void objc_send_initialize(id object)
 	InitializingDtable meta_buffer = { meta, dtable, &buffer };
 	temporary_dtables = &meta_buffer;
 	UNLOCK(&initialize_lock);
+
+	checkARCAccessors(class);
 
 	// Store the buffer in the temporary dtables list.  Note that it is safe to
 	// insert it into a global list, even though it's a temporary variable,

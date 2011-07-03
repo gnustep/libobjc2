@@ -5,10 +5,6 @@
 #include <string.h>
 
 @implementation Protocol
-+ (void)load
-{
-	objc_clear_class_flag(self, objc_class_flag_plane_aware);
-}
 // FIXME: This needs removing, but it's included for now because GNUstep's
 // implementation of +[NSObject conformsToProtocol:] calls it.
 - (BOOL)conformsTo: (Protocol*)p
@@ -22,12 +18,6 @@
 - (void)release {}
 + (Class)class { return self; }
 - (id)self { return self; }
-@end
-@implementation Protocol2 
-+ (void)load
-{
-	objc_clear_class_flag(self, objc_class_flag_plane_aware);
-}
 @end
 
 /**

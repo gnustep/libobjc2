@@ -62,6 +62,8 @@ struct objc_slot* objc_get_slot(Class cls, SEL selector);
 #define __sync_swap __sync_lock_test_and_set
 #endif
 
+void call_cxx_destruct(id obj);
+
 #ifdef NO_EXECINFO
 static inline void dump_stack(char *msg, void *addr) {}
 #else 
@@ -306,8 +308,6 @@ id objc_assign_weak(id value, id *location)
 }
 
 static SEL finalize;
-static SEL cxx_destruct;
-
 Class zombie_class;
 
 
@@ -327,17 +327,13 @@ static void runFinalize(void *addr, void *context)
 		abort();
 	}
 	//fprintf(stderr, "FINALIZING %p (%s)\n", addr, ((id)addr)->isa->name);
-	if (Nil == ((id)addr)->isa) { return; }
-	struct objc_slot *slot = objc_get_slot(obj->isa, cxx_destruct);
-	if (NULL != slot)
-	{
-		slot->method(obj, cxx_destruct);
-	}
-	slot = objc_get_slot(obj->isa, finalize);
+	if (Nil == obj->isa) { return; }
+	struct objc_slot *slot = objc_get_slot(obj->isa, finalize);
 	if (NULL != slot)
 	{
 		slot->method(obj, finalize);
 	}
+	call_cxx_destruct(obj);
 	*(void**)addr = zombie_class;
 }
 
@@ -728,6 +724,5 @@ PRIVATE void enableGC(BOOL exclude)
 	gc = &gc_ops_boehm;
 	refcount_initialize(&refcounts, 4096);
 	finalize = sel_registerName("finalize");
-	cxx_destruct = sel_registerName(".cxx_destruct");
 	GC_finalizer_notifier = runFinalizers;
 }

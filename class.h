@@ -168,12 +168,10 @@ enum objc_class_flags
 	 */
 	objc_class_flag_user_created = (1<<5),
 	/** 
-	 * Instances of this class have a reference count and plane ID prepended to
-	 * them.  The default for this is set for classes, unset for metaclasses.
-	 * It should be cleared by protocols, constant strings, and objects not
-	 * allocated by NSAllocateObject().
+	 * Instances of this class are provide ARC-safe retain / release /
+	 * autorelease implementations.
 	 */
-	objc_class_flag_plane_aware = (1<<6),
+	objc_class_flag_fast_arc = (1<<6),
 	/**
 	 * This class is a hidden class (should not be registered in the class
 	 * table nor returned from object_getClass()).
@@ -185,16 +183,25 @@ enum objc_class_flags
 	objc_class_flag_assoc_class = (1<<8)
 };
 
+/**
+ * Sets the specific class flag.  Note: This is not atomic.
+ */
 static inline void objc_set_class_flag(struct objc_class *aClass,
                                        enum objc_class_flags flag)
 {
 	aClass->info |= (unsigned long)flag;
 }
+/**
+ * Unsets the specific class flag.  Note: This is not atomic.
+ */
 static inline void objc_clear_class_flag(struct objc_class *aClass,
                                          enum objc_class_flags flag)
 {
 	aClass->info &= ~(unsigned long)flag;
 }
+/**
+ * Checks whether a specific class flag is set.
+ */
 static inline BOOL objc_test_class_flag(struct objc_class *aClass,
                                         enum objc_class_flags flag)
 {

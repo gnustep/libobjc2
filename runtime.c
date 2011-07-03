@@ -22,6 +22,52 @@
 struct objc_slot *objc_get_slot(Class cls, SEL selector);
 #define CHECK_ARG(arg) if (0 == arg) { return 0; }
 
+/**
+ * Calls C++ destructors in the correct order.
+ */
+PRIVATE void call_cxx_destruct(id obj)
+{
+	static SEL cxx_destruct;
+	if (NULL == cxx_destruct)
+	{
+		cxx_destruct = sel_registerName(".cxx_destruct");
+	}
+	// Don't call object_getClass(), because we want to get hidden classes too
+	Class cls = obj->isa;
+
+	while (cls)
+	{
+		struct objc_slot *slot = objc_get_slot(cls, cxx_destruct);
+		cls = Nil;
+		if (NULL != slot)
+		{
+			slot->method(obj, cxx_destruct);
+			cls = slot->owner->super_class;
+		}
+	}
+}
+
+static void call_cxx_construct_for_class(Class cls, id obj)
+{
+	static SEL cxx_construct;
+	if (NULL == cxx_construct)
+	{
+		cxx_construct = sel_registerName(".cxx_contruct");
+	}
+	struct objc_slot *slot = objc_get_slot(cls, cxx_construct);
+	cls = slot->owner->super_class;
+	if (Nil != cls)
+	{
+		call_cxx_construct_for_class(cls, obj);
+	}
+	slot->method(obj, cxx_construct);
+}
+
+PRIVATE void call_cxx_construct(id obj)
+{
+	call_cxx_construct_for_class(obj->isa, obj);
+}
+
 /** 
  * Looks up the instance method in a specific class, without recursing into
  * superclasses.
@@ -277,6 +323,7 @@ id class_createInstance(Class cls, size_t extraBytes)
 	if (Nil == cls)	{ return nil; }
 	id obj = gc->allocate_class(cls, extraBytes);
 	obj->isa = cls;
+	call_cxx_construct(obj);
 	return obj;
 }
 
@@ -290,7 +337,8 @@ id object_copy(id obj, size_t size)
 
 id object_dispose(id obj)
 {
-	free(obj);
+	call_cxx_destruct(obj);
+	gc->free(obj);
 	return nil;
 }
 
@@ -673,3 +721,4 @@ void objc_registerClassPair(Class cls)
 	LOCK_RUNTIME_FOR_SCOPE();
 	class_table_insert(cls);
 }
+
