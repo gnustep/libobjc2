@@ -27,3 +27,19 @@ MDNode* CreateMDNode(LLVMContext &C,
   return MDNode::get(C, val);
 #endif
 }
+
+#if LLVM_MAJOR < 3
+#define GetStructType(context, ...) StructType::get(context, __VA_ARGS__)
+#else
+#define GetStructType(context, ...) StructType::get(__VA_ARGS__)
+#endif
+
+__attribute((unused)) static inline 
+Constant* GetConstantStruct(LLVMContext &C, const std::vector<Constant*>
+		&V, bool Packed) {
+#if LLVM_MAJOR < 3
+	return ConstantStruct::get(C, V, Packed);
+#else
+	return ConstantStruct::getAnon(C, V, Packed);
+#endif
+}

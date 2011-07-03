@@ -9,6 +9,7 @@
 #include <vector>
 
 using namespace llvm;
+#include "LLVMCompat.h"
 
 namespace {
   struct GNUObjCTypeFeedback : public ModulePass {
@@ -113,7 +114,7 @@ namespace {
       std::vector<Constant*> CSVals;
       CSVals.push_back(ConstantInt::get(Type::getInt32Ty(VMContext),65535));
       CSVals.push_back(init);
-      ctors.push_back(ConstantStruct::get(GCL->getContext(), CSVals, false));
+      ctors.push_back(GetConstantStruct(GCL->getContext(), CSVals, false));
       // Create the array initializer.
       CA = cast<ConstantArray>(ConstantArray::get(ArrayType::get(ctorTy,
             ctors.size()), ctors));
