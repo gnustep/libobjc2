@@ -55,12 +55,15 @@ static void call_cxx_construct_for_class(Class cls, id obj)
 		cxx_construct = sel_registerName(".cxx_contruct");
 	}
 	struct objc_slot *slot = objc_get_slot(cls, cxx_construct);
-	cls = slot->owner->super_class;
-	if (Nil != cls)
+	if (NULL != slot)
 	{
-		call_cxx_construct_for_class(cls, obj);
+		cls = slot->owner->super_class;
+		if (Nil != cls)
+		{
+			call_cxx_construct_for_class(cls, obj);
+		}
+		slot->method(obj, cxx_construct);
 	}
-	slot->method(obj, cxx_construct);
 }
 
 PRIVATE void call_cxx_construct(id obj)

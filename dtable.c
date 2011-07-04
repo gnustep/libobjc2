@@ -52,19 +52,19 @@ static void checkARCAccessors(Class cls)
 		isARC = sel_registerName("_ARCCompliantRetainRelease");
 	}
 	struct objc_slot *slot = objc_get_slot(cls, retain);
-	if (!ownsMethod(slot->owner, isARC))
+	if ((NULL != slot) && !ownsMethod(slot->owner, isARC))
 	{
 		objc_clear_class_flag(cls, objc_class_flag_fast_arc);
 		return;
 	}
 	slot = objc_get_slot(cls, release);
-	if (!ownsMethod(slot->owner, isARC))
+	if ((NULL != slot) && !ownsMethod(slot->owner, isARC))
 	{
 		objc_clear_class_flag(cls, objc_class_flag_fast_arc);
 		return;
 	}
 	slot = objc_get_slot(cls, autorelease);
-	if (!ownsMethod(slot->owner, isARC))
+	if ((NULL != slot) && !ownsMethod(slot->owner, isARC))
 	{
 		objc_clear_class_flag(cls, objc_class_flag_fast_arc);
 		return;
