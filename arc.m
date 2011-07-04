@@ -7,12 +7,14 @@
 #import "visibility.h"
 #import "objc/hooks.h"
 #import "objc/objc-arc.h"
+#import "objc/blocks_runtime.h"
 
 #ifndef NO_PTHREADS
 #include <pthread.h>
 pthread_key_t ReturnRetained;
 #endif
 
+extern struct objc_class _NSConcreteStackBlock;
 
 @interface NSAutoreleasePool
 + (Class)class;
@@ -31,6 +33,11 @@ extern BOOL FastARCAutorelease;
 
 static inline id retain(id obj)
 {
+	if ((Class)&_NSConcreteStackBlock == obj->isa)
+	{
+		fprintf(stderr, "Retaining block\n");
+		return Block_copy(obj);
+	}
 	if (objc_test_class_flag(obj->isa, objc_class_flag_fast_arc))
 	{
 		intptr_t *refCount = ((intptr_t*)obj) - 1;
@@ -158,7 +165,8 @@ id objc_retainAutorelease(id obj)
 
 id objc_retainAutoreleaseReturnValue(id obj)
 {
-	return objc_autoreleaseReturnValue(objc_retain(obj));
+	if (nil == obj) { return obj; }
+	return objc_autoreleaseReturnValue(retain(obj));
 }
 
 
