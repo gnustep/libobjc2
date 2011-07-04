@@ -40,7 +40,7 @@ static inline id retain(id obj)
 	if (objc_test_class_flag(obj->isa, objc_class_flag_fast_arc))
 	{
 		intptr_t *refCount = ((intptr_t*)obj) - 1;
-		__sync_fetch_and_add(refCount, 1);
+		__sync_add_and_fetch(refCount, 1);
 		return obj;
 	}
 	return [obj retain];
@@ -51,7 +51,7 @@ static inline void release(id obj)
 	if (objc_test_class_flag(obj->isa, objc_class_flag_fast_arc))
 	{
 		intptr_t *refCount = ((intptr_t*)obj) - 1;
-		if (__sync_fetch_and_sub(refCount, 1) < 0)
+		if (__sync_sub_and_fetch(refCount, 1) < 0)
 		{
 			objc_delete_weak_refs(obj);
 			[obj dealloc];
