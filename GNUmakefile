@@ -109,7 +109,6 @@ endif
 # using is rubbish - they complain.
 #CPPFLAGS += -DNO_SELECTOR_MISMATCH_WARNINGS
 
-${LIBOBJC}_CFLAGS +=  -O3
 
 # Deprecated functions are only deprecated for external use, not for us because
 # we are special, precious, little flowers.
@@ -125,7 +124,10 @@ ${LIBOBJC}_CFLAGS += -Wno-unused-function
 # debugger actually works...
 ifeq ($(debug), yes)
 ${LIBOBJC}_CFLAGS += -fno-inline
+${LIBOBJC}_OBJCFLAGS += -fno-inline
 ${LIBOBJC}_CPPFLAGS += -DGC_DEBUG
+else
+${LIBOBJC}_CFLAGS +=  -O3
 endif
 ${LIBOBJC}_OBJCFLAGS += $(${LIBOBJC}_CFLAGS) $(${LIBOBJC}_CFLAGS)
 
