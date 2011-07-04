@@ -637,7 +637,7 @@ static void runFinalizers(void)
 PRIVATE void init_gc(void)
 {
 	//GC_no_dls = 1;
-	GC_enable_incremental();
+	//GC_enable_incremental();
 	GC_INIT();
 	char *envValue;
 	// Dump GC stats on exit - uncomment when debugging.
