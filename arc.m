@@ -14,7 +14,8 @@
 pthread_key_t ReturnRetained;
 #endif
 
-extern struct objc_class _NSConcreteStackBlock;
+extern void _NSConcreteStackBlock;
+extern void _NSConcreteGlobalBlock;
 
 @interface NSAutoreleasePool
 + (Class)class;
@@ -247,20 +248,26 @@ PRIVATE void init_arc(void)
 #endif
 }
 
+void* block_load_weak(void *block);
+
 id objc_storeWeak(id *addr, id obj)
 {
+	fprintf(stderr, "Storing weak value %p\n", obj);
 	id old = *addr;
 	LOCK_FOR_SCOPE(&weakRefLock);
-	WeakRef *oldRef = weak_ref_table_get(weakRefs, old);
-	while (NULL != oldRef)
+	if (nil != old)
 	{
-		for (int i=0 ; i<4 ; i++)
+		WeakRef *oldRef = weak_ref_table_get(weakRefs, old);
+		while (NULL != oldRef)
 		{
-			if (oldRef->ref[i] == addr)
+			for (int i=0 ; i<4 ; i++)
 			{
-				oldRef->ref[i] = 0;
-				oldRef = 0;
-				break;
+				if (oldRef->ref[i] == addr)
+				{
+					oldRef->ref[i] = 0;
+					oldRef = 0;
+					break;
+				}
 			}
 		}
 	}
@@ -269,7 +276,23 @@ id objc_storeWeak(id *addr, id obj)
 		*addr = obj;
 		return nil;
 	}
-	obj = _objc_weak_load(obj);
+	if (&_NSConcreteGlobalBlock == obj->isa)
+	{
+		// If this is a global block, it's never deallocated, so secretly make
+		// this a strong reference
+		// TODO: We probably also want to do the same for constant strings and
+		// classes.
+		*addr = obj;
+		return obj;
+	}
+	if (&_NSConcreteStackBlock == obj->isa)
+	{
+		block_load_weak(obj);
+	}
+	else
+	{
+		obj = _objc_weak_load(obj);
+	}
 	if (nil != obj)
 	{
 		WeakRef *ref = weak_ref_table_get(weakRefs, obj);
@@ -301,6 +324,7 @@ id objc_storeWeak(id *addr, id obj)
 			weak_ref_insert(weakRefs, newRef);
 		}
 	}
+	*addr = obj;
 	return obj;
 }
 

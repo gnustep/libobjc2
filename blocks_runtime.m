@@ -27,6 +27,7 @@
 #import "objc/runtime.h"
 #import "objc/objc-arc.h"
 #include "gc_ops.h"
+#include "visibility.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -496,7 +497,14 @@ void _Block_release(void *src)
 		{
 			if(self->flags & BLOCK_HAS_COPY_DISPOSE)
 				self->descriptor->dispose_helper(self);
+			objc_delete_weak_refs((id)self);
 			gc->free(self);
 		}
 	}
+}
+
+PRIVATE void* block_load_weak(void *block)
+{
+	struct block_literal *self = block;
+	return (self->reserved) > 0 ? block : 0;
 }
