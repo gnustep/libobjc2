@@ -91,6 +91,13 @@ void objc_autoreleasePoolPop(void *pool)
 	// TODO: Keep a small pool of autorelease pools per thread and allocate
 	// from there.
 	DeleteAutoreleasePool(pool, SELECTOR(release));
+#ifndef NO_PTHREADS
+	// Ensure that autoreleased return values are destroyed at the correct
+	// moment.
+	id tmp = pthread_getspecific(ReturnRetained);
+	objc_release(tmp);
+	pthread_setspecific(ReturnRetained, NULL);
+#endif
 }
 
 id objc_autorelease(id obj)
