@@ -26,7 +26,7 @@ static void set_buffered_object_at_index(BUFFER_TYPE *cat, unsigned int i)
 				calloc(BUFFER_SIZE, sizeof(BUFFER_TYPE*));
 			buffered_object_overflow_space = BUFFER_SIZE;
 		}
-		while (i > buffered_object_overflow_space)
+		while (i >= buffered_object_overflow_space)
 		{
 			buffered_object_overflow_space <<= 1;
 			buffered_object_overflow = realloc(buffered_object_overflow,
