@@ -22,6 +22,8 @@ Both ABIs support the following feature above and beyond the GCC runtime:
 - Type-dependent dispatch, eliminating stack corruption from mismatched
   selectors.
 - Support for the associated reference APIs introduced with Mac OS X 10.6.
+- Support for the automatic reference counting APIs introduced with Mac OS X
+  10.7
 
 History
 -------
@@ -427,3 +429,21 @@ Several environment variables can be used for debugging programs
   finalisation, the runtime will check that this value has not been modified,
   and abort if it has.  This can help to catch heap buffer overflows.  It is
   most useful when debugging.
+
+Automatic Reference Counting
+----------------------------
+
+As of version 1.5, the runtime provides support for automatic reference
+counting (ARC).  This uses the same runtime interface as documented by the ABI
+supplement here:
+
+http://clang.llvm.org/docs/AutomaticReferenceCounting.html#runtime
+
+The runtime implements the following optimisations:
+
+- Classes that have ARC-compliant retain, release, and autorelease methods will
+  never see them called from ARC code.  Instead, equivalent code will be run
+  directly.
+- If an object is autoreleased, returned, and retained, it is just stored in
+  thread-local storage temporarily, not actually autoreleased.
+- Moving weak references skips the retain / release step.
