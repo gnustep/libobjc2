@@ -25,6 +25,7 @@
  */
 #import "objc/blocks_runtime.h"
 #import "objc/runtime.h"
+#import "objc/objc-arc.h"
 #include "gc_ops.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -33,12 +34,6 @@
 #include <assert.h>
 
 #define fprintf(...)
-
-/* Makes the compiler happy even without Foundation */
-@interface Dummy
-- (id)retain;
-- (void)release;
-@end
 
 static void *_HeapBlockByRef = (void*)1;
 
@@ -370,7 +365,7 @@ void _Block_object_assign(void *destAddr, const void *object, const int flags)
 			*dst = src;
 			if (!isGCEnabled)
 			{
-				*dst = [src retain];
+				*dst = objc_retain(src);
 			}
 		}
 	}
@@ -449,7 +444,7 @@ void _Block_object_dispose(const void *object, const int flags)
 			if (!isGCEnabled)
 			{
 				fprintf(stderr, "Sending release message to %p\n", src);
-				[src release];
+				objc_release(src);
 			}
 		}
 	}

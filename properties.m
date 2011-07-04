@@ -1,4 +1,5 @@
 #include "objc/runtime.h"
+#include "objc/objc-arc.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -30,15 +31,16 @@ id objc_getProperty(id obj, SEL _cmd, ptrdiff_t offset, BOOL isAtomic)
 		volatile int *lock = lock_for_pointer(addr);
 		lock_spinlock(lock);
 		ret = *(id*)addr;
-		ret = [ret retain];
+		ret = objc_retain(ret);
 		unlock_spinlock(lock);
+		ret = objc_autoreleaseReturnValue(ret);
 	}
 	else
 	{
 		ret = *(id*)addr;
-		ret = [ret retain];
+		ret = objc_retainAutoreleaseReturnValue(ret);
 	}
-	return [ret autorelease];
+	return ret;
 }
 
 void objc_setProperty(id obj, SEL _cmd, ptrdiff_t offset, id arg, BOOL isAtomic, BOOL isCopy)
@@ -62,7 +64,7 @@ void objc_setProperty(id obj, SEL _cmd, ptrdiff_t offset, id arg, BOOL isAtomic,
 	}
 	else
 	{
-		arg = [arg retain];
+		arg = objc_retain(arg);
 	}
 	id old;
 	if (isAtomic)
@@ -78,7 +80,7 @@ void objc_setProperty(id obj, SEL _cmd, ptrdiff_t offset, id arg, BOOL isAtomic,
 		old = *(id*)addr;
 		*(id*)addr = arg;
 	}
-	[old release];
+	objc_release(old);
 }
 
 /**

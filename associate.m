@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "objc/runtime.h"
+#include "objc/objc-arc.h"
 #include "nsobject.h"
 #include "spinlock.h"
 #include "class.h"
@@ -101,7 +102,7 @@ static void cleanupReferenceList(struct reference_list *list)
 				// Full barrier - ensure that we've zero'd the key before doing
 				// this!
 				__sync_synchronize();
-				[(id)r->object release];
+				objc_release(r->object);
 			}
 			r->object = 0;
 			r->policy = 0;
@@ -131,7 +132,7 @@ static void setReference(struct reference_list *list,
 			break;
 		case OBJC_ASSOCIATION_RETAIN_NONATOMIC:
 		case OBJC_ASSOCIATION_RETAIN:
-			obj = [(id)obj retain];
+			obj = objc_retain(obj);
 		case OBJC_ASSOCIATION_ASSIGN:
 			break;
 	}
@@ -169,7 +170,7 @@ static void setReference(struct reference_list *list,
 	r->object = obj;
 	if (OBJC_ASSOCIATION_ASSIGN != r->policy)
 	{
-		[old release];
+		objc_release(old);
 	}
 	if (needLock)
 	{
