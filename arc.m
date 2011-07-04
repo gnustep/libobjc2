@@ -341,9 +341,24 @@ void objc_copyWeak(id *dest, id *src)
 
 void objc_moveWeak(id *dest, id *src)
 {
-	// FIXME: src can be zero'd here, removing the relationship between the
-	// object and the pointer, which can be cheaper.
-	objc_moveWeak(dest, src);
+	// Don't retain or release.  While the weak ref lock is held, we know that
+	// the object can't be deallocated, so we just move the value and update
+	// the weak reference table entry to indicate the new address.
+	LOCK_FOR_SCOPE(&weakRefLock);
+	*dest = *src;
+	*src = nil;
+	WeakRef *oldRef = weak_ref_table_get(weakRefs, *dest);
+	while (NULL != oldRef)
+	{
+		for (int i=0 ; i<4 ; i++)
+		{
+			if (oldRef->ref[i] == src)
+			{
+				oldRef->ref[i] = dest;
+				return;
+			}
+		}
+	}
 }
 
 void objc_destroyWeak(id* obj)
