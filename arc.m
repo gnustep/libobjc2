@@ -35,7 +35,6 @@ static inline id retain(id obj)
 {
 	if ((Class)&_NSConcreteStackBlock == obj->isa)
 	{
-		fprintf(stderr, "Retaining block\n");
 		return Block_copy(obj);
 	}
 	if (objc_test_class_flag(obj->isa, objc_class_flag_fast_arc))
