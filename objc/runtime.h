@@ -9,6 +9,10 @@ extern "C" {
 #	define __GNUSTEP_RUNTIME__
 #endif
 
+#ifndef __has_feature
+#	define __has_feature(x) 0
+#endif
+
 #ifndef __unsafe_unretained
 #	ifndef __has_feature
 #		define __unsafe_unretained
