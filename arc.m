@@ -287,7 +287,14 @@ id objc_storeWeak(id *addr, id obj)
 	}
 	if (&_NSConcreteStackBlock == obj->isa)
 	{
-		block_load_weak(obj);
+		obj = block_load_weak(obj);
+	}
+	else if (objc_test_class_flag(obj->isa, objc_class_flag_fast_arc))
+	{
+		if ((*(((intptr_t*)obj) - 1)) <= 0)
+		{
+			return nil;
+		}
 	}
 	else
 	{
@@ -361,10 +368,26 @@ void objc_delete_weak_refs(id obj)
 	}
 }
 
-id objc_loadWeakRetained(id* obj)
+id objc_loadWeakRetained(id* addr)
 {
 	LOCK_FOR_SCOPE(&weakRefLock);
-	return objc_retain(*obj);
+	id obj = *addr;
+	if (&_NSConcreteStackBlock == obj->isa)
+	{
+		obj = block_load_weak(obj);
+	}
+	else if (objc_test_class_flag(obj->isa, objc_class_flag_fast_arc))
+	{
+		if ((*(((intptr_t*)obj) - 1)) <= 0)
+		{
+			return nil;
+		}
+	}
+	else
+	{
+		obj = _objc_weak_load(obj);
+	}
+	return objc_retain(obj);
 }
 
 id objc_loadWeak(id* object)
