@@ -372,6 +372,7 @@ id objc_loadWeakRetained(id* addr)
 {
 	LOCK_FOR_SCOPE(&weakRefLock);
 	id obj = *addr;
+	if (nil == obj) { return nil; }
 	if (&_NSConcreteStackBlock == obj->isa)
 	{
 		obj = block_load_weak(obj);
