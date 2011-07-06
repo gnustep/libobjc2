@@ -301,8 +301,8 @@ id objc_retainAutoreleasedReturnValue(id obj)
 		if (obj == tls->returnRetained)
 		{
 			tls->returnRetained = NULL;
+			return obj;
 		}
-		return obj;
 	}
 	return objc_retain(obj);
 }
