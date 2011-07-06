@@ -1,3 +1,5 @@
+#include <stdlib.h>
+#include <assert.h>
 #import "stdio.h"
 #import "objc/runtime.h"
 #import "objc/blocks_runtime.h"
@@ -11,7 +13,7 @@
 
 #ifndef NO_PTHREADS
 #include <pthread.h>
-pthread_key_t ReturnRetained;
+pthread_key_t ARCThreadKey;
 #endif
 
 extern void _NSConcreteStackBlock;
@@ -23,6 +25,117 @@ extern void _NSConcreteGlobalBlock;
 - (void)release;
 @end
 
+#define POOL_SIZE (4096 / sizeof(void*) - (2 * sizeof(void*)))
+/**
+ * Structure used for ARC-managed autorelease pools.  This structure should be
+ * exactly one page in size, so that it can be quickly allocated.  This does
+ * not correspond directly to an autorelease pool.  The 'pool' returned by
+ * objc_autoreleasePoolPush() may be an interior pointer to one of these
+ * structures.
+ */
+struct arc_autorelease_pool
+{
+	/**
+	 * Pointer to the previous autorelease pool structure in the chain.  Set
+	 * when pushing a new structure on the stack, popped during cleanup.
+	 */
+	struct arc_autorelease_pool *previous;
+	/**
+	 * The current insert point.
+	 */
+	id *insert;
+	/**
+	 * The remainder of the page, an array of object pointers.  
+	 */
+	id pool[POOL_SIZE];
+};
+
+struct arc_tls
+{
+	struct arc_autorelease_pool *pool;
+	id returnRetained;
+};
+
+static inline struct arc_tls* getARCThreadData(void)
+{
+#ifdef NO_PTHREADS
+	return NULL;
+#else
+	struct arc_tls *tls = pthread_getspecific(ARCThreadKey);
+	if (NULL == tls)
+	{
+		tls = calloc(sizeof(struct arc_tls), 1);
+		pthread_setspecific(ARCThreadKey, tls);
+	}
+	return tls;
+#endif
+}
+
+static inline void release(id obj);
+
+/**
+ * Empties objects from the autorelease pool, stating at the head of the list
+ * specified by pool and continuing until it reaches the stop point.  If the stop point is NULL then 
+ */
+static struct arc_autorelease_pool*
+emptyPool(struct arc_autorelease_pool *pool, id *stop)
+{
+	struct arc_autorelease_pool *stopPool = NULL;
+	if (NULL != stop)
+	{
+		stopPool = pool;
+		do
+		{
+			// Invalid stop location
+			if (NULL == stopPool)
+			{
+				return pool;
+			}
+			// Stop location was found in this pool
+			if ((stop > pool->pool) && (stop < &pool->pool[POOL_SIZE]))
+			{
+				break;
+			}
+			stopPool = stopPool->previous;
+		} while (1);
+	}
+	while (pool != stopPool)
+	{
+		while (pool->insert > pool->pool)
+		{
+			pool->insert--;
+			release(*pool->insert);
+		}
+		void *old = pool;
+		pool = pool->previous;
+		free(old);
+	}
+	if (NULL != pool)
+	{
+		while ((pool->insert > stop) && (pool->insert > pool->pool))
+		{
+			pool->insert--;
+			release(*pool->insert);
+		}
+	}
+	return pool;
+}
+
+static void cleanupPools(struct arc_tls* tls)
+{
+	struct arc_autorelease_pool *pool = tls->pool;
+	while(NULL != pool)
+	{
+		assert(NULL == emptyPool(pool, NULL));
+	}
+	if (tls->returnRetained)
+	{
+		release(tls->returnRetained);
+	}
+	free(tls);
+}
+
+
 static Class AutoreleasePool;
 static IMP NewAutoreleasePool;
 static IMP DeleteAutoreleasePool;
@@ -31,6 +144,8 @@ static IMP AutoreleaseAdd;
 extern BOOL FastARCRetain;
 extern BOOL FastARCRelease;
 extern BOOL FastARCAutorelease;
+
+static BOOL useARCAutoreleasePool;
 
 static inline id retain(id obj)
 {
@@ -64,6 +179,25 @@ static inline void release(id obj)
 
 static inline id autorelease(id obj)
 {
+	//fprintf(stderr, "Autoreleasing %p\n", obj);
+	if (useARCAutoreleasePool)
+	{
+		struct arc_tls *tls = getARCThreadData();
+		if (NULL != tls)
+		{
+			struct arc_autorelease_pool *pool = tls->pool;
+			if (NULL == pool || (pool->insert >= &pool->pool[POOL_SIZE]))
+			{
+				pool = calloc(sizeof(struct arc_autorelease_pool), 1);
+				pool->previous = tls->pool;
+				pool->insert = pool->pool;
+				tls->pool = pool;
+			}
+			*pool->insert = obj;
+			pool->insert++;
+			return obj;
+		}
+	}
 	if (objc_test_class_flag(obj->isa, objc_class_flag_fast_arc))
 	{
 		AutoreleaseAdd(AutoreleasePool, SELECTOR(addObject:), obj);
@@ -75,36 +209,59 @@ static inline id autorelease(id obj)
 
 void *objc_autoreleasePoolPush(void)
 {
-	// TODO: This should be more lightweight.  We really just need to allocate
-	// an array here...
 	if (Nil == AutoreleasePool)
 	{
 		AutoreleasePool = objc_getRequiredClass("NSAutoreleasePool");
-		[AutoreleasePool class];
-		NewAutoreleasePool = class_getMethodImplementation(
-				object_getClass(AutoreleasePool),
-				SELECTOR(new));
-		DeleteAutoreleasePool = class_getMethodImplementation(
-				AutoreleasePool,
-				SELECTOR(release));
-		AutoreleaseAdd = class_getMethodImplementation(
-				object_getClass(AutoreleasePool),
-				SELECTOR(addObject:));
+		if (Nil == AutoreleasePool)
+		{
+			useARCAutoreleasePool = YES;
+		}
+		else
+		{
+			[AutoreleasePool class];
+			useARCAutoreleasePool = class_respondsToSelector(AutoreleasePool,
+			                                                 SELECTOR(_ARCCompatibleAutoreleasePool));
+			NewAutoreleasePool = class_getMethodImplementation(object_getClass(AutoreleasePool),
+			                                                   SELECTOR(new));
+			DeleteAutoreleasePool = class_getMethodImplementation(AutoreleasePool,
+			                                                      SELECTOR(release));
+			AutoreleaseAdd = class_getMethodImplementation(object_getClass(AutoreleasePool),
+			                                               SELECTOR(addObject:));
+		}
+	}
+	if (useARCAutoreleasePool)
+	{
+		struct arc_tls* tls = getARCThreadData();
+		if (NULL != tls)
+		{
+			// If there is no autorelease pool allocated for this thread, then
+			// we lazily allocate one the first time something is autoreleased.
+			return (NULL != tls->pool) ? tls->pool->insert : NULL;
+		}
 	}
 	return NewAutoreleasePool(AutoreleasePool, SELECTOR(new));
 }
 void objc_autoreleasePoolPop(void *pool)
 {
+	if (useARCAutoreleasePool)
+	{
+		struct arc_tls* tls = getARCThreadData();
+		if (NULL != tls)
+		{
+			if (NULL == tls->pool) { return; }
+			tls->pool = emptyPool(tls->pool, pool);
+			return;
+		}
+	}
 	// TODO: Keep a small pool of autorelease pools per thread and allocate
 	// from there.
 	DeleteAutoreleasePool(pool, SELECTOR(release));
-#ifndef NO_PTHREADS
-	// Ensure that autoreleased return values are destroyed at the correct
-	// moment.
-	id tmp = pthread_getspecific(ReturnRetained);
-	objc_release(tmp);
-	pthread_setspecific(ReturnRetained, NULL);
-#endif
+	struct arc_tls* tls = getARCThreadData();
+	if (tls && tls->returnRetained)
+	{
+		release(tls->returnRetained);
+		tls->returnRetained = nil;
+	}
 }
 
 id objc_autorelease(id obj)
@@ -118,23 +275,18 @@ id objc_autorelease(id obj)
 
 id objc_autoreleaseReturnValue(id obj)
 {
-#ifdef NO_PTHREADS
-	return [obj autorelease];
-#else
-	id old = pthread_getspecific(ReturnRetained);
-	objc_autorelease(old);
-	pthread_setspecific(ReturnRetained, obj);
-	return old;
-#endif
+	struct arc_tls* tls = getARCThreadData();
+	if (NULL != tls)
+	{
+		objc_autorelease(tls->returnRetained);
+		tls->returnRetained = obj;
+		return obj;
+	}
+	return objc_autorelease(obj);
 }
 
 id objc_retainAutoreleasedReturnValue(id obj)
 {
-#ifdef NO_PTHREADS
-	return objc_retain(obj);
-#else
-	id old = pthread_getspecific(ReturnRetained);
-	pthread_setspecific(ReturnRetained, NULL);
 	// If the previous object was released  with objc_autoreleaseReturnValue()
 	// just before return, then it will not have actually been autoreleased.
 	// Instead, it will have been stored in TLS.  We just remove it from TLS
@@ -143,13 +295,16 @@ id objc_retainAutoreleasedReturnValue(id obj)
 	// If the object was not returned with objc_autoreleaseReturnValue() then
 	// we actually autorelease the fake object. and then retain the argument.
 	// In tis case, this is equivalent to objc_retain().
-	if (obj != old)
+	struct arc_tls* tls = getARCThreadData();
+	if (NULL != tls)
 	{
-		objc_autorelease(old);
-		objc_retain(obj);
+		if (obj == tls->returnRetained)
+		{
+			tls->returnRetained = NULL;
+		}
+		return obj;
 	}
-	return obj;
-#endif
+	return objc_retain(obj);
 }
 
 id objc_retain(id obj)
@@ -244,7 +399,7 @@ PRIVATE void init_arc(void)
 	weak_ref_initialize(&weakRefs, 128);
 	INIT_LOCK(weakRefLock);
 #ifndef NO_PTHREADS
-	pthread_key_create(&ReturnRetained, (void(*)(void*))objc_release);
+	pthread_key_create(&ARCThreadKey, (void(*)(void*))cleanupPools);
 #endif
 }
 
@@ -252,7 +407,6 @@ void* block_load_weak(void *block);
 
 id objc_storeWeak(id *addr, id obj)
 {
-	fprintf(stderr, "Storing weak value %p\n", obj);
 	id old = *addr;
 	LOCK_FOR_SCOPE(&weakRefLock);
 	if (nil != old)
