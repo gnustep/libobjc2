@@ -447,3 +447,18 @@ The runtime implements the following optimisations:
 - If an object is autoreleased, returned, and retained, it is just stored in
   thread-local storage temporarily, not actually autoreleased.
 - Moving weak references skips the retain / release step.
+
+ARC requires the ability to interoperate perfectly with manual retain / release
+code, including the ability for non-ARC code to implement custom reference
+counting behaviour.  If an object implements -_ARCCompliantRetainRelease, then
+it is advertising that its retain, release, and autorelease implementations are
+ARC-compatible.  These methods may be called explicitly in non-ARC code, but
+will not be called from ARC.
+
+ARC moves autorelease pools into the runtime.  If NSAutoreleasePool exists and
+does not implement a -_ARCCompatibleAutoreleasePool method, then it will be
+used directly.  If it does not exist, ARC will implement its own autorelease
+pools.  If it exists and does implement -_ARCCompatibleAutoreleasePool then it
+must call objc_autoreleasePoolPush() and objc_autoreleasePoolPop() to manage
+autoreleased object storage and call objc_autorelease() in its -addObject:
+method.
