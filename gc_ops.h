@@ -48,7 +48,13 @@ enum objc_gc_mode
 	/**
 	 * This module expects garbage collection and will break without it.
 	 */
-	GC_Required = 2
+	GC_Required = 2,
+	/**
+	 * This module was compiled with automatic reference counting.  This
+	 * guarantees the use of the non-fragile ABI and means that we could
+	 * potentially support GC, although we don't currently.
+	 */
+	GC_ARC = 3
 };
 
 /**
