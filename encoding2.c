@@ -505,9 +505,10 @@ void objc_layout_structure_get_info (struct objc_struct_layout *layout,
 {
 	//printf("%p\n", layout);
 	*type = layout->type;
-	*offset = layout->record_size / 8;
+	size_t off = layout->record_size / 8;
 	*align= layout->record_align / 8;
-	round_up((size_t*)offset, (size_t)*align);
+	round_up(&off, (size_t)*align);
+	*offset = (unsigned int)off;
 }
 
 #ifdef ENCODING_TESTS
