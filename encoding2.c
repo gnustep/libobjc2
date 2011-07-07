@@ -191,7 +191,7 @@ static const char *sizeof_type(const char *type, size_t *size)
 		case '[':
 		{
 			const char *t = type;
-			int element_size = 0;
+			size_t element_size = 0;
 			// FIXME: aligned size
 			int element_count = parse_array(&t, (type_parser)sizeof_type, &element_size);
 			(*size) += element_size * element_count;
