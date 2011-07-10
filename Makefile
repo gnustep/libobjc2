@@ -3,7 +3,7 @@
 .SUFFIXES: .cc .c .m .o
 
 MAJOR_VERSION = 1
-MINOR_VERSION = 4
+MINOR_VERSION = 5
 SUBMINOR_VERSION = 0
 VERSION = $(MAJOR_VERSION).$(MINOR_VERSION).$(SUBMINOR_VERSION)
 
@@ -27,6 +27,7 @@ OBJECTS = \
 	Protocol2.o\
 	abi_version.o\
 	alias_table.o\
+	arc.o\
 	associate.o\
 	blocks_runtime.o\
 	caps.o\
