@@ -177,6 +177,30 @@ static inline void release(id obj)
 	[obj release];
 }
 
+static inline void initAutorelease(void)
+{
+	if (Nil == AutoreleasePool)
+	{
+		AutoreleasePool = objc_getRequiredClass("NSAutoreleasePool");
+		if (Nil == AutoreleasePool)
+		{
+			useARCAutoreleasePool = YES;
+		}
+		else
+		{
+			[AutoreleasePool class];
+			useARCAutoreleasePool = class_respondsToSelector(AutoreleasePool,
+			                                                 SELECTOR(_ARCCompatibleAutoreleasePool));
+			NewAutoreleasePool = class_getMethodImplementation(object_getClass(AutoreleasePool),
+			                                                   SELECTOR(new));
+			DeleteAutoreleasePool = class_getMethodImplementation(AutoreleasePool,
+			                                                      SELECTOR(release));
+			AutoreleaseAdd = class_getMethodImplementation(object_getClass(AutoreleasePool),
+			                                               SELECTOR(addObject:));
+		}
+	}
+}
+
 static inline id autorelease(id obj)
 {
 	//fprintf(stderr, "Autoreleasing %p\n", obj);
@@ -200,7 +224,11 @@ static inline id autorelease(id obj)
 	}
 	if (objc_test_class_flag(obj->isa, objc_class_flag_fast_arc))
 	{
-		AutoreleaseAdd(AutoreleasePool, SELECTOR(addObject:), obj);
+		initAutorelease();
+		if (0 != AutoreleaseAdd)
+		{
+			AutoreleaseAdd(AutoreleasePool, SELECTOR(addObject:), obj);
+		}
 		return obj;
 	}
 	return [obj autorelease];
@@ -209,26 +237,6 @@ static inline id autorelease(id obj)
 
 void *objc_autoreleasePoolPush(void)
 {
-	if (Nil == AutoreleasePool)
-	{
-		AutoreleasePool = objc_getRequiredClass("NSAutoreleasePool");
-		if (Nil == AutoreleasePool)
-		{
-			useARCAutoreleasePool = YES;
-		}
-		else
-		{
-			[AutoreleasePool class];
-			useARCAutoreleasePool = class_respondsToSelector(AutoreleasePool,
-			                                                 SELECTOR(_ARCCompatibleAutoreleasePool));
-			NewAutoreleasePool = class_getMethodImplementation(object_getClass(AutoreleasePool),
-			                                                   SELECTOR(new));
-			DeleteAutoreleasePool = class_getMethodImplementation(AutoreleasePool,
-			                                                      SELECTOR(release));
-			AutoreleaseAdd = class_getMethodImplementation(object_getClass(AutoreleasePool),
-			                                               SELECTOR(addObject:));
-		}
-	}
 	if (useARCAutoreleasePool)
 	{
 		struct arc_tls* tls = getARCThreadData();
@@ -239,6 +247,8 @@ void *objc_autoreleasePoolPush(void)
 			return (NULL != tls->pool) ? tls->pool->insert : NULL;
 		}
 	}
+	initAutorelease();
+	if (0 == NewAutoreleasePool) { return NULL; }
 	return NewAutoreleasePool(AutoreleasePool, SELECTOR(new));
 }
 void objc_autoreleasePoolPop(void *pool)
@@ -253,8 +263,6 @@ void objc_autoreleasePoolPop(void *pool)
 			return;
 		}
 	}
-	// TODO: Keep a small pool of autorelease pools per thread and allocate
-	// from there.
 	DeleteAutoreleasePool(pool, SELECTOR(release));
 	struct arc_tls* tls = getARCThreadData();
 	if (tls && tls->returnRetained)
