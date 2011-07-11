@@ -83,7 +83,7 @@ static Method class_getInstanceMethodNonrecursive(Class aClass, SEL aSelector)
 		for (int i=0 ; i<methods->count ; i++)
 		{
 			Method method = &methods->methods[i];
-			if (method->selector->name == aSelector->name)
+			if (method->selector->index == aSelector->index)
 			{
 				return method;
 			}
@@ -349,15 +349,25 @@ Method class_getInstanceMethod(Class aClass, SEL aSelector)
 {
 	CHECK_ARG(aClass);
 	CHECK_ARG(aSelector);
-	// Do a dtable lookup to find out which class the method comes from.
-	struct objc_slot *slot = objc_get_slot(aClass, aSelector);
-	if (NULL == slot) { return NULL; }
+	// If the class has a dtable installed, then we can use the fast path
+	if (classHasInstalledDtable(aClass))
+	{
+		// Do a dtable lookup to find out which class the method comes from.
+		struct objc_slot *slot = objc_get_slot(aClass->isa, aSelector);
+		if (NULL == slot) { return NULL; }
 
-	// Now find the typed variant of the selector, with the correct types.
-	aSelector = slot->selector;
-	
-	// Then do the slow lookup to find the method.
-	return class_getInstanceMethodNonrecursive(slot->owner, aSelector);
+		// Now find the typed variant of the selector, with the correct types.
+		aSelector = slot->selector;
+		
+		// Then do the slow lookup to find the method.
+		return class_getInstanceMethodNonrecursive(slot->owner, aSelector);
+	}
+	Method m = class_getInstanceMethodNonrecursive(aClass, aSelector);
+	if (NULL != m)
+	{
+		return m;
+	}
+	return class_getInstanceMethod(class_getSuperclass(aClass), aSelector);
 }
 
 Method class_getClassMethod(Class aClass, SEL aSelector)
