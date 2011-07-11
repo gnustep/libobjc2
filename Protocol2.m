@@ -19,6 +19,7 @@
 + (Class)class { return self; }
 - (id)self { return self; }
 @end
+@implementation Protocol2 @end
 
 /**
  * This class exists for the sole reason that the legacy GNU ABI did not
