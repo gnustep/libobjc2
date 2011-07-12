@@ -37,7 +37,7 @@ struct objc_symbol_table_abi_8
 	 * Current compilers only use this for constant strings.  The runtime
 	 * permits other types.
 	 */
-	void           *definitions[1];
+	void           *definitions[];
 };
 
 /**
@@ -98,5 +98,5 @@ struct objc_static_instance_list
 	/**
 	 * NULL-terminated array of statically-allocated instances.
 	 */
-	id    instances[1];
+	id    instances[];
 };

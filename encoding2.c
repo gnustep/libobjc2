@@ -130,7 +130,7 @@ static void parse_struct(const char **type, type_parser callback, void *context)
 
 inline static void round_up(size_t *v, size_t b)
 {
-        if (0 == b)
+	if (0 == b)
 	{
 		return;
 	}

@@ -95,6 +95,6 @@ struct objc_property_list
 	/**
 	 * List of properties.
 	 */
-	struct objc_property properties[1];
+	struct objc_property properties[];
 };
 

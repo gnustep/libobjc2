@@ -61,7 +61,7 @@ struct objc_slot* objc_get_slot(Class cls, SEL selector);
 #ifndef __has_builtin
 #	define __has_builtin(x) 0
 #endif
-#if __has_builtin(__sync_swap)
+#if !__has_builtin(__sync_swap)
 #define __sync_swap __sync_lock_test_and_set
 #endif
 

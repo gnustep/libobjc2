@@ -1,5 +1,22 @@
 #ifndef __OBJC_CLASS_H_INCLUDED
 #define __OBJC_CLASS_H_INCLUDED
+
+/**
+ * Overflow bitfield.  Used for bitfields that are more than 63 bits.
+ */
+struct objc_bitfield
+{
+	/**
+	 * The number of elements in the values array.
+	 */
+	int32_t  length;
+	/**
+	 * An array of values.  Each 32 bits is stored in the native endian for the
+	 * platform.
+	 */
+	int32_t values[0];
+};
+
 struct objc_class
 {
 	/**
@@ -83,7 +100,9 @@ struct objc_class
 	*/
 
 	/**
-	* The version of the ABI used for this class.  This is currently always zero.  
+	* The version of the ABI used for this class.  Zero indicates the ABI first
+	* implemented by clang 1.0.  One indicates the presence of bitmaps
+	* indicating the offsets of strong, weak, and unretained ivars.
 	*/
 	long                       abi_version;
 
@@ -108,6 +127,26 @@ struct objc_class
 	* the accessor methods for each property.
 	*/
 	struct objc_property_list *properties;
+
+	/**
+	 * GC / ARC ABI: Fields below this point only exist if abi_version is >= 1.
+	 */
+
+	/**
+	 * The location of all strong pointer ivars declared by this class.  
+	 *
+	 * If the low bit of this field is 0, then this is a pointer to an
+	 * objc_bitfield structure.  If the low bit is 1, then the remaining 63
+	 * bits are set, from low to high, for each ivar in the object that is a
+	 * strong pointer.
+	 */
+	int64_t                    strong_pointers;
+	/**
+	 * The location of all zeroing weak pointer ivars declared by this class.
+	 * The format of this field is the same as the format of the
+	 * strong_pointers field.
+	 */
+	int64_t                    weak_pointers;
 };
 
 /**

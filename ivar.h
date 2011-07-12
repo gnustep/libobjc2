@@ -41,7 +41,7 @@ struct objc_ivar_list
 	int              count;
 	/**
 	 * An array of instance variable metadata structures.  Note that this array
-	 * has count elements, not 1.
+	 * has count elements.
 	 */
-	struct objc_ivar ivar_list[1];
+	struct objc_ivar ivar_list[];
 };

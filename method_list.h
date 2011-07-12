@@ -37,7 +37,7 @@ struct objc_method_list
 	 */
 	int                       count;
 	/**
-	 * An array of methods.  Note that the actual size of this is count, not 1.
+	 * An array of methods.  Note that the actual size of this is count.
 	 */
-	struct objc_method        methods[1];
+	struct objc_method        methods[];
 };
