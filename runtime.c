@@ -83,7 +83,7 @@ static Method class_getInstanceMethodNonrecursive(Class aClass, SEL aSelector)
 		for (int i=0 ; i<methods->count ; i++)
 		{
 			Method method = &methods->methods[i];
-			if (method->selector->index == aSelector->index)
+			if (sel_isEqual(method->selector, aSelector))
 			{
 				return method;
 			}
@@ -129,7 +129,7 @@ BOOL class_addIvar(Class cls, const char *name, size_t size, uint8_t alignment,
 
 	if (NULL == ivarlist)
 	{
-		cls->ivars = malloc(sizeof(struct objc_ivar_list));
+		cls->ivars = malloc(sizeof(struct objc_ivar_list) + sizeof(struct objc_ivar));
 		cls->ivars->count = 1;
 	}
 	else
@@ -137,7 +137,7 @@ BOOL class_addIvar(Class cls, const char *name, size_t size, uint8_t alignment,
 		ivarlist->count++;
 		// objc_ivar_list contains one ivar.  Others follow it.
 		cls->ivars = realloc(ivarlist, sizeof(struct objc_ivar_list) +
-				(ivarlist->count - 1) * sizeof(struct objc_ivar));
+				(ivarlist->count) * sizeof(struct objc_ivar));
 	}
 	Ivar ivar = &cls->ivars->ivar_list[cls->ivars->count - 1];
 	ivar->name = strdup(name);
@@ -177,7 +177,7 @@ BOOL class_addMethod(Class cls, SEL name, IMP imp, const char *types)
 		}
 	}
 
-	methods = malloc(sizeof(struct objc_method_list));
+	methods = malloc(sizeof(struct objc_method_list) + sizeof(struct objc_method));
 	methods->next = cls->methods;
 	cls->methods = methods;
 
@@ -200,7 +200,7 @@ BOOL class_addProtocol(Class cls, Protocol *protocol)
 	CHECK_ARG(protocol);
 	if (class_conformsToProtocol(cls, protocol)) { return NO; }
 	struct objc_protocol_list *protocols = 
-		malloc(sizeof(struct objc_protocol_list));
+		malloc(sizeof(struct objc_protocol_list) + sizeof(Protocol2*));
 	if (protocols == NULL) { return NO; }
 	protocols->next = cls->protocols;
 	protocols->count = 1;
@@ -450,6 +450,7 @@ IMP class_replaceMethod(Class cls, SEL name, IMP imp, const char *types)
 	if (Nil == cls) { return (IMP)0; }
 	SEL sel = sel_registerTypedName_np(sel_getName(name), types);
 	Method method = class_getInstanceMethodNonrecursive(cls, sel);
+	//fprintf(stderr, "Found %p looking for [%s %s]\n", method, cls->name, sel_getName(sel));
 	if (method == NULL)
 	{
 		class_addMethod(cls, sel, imp, types);
@@ -472,7 +473,7 @@ void class_setIvarLayout(Class cls, const char *layout)
 	if ((Nil == cls) || (NULL == layout)) { return; }
 	struct objc_ivar_list *list = (struct objc_ivar_list*)layout;
 	size_t listsize = sizeof(struct objc_ivar_list) + 
-			sizeof(struct objc_ivar) * (list->count - 1);
+			sizeof(struct objc_ivar) * (list->count);
 	cls->ivars = malloc(listsize);
 	memcpy(cls->ivars, list, listsize);
 }
