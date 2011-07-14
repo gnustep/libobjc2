@@ -353,8 +353,15 @@ Method class_getInstanceMethod(Class aClass, SEL aSelector)
 	if (classHasInstalledDtable(aClass))
 	{
 		// Do a dtable lookup to find out which class the method comes from.
-		struct objc_slot *slot = objc_get_slot(aClass->isa, aSelector);
-		if (NULL == slot) { return NULL; }
+		struct objc_slot *slot = objc_get_slot(aClass, aSelector);
+		if (NULL == slot)
+		{
+			slot = objc_get_slot(aClass, sel_registerName(sel_getName(aSelector)));
+			if (NULL == slot)
+			{
+				return NULL;
+			}
+		}
 
 		// Now find the typed variant of the selector, with the correct types.
 		aSelector = slot->selector;
@@ -450,7 +457,6 @@ IMP class_replaceMethod(Class cls, SEL name, IMP imp, const char *types)
 	if (Nil == cls) { return (IMP)0; }
 	SEL sel = sel_registerTypedName_np(sel_getName(name), types);
 	Method method = class_getInstanceMethodNonrecursive(cls, sel);
-	//fprintf(stderr, "Found %p looking for [%s %s]\n", method, cls->name, sel_getName(sel));
 	if (method == NULL)
 	{
 		class_addMethod(cls, sel, imp, types);
