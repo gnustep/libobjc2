@@ -455,6 +455,7 @@ void _Block_object_dispose(const void *object, const int flags)
 // Copy a block to the heap if it's still on the stack or increments its retain count.
 void *_Block_copy(void *src)
 {
+	if (NULL == src) { return NULL; }
 	fprintf(stderr, "_Block_copy()\n");
 	struct block_literal *self = src;
 	struct block_literal *ret = self;
@@ -485,6 +486,7 @@ void *_Block_copy(void *src)
 // Release a block and frees the memory when the retain count hits zero.
 void _Block_release(void *src)
 {
+	if (NULL == src) { return; }
 	struct block_literal *self = src;
 	
 	extern void _NSConcreteStackBlock;
