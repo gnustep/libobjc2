@@ -453,7 +453,7 @@ id objc_storeWeak(id *addr, id obj)
 	}
 	else if (objc_test_class_flag(obj->isa, objc_class_flag_fast_arc))
 	{
-		if ((*(((intptr_t*)obj) - 1)) <= 0)
+		if ((*(((intptr_t*)obj) - 1)) < 0)
 		{
 			return nil;
 		}
@@ -541,7 +541,7 @@ id objc_loadWeakRetained(id* addr)
 	}
 	else if (objc_test_class_flag(obj->isa, objc_class_flag_fast_arc))
 	{
-		if ((*(((intptr_t*)obj) - 1)) <= 0)
+		if ((*(((intptr_t*)obj) - 1)) < 0)
 		{
 			return nil;
 		}
