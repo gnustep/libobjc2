@@ -320,7 +320,7 @@ void _Block_object_assign(void *destAddr, const void *object, const int flags)
 				// Refcount must be two; one for the copy and one for the
 				// on-stack version that will point to it.
 				(*dst)->flags += 2;
-				if ((size_t)src->size >= sizeof(struct block_byref_obj))
+				if (IS_SET(src->flags, BLOCK_HAS_COPY_DISPOSE))
 				{
 					src->byref_keep(*dst, src);
 				}
@@ -418,7 +418,7 @@ void _Block_object_dispose(const void *object, const int flags)
 				fprintf(stderr, "dispose: %p\n", src->byref_dispose);
 				fprintf(stderr, "Cleaning up %p\n" , *(id*)(src+1));
 				// Call nontrivial destructors, but don't
-				if (0 != src->byref_dispose)
+				if (IS_SET(src->flags, BLOCK_HAS_COPY_DISPOSE))
 				{
 					//fprintf(stderr, "Calling byref dispose\n");
 					src->byref_dispose(src);
