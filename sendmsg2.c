@@ -159,7 +159,21 @@ Slot_t objc_slot_lookup_super(struct objc_super *super, SEL selector)
 		if (0 == result)
 		{
 			// Dtable should always be installed in the superclass
-			ASSERT(dtable_for_class(class) != uninstalled_dtable);
+			// Unfortunately, some stupid code (PyObjC) decides to use this
+			// mechanism for everything 
+			if (dtable_for_class(class) == uninstalled_dtable)
+			{
+				if (class_isMetaClass(receiver->isa))
+				{
+					objc_send_initialize(receiver);
+				}
+				else
+				{
+					objc_send_initialize((id)receiver->isa);
+				}
+				objc_send_initialize((id)class);
+				return objc_slot_lookup_super(super, selector);
+			}
 			result = &nil_slot;
 		}
 		return result;
