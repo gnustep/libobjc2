@@ -85,6 +85,17 @@ extern "C" {
  * __weak references.
  */
 #define OBJC_CAP_ARC 11
+/**
+ * The runtime has support for garbage collection, as introduced by OS X 10.5.
+ * This includes implementations of a set of write barrier functions.
+ */
+#define OBJC_CAP_GARBAGE_COLLECTION 12
+/**
+ * The runtime has support for associated references, as introduced with OS X
+ * 10.6.  The objc_setAssociatedObject() and objc_getAssociatedObject()
+ * functions are available.
+ */
+#define OBJC_CAP_ASSOCIATED_REFERENCES 13
 
 /**
  * Macro used to require the existence of a specific capability.  This creates

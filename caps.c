@@ -15,6 +15,7 @@ static const int32_t caps =
 	(1<<OBJC_DEVELOPER_MODE) |
 	(1<<OBJC_CAP_REGISTERED_COMPATIBILITY_ALIASES) |
 	(1<<OBJC_CAP_ARC) |
+	(1<<OBJC_CAP_ASSOCIATED_REFERENCES) |
 #ifndef NO_OBJCXX
 	(1<<OBJC_UNIFIED_EXCEPTION_MODEL) |
 #endif
@@ -23,6 +24,9 @@ static const int32_t caps =
 #endif
 #ifdef __OBJC_LOW_MEMORY__
 	(1<<OBJC_CAP_LOW_MEMORY) |
+#endif
+#ifdef ENABLE_GC
+	(1<<OBJC_CAP_GARBAGE_COLLECTION) |
 #endif
 	0;
 
