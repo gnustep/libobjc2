@@ -86,7 +86,7 @@ ifeq ($(low_memory), yes)
 ${LIBOBJC}_CPPFLAGS += -D__OBJC_LOW_MEMORY__
 endif
 
-ifneq ($(boehm_gc), no)
+ifeq ($(boehm_gc), yes)
 ${LIBOBJC}_C_FILES += gc_boehm.c
 ifneq ($(findstring linux, $(GNUSTEP_TARGET_OS)), linux)
 ${LIBOBJC}_LIBRARIES_DEPEND_UPON += -lgc-threaded -lexecinfo
