@@ -32,11 +32,11 @@ release include:
 You may obtain the code for this release from subversion at the following
 subversion branch:
 
-svn://svn.gna.org/svn/gnustep/libs/libobjc2/1.4
+svn://svn.gna.org/svn/gnustep/libs/libobjc2/1.5
 
 Alternatively, a tarball is available from:
 
-http://download.gna.org/gnustep/libobjc2-1.4.tar.bz2
+http://download.gna.org/gnustep/libobjc2-1.5.tar.bz2
 
 The runtime library is responsible for implementing the core features of the
 object model, as well as exposing introspection features to the user.  The
