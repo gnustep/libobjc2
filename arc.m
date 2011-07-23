@@ -472,6 +472,7 @@ id objc_storeWeak(id *addr, id obj)
 				if (0 == ref->ref[i])
 				{
 					ref->ref[i] = addr;
+					*addr = obj;
 					return obj;
 				}
 			}
