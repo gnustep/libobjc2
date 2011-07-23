@@ -1,7 +1,7 @@
 GNUstep Objective-C Runtime 1.5
 ===============================
 
-This is the fifth official release of the GNUstep Objective-C runtime (a.k.a.
+This is the sixth official release of the GNUstep Objective-C runtime (a.k.a.
 libobjc2).  This runtime was designed to support the features of Objective-C 2
 for use with GNUstep and other Objective-C programs.  Highlights of this
 release include:
