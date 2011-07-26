@@ -749,6 +749,10 @@ BOOL objc_registerSmallObjectClass_np(Class cls, uintptr_t classId);
  * This restriction may be relaxed in the future on 64-bit systems.
  */
 #define OBJC_SMALL_OBJECT_MASK ((sizeof(id) == 4) ? 1 : 7)
+/**
+ * The number of bits reserved for the class identifier in a small object.
+ */
+#define OBJC_SMALL_OBJECT_SHIFT ((sizeof(id) == 4) ? 1 : 3)
 
 
 /**
