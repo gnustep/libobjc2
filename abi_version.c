@@ -130,7 +130,7 @@ PRIVATE BOOL objc_check_abi_version(struct objc_module_abi_8 *module)
 	if (current_gc_mode == GC_Optional)
 	{
 		current_gc_mode = gc_mode;
-		if (gc_mode != GC_None)
+		if (gc_mode == GC_Required)
 		{
 			enableGC(NO);
 		}
