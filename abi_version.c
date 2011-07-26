@@ -137,7 +137,7 @@ PRIVATE BOOL objc_check_abi_version(struct objc_module_abi_8 *module)
 	}
 	// We can't mix GC_None and GC_Required code, but we can mix any other
 	// combination
-	FAIL_IF((gc_mode != GC_Optional) && (gc_mode != current_gc_mode),
+	FAIL_IF((gc_mode == GC_Required) && (gc_mode != current_gc_mode),
 	        "Attempting to mix GC and non-GC code!");
 	return YES;
 }

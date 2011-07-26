@@ -149,7 +149,8 @@ static BOOL useARCAutoreleasePool;
 
 static inline id retain(id obj)
 {
-	Class cls = classForObject(obj);
+	if (isSmallObject(obj)) { return obj; }
+	Class cls = obj->isa;
 	if ((Class)&_NSConcreteStackBlock == cls)
 	{
 		return Block_copy(obj);
@@ -165,7 +166,8 @@ static inline id retain(id obj)
 
 static inline void release(id obj)
 {
-	Class cls = classForObject(obj);
+	if (isSmallObject(obj)) { return; }
+	Class cls = obj->isa;
 	if (objc_test_class_flag(cls, objc_class_flag_fast_arc))
 	{
 		intptr_t *refCount = ((intptr_t*)obj) - 1;
