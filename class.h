@@ -1,5 +1,6 @@
 #ifndef __OBJC_CLASS_H_INCLUDED
 #define __OBJC_CLASS_H_INCLUDED
+#include "visibility.h"
 
 /**
  * Overflow bitfield.  Used for bitfields that are more than 63 bits.
@@ -251,4 +252,36 @@ static inline BOOL objc_test_class_flag(struct objc_class *aClass,
  * Adds a class to the class table.
  */
 void class_table_insert(Class class);
+
+/**
+ * Array of classes used for small objects.  Small objects are embedded in
+ * their pointer.  In 32-bit mode, we have one small object class (typically
+ * used for storing 31-bit signed integers.  In 64-bit mode then we can have 7,
+ * because classes are guaranteed to be word aligned. 
+ */
+extern Class SmallObjectClasses[4];
+
+__attribute__((always_inline))
+static inline Class classForObject(id obj)
+{
+	uintptr_t addr = ((uintptr_t)obj);
+	if (UNLIKELY((addr & 1) == 1))
+	{
+		if (sizeof(Class) == 4)
+		{
+			return SmallObjectClasses[0];
+		}
+		else
+		{
+			return SmallObjectClasses[((addr >> 1) & 3)];
+		}
+	}
+	return obj->isa;
+}
+
+static BOOL isSmallObject(id obj)
+{
+	uintptr_t addr = ((uintptr_t)obj);
+	return (addr & 1) == 1;
+}
 #endif //__OBJC_CLASS_H_INCLUDED

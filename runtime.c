@@ -33,7 +33,7 @@ PRIVATE void call_cxx_destruct(id obj)
 		cxx_destruct = sel_registerName(".cxx_destruct");
 	}
 	// Don't call object_getClass(), because we want to get hidden classes too
-	Class cls = obj->isa;
+	Class cls = classForObject(obj);
 
 	while (cls)
 	{
@@ -68,7 +68,7 @@ static void call_cxx_construct_for_class(Class cls, id obj)
 
 PRIVATE void call_cxx_construct(id obj)
 {
-	call_cxx_construct_for_class(obj->isa, obj);
+	call_cxx_construct_for_class(classForObject(obj), obj);
 }
 
 /** 
@@ -323,6 +323,24 @@ Protocol*__unsafe_unretained* class_copyProtocolList(Class cls, unsigned int *ou
 id class_createInstance(Class cls, size_t extraBytes)
 {
 	CHECK_ARG(cls);
+	if (sizeof(id) == 4)
+	{
+		if (cls == SmallObjectClasses[0])
+		{
+			return (id)1;
+		}
+	}
+	else
+	{
+		for (int i=0 ; i<4 ; i++)
+		{
+			if (cls == SmallObjectClasses[i])
+			{
+				return (id)(i<<1)+1;
+			}
+		}
+	}
+
 	if (Nil == cls)	{ return nil; }
 	id obj = gc->allocate_class(cls, extraBytes);
 	obj->isa = cls;
@@ -695,8 +713,8 @@ Class objc_allocateClassPair(Class superclass, const char *name, size_t extraByt
 void *object_getIndexedIvars(id obj)
 {
 	CHECK_ARG(obj);
-	size_t size = obj->isa->instance_size;
-	if ((0 == size) && class_isMetaClass(obj->isa))
+	size_t size = classForObject(obj)->instance_size;
+	if ((0 == size) && class_isMetaClass(classForObject(obj)))
 	{
 		Class cls = (Class)obj;
 		if (objc_test_class_flag(cls, objc_class_flag_new_abi))
@@ -714,7 +732,7 @@ void *object_getIndexedIvars(id obj)
 Class object_getClass(id obj)
 {
 	CHECK_ARG(obj);
-	Class isa = obj->isa;
+	Class isa = classForObject(obj);
 	while ((Nil != isa) && objc_test_class_flag(isa, objc_class_flag_hidden_class))
 	{
 		isa = isa->super_class;
@@ -725,6 +743,9 @@ Class object_getClass(id obj)
 Class object_setClass(id obj, Class cls)
 {
 	CHECK_ARG(obj);
+	// If this is a small object, then don't set its class.
+	uintptr_t addr = (uintptr_t)obj;
+	if (addr & 1) { return classForObject(obj); }
 	Class oldClass =  obj->isa;
 	obj->isa = cls;
 	return oldClass;

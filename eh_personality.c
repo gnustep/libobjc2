@@ -68,7 +68,7 @@ void objc_exception_throw(id object)
 
 	SEL rethrow_sel = sel_registerName("rethrow");
 	if ((nil != object) &&
-	    (class_respondsToSelector(object->isa, rethrow_sel)))
+	    (class_respondsToSelector(classForObject(object), rethrow_sel)))
 	{
 		fprintf(stderr, "Rethrowing\n");
 		IMP rethrow = objc_msg_lookup(object, rethrow_sel);
@@ -249,7 +249,7 @@ _Unwind_Reason_Code  __gnu_objc_personality_v0(int version,
 
 	if (objcxxException)
 	{
-		thrown_class = (object == 0) ? Nil : ((id)object)->isa;
+		thrown_class = (object == 0) ? Nil : classForObject((id)object);
 	}
 	// If it's not a foreign exception, then we know the layout of the
 	// language-specific exception stuff.
@@ -258,7 +258,7 @@ _Unwind_Reason_Code  __gnu_objc_personality_v0(int version,
 		ex = (struct objc_exception*) ((char*)exceptionObject - 
 				offsetof(struct objc_exception, unwindHeader));
 
-		thrown_class = ex->object->isa;
+		thrown_class = classForObject(ex->object);
 	}
 	else if (_objc_class_for_boxing_foreign_exception)
 	{

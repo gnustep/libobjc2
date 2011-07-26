@@ -149,11 +149,12 @@ static BOOL useARCAutoreleasePool;
 
 static inline id retain(id obj)
 {
-	if ((Class)&_NSConcreteStackBlock == obj->isa)
+	Class cls = classForObject(obj);
+	if ((Class)&_NSConcreteStackBlock == cls)
 	{
 		return Block_copy(obj);
 	}
-	if (objc_test_class_flag(obj->isa, objc_class_flag_fast_arc))
+	if (objc_test_class_flag(cls, objc_class_flag_fast_arc))
 	{
 		intptr_t *refCount = ((intptr_t*)obj) - 1;
 		__sync_add_and_fetch(refCount, 1);
@@ -164,7 +165,8 @@ static inline id retain(id obj)
 
 static inline void release(id obj)
 {
-	if (objc_test_class_flag(obj->isa, objc_class_flag_fast_arc))
+	Class cls = classForObject(obj);
+	if (objc_test_class_flag(cls, objc_class_flag_fast_arc))
 	{
 		intptr_t *refCount = ((intptr_t*)obj) - 1;
 		if (__sync_sub_and_fetch(refCount, 1) < 0)
@@ -222,7 +224,7 @@ static inline id autorelease(id obj)
 			return obj;
 		}
 	}
-	if (objc_test_class_flag(obj->isa, objc_class_flag_fast_arc))
+	if (objc_test_class_flag(classForObject(obj), objc_class_flag_fast_arc))
 	{
 		initAutorelease();
 		if (0 != AutoreleaseAdd)
@@ -438,7 +440,8 @@ id objc_storeWeak(id *addr, id obj)
 		*addr = obj;
 		return nil;
 	}
-	if (&_NSConcreteGlobalBlock == obj->isa)
+	Class cls = classForObject(obj);
+	if (&_NSConcreteGlobalBlock == cls)
 	{
 		// If this is a global block, it's never deallocated, so secretly make
 		// this a strong reference
@@ -447,11 +450,11 @@ id objc_storeWeak(id *addr, id obj)
 		*addr = obj;
 		return obj;
 	}
-	if (&_NSConcreteStackBlock == obj->isa)
+	if (&_NSConcreteStackBlock == cls)
 	{
 		obj = block_load_weak(obj);
 	}
-	else if (objc_test_class_flag(obj->isa, objc_class_flag_fast_arc))
+	else if (objc_test_class_flag(cls, objc_class_flag_fast_arc))
 	{
 		if ((*(((intptr_t*)obj) - 1)) < 0)
 		{
@@ -536,11 +539,12 @@ id objc_loadWeakRetained(id* addr)
 	LOCK_FOR_SCOPE(&weakRefLock);
 	id obj = *addr;
 	if (nil == obj) { return nil; }
-	if (&_NSConcreteStackBlock == obj->isa)
+	Class cls = classForObject(obj);
+	if (&_NSConcreteStackBlock == cls)
 	{
 		obj = block_load_weak(obj);
 	}
-	else if (objc_test_class_flag(obj->isa, objc_class_flag_fast_arc))
+	else if (objc_test_class_flag(cls, objc_class_flag_fast_arc))
 	{
 		if ((*(((intptr_t*)obj) - 1)) < 0)
 		{

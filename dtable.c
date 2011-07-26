@@ -643,7 +643,7 @@ static void remove_dtable(InitializingDtable* meta_buffer)
  */
 PRIVATE void objc_send_initialize(id object)
 {
-	Class class = object->isa;
+	Class class = classForObject(object);
 	// If the first message is sent to an instance (weird, but possible and
 	// likely for things like NSConstantString, make sure +initialize goes to
 	// the class not the metaclass.  

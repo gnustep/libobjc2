@@ -96,6 +96,10 @@ extern "C" {
  * functions are available.
  */
 #define OBJC_CAP_ASSOCIATED_REFERENCES 13
+/**
+ * The runtime supports storing objects in pointers.
+ */
+#define OBJC_CAP_SMALL_OBJECTS 14
 
 /**
  * Macro used to require the existence of a specific capability.  This creates

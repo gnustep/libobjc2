@@ -736,6 +736,22 @@ extern struct objc_slot *objc_msg_lookup_sender(id *receiver, SEL selector, id s
 	OBJC_NONPORTABLE;
 
 /**
+ * Registers a class for small objects.  Small objects are stored inside a
+ * pointer.  If the class can be registered, then this returns YES.  The second
+ * argument specifies the bit pattern to use to identify the small object.
+ */
+BOOL objc_registerSmallObjectClass_np(Class cls, uintptr_t classId);
+
+/**
+ * The mask identifying the bits that can be used in an object pointer to
+ * identify a small object.  On 32-bit systems, we use the low bit.  On 64-bit
+ * systems, we use the low 3 bits.  In both cases, the lowest bit must be 1.
+ * This restriction may be relaxed in the future on 64-bit systems.
+ */
+#define OBJC_SMALL_OBJECT_MASK ((sizeof(id) == 4) ? 1 : 7)
+
+
+/**
  * Valid values for objc_AssociationPolicy.  This is really a bitfield, but
  * only specific combinations of flags are permitted.
  */

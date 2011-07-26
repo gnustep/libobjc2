@@ -306,12 +306,14 @@ void objc_setAssociatedObject(id object,
                               id value,
                               objc_AssociationPolicy policy)
 {
+	if (isSmallObject(object)) { return; }
 	struct reference_list *list = referenceListForObject(object, YES);
 	setReference(list, key, value, policy);
 }
 
 id objc_getAssociatedObject(id object, void *key)
 {
+	if (isSmallObject(object)) { return nil; }
 	struct reference_list *list = referenceListForObject(object, NO);
 	if (NULL == list) { return nil; }
 	struct reference *r = findReference(list, key);
@@ -321,6 +323,7 @@ id objc_getAssociatedObject(id object, void *key)
 
 void objc_removeAssociatedObjects(id object)
 {
+	if (isSmallObject(object)) { return; }
 	cleanupReferenceList(referenceListForObject(object, NO));
 }
 
@@ -337,6 +340,7 @@ PRIVATE void gc_setTypeForClass(Class cls, void *type)
 
 int objc_sync_enter(id object)
 {
+	if (isSmallObject(object)) { return 0; }
 	struct reference_list *list = referenceListForObject(object, YES);
 	LOCK(&list->lock);
 	return 0;
@@ -344,6 +348,7 @@ int objc_sync_enter(id object)
 
 int objc_sync_exit(id object)
 {
+	if (isSmallObject(object)) { return 0; }
 	struct reference_list *list = referenceListForObject(object, NO);
 	if (NULL != list)
 	{

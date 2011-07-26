@@ -44,6 +44,8 @@ static struct objc_slot* objc_selector_type_mismatch(Class cls, SEL
 	return result;
 }
 #endif
+
+
 struct objc_slot* (*_objc_selector_type_mismatch)(Class cls, SEL
 		selector, struct objc_slot *result) = objc_selector_type_mismatch;
 static 
@@ -55,11 +57,10 @@ Slot_t objc_msg_lookup_internal(id *receiver,
                                 id sender)
 {
 retry:;
-	Slot_t result = objc_dtable_lookup((*receiver)->isa->dtable,
-			selector->index);
+	Class class = classForObject((*receiver));
+	Slot_t result = objc_dtable_lookup(class->dtable, selector->index);
 	if (UNLIKELY(0 == result))
 	{
-		Class class = (*receiver)->isa;
 		dtable_t dtable = dtable_for_class(class);
 		/* Install the dtable if it hasn't already been initialized. */
 		if (dtable == uninstalled_dtable)
@@ -85,8 +86,7 @@ retry:;
 			}
 			if ((result = objc_dtable_lookup(dtable, get_untyped_idx(selector))))
 			{
-				return _objc_selector_type_mismatch((*receiver)->isa, selector,
-						result);
+				return _objc_selector_type_mismatch(class, selector, result);
 			}
 			id newReceiver = objc_proxy_lookup(*receiver, selector);
 			// If some other library wants us to play forwarding games, try
@@ -158,18 +158,19 @@ Slot_t objc_slot_lookup_super(struct objc_super *super, SEL selector)
 				selector->index);
 		if (0 == result)
 		{
+			Class class = classForObject(receiver);
 			// Dtable should always be installed in the superclass
 			// Unfortunately, some stupid code (PyObjC) decides to use this
 			// mechanism for everything 
 			if (dtable_for_class(class) == uninstalled_dtable)
 			{
-				if (class_isMetaClass(receiver->isa))
+				if (class_isMetaClass(class))
 				{
 					objc_send_initialize(receiver);
 				}
 				else
 				{
-					objc_send_initialize((id)receiver->isa);
+					objc_send_initialize((id)class);
 				}
 				objc_send_initialize((id)class);
 				return objc_slot_lookup_super(super, selector);
@@ -335,7 +336,7 @@ IMP class_getMethodImplementation_stret(Class cls, SEL name)
  */
 BOOL __objc_responds_to(id object, SEL sel)
 {
-	return class_respondsToSelector(object->isa, sel);
+	return class_respondsToSelector(classForObject(object), sel);
 }
 
 IMP get_imp(Class cls, SEL selector)
