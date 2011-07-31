@@ -21,8 +21,13 @@ extern "C" {
 #	endif
 #endif
 
+// Make sure we get the limit macros, even in C++ mode
+#ifndef __STDC_LIMIT_MACROS                                                     
+#	define __STDC_LIMIT_MACROS                                                    
+#endif
 
 #include <stdint.h>
+#include <limits.h>
 #include <stddef.h>
 #include <sys/types.h>
 #include "Availability.h"
@@ -751,11 +756,19 @@ BOOL objc_registerSmallObjectClass_np(Class cls, uintptr_t classId);
  * systems, we use the low 3 bits.  In both cases, the lowest bit must be 1.
  * This restriction may be relaxed in the future on 64-bit systems.
  */
-#define OBJC_SMALL_OBJECT_MASK ((sizeof(id) == 4) ? 1 : 7)
+#if UINTPTR_MAX < UINT64_MAX
+#	define OBJC_SMALL_OBJECT_MASK 1
+#else
+#	define OBJC_SMALL_OBJECT_MASK 7
+#endif
 /**
  * The number of bits reserved for the class identifier in a small object.
  */
-#define OBJC_SMALL_OBJECT_SHIFT ((sizeof(id) == 4) ? 1 : 3)
+#if UINTPTR_MAX < UINT64_MAX
+#	define OBJC_SMALL_OBJECT_SHIFT 1
+#else
+#	define OBJC_SMALL_OBJECT_SHIFT 3
+#endif
 
 
 /**
