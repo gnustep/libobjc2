@@ -13,6 +13,10 @@ struct gc_ops
 	 */
 	id (*allocate_class)(Class, size_t);
 	/**
+	 * Frees an object.
+	 */
+	void (*free_object)(id);
+	/**
 	 * Allocates some memory that can be used to store pointers.  This must be
 	 * used instead of malloc() for internal data structures that will store
 	 * pointers passed in from outside.  The function is expected to zero the

@@ -11,6 +11,11 @@ static id allocate_class(Class cls, size_t extraBytes)
 	return (id)(addr + 1);
 }
 
+static void free_object(id obj)
+{
+	free((void*)(((intptr_t)obj) - 1));
+}
+
 static void *alloc(size_t size)
 {
 	return calloc(size, 1);
@@ -19,6 +24,7 @@ static void *alloc(size_t size)
 PRIVATE struct gc_ops gc_ops_none = 
 {
 	.allocate_class = allocate_class,
+	.free_object    = free_object,
 	.malloc         = alloc,
 	.free           = free
 };

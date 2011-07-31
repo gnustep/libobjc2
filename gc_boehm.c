@@ -429,6 +429,7 @@ static id allocate_class(Class cls, size_t extra)
 	return obj;
 }
 
+static void free_object(id obj) {}
 id objc_allocate_object(Class cls, int extra)
 {
 	return class_createInstance(cls, extra);
@@ -714,6 +715,7 @@ static void debug_free(void *ptr)
 PRIVATE struct gc_ops gc_ops_boehm =
 {
 	.allocate_class = allocate_class,
+	.free_object    = free_object,
 	.malloc         = debug_malloc,
 	.free           = debug_free,
 };

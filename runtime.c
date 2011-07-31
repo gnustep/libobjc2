@@ -358,8 +358,11 @@ id object_copy(id obj, size_t size)
 
 id object_dispose(id obj)
 {
-	call_cxx_destruct(obj);
-	gc->free(obj);
+	if (isGCEnabled)
+	{
+		call_cxx_destruct(obj);
+		gc->free_object(obj);
+	}
 	return nil;
 }
 
