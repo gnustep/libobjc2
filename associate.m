@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
 #include "objc/runtime.h"
 #include "objc/objc-arc.h"
 #include "nsobject.h"
@@ -200,9 +201,11 @@ static Class allocateHiddenClass(Class superclass)
 
 	// Set up the new class
 	newClass->isa = superclass->isa;
-	// Set the superclass pointer to the name.  The runtime will fix this when
-	// the class links are resolved.
 	newClass->name = superclass->name;
+	// Uncomment this for debugging: it makes it easier to track which hidden
+	// class is which
+	// static int count;
+	//asprintf(&newClass->name, "%s%d", superclass->name, count++);
 	newClass->info = objc_class_flag_resolved | 
 		objc_class_flag_class | objc_class_flag_user_created |
 		objc_class_flag_new_abi | objc_class_flag_hidden_class |
@@ -210,10 +213,9 @@ static Class allocateHiddenClass(Class superclass)
 	newClass->super_class = superclass;
 	newClass->dtable = uninstalled_dtable;
 	newClass->instance_size = superclass->instance_size;
-	if (objc_test_class_flag(superclass, objc_class_flag_meta))
-	{
-		newClass->info |= objc_class_flag_meta;
-	}
+
+	newClass->sibling_class = superclass->subclass_list;
+	superclass->subclass_list = newClass;
 
 	return newClass;
 }
@@ -221,22 +223,16 @@ static Class allocateHiddenClass(Class superclass)
 static inline Class initHiddenClassForObject(id obj)
 {
 	Class hiddenClass = allocateHiddenClass(obj->isa); 
-	if (class_isMetaClass(obj->isa))
+	assert(!class_isMetaClass(obj->isa));
+	static SEL cxx_destruct;
+	if (NULL == cxx_destruct)
 	{
-		obj->isa = hiddenClass;
+		cxx_destruct = sel_registerName(".cxx_destruct");
 	}
-	else
-	{
-		static SEL cxx_destruct;
-		if (NULL == cxx_destruct)
-		{
-			cxx_destruct = sel_registerName(".cxx_destruct");
-		}
-		const char *types = sizeof(void*) == 4 ? "v8@0:4" : "v16@0:8";
-		class_addMethod(hiddenClass, cxx_destruct,
-			(IMP)deallocHiddenClass, types);
-		obj->isa = hiddenClass;
-	}
+	const char *types = sizeof(void*) == 4 ? "v8@0:4" : "v16@0:8";
+	class_addMethod(hiddenClass, cxx_destruct,
+		(IMP)deallocHiddenClass, types);
+	obj->isa = hiddenClass;
 	return hiddenClass;
 }
 
@@ -421,6 +417,9 @@ static char prototypeKey;
 id object_clone_np(id object)
 {
 	if (isSmallObject(object)) { return object; }
+	// Make sure that the prototype has a hidden class, so that methods added
+	// to it will appear in the clone.
+	referenceListForObject(object, YES);
 	id new = class_createInstance(object->isa, 0);
 	Class hiddenClass = initHiddenClassForObject(new);
 	struct reference_list *list = object_getIndexedIvars(hiddenClass);
