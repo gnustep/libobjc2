@@ -227,13 +227,14 @@ static inline Class initHiddenClassForObject(id obj)
 	}
 	else
 	{
-		const char *types =
-			method_getTypeEncoding(class_getInstanceMethod(obj->isa,
-						SELECTOR(dealloc)));
-		class_addMethod(hiddenClass, SELECTOR(dealloc), (IMP)deallocHiddenClass,
-				types);
-		class_addMethod(hiddenClass, SELECTOR(finalize), (IMP)deallocHiddenClass,
-				types);
+		static SEL cxx_destruct;
+		if (NULL == cxx_destruct)
+		{
+			cxx_destruct = sel_registerName(".cxx_destruct");
+		}
+		const char *types = sizeof(void*) == 4 ? "v8@0:4" : "v16@0:8";
+		class_addMethod(hiddenClass, cxx_destruct,
+			(IMP)deallocHiddenClass, types);
 		obj->isa = hiddenClass;
 	}
 	return hiddenClass;
@@ -242,20 +243,13 @@ static inline Class initHiddenClassForObject(id obj)
 static void deallocHiddenClass(id obj, SEL _cmd)
 {
 	Class hiddenClass = findHiddenClass(obj);
-	Class realClass = class_getSuperclass(hiddenClass);
-	// Call the real -dealloc method (this ordering is required in case the
-	// user does @synchronized(self) in -dealloc)
-	struct objc_super super = {obj, realClass};
-	objc_msg_lookup_super(&super, _cmd)(obj, _cmd);
 	// After calling [super dealloc], the object will no longer exist.
 	// Free the hidden
 	struct reference_list *list = object_getIndexedIvars(hiddenClass);
 	DESTROY_LOCK(&list->lock);
 	cleanupReferenceList(list);
 	freeReferenceList(list->next);
-
 	free_dtable(hiddenClass->dtable);
-
 	// Free the class
 	free(hiddenClass);
 }
@@ -356,4 +350,38 @@ int objc_sync_exit(id object)
 		return 0;
 	}
 	return 1;
+}
+
+static Class hiddenClassForObject(id object)
+{
+	if (isSmallObject(object)) { return nil; }
+	if (class_isMetaClass(object->isa))
+	{
+		return object->isa;
+	}
+	Class hiddenClass = findHiddenClass(object);
+	if (NULL == hiddenClass)
+	{
+		volatile int *lock = lock_for_pointer(object);
+		lock_spinlock(lock);
+		hiddenClass = findHiddenClass(object);
+		if (NULL == hiddenClass)
+		{
+			hiddenClass = initHiddenClassForObject(object);
+			struct reference_list *list = object_getIndexedIvars(hiddenClass);
+			INIT_LOCK(list->lock);
+		}
+		unlock_spinlock(lock);
+	}
+	return hiddenClass;
+}
+
+BOOL object_addMethod_np(id object, SEL name, IMP imp, const char *types)
+{
+	return class_addMethod(hiddenClassForObject(object), name, imp, types);
+}
+
+IMP object_replaceMethod_np(id object, SEL name, IMP imp, const char *types)
+{
+	return class_replaceMethod(hiddenClassForObject(object), name, imp, types);
 }

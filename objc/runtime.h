@@ -822,6 +822,17 @@ void objc_setAssociatedObject(id object, void *key, id value, objc_AssociationPo
  */
 void objc_removeAssociatedObjects(id object);
 
+/**
+ * Adds a method to a specific object,  This method will not be added to any
+ * other instances of the same class.
+ */
+BOOL object_addMethod_np(id object, SEL name, IMP imp, const char *types);
+
+/**
+ * Replaces a method on a specific object,  This method will not be added to
+ * any other instances of the same class.
+ */
+IMP object_replaceMethod_np(id object, SEL name, IMP imp, const char *types);
 
 /**
  * Toggles whether Objective-C objects caught in C++ exception handlers in

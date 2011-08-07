@@ -41,8 +41,8 @@ PRIVATE void call_cxx_destruct(id obj)
 		cls = Nil;
 		if (NULL != slot)
 		{
-			slot->method(obj, cxx_destruct);
 			cls = slot->owner->super_class;
+			slot->method(obj, cxx_destruct);
 		}
 	}
 }
