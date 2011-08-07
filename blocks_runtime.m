@@ -34,8 +34,6 @@
 #include <limits.h>
 #include <assert.h>
 
-#define fprintf(...)
-
 static void *_HeapBlockByRef = (void*)1;
 
 /**
@@ -290,7 +288,6 @@ static int cas(void *ptr, void *old, void *new)
  */
 void _Block_object_assign(void *destAddr, const void *object, const int flags)
 {
-	fprintf(stderr, "assign: %d\n", flags);
 	//printf("Copying %x to %x with flags %x\n", object, destAddr, flags);
 	// FIXME: Needs to be implemented
 	//if(flags & BLOCK_FIELD_IS_WEAK)
@@ -298,23 +295,15 @@ void _Block_object_assign(void *destAddr, const void *object, const int flags)
 	}
 	//else
 	{
-		fprintf(stderr, "BLOCK_FIELD_IS_OBJECT: %d\n", (flags & BLOCK_FIELD_IS_OBJECT) == BLOCK_FIELD_IS_OBJECT);
-		fprintf(stderr, "BLOCK_FIELD_IS_BLOCK: %d\n", (flags & BLOCK_FIELD_IS_BLOCK) == BLOCK_FIELD_IS_BLOCK);
-		fprintf(stderr, "BLOCK_FIELD_IS_BYREF: %d\n", (flags & BLOCK_FIELD_IS_BYREF) == BLOCK_FIELD_IS_BYREF);
-		fprintf(stderr, "BLOCK_FIELD_IS_WEAK: %d\n", (flags & BLOCK_FIELD_IS_WEAK) == BLOCK_FIELD_IS_WEAK);
 		if (IS_SET(flags, BLOCK_FIELD_IS_BYREF))
 		{
 			struct block_byref_obj *src = (struct block_byref_obj *)object;
 			struct block_byref_obj **dst = destAddr;
-			fprintf(stderr, "Copy dispose? %d\n", (src->flags & BLOCK_HAS_COPY_DISPOSE) == BLOCK_HAS_COPY_DISPOSE);
-			fprintf(stderr, "Retain Count? %x %x\n", src->flags & BLOCK_REFCOUNT_MASK, BLOCK_REFCOUNT_MASK);
-			fprintf(stderr, "Forwarding: %p -> %p\n", src, src->forwarding);
 			src = src->forwarding;
 			
 			if ((src->flags & BLOCK_REFCOUNT_MASK) == 0)
 			{
 				*dst = gc->malloc(src->size);
-				fprintf(stderr, "Copying %d bytes to %p\n", src->size, *dst);
 				memcpy(*dst, src, src->size);
 				(*dst)->isa = _HeapBlockByRef;
 				// Refcount must be two; one for the copy and one for the
@@ -347,7 +336,6 @@ void _Block_object_assign(void *destAddr, const void *object, const int flags)
 			{
 				*dst = (struct block_byref_obj*)src;
 				increment24(&(*dst)->flags);
-				fprintf(stderr, "Flags for block: %p: %d (refcount %x)\n", *dst, (*dst)->flags, (*dst)->flags & BLOCK_REFCOUNT_MASK);
 			}
 		}
 		else if (IS_SET(flags, BLOCK_FIELD_IS_BLOCK))
@@ -360,7 +348,6 @@ void _Block_object_assign(void *destAddr, const void *object, const int flags)
 		else if (IS_SET(flags, BLOCK_FIELD_IS_OBJECT) &&
 		         !IS_SET(flags, BLOCK_BYREF_CALLER))
 		{
-			fprintf(stderr, "[%p -retain]\n", object);
 			id src = (id)object;
 			void **dst = destAddr;
 			*dst = src;
@@ -380,11 +367,6 @@ void _Block_object_assign(void *destAddr, const void *object, const int flags)
  */
 void _Block_object_dispose(const void *object, const int flags)
 {
-	fprintf(stderr, "Dispose %p, Flags: %d\n", object, flags);
-		fprintf(stderr, "BLOCK_FIELD_IS_OBJECT: %d\n", (flags & BLOCK_FIELD_IS_OBJECT) == BLOCK_FIELD_IS_OBJECT);
-		fprintf(stderr, "BLOCK_FIELD_IS_BLOCK: %d\n", (flags & BLOCK_FIELD_IS_BLOCK) == BLOCK_FIELD_IS_BLOCK);
-		fprintf(stderr, "BLOCK_FIELD_IS_BYREF: %d\n", (flags & BLOCK_FIELD_IS_BYREF) == BLOCK_FIELD_IS_BYREF);
-		fprintf(stderr, "BLOCK_FIELD_IS_WEAK: %d\n", (flags & BLOCK_FIELD_IS_WEAK) == BLOCK_FIELD_IS_WEAK);
 	// FIXME: Needs to be implemented
 	//if(flags & BLOCK_FIELD_IS_WEAK)
 	{
@@ -397,32 +379,22 @@ void _Block_object_dispose(const void *object, const int flags)
 				(struct block_byref_obj*)object;
 			if (src->isa == _HeapBlockByRef)
 			{
-				fprintf(stderr, "refcount %x\n", src->flags & BLOCK_REFCOUNT_MASK);
 				int refcount = (src->flags & BLOCK_REFCOUNT_MASK) == 0 ? 0 : decrement24(&src->flags);
-				fprintf(stderr, "new refcount %x\n", refcount & BLOCK_REFCOUNT_MASK);
 				if (refcount == 0)
 				{
 					if (0 != src->byref_dispose)
 					{
-						fprintf(stderr, "Calling byref dispose\n");
 						src->byref_dispose(src);
 					}
-					fprintf(stderr, "Freeing %p\n", src);
 					gc->free(src);
 				}
 			}
 			else
 			{
-				fprintf(stderr, "src: %p\n", src);
-				fprintf(stderr, "forwarding: %p\n", src->forwarding);
-				fprintf(stderr, "dispose: %p\n", src->byref_dispose);
-				fprintf(stderr, "Cleaning up %p\n" , *(id*)(src+1));
 				// Call nontrivial destructors, but don't
 				if (IS_SET(src->flags, BLOCK_HAS_COPY_DISPOSE))
 				{
-					//fprintf(stderr, "Calling byref dispose\n");
 					src->byref_dispose(src);
-					//fprintf(stderr, "Called byref dispose\n");
 				}
 				// If this block has been promoted to the heap, decrement its
 				// reference count / destroy it if the heap version is already
@@ -444,7 +416,6 @@ void _Block_object_dispose(const void *object, const int flags)
 			id src = (id)object;
 			if (!isGCEnabled)
 			{
-				fprintf(stderr, "Sending release message to %p\n", src);
 				objc_release(src);
 			}
 		}
@@ -456,29 +427,32 @@ void _Block_object_dispose(const void *object, const int flags)
 void *_Block_copy(void *src)
 {
 	if (NULL == src) { return NULL; }
-	fprintf(stderr, "_Block_copy()\n");
 	struct block_literal *self = src;
 	struct block_literal *ret = self;
 
 	extern void _NSConcreteStackBlock;
-	fprintf(stderr, "isa %p stack block %p\n", self->isa, &_NSConcreteStackBlock);
+	extern void _NSConcreteMallocBlock;
 	
 	// If the block is Global, there's no need to copy it on the heap.
 	if(self->isa == &_NSConcreteStackBlock)
 	{
-		fprintf(stderr, "reserved: %d\n", self->reserved);
-		fprintf(stderr, "block flags: %d\n", self->flags);
-		if(self->reserved == 0)
+		ret = gc->malloc(self->descriptor->size);
+		memcpy(ret, self, self->descriptor->size);
+		ret->isa = &_NSConcreteMallocBlock;
+		if(self->flags & BLOCK_HAS_COPY_DISPOSE)
 		{
-			ret = gc->malloc(self->descriptor->size);
-			memcpy(ret, self, self->descriptor->size);
-			if(self->flags & BLOCK_HAS_COPY_DISPOSE)
-			{
-	fprintf(stderr, "_Block_copy() calling copy helper\n");
-				self->descriptor->copy_helper(ret, self);
-			}
+			self->descriptor->copy_helper(ret, self);
 		}
-		ret->reserved++;
+		// We don't need any atomic operations here, because on-stack blocks
+		// can not be aliased across threads (unless you've done something
+		// badly wrong).
+		ret->reserved = 1;
+	}
+	else if (self->isa == &_NSConcreteMallocBlock)
+	{
+		// We need an atomic increment for malloc'd blocks, because they may be
+		// shared.
+		__sync_fetch_and_add(&ret->reserved, 1);
 	}
 	return ret;
 }
@@ -490,12 +464,15 @@ void _Block_release(void *src)
 	struct block_literal *self = src;
 	
 	extern void _NSConcreteStackBlock;
+	extern void _NSConcreteMallocBlock;
 
-	if(self->isa == &_NSConcreteStackBlock && // A Global block doesn't need to be released
-	   self->reserved > 0)		// If false, then it's not allocated on the heap, we won't release auto memory !
+	if (&_NSConcreteStackBlock == self->isa)
 	{
-		self->reserved--;
-		if(self->reserved == 0)
+		fprintf(stderr, "Block_release called upon a stack Block: %p, ignored\n", self);
+	}
+	else if (&_NSConcreteMallocBlock == self->isa)
+	{
+		if (__sync_sub_and_fetch(&self->reserved, 1) == 0)
 		{
 			if(self->flags & BLOCK_HAS_COPY_DISPOSE)
 				self->descriptor->dispose_helper(self);

@@ -7,9 +7,11 @@
 
 struct objc_class _NSConcreteGlobalBlock;
 struct objc_class _NSConcreteStackBlock;
+struct objc_class _NSConcreteMallocBlock;
 
 static struct objc_class _NSConcreteGlobalBlockMeta;
 static struct objc_class _NSConcreteStackBlockMeta;
+static struct objc_class _NSConcreteMallocBlockMeta;
 
 static struct objc_class _NSBlock;
 static struct objc_class _NSBlockMeta;
@@ -45,5 +47,6 @@ BOOL objc_create_block_classes_as_subclasses_of(Class super)
 	NEW_CLASS(super, _NSBlock);
 	NEW_CLASS(&_NSBlock, _NSConcreteStackBlock);
 	NEW_CLASS(&_NSBlock, _NSConcreteGlobalBlock);
+	NEW_CLASS(&_NSBlock, _NSConcreteMallocBlock);
 	return YES;
 }

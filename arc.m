@@ -16,7 +16,7 @@
 pthread_key_t ARCThreadKey;
 #endif
 
-extern void _NSConcreteStackBlock;
+extern void _NSConcreteMallocBlock;
 extern void _NSConcreteGlobalBlock;
 
 @interface NSAutoreleasePool
@@ -151,7 +151,7 @@ static inline id retain(id obj)
 {
 	if (isSmallObject(obj)) { return obj; }
 	Class cls = obj->isa;
-	if ((Class)&_NSConcreteStackBlock == cls)
+	if ((Class)&_NSConcreteMallocBlock == cls)
 	{
 		return Block_copy(obj);
 	}
@@ -452,7 +452,7 @@ id objc_storeWeak(id *addr, id obj)
 		*addr = obj;
 		return obj;
 	}
-	if (&_NSConcreteStackBlock == cls)
+	if (&_NSConcreteMallocBlock == cls)
 	{
 		obj = block_load_weak(obj);
 	}
@@ -542,7 +542,7 @@ id objc_loadWeakRetained(id* addr)
 	id obj = *addr;
 	if (nil == obj) { return nil; }
 	Class cls = classForObject(obj);
-	if (&_NSConcreteStackBlock == cls)
+	if (&_NSConcreteMallocBlock == cls)
 	{
 		obj = block_load_weak(obj);
 	}
