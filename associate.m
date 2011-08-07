@@ -311,7 +311,38 @@ id objc_getAssociatedObject(id object, void *key)
 	struct reference_list *list = referenceListForObject(object, NO);
 	if (NULL == list) { return nil; }
 	struct reference *r = findReference(list, key);
-	return r ? r->object : nil;
+	if (NULL != r)
+	{
+		return r->object;
+	}
+	if (class_isMetaClass(object->isa))
+	{
+		return nil;
+	}
+	Class cls = object->isa;
+	while (Nil != cls)
+	{
+		while (Nil != cls && 
+			   !objc_test_class_flag(cls, objc_class_flag_assoc_class))
+		{
+			cls = class_getSuperclass(cls);
+		}
+		if (Nil != cls)
+		{
+			struct reference_list *next_list = object_getIndexedIvars(cls);
+			if (list != next_list)
+			{
+				list = next_list;
+				struct reference *r = findReference(list, key);
+				if (NULL != r)
+				{
+					return r->object;
+				}
+			}
+			cls = class_getSuperclass(cls);
+		}
+	}
+	return nil;
 }
 
 
@@ -384,4 +415,22 @@ BOOL object_addMethod_np(id object, SEL name, IMP imp, const char *types)
 IMP object_replaceMethod_np(id object, SEL name, IMP imp, const char *types)
 {
 	return class_replaceMethod(hiddenClassForObject(object), name, imp, types);
+}
+static char prototypeKey;
+
+id object_clone_np(id object)
+{
+	if (isSmallObject(object)) { return object; }
+	id new = class_createInstance(object->isa, 0);
+	Class hiddenClass = initHiddenClassForObject(new);
+	struct reference_list *list = object_getIndexedIvars(hiddenClass);
+	INIT_LOCK(list->lock);
+	objc_setAssociatedObject(new, &prototypeKey, object,
+			OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+	return new;
+}
+
+id object_getPrototype_np(id object)
+{
+	return objc_getAssociatedObject(object, &prototypeKey);
 }

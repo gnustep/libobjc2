@@ -358,11 +358,8 @@ id object_copy(id obj, size_t size)
 
 id object_dispose(id obj)
 {
-	if (isGCEnabled)
-	{
-		call_cxx_destruct(obj);
-		gc->free_object(obj);
-	}
+	call_cxx_destruct(obj);
+	gc->free_object(obj);
 	return nil;
 }
 
@@ -671,8 +668,8 @@ void objc_disposeClassPair(Class cls)
 	}
 
 	// Free the class and metaclass
-	free(meta);
-	free(cls);
+	gc->free(meta);
+	gc->free(cls);
 }
 
 Class objc_allocateClassPair(Class superclass, const char *name, size_t extraBytes)
@@ -680,12 +677,12 @@ Class objc_allocateClassPair(Class superclass, const char *name, size_t extraByt
 	// Check the class doesn't already exist.
 	if (nil != objc_lookUpClass(name)) { return Nil; }
 
-	Class newClass = calloc(1, sizeof(struct objc_class) + extraBytes);
+	Class newClass = gc->malloc(sizeof(struct objc_class) + extraBytes);
 
 	if (Nil == newClass) { return Nil; }
 
 	// Create the metaclass
-	Class metaClass = calloc(1, sizeof(struct objc_class));
+	Class metaClass = gc->malloc(sizeof(struct objc_class));
 
 	// Initialize the metaclass
 	// Set the meta-metaclass pointer to the name.  The runtime will fix this

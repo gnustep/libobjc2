@@ -835,6 +835,18 @@ BOOL object_addMethod_np(id object, SEL name, IMP imp, const char *types);
 IMP object_replaceMethod_np(id object, SEL name, IMP imp, const char *types);
 
 /**
+ * Creates a clone, in the JavaScript sense - an object which inherits both
+ * associated references and methods from the original object.
+ */
+id object_clone_np(id object);
+
+/**
+ * Returns the prototype of the object if it was created with
+ * object_clone_np(), or nil otherwise.
+ */
+id object_getPrototype_np(id object);
+
+/**
  * Toggles whether Objective-C objects caught in C++ exception handlers in
  * Objective-C++ mode should follow Objective-C or C++ semantics.  The obvious
  * choice is for them to follow C++ semantics, because people using a C++

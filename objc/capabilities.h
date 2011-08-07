@@ -100,6 +100,10 @@ extern "C" {
  * The runtime supports storing objects in pointers.
  */
 #define OBJC_CAP_SMALL_OBJECTS 14
+/**
+ * The runtime supports prototype-based object orientation.
+ */
+#define OBJC_CAP_PROTOTYPES 15
 
 /**
  * Macro used to require the existence of a specific capability.  This creates
