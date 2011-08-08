@@ -39,14 +39,13 @@ OBJECTS = \
 	selector_table.bc\
 	sendmsg2.bc\
 	statics_loader.bc\
-	sync.bc\
 	toydispatch.bc
 
 all: libobjc.so.$(VERSION) libobjc.a
 
 libobjc.so.$(VERSION): libobjc.o
 	@echo Linking shared library...
-	@ld -shared -o $@ libobjc.o
+	@clang -shared -o $@ libobjc.o -lpthread
 
 libobjc.a: libobjc.o
 	@echo Linking static library...
@@ -56,9 +55,9 @@ libobjc.o: libobjc.bc
 	@echo Generating native object code...
 	@llc -O3 -filetype=obj -o libobjc.o libobjc.bc
 
-libobjc.bc: $(OBJECTS) exports.txt
+libobjc.bc: $(OBJECTS)
 	@echo Linking bitcode...
-	@llvm-ld -internalize -internalize-public-api-file=../exports.txt -link-as-library -native -o libobjc.bc $(OBJECTS)
+	@llvm-ld -internalize -link-as-library -native -o libobjc.bc $(OBJECTS)
 
 .c.bc:
 	@echo Compiling $<...

@@ -121,7 +121,7 @@ typedef struct objc_method *Method;
 typedef signed char BOOL;
 #	else
 #		ifdef __vxwords
-typedef  int BOOL
+typedef  int BOOL;
 #		else
 typedef unsigned char BOOL;
 #		endif
