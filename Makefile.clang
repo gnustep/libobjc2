@@ -15,6 +15,9 @@ LIB_DIR= ${PREFIX}/lib
 HEADER_DIR= ${PREFIX}/include
 
 OBJECTS = \
+	arc.bc\
+	associate.bc\
+	gc_none.bc\
 	NSBlocks.bc\
 	Protocol2.bc\
 	abi_version.bc\
