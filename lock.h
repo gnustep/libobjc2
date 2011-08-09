@@ -7,7 +7,9 @@
 #ifndef __LIBOBJC_LOCK_H_INCLUDED__
 #define __LIBOBJC_LOCK_H_INCLUDED__
 #ifdef WIN32
+#define BOOL _WINBOOL
 #	include <windows.h>
+#undef BOOL
 typedef HANDLE mutex_t;
 #	define INIT_LOCK(x) x = CreateMutex(NULL, FALSE, NULL)
 #	define LOCK(x) WaitForSingleObject(*x, INFINITE)
