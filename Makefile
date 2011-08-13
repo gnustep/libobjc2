@@ -2,7 +2,7 @@
 
 .SUFFIXES: .cc .c .m .o
 
-MAJOR_VERSION = 1
+MAJOR_VERSION = 4
 MINOR_VERSION = 6
 SUBMINOR_VERSION = 0
 VERSION = $(MAJOR_VERSION).$(MINOR_VERSION).$(SUBMINOR_VERSION)
@@ -14,6 +14,8 @@ CPPFLAGS += -D__OBJC_RUNTIME_INTERNAL__=1 -D_XOPEN_SOURCE=500
 
 # Suppress warnings about incorrect selectors
 CPPFLAGS += -DNO_SELECTOR_MISMATCH_WARNINGS
+# Some helpful flags for debugging.
+#CPPFLAGS += -g -O0 -fno-inline
 
 PREFIX?= /usr/local
 LIB_DIR= ${PREFIX}/lib

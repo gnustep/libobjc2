@@ -261,11 +261,16 @@ void class_table_insert(Class class);
  */
 extern Class SmallObjectClasses[4];
 
+static BOOL isSmallObject(id obj)
+{
+	uintptr_t addr = ((uintptr_t)obj);
+	return (addr & OBJC_SMALL_OBJECT_MASK) != 0;
+}
+
 __attribute__((always_inline))
 static inline Class classForObject(id obj)
 {
-	uintptr_t addr = ((uintptr_t)obj);
-	if (UNLIKELY((addr & 1) == 1))
+	if (UNLIKELY(isSmallObject(obj)))
 	{
 		if (sizeof(Class) == 4)
 		{
@@ -273,15 +278,11 @@ static inline Class classForObject(id obj)
 		}
 		else
 		{
+			uintptr_t addr = ((uintptr_t)obj);
 			return SmallObjectClasses[((addr >> 1) & 3)];
 		}
 	}
 	return obj->isa;
 }
 
-static BOOL isSmallObject(id obj)
-{
-	uintptr_t addr = ((uintptr_t)obj);
-	return (addr & 1) == 1;
-}
 #endif //__OBJC_CLASS_H_INCLUDED
