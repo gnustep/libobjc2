@@ -56,7 +56,7 @@ all: libobjc.a libobjcxx.so.$(VERSION)
 
 libobjcxx.so.$(VERSION): libobjc.so.$(VERSION) $(OBJCXX_OBJECTS)
 	@echo Linking shared Objective-C++ runtime library...
-	@$(CXX) -Wl,-shared -o $@ $(OBJCXX_OBJECTS) -lobjc
+	@$(CXX) -shared -o $@ $(OBJCXX_OBJECTS) -L. -lobjc
 
 libobjc.so.$(VERSION): $(OBJECTS)
 	@echo Linking shared Objective-C runtime library...
