@@ -7,8 +7,8 @@ MINOR_VERSION = 6
 SUBMINOR_VERSION = 0
 VERSION = $(MAJOR_VERSION).$(MINOR_VERSION).$(SUBMINOR_VERSION)
 
-CFLAGS += -std=gnu99 -fPIC
-CXXFLAGS += -fPIC
+CFLAGS += -std=gnu99 -fPIC -fexceptions
+CXXFLAGS += -fPIC -fexceptions
 CPPFLAGS += -DTYPE_DEPENDENT_DISPATCH -DGNUSTEP
 CPPFLAGS += -D__OBJC_RUNTIME_INTERNAL__=1 -D_XOPEN_SOURCE=500
 
@@ -60,7 +60,7 @@ libobjcxx.so.$(VERSION): libobjc.so.$(VERSION) $(OBJCXX_OBJECTS)
 
 libobjc.so.$(VERSION): $(OBJECTS)
 	@echo Linking shared Objective-C runtime library...
-	@ld -shared -o $@ $(OBJECTS)
+	@$(CC) -shared -rdynamic -o $@ $(OBJECTS)
 
 libobjc.a: $(OBJECTS)
 	@echo Linking static Objective-C runtime library...
@@ -76,7 +76,7 @@ libobjc.a: $(OBJECTS)
 
 .m.o:
 	@echo Compiling `basename $<`...
-	@$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+	@$(CC) $(CPPFLAGS) $(CFLAGS) -fobjc-exceptions -c $< -o $@
 
 install: all
 	@echo Installing libraries...
