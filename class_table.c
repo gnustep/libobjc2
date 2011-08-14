@@ -423,29 +423,20 @@ PRIVATE void objc_load_class(struct objc_class *class)
 	}
 }
 
-PRIVATE Class SmallObjectClasses[4];
+PRIVATE Class SmallObjectClasses[7];
 
 BOOL objc_registerSmallObjectClass_np(Class class, uintptr_t mask)
 {
-	if (sizeof(id) == 4)
+	if ((mask & OBJC_SMALL_OBJECT_MASK) != mask)
 	{
-		if (SmallObjectClasses[0] == Nil && (mask == 1))
-		{
-			SmallObjectClasses[0] = class;
-			return YES;
-		}
+		return NO;
 	}
-	else
+	if (Nil != SmallObjectClasses[mask])
 	{
-		int i = (mask >> 1);
-		if ((mask < 7) && ((mask & 1) == 1))
-		if (SmallObjectClasses[i] == Nil)
-		{
-			SmallObjectClasses[i] = class;
-			return YES;
-		}
+		return NO;
 	}
-	return NO;
+	SmallObjectClasses[mask] = class;
+	return YES;
 }
 
 

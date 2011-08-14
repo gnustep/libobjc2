@@ -259,7 +259,7 @@ void class_table_insert(Class class);
  * used for storing 31-bit signed integers.  In 64-bit mode then we can have 7,
  * because classes are guaranteed to be word aligned. 
  */
-extern Class SmallObjectClasses[4];
+extern Class SmallObjectClasses[7];
 
 static BOOL isSmallObject(id obj)
 {
@@ -279,7 +279,7 @@ static inline Class classForObject(id obj)
 		else
 		{
 			uintptr_t addr = ((uintptr_t)obj);
-			return SmallObjectClasses[((addr >> 1) & 3)];
+			return SmallObjectClasses[(addr & OBJC_SMALL_OBJECT_MASK)];
 		}
 	}
 	return obj->isa;
