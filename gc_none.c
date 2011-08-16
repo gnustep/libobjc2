@@ -13,7 +13,7 @@ static id allocate_class(Class cls, size_t extraBytes)
 
 static void free_object(id obj)
 {
-	free((void*)(((intptr_t)obj) - 1));
+	free((void*)(((intptr_t*)obj) - 1));
 }
 
 static void *alloc(size_t size)
