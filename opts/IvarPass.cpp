@@ -10,7 +10,6 @@
 #include "ObjectiveCOpts.h"
 #include <string>
 
-using namespace GNUstep;
 using namespace llvm;
 using std::string;
 
@@ -147,14 +146,6 @@ namespace {
 
   char GNUNonfragileIvarPass::ID = 0;
   RegisterPass<GNUNonfragileIvarPass> X("gnu-nonfragile-ivar", "Ivar fragility pass");
-#if LLVM_MAJOR > 2
-  StandardPass::RegisterStandardPass<GNUNonfragileIvarPass> D(
-        StandardPass::Module, &DefaultStandardPasses::LoopUnrollID,
-        StandardPass::OptimzationFlags(1), &NonfragileIvarID);
-  StandardPass::RegisterStandardPass<GNUNonfragileIvarPass> L(StandardPass::LTO,
-      &DefaultStandardPasses::JumpThreadingID,
-      StandardPass::OptimzationFlags(0), &NonfragileIvarID);
-#endif
 }
 
 FunctionPass *createGNUNonfragileIvarPass(void)

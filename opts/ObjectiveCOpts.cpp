@@ -53,9 +53,3 @@ namespace
           "Run all of the GNUstep Objective-C runtimm optimisations");
 
 }
-
-unsigned char GNUstep::ClassIMPCacheID;
-unsigned char GNUstep::ClassMethodInlinerID;
-unsigned char GNUstep::ClassLookupCacheID;
-unsigned char GNUstep::LoopIMPCacheID;
-unsigned char GNUstep::NonfragileIvarID;

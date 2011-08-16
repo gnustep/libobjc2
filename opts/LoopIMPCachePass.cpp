@@ -21,7 +21,7 @@ namespace
   class GNULoopIMPCachePass : public FunctionPass 
   {
     GNUstep::IMPCacher *cacher;
-    const IntegerType *IntTy;
+    LLVMIntegerType *IntTy;
     Module *M;
 
     public:
@@ -68,7 +68,7 @@ namespace
       IRBuilder<> B = IRBuilder<>(entry);
       for (SmallVectorImpl<CallInst*>::iterator i=Lookups.begin(), 
           e=Lookups.end() ; e!=i ; i++) {
-        const Type *SlotPtrTy = (*i)->getType();
+        LLVMType *SlotPtrTy = (*i)->getType();
         B.SetInsertPoint(entry, entry->begin());
         Value *slot = B.CreateAlloca(SlotPtrTy, 0, "slot");
         Value *version = B.CreateAlloca(IntTy, 0, "slot_version");
@@ -87,15 +87,6 @@ namespace
   char GNULoopIMPCachePass::ID = 0;
   RegisterPass<GNULoopIMPCachePass> X("gnu-loop-imp-cache", 
           "Cache IMPs in loops pass");
-#if LLVM_MAJOR > 2
-  StandardPass::RegisterStandardPass<GNULoopIMPCachePass> D(
-        StandardPass::Module, &ClassIMPCacheID,
-        StandardPass::OptimzationFlags(2, 0, 0, StandardPass::OptimizeSize),
-        &LoopIMPCacheID);
-  StandardPass::RegisterStandardPass<GNULoopIMPCachePass> L(StandardPass::LTO,
-      &ClassIMPCacheID, StandardPass::OptimzationFlags(0),
-      &LoopIMPCacheID);
-#endif
 }
 
 FunctionPass *createGNULoopIMPCachePass(void)

@@ -20,7 +20,7 @@ GNUstep::IMPCacher::IMPCacher(LLVMContext &C, Pass *owner) : Context(C),
   IntTy = (sizeof(int) == 4 ) ? Type::getInt32Ty(C) : Type::getInt64Ty(C);
   IdTy = PointerType::getUnqual(PtrTy);
   Value *AlreadyCachedFlagValue = MDString::get(C, "IMPCached");
-  AlreadyCachedFlag = CreateMDNode(C, AlreadyCachedFlagValue);
+  AlreadyCachedFlag = CreateMDNode(C, &AlreadyCachedFlagValue);
   IMPCacheFlagKind = Context.getMDKindID("IMPCache");
 }
 
@@ -149,8 +149,8 @@ void GNUstep::IMPCacher::SpeculativelyInline(Instruction *call, Function
 
   if (calleeTy != FTy) {
     for (unsigned i=0 ; i<FTy->getNumParams() ; i++) {
-      const Type *callType = calleeTy->getParamType(i);
-      const Type *argType = FTy->getParamType(i);
+      LLVMType *callType = calleeTy->getParamType(i);
+      LLVMType *argType = FTy->getParamType(i);
       if (callType != argType) {
         inlineCall->setOperand(i, new
             BitCastInst(inlineCall->getOperand(i), argType, "", inlineCall));

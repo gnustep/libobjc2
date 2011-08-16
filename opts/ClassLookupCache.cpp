@@ -72,7 +72,7 @@ namespace
           e=Lookups.end() ; e!=i ; i++) {
         llvm::Instruction *lookup = i->first;
         std::string &cls = i->second;
-        const llvm::Type *clsTy = lookup->getType();
+        LLVMType *clsTy = lookup->getType();
         Value *global = M->getGlobalVariable(("_OBJC_CLASS_" + i->second).c_str(), true);
         global = 0;
         // If we can see the class reference for this, then reference it
@@ -147,15 +147,6 @@ namespace
   char ClassLookupCachePass::ID = 0;
   RegisterPass<ClassLookupCachePass> X("gnu-class-lookup-cache", 
           "Cache class lookups");
-#if LLVM_MAJOR > 2
-  StandardPass::RegisterStandardPass<ClassLookupCachePass> D(
-        StandardPass::Module, &LoopIMPCacheID,
-        StandardPass::OptimzationFlags(1, 0, 0, StandardPass::OptimizeSize),
-        &ClassLookupCacheID);
-  StandardPass::RegisterStandardPass<ClassLookupCachePass> L(StandardPass::LTO,
-      &LoopIMPCacheID, StandardPass::OptimzationFlags(0),
-      &ClassLookupCacheID);
-#endif
 }
 
 ModulePass *createClassLookupCachePass(void)

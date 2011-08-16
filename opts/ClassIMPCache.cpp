@@ -12,6 +12,7 @@
 #include "ObjectiveCOpts.h"
 #include "IMPCacher.h"
 #include <string>
+#include "LLVMCompat.h"
 
 using namespace GNUstep;
 using namespace llvm;
@@ -21,7 +22,7 @@ namespace
 {
   class ClassIMPCachePass : public ModulePass 
   {
-    const IntegerType *IntTy;
+    LLVMIntegerType *IntTy;
 
     public:
     static char ID;
@@ -68,7 +69,7 @@ namespace
         for (SmallVectorImpl<std::pair<CallSite, bool> >::iterator
             i=Lookups.begin(), e=Lookups.end() ; e!=i ; i++) {
           Instruction *call = i->first.getInstruction();
-          const Type *SlotPtrTy = call->getType();
+          LLVMType *SlotPtrTy = call->getType();
 
           Value *slot = new GlobalVariable(M, SlotPtrTy, false,
               GlobalValue::PrivateLinkage, Constant::getNullValue(SlotPtrTy),
@@ -86,15 +87,6 @@ namespace
   char ClassIMPCachePass::ID = 0;
   RegisterPass<ClassIMPCachePass> X("gnu-class-imp-cache", 
           "Cache IMPs for class messages");
-#if LLVM_MAJOR > 2
-  StandardPass::RegisterStandardPass<ClassIMPCachePass> D(
-        StandardPass::Module, &NonfragileIvarID,
-        StandardPass::OptimzationFlags(2, 0, 0, StandardPass::OptimizeSize),
-        &ClassIMPCacheID);
-  StandardPass::RegisterStandardPass<ClassIMPCachePass> L(StandardPass::LTO,
-      &NonfragileIvarID, StandardPass::OptimzationFlags(0),
-      &ClassIMPCacheID);
-#endif
 }
 
 ModulePass *createClassIMPCachePass(void)

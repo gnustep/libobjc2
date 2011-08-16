@@ -18,7 +18,7 @@ namespace {
     typedef std::vector<callPair > replacementVector;
       static char ID;
     uint32_t callsiteCount;
-    const IntegerType *Int32Ty;
+    LLVMIntegerType *Int32Ty;
       GNUObjCTypeFeedback() : ModulePass(ID), callsiteCount(0) {}
 
     void profileFunction(Function &F, Constant *ModuleID) {
@@ -32,14 +32,17 @@ namespace {
 
           CallSite call(b);
           if (call.getInstruction() && !call.getCalledFunction()) {
-            llvm::Value *args[] = { call->getOperand(1), call->getOperand(0),
-              ModuleID, ConstantInt::get(Int32Ty, callsiteCount++) };
+            llvm::SmallVector<llvm::Value*, 4> args;
+            args.push_back(call->getOperand(1));
+            args.push_back(call->getOperand(0)),
+            args.push_back(ModuleID);
+            args.push_back(ConstantInt::get(Int32Ty, callsiteCount++));
             Constant *profile = 
                 M->getOrInsertFunction("objc_msg_profile",
                   Type::getVoidTy(M->getContext()),
                   args[0]->getType(), args[1]->getType(),
                   args[2]->getType(), args[3]->getType(), NULL);
-            CallInst::Create(profile, args, args+4, "", call.getInstruction());
+            CreateCall(profile, args, "", call.getInstruction());
           }
         }
       }
@@ -50,7 +53,7 @@ namespace {
     {
       LLVMContext &VMContext = M.getContext();
       Int32Ty = IntegerType::get(VMContext, 32);
-      const PointerType *PtrTy = Type::getInt8PtrTy(VMContext);
+      LLVMPointerType *PtrTy = Type::getInt8PtrTy(VMContext);
       Constant *moduleName = 
         ConstantArray::get(VMContext, M.getModuleIdentifier(), true);
       moduleName = new GlobalVariable(M, moduleName->getType(), true,
@@ -108,7 +111,7 @@ namespace {
       }
 
       // Type of one ctor
-      const Type *ctorTy =
+      LLVMType *ctorTy =
         cast<ArrayType>(GCL->getType()->getElementType())->getElementType();
       // Add the 
       std::vector<Constant*> CSVals;

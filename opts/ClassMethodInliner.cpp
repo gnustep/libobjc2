@@ -101,15 +101,6 @@ namespace
   char ClassMethodInliner::ID = 0;
   RegisterPass<ClassMethodInliner> X("gnu-class-method-inline", 
           "Inline class methods and message sends to super");
-#if LLVM_MAJOR > 2
-  StandardPass::RegisterStandardPass<ClassMethodInliner> D(
-        StandardPass::Module, &ClassLookupCacheID,
-        StandardPass::OptimzationFlags(3, 0, 0, StandardPass::OptimizeSize),
-        &ClassMethodInlinerID);
-  StandardPass::RegisterStandardPass<ClassMethodInliner> L(StandardPass::LTO,
-      &ClassLookupCacheID, StandardPass::OptimzationFlags(0),
-      &ClassMethodInlinerID);
-#endif
 }
 
 ModulePass *createClassMethodInliner(void)

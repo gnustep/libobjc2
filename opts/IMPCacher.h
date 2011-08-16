@@ -1,3 +1,4 @@
+#include "LLVMCompat.h"
 namespace llvm
 {
   class BasicBlock;
@@ -23,9 +24,9 @@ namespace GNUstep
       MDNode *AlreadyCachedFlag;
       unsigned IMPCacheFlagKind;
       Pass *Owner;
-      const PointerType *PtrTy;
-      const PointerType *IdTy;
-      const IntegerType *IntTy;
+      LLVMPointerType *PtrTy;
+      LLVMPointerType *IdTy;
+      LLVMIntegerType *IntTy;
     public:
       IMPCacher(LLVMContext &C, Pass *owner);
       void CacheLookup(Instruction *lookup, Value *slot, Value *version, bool
