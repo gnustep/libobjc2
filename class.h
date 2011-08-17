@@ -274,7 +274,7 @@ static inline Class classForObject(id obj)
 	{
 		if (sizeof(Class) == 4)
 		{
-			return SmallObjectClasses[0];
+			return SmallObjectClasses[1];
 		}
 		else
 		{
