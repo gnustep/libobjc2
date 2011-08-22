@@ -25,7 +25,9 @@ APPLY_TYPE(unsigned long long, unsignedLongLong, UnsignedLongLong, 'Q')
 #ifdef NON_INTEGER_TYPES
 #undef NON_INTEGER_TYPES
 APPLY_TYPE(_Bool, bool, Bool, 'B')
+#ifndef SKIP_ID
 APPLY_TYPE(id, object, Object, '@')
+#endif
 APPLY_TYPE(Class, class, Class, '#')
 APPLY_TYPE(SEL, selector, Selector, ':')
 APPLY_TYPE(char*, cString, CString, '*')

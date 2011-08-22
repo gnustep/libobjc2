@@ -161,8 +161,19 @@ static const char *sizeof_type(const char *type, size_t *size)
 			*size += (sizeof(typeName) * 8);\
 			return type + 1;\
 		}
+#define SKIP_ID 1
 #define NON_INTEGER_TYPES 1
 #include "type_encoding_cases.h"
+		case '@':
+		{
+			round_up(size, (alignof(id) * 8));
+			*size += (sizeof(id) * 8);
+			if (*(type+1) == '?')
+			{
+				type++;
+			}
+			return type + 1;
+		}
 		case '?':
 		case 'v': return type+1;
 		case 'j':
@@ -252,7 +263,17 @@ static const char *alignof_type(const char *type, size_t *align)
 			return type + 1;\
 		}
 #define NON_INTEGER_TYPES 1
+#define SKIP_ID 1
 #include "type_encoding_cases.h"
+		case '@':
+		{
+			*align = max((alignof(id) * 8), *align);\
+			if (*(type+1) == '?')
+			{
+				type++;
+			}
+			return type + 1;
+		}
 		case '?':
 		case 'v': return type+1;
 		case 'j':
