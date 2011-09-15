@@ -695,7 +695,7 @@ PRIVATE void objc_send_initialize(id object)
 
 	// If there's no initialize method, then don't bother installing and
 	// removing the initialize dtable, just install both dtables correctly now
-	if (0 == initializeSlot || initializeSlot->owner != meta)
+	if (0 == initializeSlot)
 	{
 		meta->dtable = dtable;
 		class->dtable = class_dtable;
@@ -729,5 +729,4 @@ PRIVATE void objc_send_initialize(id object)
 	// safe.  We only need the lock when we remove the cached version.
 	meta->dtable = dtable;
 	class->dtable = class_dtable;
-
 }
