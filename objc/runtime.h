@@ -827,6 +827,25 @@ void objc_setAssociatedObject(id object, void *key, id value, objc_AssociationPo
 void objc_removeAssociatedObjects(id object);
 
 /**
+ * Converts a block into an IMP that can be used as a method.  The block should
+ * take an object pointer (self) as its first argument, and then the same
+ * arguments as the method.
+ */
+IMP imp_implementationWithBlock(void *block);
+/**
+ * Returns the block that was used in an IMP created by
+ * imp_implementationWithBlock().  The result of calling this function with any
+ * other IMP is undefined.
+ */
+void *imp_getBlock(IMP anImp);
+/**
+ * Removes a block that was converted to an IMP with
+ * imp_implementationWithBlock().  The result of calling this function with any
+ * other IMP is undefined.  Returns YES on success, NO on failure.
+ */
+BOOL imp_removeBlock(IMP anImp);
+
+/**
  * Adds a method to a specific object,  This method will not be added to any
  * other instances of the same class.
  */

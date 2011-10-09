@@ -22,6 +22,7 @@ void init_dispatch_tables(void);
 void init_gc(void);
 void init_protocol_table(void);
 void init_selector_tables(void);
+void init_trampolines(void);
 void objc_send_load_message(Class class);
 
 /* Number of threads that are alive.  */
@@ -59,6 +60,7 @@ void __objc_exec_class(struct objc_module_abi_8 *module)
 		init_dispatch_tables();
 		init_alias_table();
 		init_arc();
+		init_trampolines();
 		first_run = NO;
 	}
 

@@ -1,6 +1,6 @@
 .POSIX:
 
-.SUFFIXES: .cc .c .m .o
+.SUFFIXES: .cc .c .m .o .S
 
 MAJOR_VERSION = 4
 MINOR_VERSION = 6
@@ -10,12 +10,12 @@ VERSION = $(MAJOR_VERSION).$(MINOR_VERSION).$(SUBMINOR_VERSION)
 CFLAGS += -std=gnu99 -fPIC -fexceptions
 CXXFLAGS += -fPIC -fexceptions
 CPPFLAGS += -DTYPE_DEPENDENT_DISPATCH -DGNUSTEP
-CPPFLAGS += -D__OBJC_RUNTIME_INTERNAL__=1 -D_XOPEN_SOURCE=500
+CPPFLAGS += -D__OBJC_RUNTIME_INTERNAL__=1 -D_XOPEN_SOURCE=500 -D__BSD_VISIBLE=1
 
 # Suppress warnings about incorrect selectors
 CPPFLAGS += -DNO_SELECTOR_MISMATCH_WARNINGS
 # Some helpful flags for debugging.
-#CPPFLAGS += -g -O0 -fno-inline
+CPPFLAGS += -g -O0 -fno-inline
 
 PREFIX?= /usr/local
 LIB_DIR= ${PREFIX}/lib
@@ -32,6 +32,8 @@ OBJECTS = \
 	arc.o\
 	associate.o\
 	blocks_runtime.o\
+	block_to_imp.o\
+	block_trampolines.o\
 	caps.o\
 	category_loader.o\
 	class_table.o\
@@ -68,17 +70,21 @@ libobjc.a: $(OBJECTS)
 	@echo Linking static Objective-C runtime library...
 	@ld -r -s -o $@ $(OBJECTS)
 
-.cc.o:
+.cc.o: Makefile
 	@echo Compiling `basename $<`...
 	@$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
 
-.c.o:
+.c.o: Makefile
 	@echo Compiling `basename $<`...
 	@$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
-.m.o:
+.m.o: Makefile
 	@echo Compiling `basename $<`...
 	@$(CC) $(CPPFLAGS) $(CFLAGS) -fobjc-exceptions -c $< -o $@
+
+.S.o: Makefile
+	@echo Assembling `basename $<`...
+	@$(CC) $(CPPFLAGS) -c $< -o $@
 
 install: all
 	@echo Installing libraries...
