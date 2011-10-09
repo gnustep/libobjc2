@@ -40,6 +40,14 @@ next_line:
 	jmp   *-13(%eax)           # Call the block function
 __objc_block_trampoline_end:
 __objc_block_trampoline_sret:
+	call  next_line2           # Store the instruction pointer on the stack
+next_line2:
+	pop   %eax                 # Load the old instruction pointer
+	mov   8(%esp), %ebx        # Load the self parameter
+	mov   %ebx, 12(%esp)        # Store self as the second argument
+	mov   -9(%eax), %ebx       # Load the block pointer to %ebx
+	mov   %ebx, 8(%esp)        # Store the block pointer in the first argument
+	jmp   *-13(%eax)           # Call the block function
 __objc_block_trampoline_end_sret:
 #else
 __objc_block_trampoline:
