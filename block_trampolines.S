@@ -21,12 +21,14 @@
 .globl __objc_block_trampoline_end
 #if __x86_64
 __objc_block_trampoline:
-next:
-	mov   -14(%rip), %esi      # Load the block pointer into the second argument
-	xchg  %edi, %esi           # Swap the first and second arguments
-	jmp   *-30(%rip)           # Call the block function
+	mov   -15(%rip), %rsi      # Load the block pointer into the second argument
+	xchg  %rdi, %rsi           # Swap the first and second arguments
+	jmp   *-32(%rip)           # Call the block function
 __objc_block_trampoline_end:
 __objc_block_trampoline_sret:
+	mov   -15(%rip), %rdx      # Load the block pointer into the second argument
+	xchg  %rdx, %rsi           # Swap the first and second arguments
+	jmp   *-32(%rip)           # Call the block function
 __objc_block_trampoline_end_sret:
 #elif __i386
 __objc_block_trampoline:
