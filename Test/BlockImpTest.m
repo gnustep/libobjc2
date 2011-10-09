@@ -35,10 +35,15 @@ int main(void)
 		return b;
 	};
 	imp = imp_implementationWithBlock(blk);
+	assert(imp && "Can't make sret IMP");
 	char *type;
 	asprintf(&type, "%s@:", @encode(struct big));
 	class_addMethod((objc_getMetaClass("Foo")), @selector(sret), imp, type);
 	struct big s = [Foo sret];
-	fprintf(stderr, "%d %d %d %d %d\n", s.a, s.b, s.c, s.d, s.e);
+	assert(s.a == 1);
+	assert(s.b == 2);
+	assert(s.c == 3);
+	assert(s.d == 4);
+	assert(s.e == 5);
 	return 0;
 }
