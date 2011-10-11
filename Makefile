@@ -7,6 +7,10 @@ MINOR_VERSION = 6
 SUBMINOR_VERSION = 0
 VERSION = $(MAJOR_VERSION).$(MINOR_VERSION).$(SUBMINOR_VERSION)
 
+LIBOBJCLIBNAME=objc
+LIBOBJC=libobjc
+LIBOBJCXX=libobjcxx
+
 CFLAGS += -std=gnu99 -fPIC -fexceptions
 CXXFLAGS += -fPIC -fexceptions
 CPPFLAGS += -DTYPE_DEPENDENT_DISPATCH -DGNUSTEP
@@ -56,17 +60,17 @@ OBJECTS = \
 	statics_loader.o\
 	toydispatch.o
 
-all: libobjc.a libobjcxx.so.$(VERSION)
+all: $(LIBOBJC).a $(LIBOBJCXX).so.$(VERSION)
 
-libobjcxx.so.$(VERSION): libobjc.so.$(VERSION) $(OBJCXX_OBJECTS)
+$(LIBOBJCXX).so.$(VERSION): $(LIBOBJC).so.$(VERSION) $(OBJCXX_OBJECTS)
 	@echo Linking shared Objective-C++ runtime library...
 	@$(CXX) -shared -o $@ $(OBJCXX_OBJECTS)
 
-libobjc.so.$(VERSION): $(OBJECTS)
+$(LIBOBJC).so.$(VERSION): $(OBJECTS)
 	@echo Linking shared Objective-C runtime library...
 	@$(CC) -shared -rdynamic -o $@ $(OBJECTS)
 
-libobjc.a: $(OBJECTS)
+$(LIBOBJC).a: $(OBJECTS)
 	@echo Linking static Objective-C runtime library...
 	@ld -r -s -o $@ $(OBJECTS)
 
@@ -89,16 +93,16 @@ libobjc.a: $(OBJECTS)
 install: all
 	@echo Installing libraries...
 	@install -d $(LIB_DIR)
-	@install -m 444 libobjc.so.$(VERSION) $(LIB_DIR)
-	@install -m 444 libobjcxx.so.$(VERSION) $(LIB_DIR)
-	@install -m 444 libobjc.a $(LIB_DIR)
+	@install -m 444 $(LIBOBJC).so.$(VERSION) $(LIB_DIR)
+	@install -m 444 $(LIBOBJCXX).so.$(VERSION) $(LIB_DIR)
+	@install -m 444 $(LIBOBJC).a $(LIB_DIR)
 	@echo Creating symbolic links...
-	@ln -sf $(LIB_DIR)/libobjc.so.$(VERSION) $(LIB_DIR)/libobjc.so
-	@ln -sf $(LIB_DIR)/libobjc.so.$(VERSION) $(LIB_DIR)/libobjc.so.$(MAJOR_VERSION)
-	@ln -sf $(LIB_DIR)/libobjc.so.$(VERSION) $(LIB_DIR)/libobjc.so.$(MAJOR_VERSION).$(MINOR_VERSION)
-	@ln -sf $(LIB_DIR)/libobjcxx.so.$(VERSION) $(LIB_DIR)/libobjcxx.so
-	@ln -sf $(LIB_DIR)/libobjcxx.so.$(VERSION) $(LIB_DIR)/libobjcxx.so.$(MAJOR_VERSION)
-	@ln -sf $(LIB_DIR)/libobjcxx.so.$(VERSION) $(LIB_DIR)/libobjcxx.so.$(MAJOR_VERSION).$(MINOR_VERSION)
+	@ln -sf $(LIB_DIR)/$(LIBOBJC).so.$(VERSION) $(LIB_DIR)/$(LIBOBJC).so
+	@ln -sf $(LIB_DIR)/$(LIBOBJC).so.$(VERSION) $(LIB_DIR)/$(LIBOBJC).so.$(MAJOR_VERSION)
+	@ln -sf $(LIB_DIR)/$(LIBOBJC).so.$(VERSION) $(LIB_DIR)/$(LIBOBJC).so.$(MAJOR_VERSION).$(MINOR_VERSION)
+	@ln -sf $(LIB_DIR)/$(LIBOBJCXX).so.$(VERSION) $(LIB_DIR)/$(LIBOBJCXX).so
+	@ln -sf $(LIB_DIR)/$(LIBOBJCXX).so.$(VERSION) $(LIB_DIR)/$(LIBOBJCXX).so.$(MAJOR_VERSION)
+	@ln -sf $(LIB_DIR)/$(LIBOBJCXX).so.$(VERSION) $(LIB_DIR)/$(LIBOBJCXX).so.$(MAJOR_VERSION).$(MINOR_VERSION)
 	@echo Installing headers...
 	@install -d $(HEADER_DIR)/objc
 	@install -m 444 objc/*.h $(HEADER_DIR)/objc
@@ -107,6 +111,6 @@ clean:
 	@echo Cleaning...
 	@rm -f $(OBJECTS)
 	@rm -f $(OBJCXX_OBJECTS)
-	@rm -f libobjc.so.$(VERSION)
-	@rm -f libobjcxx.so.$(VERSION)
-	@rm -f libobjc.a
+	@rm -f $(LIBOBJC).so.$(VERSION)
+	@rm -f $(LIBOBJCXX).so.$(VERSION)
+	@rm -f $(LIBOBJC).a
