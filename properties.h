@@ -1,3 +1,4 @@
+#include "visibility.h"
 
 enum PropertyAttributeKind 
 {
@@ -55,7 +56,7 @@ struct objc_property
 	 * Attributes for this property.  Made by ORing together
 	 * PropertyAttributeKinds.
 	 */
-	const char attributes;
+	char attributes;
 	/**
 	 * Flag set if the property is synthesized.
 	 */
@@ -88,8 +89,7 @@ struct objc_property_list
 	 */
 	int count;
 	/* 
-	 * UNUSED.  In future, categories will be allowed to add properties and
-	 * then this will be used to link the declarations together.
+	 * The next property in a linked list.
 	 */
 	struct objc_property_list *next; 
 	/**
@@ -98,3 +98,8 @@ struct objc_property_list
 	struct objc_property properties[];
 };
 
+/**
+ * Constructs a property description from a list of attributes.
+ */
+PRIVATE struct objc_property propertyFromAttrs(const objc_property_attribute_t *attributes,
+                                               unsigned int attributeCount);

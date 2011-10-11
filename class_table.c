@@ -460,6 +460,17 @@ int objc_getClassList(Class *buffer, int bufferLen)
 	}
 	return count;
 }
+Class *objc_copyClassList(unsigned int *outCount)
+{
+	int count = class_table->table_used;
+	Class *buffer = calloc(sizeof(Class), count);
+	if (NULL != outCount)
+	{
+		*outCount = count;
+	}
+	objc_getClassList(buffer, count);
+	return buffer;
+}
 
 Class class_getSuperclass(Class cls)
 {

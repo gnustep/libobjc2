@@ -163,6 +163,26 @@ struct objc_method_description
 	const char *types;
 };
 
+/**
+ * The objc_property_attribute_t type is used to store attributes for
+ * properties.  This is used to store a decomposed version of the property
+ * encoding, with each flag stored in the name and each value in the value.
+ *
+ * All of the strings that these refer to are internal to the runtime and
+ * should not be freed.
+ */
+typedef struct
+{
+	/**
+	 * The flag that this attribute describes.  All current flags are single characters,
+	 */
+	const char *name;
+	/**
+	 */
+	const char *value;
+} objc_property_attribute_t;
+
+
 
 #ifndef YES
 #	define YES ((BOOL)1)
@@ -520,6 +540,12 @@ id objc_getClass(const char *name);
  * Otherwise, it copies classes and returns the number copied.
  */
 int objc_getClassList(Class *buffer, int bufferLen);
+/**
+ * Returns a copy of the list of all classes in the system.  The caller is
+ * responsible for freeing this list.  The number of classes is returned in the
+ * parameter.
+ */
+Class *objc_copyClassList(unsigned int *outCount);
 
 /**
  * Returns the metaclass with the specified name.  This is equivalent to
@@ -544,6 +570,41 @@ id objc_lookUpClass(const char *name);
  * Returns the protocol with the specified name.
  */
 Protocol *objc_getProtocol(const char *name);
+/**
+ * Allocates a new protocol.  This returns NULL if a protocol with the same
+ * name already exists in the system.
+ *
+ * Protocols are immutable after they have been registered, so may only be
+ * modified between calling this function and calling objc_registerProtocol().
+ */
+Protocol *objc_allocateProtocol(const char *name);
+/**
+ * Registers a protocol with the runtime.  After this point, the protocol may
+ * not be modified.
+ */
+void objc_registerProtocol(Protocol *proto);
+/**
+ * Adds a method to the protocol.
+ */
+void protocol_addMethodDescription(Protocol *aProtocol,
+                                   SEL name,
+                                   const char *types,
+                                   BOOL isRequiredMethod,
+                                   BOOL isInstanceMethod);
+/**
+ * Adds a protocol to the protocol.
+ */
+void protocol_addProtocol(Protocol *aProtocol, Protocol *addition);
+/**
+ * Adds a property to the protocol.
+ */
+void protocol_addProperty(Protocol *aProtocol,
+                          const char *name,
+                          const objc_property_attribute_t *attributes,
+                          unsigned int attributeCount,
+                          BOOL isRequiredProperty,
+                          BOOL isInstanceProperty);
+
 
 /**
  * Registers a new class and its metaclass with the runtime.  This function
@@ -599,6 +660,36 @@ const char *property_getName(objc_property_t property);
  * Objective-C Runtime Programming Guide.
  */
 const char *property_getAttributes(objc_property_t property);
+
+/**
+ * Returns an array of attributes for this property.
+ */
+objc_property_attribute_t *property_copyAttributeList(objc_property_t property,
+                                                      unsigned int *outCount);
+/**
+ * Adds a property to the class, given a specified set of attributes.  Note
+ * that this only sets the property metadata.  The property accessor methods
+ * must already be created.
+ */
+BOOL class_addProperty(Class cls,
+                       const char *name,
+                       const objc_property_attribute_t *attributes, 
+                       unsigned int attributeCount);
+
+/**
+ * Replaces property metadata.  If the property does not exist, then this is
+ * equivalent to calling class_addProperty().
+ */
+void class_replaceProperty(Class cls,
+                           const char *name,
+                           const objc_property_attribute_t *attributes,
+                           unsigned int attributeCount);
+
+/**
+ * Returns a copy of a single attribute.
+ */
+char *property_copyAttributeValue(objc_property_t property,
+                                  const char *attributeName);
 
 /**
  * Testswhether a protocol conforms to another protocol.

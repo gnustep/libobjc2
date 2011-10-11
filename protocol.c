@@ -3,7 +3,6 @@
 #include "properties.h"
 #include "class.h"
 #include "lock.h"
-#include "visibility.h"
 #include <stdlib.h>
 
 #define BUFFER_TYPE struct objc_protocol_list
@@ -492,5 +491,125 @@ Protocol*__unsafe_unretained* objc_copyProtocolList(unsigned int *outCount)
 		*outCount = total;
 	}
 	return p;
+}
+
+
+Protocol *objc_allocateProtocol(const char *name)
+{
+	if (objc_getProtocol(name) != NULL) { return NULL; }
+	Protocol *p = calloc(1, sizeof(Protocol2));
+	p->name = strdup(name);
+	return p;
+}
+void objc_registerProtocol(Protocol *proto)
+{
+	if (NULL == proto) { return; }
+	LOCK_RUNTIME_FOR_SCOPE();
+	if (objc_getProtocol(proto->name) != NULL) { return; }
+	if (nil != proto->isa) { return; }
+	proto->isa = ObjC2ProtocolClass;
+	protocol_table_insert((struct objc_protocol2*)proto);
+}
+void protocol_addMethodDescription(Protocol *aProtocol,
+                                   SEL name,
+                                   const char *types,
+                                   BOOL isRequiredMethod,
+                                   BOOL isInstanceMethod)
+{
+	if ((NULL == aProtocol) || (NULL == name) || (NULL == types)) { return; }
+	if (nil != aProtocol->isa) { return; }
+	Protocol2 *proto = (Protocol2*)aProtocol;
+	struct objc_method_description_list **listPtr;
+	if (isInstanceMethod)
+	{
+		if (isRequiredMethod)
+		{
+			listPtr = &proto->instance_methods;
+		}
+		else
+		{
+			listPtr = &proto->optional_instance_methods;
+		}
+	}
+	else
+	{
+		if (isRequiredMethod)
+		{
+			listPtr = &proto->class_methods;
+		}
+		else
+		{
+			listPtr = &proto->optional_class_methods;
+		}
+	}
+	if (NULL == *listPtr)
+	{
+		*listPtr = calloc(1, sizeof(struct objc_method_description_list) + sizeof(struct objc_method_description));
+		(*listPtr)->count = 1;
+	}
+	else
+	{
+		(*listPtr)->count++;
+		*listPtr = realloc(*listPtr, sizeof(struct objc_method_description_list) +
+				sizeof(struct objc_method_description) * (*listPtr)->count);
+	}
+	struct objc_method_description_list *list = *listPtr;
+	int index = list->count-1;
+	list->methods[index].name = sel_getName(name);
+	list->methods[index].types= types;
+}
+void protocol_addProtocol(Protocol *aProtocol, Protocol *addition)
+{
+	if ((NULL == aProtocol) || (NULL == addition)) { return; }
+	Protocol2 *proto = (Protocol2*)aProtocol;
+	if (NULL == proto->protocol_list)
+	{
+		proto->protocol_list = calloc(1, sizeof(struct objc_property_list) + sizeof(Protocol2*));
+		proto->protocol_list->count = 1;
+	}
+	else
+	{
+		proto->protocol_list->count++;
+		proto->protocol_list = realloc(proto->protocol_list, sizeof(struct objc_property_list) +
+				proto->protocol_list->count * sizeof(Protocol2*));
+		proto->protocol_list->count = 1;
+	}
+	proto->protocol_list->list[proto->protocol_list->count-1] = (Protocol2*)addition;
+}
+void protocol_addProperty(Protocol *aProtocol,
+                          const char *name,
+                          const objc_property_attribute_t *attributes,
+                          unsigned int attributeCount,
+                          BOOL isRequiredProperty,
+                          BOOL isInstanceProperty)
+{
+	if ((NULL == aProtocol) || (NULL == name)) { return; }
+	if (nil != aProtocol->isa) { return; }
+	if (!isInstanceProperty) { return; }
+	Protocol2 *proto = (Protocol2*)aProtocol;
+	struct objc_property_list **listPtr;
+	if (isRequiredProperty)
+	{
+		listPtr = &proto->properties;
+	}
+	else
+	{
+		listPtr = &proto->optional_properties;
+	}
+	if (NULL == *listPtr)
+	{
+		*listPtr = calloc(1, sizeof(struct objc_property_list) + sizeof(struct objc_property));
+		(*listPtr)->count = 1;
+	}
+	else
+	{
+		(*listPtr)->count++;
+		*listPtr = realloc(*listPtr, sizeof(struct objc_property_list) +
+				sizeof(struct objc_property) * (*listPtr)->count);
+	}
+	struct objc_property_list *list = *listPtr;
+	int index = list->count-1;
+	list->properties[index] = propertyFromAttrs(attributes, attributeCount);
+	list->properties[index].name = strdup(name);
 }
 

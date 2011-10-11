@@ -6,12 +6,13 @@ libobjc2).  This runtime was designed to support the features of Objective-C 2
 for use with GNUstep and other Objective-C programs.  Highlights of this
 release include:
 
+- Compatibility with the new runtime APIs introduced with Mac OS X 10.7.
 - Support for small objects (ones hidden inside a pointer).  On 32-bit systems,
   the runtime permits one small object class, on 64-bit systems it permits 4.
 - Support for prototype-style object orientation.  You can now add methods, as
   well as associated references, to individual objects, as well as cloning
   them.  The runtime now supports everything required for the JavaScript object
-  model.
+  model, including the ability to use blocks as methods.
 
 You may obtain the code for this release from subversion at the following
 subversion branch:
