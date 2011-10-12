@@ -11,6 +11,8 @@ LIBOBJCLIBNAME=objc
 LIBOBJC=libobjc
 LIBOBJCXX=libobjcxx
 
+SILENT=@
+
 CFLAGS += -std=gnu99 -fPIC -fexceptions
 CXXFLAGS += -fPIC -fexceptions
 CPPFLAGS += -DTYPE_DEPENDENT_DISPATCH -DGNUSTEP
@@ -63,54 +65,54 @@ OBJECTS = \
 all: $(LIBOBJC).a $(LIBOBJCXX).so.$(VERSION)
 
 $(LIBOBJCXX).so.$(VERSION): $(LIBOBJC).so.$(VERSION) $(OBJCXX_OBJECTS)
-	@echo Linking shared Objective-C++ runtime library...
-	@$(CXX) -shared -o $@ $(OBJCXX_OBJECTS)
+	$(SILENT)echo Linking shared Objective-C++ runtime library...
+	$(SILENT)$(CXX) -shared -o $@ $(OBJCXX_OBJECTS)
 
 $(LIBOBJC).so.$(VERSION): $(OBJECTS)
-	@echo Linking shared Objective-C runtime library...
-	@$(CC) -shared -rdynamic -o $@ $(OBJECTS)
+	$(SILENT)echo Linking shared Objective-C runtime library...
+	$(SILENT)$(CC) -shared -rdynamic -o $@ $(OBJECTS)
 
 $(LIBOBJC).a: $(OBJECTS)
-	@echo Linking static Objective-C runtime library...
-	@ld -r -s -o $@ $(OBJECTS)
+	$(SILENT)echo Linking static Objective-C runtime library...
+	$(SILENT)ld -r -s -o $@ $(OBJECTS)
 
 .cc.o: Makefile
-	@echo Compiling `basename $<`...
-	@$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
+	$(SILENT)echo Compiling `basename $<`...
+	$(SILENT)$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
 
 .c.o: Makefile
-	@echo Compiling `basename $<`...
-	@$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+	$(SILENT)echo Compiling `basename $<`...
+	$(SILENT)$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
 .m.o: Makefile
-	@echo Compiling `basename $<`...
-	@$(CC) $(CPPFLAGS) $(CFLAGS) -fobjc-exceptions -c $< -o $@
+	$(SILENT)echo Compiling `basename $<`...
+	$(SILENT)$(CC) $(CPPFLAGS) $(CFLAGS) -fobjc-exceptions -c $< -o $@
 
 .S.o: Makefile
-	@echo Assembling `basename $<`...
-	@$(CC) $(CPPFLAGS) -c $< -o $@
+	$(SILENT)echo Assembling `basename $<`...
+	$(SILENT)$(CC) $(CPPFLAGS) -c $< -o $@
 
 install: all
-	@echo Installing libraries...
-	@install -d $(LIB_DIR)
-	@install -m 444 $(LIBOBJC).so.$(VERSION) $(LIB_DIR)
-	@install -m 444 $(LIBOBJCXX).so.$(VERSION) $(LIB_DIR)
-	@install -m 444 $(LIBOBJC).a $(LIB_DIR)
-	@echo Creating symbolic links...
-	@ln -sf $(LIB_DIR)/$(LIBOBJC).so.$(VERSION) $(LIB_DIR)/$(LIBOBJC).so
-	@ln -sf $(LIB_DIR)/$(LIBOBJC).so.$(VERSION) $(LIB_DIR)/$(LIBOBJC).so.$(MAJOR_VERSION)
-	@ln -sf $(LIB_DIR)/$(LIBOBJC).so.$(VERSION) $(LIB_DIR)/$(LIBOBJC).so.$(MAJOR_VERSION).$(MINOR_VERSION)
-	@ln -sf $(LIB_DIR)/$(LIBOBJCXX).so.$(VERSION) $(LIB_DIR)/$(LIBOBJCXX).so
-	@ln -sf $(LIB_DIR)/$(LIBOBJCXX).so.$(VERSION) $(LIB_DIR)/$(LIBOBJCXX).so.$(MAJOR_VERSION)
-	@ln -sf $(LIB_DIR)/$(LIBOBJCXX).so.$(VERSION) $(LIB_DIR)/$(LIBOBJCXX).so.$(MAJOR_VERSION).$(MINOR_VERSION)
-	@echo Installing headers...
-	@install -d $(HEADER_DIR)/objc
-	@install -m 444 objc/*.h $(HEADER_DIR)/objc
+	$(SILENT)echo Installing libraries...
+	$(SILENT)install -d $(LIB_DIR)
+	$(SILENT)install -m 444 $(LIBOBJC).so.$(VERSION) $(LIB_DIR)
+	$(SILENT)install -m 444 $(LIBOBJCXX).so.$(VERSION) $(LIB_DIR)
+	$(SILENT)install -m 444 $(LIBOBJC).a $(LIB_DIR)
+	$(SILENT)echo Creating symbolic links...
+	$(SILENT)ln -sf $(LIB_DIR)/$(LIBOBJC).so.$(VERSION) $(LIB_DIR)/$(LIBOBJC).so
+	$(SILENT)ln -sf $(LIB_DIR)/$(LIBOBJC).so.$(VERSION) $(LIB_DIR)/$(LIBOBJC).so.$(MAJOR_VERSION)
+	$(SILENT)ln -sf $(LIB_DIR)/$(LIBOBJC).so.$(VERSION) $(LIB_DIR)/$(LIBOBJC).so.$(MAJOR_VERSION).$(MINOR_VERSION)
+	$(SILENT)ln -sf $(LIB_DIR)/$(LIBOBJCXX).so.$(VERSION) $(LIB_DIR)/$(LIBOBJCXX).so
+	$(SILENT)ln -sf $(LIB_DIR)/$(LIBOBJCXX).so.$(VERSION) $(LIB_DIR)/$(LIBOBJCXX).so.$(MAJOR_VERSION)
+	$(SILENT)ln -sf $(LIB_DIR)/$(LIBOBJCXX).so.$(VERSION) $(LIB_DIR)/$(LIBOBJCXX).so.$(MAJOR_VERSION).$(MINOR_VERSION)
+	$(SILENT)echo Installing headers...
+	$(SILENT)install -d $(HEADER_DIR)/objc
+	$(SILENT)install -m 444 objc/*.h $(HEADER_DIR)/objc
 
 clean:
-	@echo Cleaning...
-	@rm -f $(OBJECTS)
-	@rm -f $(OBJCXX_OBJECTS)
-	@rm -f $(LIBOBJC).so.$(VERSION)
-	@rm -f $(LIBOBJCXX).so.$(VERSION)
-	@rm -f $(LIBOBJC).a
+	$(SILENT)echo Cleaning...
+	$(SILENT)rm -f $(OBJECTS)
+	$(SILENT)rm -f $(OBJCXX_OBJECTS)
+	$(SILENT)rm -f $(LIBOBJC).so.$(VERSION)
+	$(SILENT)rm -f $(LIBOBJCXX).so.$(VERSION)
+	$(SILENT)rm -f $(LIBOBJC).a
