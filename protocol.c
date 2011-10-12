@@ -609,7 +609,8 @@ void protocol_addProperty(Protocol *aProtocol,
 	}
 	struct objc_property_list *list = *listPtr;
 	int index = list->count-1;
-	list->properties[index] = propertyFromAttrs(attributes, attributeCount);
-	list->properties[index].name = strdup(name);
+	struct objc_property p = propertyFromAttrs(attributes, attributeCount);
+	p.name = strdup(name);
+	memcpy(&(list->properties[index]), &p, sizeof(p));
 }
 
