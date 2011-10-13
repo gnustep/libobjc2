@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
+#include <ctype.h>
 #include <unistd.h>
 #include <sys/mman.h>
 #include "objc/runtime.h"
@@ -122,4 +124,36 @@ BOOL imp_removeBlock(IMP anImp)
 	if (0 == w) { return NO; }
 	Block_release(((void**)anImp) - 1);
 	return YES;
+}
+
+PRIVATE size_t lengthOfTypeEncoding(const char *types);
+
+char *block_copyIMPTypeEncoding_np(void*block)
+{
+	char *buffer = strdup(block_getType_np(block));
+	if (NULL == buffer) { return NULL; }
+	char *replace = buffer;
+	// Skip the return type
+	replace += lengthOfTypeEncoding(replace);
+	while (isdigit(*replace)) { replace++; }
+	// The first argument type should be @? (block), and we need to transform
+	// it to @, so we have to delete the ?.  Assert here because this isn't a
+	// block encoding at all if the first argument is not a block, and since we
+	// got it from block_getType_np(), this means something is badly wrong.
+	assert('@' == *replace);
+	replace++;
+	assert('?' == *replace);
+	// Use strlen(replace) not replace+1, because we want to copy the NULL
+	// terminator as well.
+	memmove(replace, replace+1, strlen(replace));
+	// The next argument should be an object, and we want to replace it with a
+	// selector
+	while (isdigit(*replace)) { replace++; }
+	if ('@' != *replace)
+	{
+		free(buffer);
+		return NULL;
+	}
+	*replace = ':';
+	return buffer;
 }
