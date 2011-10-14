@@ -186,14 +186,7 @@ static void PREFIX(_table_collect_garbage)(void *t)
 		objc_collect_garbage_data(PREFIX(_table_collect_garbage), t);
 		return;
 	}
-	for (uint32_t i=0 ; i<table->table_size ; i++)
-	{
-		MAP_TABLE_VALUE_TYPE value = table->table[i].value;
-		if (!MAP_TABLE_VALUE_NULL(value))
-		{
-			MAP_TABLE_HASH_VALUE(value);
-		}
-	}
+	sleep(30);
 	free(table->table);
 	free(table);
 }
