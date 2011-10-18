@@ -13,12 +13,22 @@
 # argument (the first block argument) and the _cmd parameter excised
 
 .file	"block_trampolines.S"
+#if __arm__
+.syntax unified
+.globl __objc_block_trampoline_sret
+	.type	__objc_block_trampoline_sret, %function
+.globl __objc_block_trampoline_end_sret
+.globl __objc_block_trampoline
+	.type	__objc_block_trampoline, %function
+.globl __objc_block_trampoline_end
+#else
 .globl __objc_block_trampoline_sret
 	.type	__objc_block_trampoline_sret, @function
 .globl __objc_block_trampoline_end_sret
 .globl __objc_block_trampoline
 	.type	__objc_block_trampoline, @function
 .globl __objc_block_trampoline_end
+#endif
 #if __x86_64
 __objc_block_trampoline:
 	mov   -15(%rip), %rsi      # Load the block pointer into the second argument
@@ -53,14 +63,14 @@ next_line2:
 __objc_block_trampoline_end_sret:
 #elif __arm__
 __objc_block_trampoline:
-	mov r1, r0                 # Move self over _cmd
-	ldr r0, [pc, #-16]         # Load the block pointer over self
-	ldr pc, [pc, #-24]         # Jump to the block function
+	mov r1, r0                 // Move self over _cmd
+	ldr r0, [pc, #-16]         // Load the block pointer over self
+	ldr pc, [pc, #-24]         // Jump to the block function
 __objc_block_trampoline_end:
 __objc_block_trampoline_sret:
-	mov r2, r1                 # Move self over _cmd
-	ldr r1, [pc, #-16]         # Load the block pointer over self
-	ldr pc, [pc, #-24]         # Jump to the block function
+	mov r2, r1                 // Move self over _cmd
+	ldr r1, [pc, #-16]         // Load the block pointer over self
+	ldr pc, [pc, #-24]         // Jump to the block function
 __objc_block_trampoline_end_sret:
 #else
 #warning imp_implementationWithBlock() not implemented for your architecture
