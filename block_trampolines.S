@@ -53,16 +53,14 @@ next_line2:
 __objc_block_trampoline_end_sret:
 #elif __arm__
 __objc_block_trampoline:
-	mov r12, pc                # Save entry program counter
 	mov r1, r0                 # Move self over _cmd
-	ldr r0, [r12, #-12]        # Load the block pointer over self
-	ldr pc, [r12, #-16]        # Jump to the block function
+	ldr r0, [pc, #-16]         # Load the block pointer over self
+	ldr pc, [pc, #-24]         # Jump to the block function
 __objc_block_trampoline_end:
 __objc_block_trampoline_sret:
-	mov r12, pc                # Save the program counter
 	mov r2, r1                 # Move self over _cmd
-	ldr r1, [r12, #-12]        # Load the block pointer over self
-	ldr pc, [r12, #-16]        # Jump to the block function
+	ldr r1, [pc, #-16]         # Load the block pointer over self
+	ldr pc, [pc, #-24]         # Jump to the block function
 __objc_block_trampoline_end_sret:
 #else
 #warning imp_implementationWithBlock() not implemented for your architecture
