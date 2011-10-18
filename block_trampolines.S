@@ -51,6 +51,19 @@ next_line2:
 	mov   %ebx, 8(%esp)        # Store the block pointer in the first argument
 	jmp   *-13(%eax)           # Call the block function
 __objc_block_trampoline_end_sret:
+#elif __arm__
+__objc_block_trampoline:
+	mov r12, pc                # Save entry program counter
+	mov r1, r0                 # Move self over _cmd
+	ldr r0, [r12, #-12]        # Load the block pointer over self
+	ldr pc, [r12, #-16]        # Jump to the block function
+__objc_block_trampoline_end:
+__objc_block_trampoline_sret:
+	mov r12, pc                # Save the program counter
+	mov r2, r1                 # Move self over _cmd
+	ldr r1, [r12, #-12]        # Load the block pointer over self
+	ldr pc, [r12, #-16]        # Jump to the block function
+__objc_block_trampoline_end_sret:
 #else
 #warning imp_implementationWithBlock() not implemented for your architecture
 __objc_block_trampoline:
