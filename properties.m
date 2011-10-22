@@ -343,7 +343,7 @@ const char *property_getAttributes(objc_property_t property)
 	*insert = '\0';
 	// If another thread installed the encoding string while we were computing
 	// it, then discard the one that we created and return theirs.
-	if (!__sync_bool_compare_and_swap(&(property->name), name, encoding))
+	if (!__sync_bool_compare_and_swap(&(property->name), name, (char*)encoding))
 	{
 		free(encoding);
 		return property->name + 2;
