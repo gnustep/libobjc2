@@ -45,7 +45,6 @@ static struct objc_slot* objc_selector_type_mismatch(Class cls, SEL
 }
 #endif
 
-
 struct objc_slot* (*_objc_selector_type_mismatch)(Class cls, SEL
 		selector, struct objc_slot *result) = objc_selector_type_mismatch;
 static 
@@ -105,6 +104,16 @@ retry:;
 	return result;
 }
 
+PRIVATE
+IMP slowMsgLookup(id *receiver, SEL cmd)
+{
+	return objc_msg_lookup_sender(receiver, cmd, nil)->method;
+}
+
+PRIVATE void logInt(long long a)
+{
+	fprintf(stderr, "Value: %llx\n", a);
+}
 
 Slot_t (*objc_plane_lookup)(id *receiver, SEL op, id sender) =
 	objc_msg_lookup_internal;

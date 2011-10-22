@@ -40,6 +40,7 @@ OBJECTS = \
 	blocks_runtime.o\
 	block_to_imp.o\
 	block_trampolines.o\
+	objc_msgSend.o\
 	caps.o\
 	category_loader.o\
 	class_table.o\
@@ -90,7 +91,7 @@ $(LIBOBJC).a: $(OBJECTS)
 
 .S.o: Makefile
 	$(SILENT)echo Assembling `basename $<`...
-	$(SILENT)$(CC) $(CPPFLAGS) -c $< -o $@
+	$(SILENT)$(CC) $(CPPFLAGS) -no-integrated-as -c $< -o $@
 
 install: all
 	$(SILENT)echo Installing libraries...
