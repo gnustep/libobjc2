@@ -431,6 +431,15 @@ BOOL objc_registerSmallObjectClass_np(Class class, uintptr_t mask)
 	{
 		return NO;
 	}
+	if (sizeof(void*) == 4)
+	{
+		if (Nil == SmallObjectClasses[0])
+		{
+			SmallObjectClasses[0] = class;
+			return YES;
+		}
+		return NO;
+	}
 	if (Nil != SmallObjectClasses[mask])
 	{
 		return NO;

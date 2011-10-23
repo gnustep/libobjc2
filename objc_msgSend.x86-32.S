@@ -75,7 +75,6 @@
 	call  __i686.get_pc_thunk.bx
 	addl  $_GLOBAL_OFFSET_TABLE_, %ebx
 	mov   SmallObjectClasses@GOT(%ebx), %eax
-	addl  $4, %eax
 	mov   (%eax), %eax
 	popl  %ebx
 	jmp   1b 

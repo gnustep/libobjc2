@@ -110,9 +110,9 @@ IMP slowMsgLookup(id *receiver, SEL cmd)
 	return objc_msg_lookup_sender(receiver, cmd, nil)->method;
 }
 
-PRIVATE void logInt(long long a)
+PRIVATE void logInt(void *a)
 {
-	fprintf(stderr, "Value: %llx\n", a);
+	fprintf(stderr, "Value: %p\n", a);
 }
 
 Slot_t (*objc_plane_lookup)(id *receiver, SEL op, id sender) =

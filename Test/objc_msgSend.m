@@ -3,6 +3,7 @@
 #include <objc/runtime.h>
 #include <assert.h>
 #include <string.h>
+#include <class.h>
 
 id objc_msgSend(id, SEL, ...);
 
@@ -38,6 +39,7 @@ int main(void)
 	TestCls = objc_getClass("Test");
 	objc_msgSend(TestCls, @selector(nothing));
 	objc_msgSend(TestCls, @selector(missing));
+	assert(0 == objc_msgSend(0, @selector(nothing)));
 	id a = objc_msgSend(objc_getClass("Test"), @selector(foo));
 	assert((id)0x42 == a);
 	a = objc_msgSend(TestCls, @selector(foo));
