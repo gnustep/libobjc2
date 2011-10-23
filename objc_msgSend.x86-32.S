@@ -83,7 +83,7 @@
 	.type	objc_msgSend, @function
 objc_msgSend:
 	MSGSEND 4, 8
-.globl objc_msgSend_sret
-	.type	objc_msgSend_sret, @function
-objc_msgSend_sret:
+.globl objc_msgSend_stret
+	.type	objc_msgSend_stret, @function
+objc_msgSend_stret:
 	MSGSEND 8, 12

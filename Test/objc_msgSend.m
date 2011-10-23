@@ -8,7 +8,7 @@
 id objc_msgSend(id, SEL, ...);
 
 typedef struct { int a,b,c,d,e; } s;
-s objc_msgSend_sret(id, SEL, ...);
+s objc_msgSend_stret(id, SEL, ...);
 
 Class TestCls;
 @interface Test { id isa; }@end
@@ -47,7 +47,7 @@ int main(void)
 	objc_registerSmallObjectClass_np(objc_getClass("Test"), 1);
 	a = objc_msgSend((id)01, @selector(foo));
 	assert((id)0x42 == a);
-	s ret = objc_msgSend_sret(TestCls, @selector(sret));
+	s ret = objc_msgSend_stret(TestCls, @selector(sret));
 	assert(ret.a == 1);
 	assert(ret.b == 2);
 	assert(ret.c == 3);

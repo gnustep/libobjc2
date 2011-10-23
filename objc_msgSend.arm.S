@@ -85,9 +85,9 @@
 	.type	objc_msgSend, %function
 objc_msgSend:
 	MSGSEND r0, r1
-.globl objc_msgSend_sret
-	.type	objc_msgSend_sret, %function
-objc_msgSend_sret:
+.globl objc_msgSend_stret
+	.type	objc_msgSend_stret, %function
+objc_msgSend_stret:
 	MSGSEND r1, r2
 
 LSmallIntClass:
