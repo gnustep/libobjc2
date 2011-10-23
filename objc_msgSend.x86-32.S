@@ -36,12 +36,14 @@
 	shrl  $14, %edx                       # Right shift 16, but then left shift by 2 (* sizeof(void*))
 	add   %edx, %eax
 	mov   (%eax), %eax
+	mov   DATA_OFFSET(%eax), %eax
 2:                                        # dtable16:
 	mov   %ecx, %edx
 	and   $0xff00, %edx
 	shrl  $6, %edx
 	add   %edx, %eax
 	mov   (%eax), %eax
+	mov   DATA_OFFSET(%eax), %eax
 3:                                        # dtable8:
 	and   $0xff, %ecx
 	shll  $2, %ecx

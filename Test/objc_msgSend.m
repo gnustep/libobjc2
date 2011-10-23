@@ -37,6 +37,7 @@ Class TestCls;
 int main(void)
 {
 	TestCls = objc_getClass("Test");
+	assert((id)0x42 == objc_msgSend(TestCls, @selector(foo)));
 	objc_msgSend(TestCls, @selector(nothing));
 	objc_msgSend(TestCls, @selector(missing));
 	assert(0 == objc_msgSend(0, @selector(nothing)));
