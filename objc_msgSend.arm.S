@@ -46,9 +46,11 @@
 
 	and    r6, r5, #0xff0000
 	ldr    r4, [r4, r6, asr#14]
+	ldr    r4, [r4, #DTABLE_OFFSET]        
 1:                                        // dtable16
 	and    r6, r5, #0xff00
 	ldr    r4, [r4, r6, asr#6]
+	ldr    r4, [r4, #DTABLE_OFFSET]        
 2:                                        // dtable8
 	and    r6, r5, #0xff
 	ldr    ip, [r4, r6, asl#2]

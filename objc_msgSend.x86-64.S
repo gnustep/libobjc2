@@ -32,12 +32,14 @@
 	shrl  $13, %r13d                      # Right shift 16, but then left shift by 3 *sizeof(void*)
 	add   %r13, %r12
 	mov   (%r12), %r12
+	mov   DATA_OFFSET(%r12), %r12
 2:                                        # dtable16:
 	mov   %r11, %r13
 	and   $0xff00, %r13
 	shrl  $5, %r13d
 	add   %r13, %r12
 	mov   (%r12), %r12
+	mov   DATA_OFFSET(%r12), %r12
 3:                                       # dtable8:
 	mov   %r11, %r13
 	and   $0xff, %r13
