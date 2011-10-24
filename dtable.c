@@ -653,8 +653,6 @@ PRIVATE void objc_send_initialize(id object)
 	}
 	Class meta = class->isa;
 
-	// If this class is already initialized (e.g. in another thread), give up.
-	if (objc_test_class_flag(class, objc_class_flag_initialized)) { return; }
 
 	// Make sure that the class is resolved.
 	objc_resolve_class(class);
@@ -673,8 +671,16 @@ PRIVATE void objc_send_initialize(id object)
 	if (objc_test_class_flag(class, objc_class_flag_initialized))
 	{
 		UNLOCK(&initialize_lock);
+		// We know that initialization has started because the flag is set.
+		// Check that it's finished by grabbing the class lock.  This will be
+		// released once the class has been fully initialized
+		objc_sync_enter((id)meta);
+		objc_sync_exit((id)meta);
+		assert(dtable_for_class(class) != uninstalled_dtable);
 		return;
 	}
+
+	LOCK_OBJECT_FOR_SCOPE((id)meta);
 
 	// Set the initialized flag on both this class and its metaclass, to make
 	// sure that +initialize is only ever sent once.
@@ -704,7 +710,6 @@ PRIVATE void objc_send_initialize(id object)
 		return;
 	}
 
-	LOCK_OBJECT_FOR_SCOPE((id)meta);
 
 
 	// Create an entry in the dtable look-aside buffer for this.  When sending

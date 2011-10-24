@@ -4,6 +4,7 @@
 #define DATA_OFFSET    12
 #define SLOT_OFFSET    16
 .macro MSGSEND receiver, sel
+	.cfi_startproc                        
 	movl  \receiver(%esp), %eax
 	test  %eax, %eax                      # If the receiver is nil
 	jz    4f                              # return nil
@@ -61,14 +62,11 @@
 	mov   \sel(%esp), %ecx
 	lea   \receiver(%esp), %eax
 
-	push  %ebx                           # Save old %ebx
 	push  %ecx                           # _cmd
 	push  %eax                           # &self
-	call  __i686.get_pc_thunk.bx
-	addl  $_GLOBAL_OFFSET_TABLE_, %ebx
+	.cfi_def_cfa_offset 12
 	call  slowMsgLookup@PLT
-	add   $8, %esp
-	popl  %ebx
+	add   $8, %esp                       # restore the stack
 
 
 	jmp   *%eax
@@ -80,6 +78,7 @@
 	mov   (%eax), %eax
 	popl  %ebx
 	jmp   1b 
+	.cfi_endproc
 .endm
 .globl objc_msgSend
 	.type	objc_msgSend, @function
