@@ -269,7 +269,7 @@ static inline void register_selector_locked(SEL aSel)
 	uintptr_t idx = selector_count++;
 	if (NULL == aSel->types)
 	{
-		fprintf(stderr, "Registering selector %d %s\n", idx, sel_getNameNonUnique(aSel));
+		fprintf(stderr, "Registering selector %d %s\n", (int)idx, sel_getNameNonUnique(aSel));
 		add_selector_to_table(aSel, idx, idx);
 		objc_resize_dtables(selector_count);
 		return;
@@ -281,7 +281,7 @@ static inline void register_selector_locked(SEL aSel)
 		untyped = selector_pool_alloc();
 		untyped->name = aSel->name;
 		untyped->types = 0;
-		fprintf(stderr, "Registering selector %d %s\n", idx, sel_getNameNonUnique(aSel));
+		fprintf(stderr, "Registering selector %d %s\n", (int)idx, sel_getNameNonUnique(aSel));
 		add_selector_to_table(untyped, idx, idx);
 		// If we are in type dependent dispatch mode, the uid for the typed
 		// and untyped versions will be different
@@ -294,7 +294,7 @@ static inline void register_selector_locked(SEL aSel)
 	}
 	uintptr_t uid = (uintptr_t)untyped->name;
 	TDD(uid = idx);
-	fprintf(stderr, "Registering typed selector %d %s %s\n", uid, sel_getNameNonUnique(aSel), sel_getType_np(aSel));
+	fprintf(stderr, "Registering typed selector %d %s %s\n", (int)uid, sel_getNameNonUnique(aSel), sel_getType_np(aSel));
 	add_selector_to_table(aSel, uid, idx);
 
 	// Add this set of types to the list.

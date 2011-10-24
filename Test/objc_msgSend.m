@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <string.h>
 #include <class.h>
+#include <stdarg.h>
 
 id objc_msgSend(id, SEL, ...);
 
@@ -31,6 +32,21 @@ Class TestCls;
 	assert(strcmp("sret", sel_getName(_cmd)) == 0);
 	s st = {1,2,3,4,5};
 	return st;
+}
++ (void)printf: (const char*)str, ...
+{
+	va_list ap;
+	char *s;
+
+	va_start(ap, str);
+
+	vasprintf(&s, str, ap);
+	va_end(ap);
+	assert(strcmp(s, "Format string 42 42.000000\n") ==0);
+}
++ (void)initialize
+{
+	[self printf: "Format %s %d %f%c", "string", 42, 42.0, '\n'];
 }
 + nothing { return 0; }
 @end

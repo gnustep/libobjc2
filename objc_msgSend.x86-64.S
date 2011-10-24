@@ -3,7 +3,14 @@
 #define SHIFT_OFFSET   4
 #define DATA_OFFSET    16
 #define SLOT_OFFSET    32
+
 .macro MSGSEND receiver, sel
+	.cfi_startproc                        # Start emitting unwind data.  We
+	                                      # don't actually care about any of
+	                                      # the stuff except the slow call,
+	                                      # because that's the only one that
+	                                      # can throw.
+
 	test  \receiver, \receiver            # If the receiver is nil
 	jz    4f                              # return nil
 	movq  $SMALLOBJ_MASK, %r10            # Load the small object mask
@@ -59,33 +66,56 @@
 	push  %rax                           # We need to preserve all registers that may contain arguments:
 	push  %rbx
 	push  %rcx
-	push  %rdx
 	push  %r8
 	push  %r9
+	//push  %r9                            # Fudge to ensure stack alignment stays at 16 bytes, or SSE dies
+	
+	sub $0x98, %rsp
+	movups	%xmm0, 0x80(%rsp)
+	movups	%xmm1, 0x70(%rsp)
+	movups	%xmm2, 0x60(%rsp)
+	movups	%xmm3, 0x50(%rsp)
+	movups	%xmm4, 0x40(%rsp)
+	movups	%xmm5, 0x30(%rsp)
+	movups	%xmm6, 0x20(%rsp)
+	movups	%xmm7, 0x10(%rsp)
 
+#rdi rsi rdx
 	# We're (potentially) modifying the self argument with the lookup, so we don't want to be 
 .ifc "\receiver", "%rdi"
+	push  %rdi
+	mov   %rsp, %rdi
 	push  %rsi                           # Save _cmd (not preserved across calls)
+	push  %rdx
 .else
 	push  %rdi                           # Save the sret pointer
-	mov   \sel, %rsi                     # move _cmd to where the callee expects it to be
+	push  %rsi                           # Save self where it can be modified
+	mov   %rsp, %rdi
+	push  %rdx
+	mov   %rdx, %rsi                     # move _cmd to where the callee expects it to be
 .endif
 
-	push  \receiver                      # Store the receiver on the stack
-	mov   %rsp, %rdi                     # First argument is &self
+	.cfi_def_cfa_offset 80
 	call  slowMsgLookup                  # Call the slow lookup function
 	mov   %rax, %r10                     # Load the returned IMP
-	pop   \receiver                      # Load the (potentially) new receiver
 
-.if \receiver == %rdi
+	pop   %rdx
 	pop   %rsi
-.else
 	pop   %rdi
-.endif
 
+	movups	0x80(%rsp), %xmm0
+	movups	0x70(%rsp), %xmm1
+	movups	0x60(%rsp), %xmm2
+	movups	0x50(%rsp), %xmm3
+	movups	0x40(%rsp), %xmm4
+	movups	0x30(%rsp), %xmm5
+	movups	0x20(%rsp), %xmm6
+	movups	0x10(%rsp), %xmm7
+	add   $0x98, %rsp
+
+	//pop   %r9                            # Fudge to ensure stack alignment stays at 16 bytes, or SSE dies
 	pop   %r9
 	pop   %r8
-	pop   %rdx
 	pop   %rcx
 	pop   %rbx
 	pop   %rax
@@ -97,6 +127,7 @@
 	add   %r11, %r10
 	mov   (%r10), %r10
 	jmp   1b 
+	.cfi_endproc
 .endm
 .globl objc_msgSend
 	.type	objc_msgSend, @function
