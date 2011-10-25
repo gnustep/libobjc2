@@ -3,7 +3,7 @@
 #define SHIFT_OFFSET   4
 #define DATA_OFFSET    12
 #define SLOT_OFFSET    16
-.macro MSGSEND receiver, sel
+.macro MSGSEND receiver, sel, fpret
 	.cfi_startproc                        
 	movl  \receiver(%esp), %eax
 	test  %eax, %eax                      # If the receiver is nil
@@ -56,8 +56,11 @@
 	mov   SLOT_OFFSET(%eax), %eax
 	jmp   *%eax
 4:                                       # returnNil:
+.if \fpret
+	fldz 
+.else 
 	xor   %eax, %eax                     # return 0 (int)
-	fldz                                 # return 0 (float)
+.endif
 	ret
 5:                                       # slowSend:
 	mov   \sel(%esp), %ecx
@@ -81,14 +84,15 @@
 	jmp   1b 
 	.cfi_endproc
 .endm
-.globl objc_msgSend
-	.type	objc_msgSend, @function
 .globl objc_msgSend_fpret
 	.type	objc_msgSend_fpret, @function
 objc_msgSend_fpret:
+	MSGSEND 4, 8, 1
+.globl objc_msgSend
+	.type	objc_msgSend, @function
 objc_msgSend:
-	MSGSEND 4, 8
+	MSGSEND 4, 8, 0
 .globl objc_msgSend_stret
 	.type	objc_msgSend_stret, @function
 objc_msgSend_stret:
-	MSGSEND 8, 12
+	MSGSEND 8, 12, 0
