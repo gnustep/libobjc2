@@ -621,6 +621,9 @@ static void remove_dtable(InitializingDtable* meta_buffer)
 {
 	LOCK(&initialize_lock);
 	InitializingDtable *buffer = meta_buffer->next;
+	// Install the dtable:
+	meta_buffer->class->dtable = meta_buffer->dtable;
+	buffer->class->dtable = buffer->dtable;
 	// Remove the look-aside buffer entry.
 	if (temporary_dtables == meta_buffer)
 	{
@@ -728,10 +731,4 @@ PRIVATE void objc_send_initialize(id object)
 	// insert it into a global list, even though it's a temporary variable,
 	// because we will clean it up after this function.
 	initializeSlot->method((id)class, initializeSel);
-
-	// Install the real dtable for both the class and the metaclass.  We can do
-	// this without the lock, because now both ways of accessing the dtable are
-	// safe.  We only need the lock when we remove the cached version.
-	meta->dtable = dtable;
-	class->dtable = class_dtable;
 }

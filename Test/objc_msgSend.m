@@ -53,12 +53,22 @@ Class TestCls;
 + (void)initialize
 {
 	[self printf: "Format %s %d %f%c", "string", 42, 42.0, '\n'];
+	@throw self;
 }
 + nothing { return 0; }
 @end
 int main(void)
 {
 	TestCls = objc_getClass("Test");
+	int exceptionThrown = 0;
+	@try {
+		objc_msgSend(TestCls, @selector(foo));
+	} @catch (id e)
+	{
+		assert((TestCls == e) && "Exceptions propagate out of +initialize");
+		exceptionThrown = 1;
+	}
+	assert(exceptionThrown);
 	assert((id)0x42 == objc_msgSend(TestCls, @selector(foo)));
 	objc_msgSend(TestCls, @selector(nothing));
 	objc_msgSend(TestCls, @selector(missing));

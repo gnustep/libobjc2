@@ -72,7 +72,6 @@
 	push  %rcx
 	push  %r8
 	push  %r9
-	//push  %r9                            # Fudge to ensure stack alignment stays at 16 bytes, or SSE dies
 	
 	sub $0x98, %rsp
 	movups	%xmm0, 0x80(%rsp)
@@ -99,7 +98,7 @@
 	mov   %rdx, %rsi                     # move _cmd to where the callee expects it to be
 .endif
 
-	.cfi_def_cfa_offset 80
+	.cfi_adjust_cfa_offset 0xD8
 	call  slowMsgLookup                  # Call the slow lookup function
 	mov   %rax, %r10                     # Load the returned IMP
 
@@ -117,7 +116,6 @@
 	movups	0x10(%rsp), %xmm7
 	add   $0x98, %rsp
 
-	//pop   %r9                            # Fudge to ensure stack alignment stays at 16 bytes, or SSE dies
 	pop   %r9
 	pop   %r8
 	pop   %rcx
