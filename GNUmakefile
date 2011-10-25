@@ -28,6 +28,7 @@ ${LIBOBJC}_OBJC_FILES = \
 ${LIBOBJC}_C_FILES = \
 	abi_version.c\
 	alias_table.c\
+	block_to_imp.c\
 	caps.c\
 	category_loader.c\
 	class_table.c\
@@ -45,10 +46,27 @@ ${LIBOBJC}_C_FILES = \
 	selector_table.c\
 	sendmsg2.c\
 	statics_loader.c\
-	toydispatch.c
+	toydispatch.c\
+
 
 ${LIBOBJCXX}_CC_FILES = objcxx_eh.cc
 ${LIBOBJCXX}_LDFLAGS = -L./obj/$(GNUSTEP_TARGET_LDIR)/ -lstdc++ -l${LIBOBJCLIBNAME}
+
+
+${LIBOBJC}_OBJ_FILES = \
+	$(GNUSTEP_OBJ_INSTANCE_DIR)/block_trampolines.S.o
+
+# Add some rules for assembler
+.SUFFIXES : .S
+
+%: %.S
+
+$(GNUSTEP_OBJ_INSTANCE_DIR)/%.S$(OEXT) : %.S
+	$(ECHO_COMPILING)$(CC) -no-integrated-as $< -c \
+	      $(filter-out $($<_FILE_FILTER_OUT_FLAGS),$(ALL_CPPFLAGS) \
+	                                                $(ALL_CFLAGS)) \
+	      $($<_FILE_FLAGS) -o $@$(END_ECHO)
+
 
 ifeq ($(disable_legacy), yes)
 ${LIBOBJC}_CPPFLAGS += -DNO_LEGACY
