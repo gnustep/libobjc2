@@ -60,7 +60,11 @@
 	mov   SLOT_OFFSET(%r10), %r10
 	jmp   *%r10
 4:                                       # returnNil:
-	xor   %rax, %rax
+	                                     # Both of the return registers are
+	                                     # callee-save on x86-64, so we can
+	                                     # return 0 in both in the same code:
+	xor   %rax, %rax                     # Return 0 as an integer
+	pxor  %xmm0, %xmm0                   # Return 0 as a floating point value
 	ret
 5:                                       # slowSend:
 	push  %rax                           # We need to preserve all registers that may contain arguments:
@@ -131,6 +135,9 @@
 .endm
 .globl objc_msgSend
 	.type	objc_msgSend, @function
+.globl objc_msgSend_fpret
+	.type	objc_msgSend_fpret, @function
+objc_msgSend_fpret:
 objc_msgSend:
 	MSGSEND %rdi, %rsi
 .globl objc_msgSend_stret

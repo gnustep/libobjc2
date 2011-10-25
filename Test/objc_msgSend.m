@@ -10,6 +10,12 @@ id objc_msgSend(id, SEL, ...);
 
 typedef struct { int a,b,c,d,e; } s;
 s objc_msgSend_stret(id, SEL, ...);
+@interface Fake
+- (int)izero;
+- (float)fzero;
+- (double)dzero;
+- (long double)ldzero;
+@end
 
 Class TestCls;
 @interface Test { id isa; }@end
@@ -70,6 +76,11 @@ int main(void)
 	assert(ret.c == 3);
 	assert(ret.d == 4);
 	assert(ret.e == 5);
+	Fake *f = nil;
+	assert(0 == [f izero]);
+	assert(0 == [f dzero]);
+	assert(0 == [f ldzero]);
+	assert(0 == [f fzero]);
 #ifdef BENCHMARK
 	clock_t c1, c2;
 	c1 = clock();

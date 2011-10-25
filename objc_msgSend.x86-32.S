@@ -56,7 +56,8 @@
 	mov   SLOT_OFFSET(%eax), %eax
 	jmp   *%eax
 4:                                       # returnNil:
-	xor   %eax, %eax
+	xor   %eax, %eax                     # return 0 (int)
+	fldz                                 # return 0 (float)
 	ret
 5:                                       # slowSend:
 	mov   \sel(%esp), %ecx
@@ -82,6 +83,9 @@
 .endm
 .globl objc_msgSend
 	.type	objc_msgSend, @function
+.globl objc_msgSend_fpret
+	.type	objc_msgSend_fpret, @function
+objc_msgSend_fpret:
 objc_msgSend:
 	MSGSEND 4, 8
 .globl objc_msgSend_stret
