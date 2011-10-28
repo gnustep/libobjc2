@@ -14,10 +14,14 @@
 .endm
 
 .macro MSGSEND receiver, sel
+	.cfi_startproc
 	teq    \receiver, 0
 	beq    4f                              // Skip everything if the receiver is nil
 	push   {r4-r6}                         // We're going to use these three as
-                                           // scratch registers, so save them now
+	.cfi_adjust_cfa_offset 12              // scratch registers, so save them now.
+	.cfi_rel_offset r4, 0                  // These are callee-save, so the unwind library
+	.cfi_rel_offset r5, 4                  // must be able to restore them, so we need CFI
+	.cfi_rel_offset r6, 8                  // directives for them, but not for any other pushes
 	tst    \receiver, SMALLOBJ_MASK        // Sets Z if this is not a small int
 
 
@@ -74,13 +78,16 @@
 	push   {\receiver}                    // &self, _cmd in arguments
 	mov    r0, sp
 	mov    r1, \sel
-	bl     slowMsgLookup(PLT)
+
+	.cfi_adjust_cfa_offset 24             // pushed 6 more 4-byte words onto the stack.
+	bl     slowMsgLookup(PLT)             // This is the only place where the CFI directives have to be accurate...
 	mov    ip, r0                         // IMP -> ip
 
 	pop    {r5}                           // restore (modified) self to r5
 	pop    {r0-r3, lr}                    // Load clobbered registers
 	mov    \receiver, r5
 	b      3b
+	.cfi_endproc
 .endm
 
 .globl objc_msgSend
