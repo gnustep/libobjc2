@@ -336,7 +336,7 @@ id class_createInstance(Class cls, size_t extraBytes)
 		{
 			if (cls == SmallObjectClasses[i])
 			{
-				return (id)(i<<1)+1;
+				return (id)(uintptr_t)((i<<1)+1);
 			}
 		}
 	}
