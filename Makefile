@@ -99,6 +99,12 @@ install: all
 	$(SILENT)install -m 444 $(LIBOBJC).so.$(VERSION) $(LIB_DIR)
 	$(SILENT)install -m 444 $(LIBOBJCXX).so.$(VERSION) $(LIB_DIR)
 	$(SILENT)install -m 444 $(LIBOBJC).a $(LIB_DIR)
+	$(SILENT)if [ "$(strip)" = "yes" ]; then \
+		echo Stripping installed libraries...; \
+		strip $(LIB_DIR)/$(LIBOBJC).so.$(VERSION); \
+		strip $(LIB_DIR)/$(LIBOBJCXX).so.$(VERSION); \
+		strip $(LIB_DIR)/$(LIBOBJC).a; \
+	fi
 	$(SILENT)echo Creating symbolic links...
 	$(SILENT)ln -sf $(LIB_DIR)/$(LIBOBJC).so.$(VERSION) $(LIB_DIR)/$(LIBOBJC).so
 	$(SILENT)ln -sf $(LIB_DIR)/$(LIBOBJC).so.$(VERSION) $(LIB_DIR)/$(LIBOBJC).so.$(MAJOR_VERSION)
