@@ -262,33 +262,12 @@ static handler_type check_action_record(struct _Unwind_Context *context,
 	return handler_none;
 }
 
-_Unwind_Reason_Code
-__gnu_objc_personality_v01(_Unwind_State state,
-struct _Unwind_Exception *ue_header,
-struct _Unwind_Context *context)
-{
-	fprintf(stderr, "LSDA: %p\n", (void*)_Unwind_GetLanguageSpecificData(context));
-	unsigned char *lsda_addr = (void*)_Unwind_GetLanguageSpecificData(context);
-	fprintf(stderr, "Encoding: %x\n", (int)*lsda_addr);
-	return 0;
-
-}
-typedef uint32_t _uw;
-
 /**
  * The Objective-C exception personality function.  
  */
 BEGIN_PERSONALITY_FUNCTION(__gnu_objc_personality_v0)
 	fprintf(stderr, "Personality function called\n");
 	
-	 _uw *ptr = (_uw *) exceptionObject->pr_cache.ehtp;
-	    /* Skip the personality routine address.  */
-	    ptr++;
-		  /* Skip the unwind opcodes.  */
-		  ptr += (((*ptr) >> 24) & 0xff) + 1;
-		  fprintf(stderr, "Maybe this is the LSDA? 0x%x\n", ptr);
-
-
 	// This personality function is for version 1 of the ABI.  If you use it
 	// with a future version of the ABI, it won't know what to do, so it
 	// reports a fatal error and give up before it breaks anything.
