@@ -6,6 +6,8 @@
 #include <class.h>
 #include <stdarg.h>
 
+//#define assert(x) if (!(x)) { printf("Failed %d\n", __LINE__); }
+
 id objc_msgSend(id, SEL, ...);
 
 typedef struct { int a,b,c,d,e; } s;
@@ -48,6 +50,7 @@ Class TestCls;
 
 	vasprintf(&s, str, ap);
 	va_end(ap);
+	//fprintf(stderr, "String: '%s'\n", s);
 	assert(strcmp(s, "Format string 42 42.000000\n") ==0);
 }
 + (void)initialize
@@ -68,7 +71,7 @@ int main(void)
 		assert((TestCls == e) && "Exceptions propagate out of +initialize");
 		exceptionThrown = 1;
 	}
-	assert(exceptionThrown);
+	assert(exceptionThrown && "An exception was thrown");
 	assert((id)0x42 == objc_msgSend(TestCls, @selector(foo)));
 	objc_msgSend(TestCls, @selector(nothing));
 	objc_msgSend(TestCls, @selector(missing));

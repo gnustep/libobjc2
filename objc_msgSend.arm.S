@@ -4,6 +4,7 @@
 #define DATA_OFFSET    12
 #define SLOT_OFFSET    16
 .syntax unified
+.fpu neon
 
 // Macro for testing: logs a register value to standard error
 .macro LOG reg
@@ -14,14 +15,15 @@
 .endm
 
 .macro MSGSEND receiver, sel
-	.cfi_startproc
+	.fnstart
 	teq    \receiver, 0
 	beq    4f                              // Skip everything if the receiver is nil
 	push   {r4-r6}                         // We're going to use these three as
-	.cfi_adjust_cfa_offset 12              // scratch registers, so save them now.
-	.cfi_rel_offset r4, 0                  // These are callee-save, so the unwind library
-	.cfi_rel_offset r5, 4                  // must be able to restore them, so we need CFI
-	.cfi_rel_offset r6, 8                  // directives for them, but not for any other pushes
+	.save  {r4-r6}
+	                                       // scratch registers, so save them now.
+	                                       // These are callee-save, so the unwind library
+	                                       // must be able to restore them, so we need CFI
+	                                       // directives for them, but not for any other pushes
 	tst    \receiver, SMALLOBJ_MASK        // Sets Z if this is not a small int
 
 
@@ -73,21 +75,22 @@
 	mov    r1, 0
 	mov    pc, lr
 5:                                        // Slow lookup
-	push   {r0-r3, lr}                    // Save anything that will be clobbered by the call
+	push   {r0-r4, lr}                    // Save anything that will be clobbered by the call
+	.save  {r0-r4, lr}
+
 
 	push   {\receiver}                    // &self, _cmd in arguments
-	mov    r0, sp
+	.save  {\receiver}
 	mov    r1, \sel
 
-	.cfi_adjust_cfa_offset 24             // pushed 6 more 4-byte words onto the stack.
 	bl     slowMsgLookup(PLT)             // This is the only place where the CFI directives have to be accurate...
 	mov    ip, r0                         // IMP -> ip
 
 	pop    {r5}                           // restore (modified) self to r5
-	pop    {r0-r3, lr}                    // Load clobbered registers
+	pop    {r0-r4, lr}                    // Load clobbered registers
 	mov    \receiver, r5
 	b      3b
-	.cfi_endproc
+	.fnend
 .endm
 
 .globl objc_msgSend

@@ -19,12 +19,7 @@ struct _Unwind_Exception *objc_init_cxx_exception(void *thrown_exception);
  * The GNU C++ exception personality function, provided by libsupc++ (GNU) or
  * libcxxrt (PathScale).
  */
-__attribute__((weak))
-_Unwind_Reason_Code  __gxx_personality_v0(int version,
-                                          _Unwind_Action actions,
-                                          uint64_t exceptionClass,
-                                          struct _Unwind_Exception *exceptionObject,
-                                          struct _Unwind_Context *context);
+__attribute__((weak)) DECLARE_PERSONALITY_FUNCTION(__gxx_personality_v0);
 /**
  * Frees an exception object allocated by __cxa_allocate_exception().  Part of
  * the Itanium C++ ABI.

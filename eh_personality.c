@@ -48,6 +48,68 @@ typedef enum
 	handler_class
 } handler_type;
 
+/**
+ * Saves the result of the landing pad that we have found.  For ARM, this is
+ * stored in the generic unwind structure, while on other platforms it is
+ * stored in the Objective-C exception.
+ */
+static void saveLandingPad(struct _Unwind_Context *context,
+                           struct _Unwind_Exception *ucb,
+                           struct objc_exception *ex,
+                           int selector,
+                           dw_eh_ptr_t landingPad)
+{
+#ifdef __arm__
+	// On ARM, we store the saved exception in the generic part of the structure
+	ucb->barrier_cache.sp = _Unwind_GetGR(context, 13);
+	ucb->barrier_cache.bitpattern[1] = (uint32_t)selector;
+	ucb->barrier_cache.bitpattern[3] = (uint32_t)landingPad;
+#else
+	// Cache the results for the phase 2 unwind, if we found a handler
+	// and this is not a foreign exception.  We can't cache foreign exceptions
+	// because we don't know their structure (although we could cache C++
+	// exceptions...)
+	if (ex)
+	{
+		ex->handlerSwitchValue = selector;
+		ex->landingPad = landingPad;
+	}
+#endif
+}
+
+/**
+ * Loads the saved landing pad.  Returns 1 on success, 0 on failure.
+ */
+static int loadLandingPad(struct _Unwind_Context *context,
+                          struct _Unwind_Exception *ucb,
+                          struct objc_exception *ex,
+                          unsigned long *selector,
+                          dw_eh_ptr_t *landingPad)
+{
+#ifdef __arm__
+	*selector = ucb->barrier_cache.bitpattern[1];
+	*landingPad = (dw_eh_ptr_t)ucb->barrier_cache.bitpattern[3];
+	return 1;
+#else
+	if (ex)
+	{
+		*selector = ex->handlerSwitchValue;
+		*landingPad = ex->landingPad;
+		return 0;
+	}
+	return 0;
+#endif
+}
+
+static inline _Unwind_Reason_Code continueUnwinding(struct _Unwind_Exception *ex,
+                                                    struct _Unwind_Context *context)
+{
+#ifdef __arm__
+	if (__gnu_unwind_frame(ex, context) != _URC_OK) { return _URC_FAILURE; }
+#endif
+	return _URC_CONTINUE_UNWIND;
+}
+
 static void cleanup(_Unwind_Reason_Code reason, struct _Unwind_Exception *e)
 {
 	/*
@@ -92,6 +154,7 @@ void objc_exception_throw(id object)
 	{
 		_objc_unexpected_exception(object);
 	}
+	fprintf(stderr, "Throw returned %d\n",(int) err);
 	abort();
 }
 
@@ -199,15 +262,33 @@ static handler_type check_action_record(struct _Unwind_Context *context,
 	return handler_none;
 }
 
+_Unwind_Reason_Code
+__gnu_objc_personality_v01(_Unwind_State state,
+struct _Unwind_Exception *ue_header,
+struct _Unwind_Context *context)
+{
+	fprintf(stderr, "LSDA: %p\n", (void*)_Unwind_GetLanguageSpecificData(context));
+	unsigned char *lsda_addr = (void*)_Unwind_GetLanguageSpecificData(context);
+	fprintf(stderr, "Encoding: %x\n", (int)*lsda_addr);
+	return 0;
+
+}
+typedef uint32_t _uw;
+
 /**
  * The Objective-C exception personality function.  
  */
-_Unwind_Reason_Code  __gnu_objc_personality_v0(int version,
-                                               _Unwind_Action actions,
-                                               uint64_t exceptionClass,
-                                               struct _Unwind_Exception *exceptionObject,
-                                               struct _Unwind_Context *context)
-{
+BEGIN_PERSONALITY_FUNCTION(__gnu_objc_personality_v0)
+	fprintf(stderr, "Personality function called\n");
+	
+	 _uw *ptr = (_uw *) exceptionObject->pr_cache.ehtp;
+	    /* Skip the personality routine address.  */
+	    ptr++;
+		  /* Skip the unwind opcodes.  */
+		  ptr += (((*ptr) >> 24) & 0xff) + 1;
+		  fprintf(stderr, "Maybe this is the LSDA? 0x%x\n", ptr);
+
+
 	// This personality function is for version 1 of the ABI.  If you use it
 	// with a future version of the ABI, it won't know what to do, so it
 	// reports a fatal error and give up before it breaks anything.
@@ -216,8 +297,9 @@ _Unwind_Reason_Code  __gnu_objc_personality_v0(int version,
 		return _URC_FATAL_PHASE1_ERROR;
 	}
 	struct objc_exception *ex = 0;
-
-	//char *cls = (char*)&exceptionClass;
+#ifndef fprintf
+	char *cls = (char*)&exceptionClass;
+#endif
 	fprintf(stderr, "Class: %c%c%c%c%c%c%c%c\n", cls[7], cls[6], cls[5], cls[4], cls[3], cls[2], cls[1], cls[0]);
 
 	// Check if this is a foreign exception.  If it is a C++ exception, then we
@@ -266,6 +348,7 @@ _Unwind_Reason_Code  __gnu_objc_personality_v0(int version,
 		fprintf(stderr, "Foreign class: %p\n", thrown_class);
 	}
 	unsigned char *lsda_addr = (void*)_Unwind_GetLanguageSpecificData(context);
+	fprintf(stderr, "LSDA: %p\n", lsda_addr);
 
 	// No LSDA implies no landing pads - try the next frame
 	if (0 == lsda_addr) { return _URC_CONTINUE_UNWIND; }
@@ -276,6 +359,7 @@ _Unwind_Reason_Code  __gnu_objc_personality_v0(int version,
 	
 	if (actions & _UA_SEARCH_PHASE)
 	{
+		fprintf(stderr, "Search phase...\n");
 		struct dwarf_eh_lsda lsda = parse_lsda(context, lsda_addr);
 		action = dwarf_eh_find_callsite(context, &lsda);
 		handler_type handler = check_action_record(context, foreignException,
@@ -286,13 +370,7 @@ _Unwind_Reason_Code  __gnu_objc_personality_v0(int version,
 		   ((handler == handler_catchall_id) && !foreignException) ||
 			(handler == handler_catchall))
 		{
-			// Cache the results for the phase 2 unwind, if we found a handler
-			// and this is not a foreign exception.
-			if (ex)
-			{
-				ex->handlerSwitchValue = selector;
-				ex->landingPad = action.landing_pad;
-			}
+			saveLandingPad(context, exceptionObject, ex, selector, action.landing_pad);
 			fprintf(stderr, "Found handler! %d\n", handler);
 			return _URC_HANDLER_FOUND;
 		}
@@ -353,8 +431,7 @@ _Unwind_Reason_Code  __gnu_objc_personality_v0(int version,
 	else
 	{
 		// Restore the saved info if we saved some last time.
-		action.landing_pad = ex->landingPad;
-		selector = ex->handlerSwitchValue;
+		loadLandingPad(context, exceptionObject, ex, &selector, &action.landing_pad);
 		object = ex->object;
 		free(ex);
 	}
@@ -367,12 +444,9 @@ _Unwind_Reason_Code  __gnu_objc_personality_v0(int version,
 	return _URC_INSTALL_CONTEXT;
 }
 
-_Unwind_Reason_Code  __gnustep_objcxx_personality_v0(int version,
-                                                     _Unwind_Action actions,
-                                                     uint64_t exceptionClass,
-                                                     struct _Unwind_Exception *exceptionObject,
-                                                     struct _Unwind_Context *context)
-{
+// FIXME!
+#ifndef __arm__
+BEGIN_PERSONALITY_FUNCTION(__gnustep_objcxx_personality_v0)
 	if (exceptionClass == objc_exception_class)
 	{
 		struct objc_exception *ex = (struct objc_exception*)
@@ -391,7 +465,6 @@ _Unwind_Reason_Code  __gnustep_objcxx_personality_v0(int version,
 		exceptionObject = ex->cxx_exception;
 		exceptionClass = cxx_exception_class;
 	}
-	return __gxx_personality_v0(version, actions, exceptionClass,
-			exceptionObject, context);
+	return CALL_PERSONALITY_FUNCTION(__gxx_personality_v0);
 }
-
+#endif
