@@ -129,12 +129,12 @@ extern unsigned long _Unwind_GetRegionStart(struct _Unwind_Context *);
 static inline unsigned long _Unwind_GetGR(struct _Unwind_Context *context, int reg)
 {
 	unsigned long val;
-	_Unwind_VRS_Get(context, 0, reg, 0, &val);
+	_Unwind_VRS_Get(context, _UVRSC_CORE, reg, _UVRSD_UINT32, &val);
 	return val;
 }
 static inline  void _Unwind_SetGR(struct _Unwind_Context *context, int reg, unsigned long val)
 {
-	_Unwind_VRS_Set(context, 0, reg, 0, &val);
+	_Unwind_VRS_Set(context, _UVRSC_CORE, reg, _UVRSD_UINT32, &val);
 }
 static inline unsigned long _Unwind_GetIP(_Unwind_Context *context)
 {
