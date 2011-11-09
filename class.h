@@ -141,13 +141,13 @@ struct objc_class
 	 * bits are set, from low to high, for each ivar in the object that is a
 	 * strong pointer.
 	 */
-	int64_t                    strong_pointers;
+	intptr_t                   strong_pointers;
 	/**
 	 * The location of all zeroing weak pointer ivars declared by this class.
 	 * The format of this field is the same as the format of the
 	 * strong_pointers field.
 	 */
-	int64_t                    weak_pointers;
+	intptr_t                   weak_pointers;
 };
 
 /**
