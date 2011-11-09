@@ -93,9 +93,12 @@
 	.fnend
 .endm
 
+.globl objc_msgSend_fpret
+	.type	objc_msgSend_fpret, %function
 .globl objc_msgSend
 	.type	objc_msgSend, %function
 objc_msgSend:
+objc_msgSend_fpret:
 	MSGSEND r0, r1
 .globl objc_msgSend_stret
 	.type	objc_msgSend_stret, %function
