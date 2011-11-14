@@ -77,60 +77,66 @@ static inline void release(id obj);
  * Empties objects from the autorelease pool, stating at the head of the list
  * specified by pool and continuing until it reaches the stop point.  If the stop point is NULL then 
  */
-static struct arc_autorelease_pool*
-emptyPool(struct arc_autorelease_pool *pool, id *stop)
+static void emptyPool(struct arc_tls *tls, id *stop)
 {
 	struct arc_autorelease_pool *stopPool = NULL;
 	if (NULL != stop)
 	{
-		stopPool = pool;
+		stopPool = tls->pool;
 		do
 		{
 			// Invalid stop location
 			if (NULL == stopPool)
 			{
-				return pool;
+				return;
 			}
 			// Stop location was found in this pool
-			if ((stop > pool->pool) && (stop < &pool->pool[POOL_SIZE]))
+			if ((stop > tls->pool->pool) && (stop < &tls->pool->pool[POOL_SIZE]))
 			{
 				break;
 			}
 			stopPool = stopPool->previous;
 		} while (1);
 	}
-	while (pool != stopPool)
+	while (tls->pool != stopPool)
 	{
-		while (pool->insert > pool->pool)
+		while (tls->pool->insert > tls->pool->pool)
 		{
-			pool->insert--;
-			release(*pool->insert);
+			tls->pool->insert--;
+			// This may autorelease some other objects, so we have to work in
+			// the case where the autorelease pool is extended during a -release.
+			release(*tls->pool->insert);
 		}
-		void *old = pool;
-		pool = pool->previous;
+		void *old = tls->pool;
+		tls->pool = tls->pool->previous;
 		free(old);
 	}
-	if (NULL != pool)
+	if (NULL != tls->pool)
 	{
-		while ((pool->insert > stop) && (pool->insert > pool->pool))
+		while ((tls->pool->insert > stop) && (tls->pool->insert > tls->pool->pool))
 		{
-			pool->insert--;
-			release(*pool->insert);
+			tls->pool->insert--;
+			release(*tls->pool->insert);
 		}
 	}
-	return pool;
 }
 
 static void cleanupPools(struct arc_tls* tls)
 {
 	struct arc_autorelease_pool *pool = tls->pool;
-	while(NULL != pool)
-	{
-		assert(NULL == emptyPool(pool, NULL));
-	}
 	if (tls->returnRetained)
 	{
 		release(tls->returnRetained);
+		tls->returnRetained = nil;
+	}
+	while(NULL != pool)
+	{
+		emptyPool(tls, NULL);
+		assert(NULL == tls->pool);
+	}
+	if (tls->returnRetained)
+	{
+		cleanupPools(tls);
 	}
 	free(tls);
 }
@@ -241,9 +247,17 @@ static inline id autorelease(id obj)
 
 void *objc_autoreleasePoolPush(void)
 {
+	struct arc_tls* tls = getARCThreadData();
+	// If there is an object in the return-retained slot, then we need to
+	// promote it to the real autorelease pool BEFORE pushing the new
+	// autorelease pool.  If we don't, then it may be prematurely autoreleased.
+	if ((NULL != tls) && (nil != tls->returnRetained))
+	{
+		autorelease(tls->returnRetained);
+		tls->returnRetained = nil;
+	}
 	if (useARCAutoreleasePool)
 	{
-		struct arc_tls* tls = getARCThreadData();
 		if (NULL != tls)
 		{
 			// If there is no autorelease pool allocated for this thread, then
@@ -262,8 +276,10 @@ void objc_autoreleasePoolPop(void *pool)
 		struct arc_tls* tls = getARCThreadData();
 		if (NULL != tls)
 		{
-			if (NULL == tls->pool) { return; }
-			tls->pool = emptyPool(tls->pool, pool);
+			if (NULL != tls->pool)
+			{
+				emptyPool(tls, pool);
+			}
 			return;
 		}
 	}
