@@ -78,7 +78,7 @@ namespace
         cacher->CacheLookup(*i, slot, version);
       }
       if (modified){
-          verifyFunction(F);
+        verifyFunction(F);
       }
       return modified;
     }

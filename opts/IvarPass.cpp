@@ -7,14 +7,26 @@
 #include "llvm/Constants.h"
 #include "llvm/Analysis/Verifier.h"
 #include "llvm/DefaultPasses.h"
+#include "llvm/ADT/DenseSet.h"
 #include "ObjectiveCOpts.h"
 #include <string>
 
 using namespace llvm;
 using std::string;
 
-namespace {
+typedef std::pair<Instruction*, Value*> Replacement;
 
+namespace llvm {
+template<> struct DenseMapInfo<Replacement> {
+  static inline Replacement getEmptyKey() { return Replacement(0,0); }
+  static inline Replacement getTombstoneKey() { return Replacement(0, (Value*)-1); }
+  static unsigned getHashValue(const Replacement& Val) { return ((uintptr_t)Val.first) * 37U; }
+  static bool isEqual(const Replacement& LHS, const Replacement& RHS) {
+    return LHS.first == RHS.first;
+  }
+};
+}
+namespace {
   class GNUNonfragileIvarPass : public FunctionPass {
 
     public:
@@ -88,8 +100,7 @@ namespace {
 
     virtual bool runOnFunction(Function &F) {
       bool modified = false;
-      typedef std::pair<Instruction*, Value*> Replacement;
-      llvm::SmallVector<Replacement, 16> replacements;
+      llvm::DenseSet<Replacement> replacements;
       //llvm::cerr << "IvarPass: " << F.getName() << "\n";
       for (Function::iterator i=F.begin(), end=F.end() ;
           i != end ; ++i) {
@@ -115,16 +126,16 @@ namespace {
                 // If the class, and all superclasses, are visible in this module
                 // then we can hard-code the ivar offset
                 if (size_t offset = hardCodedOffset(className, ivarName)) {
-                  replacements.push_back(Replacement(load, 0));
-                  replacements.push_back(Replacement(indirectload,
+                  replacements.insert(Replacement(indirectload,
                               ConstantInt::get(indirectload->getType(), offset)));
+                  replacements.insert(Replacement(load, 0));
                   modified = true;
                 } else {
                   // If the class was compiled with the new ABI, then we have a
                   // direct offset variable that we can use
                   if (Value *offset = M->getGlobalVariable(
                               ("__objc_ivar_offset_value_" + suffix).str())) {
-                    replacements.push_back(Replacement(load, offset));
+                    replacements.insert(Replacement(load, offset));
                     modified = true;
                   }
                 }
@@ -133,7 +144,7 @@ namespace {
           }
         }
       }
-      for (SmallVector<Replacement, 16>::iterator i=replacements.begin(),
+      for (DenseSet<Replacement>::iterator i=replacements.begin(),
               end=replacements.end() ; i != end ; ++i) {
         if (i->second) 
           i->first->replaceAllUsesWith(i->second);

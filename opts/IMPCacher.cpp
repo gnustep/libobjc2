@@ -40,21 +40,39 @@ void GNUstep::IMPCacher::CacheLookup(Instruction *lookup, Value *slot, Value
 
   removeTerminator(beforeLookupBB);
 
-  IRBuilder<> B = IRBuilder<>(beforeLookupBB);
+  CGBuilder B = CGBuilder(beforeLookupBB);
   // Load the slot and check that neither it nor the version is 0.
-  Value *slotValue = B.CreateLoad(slot);
   Value *versionValue = B.CreateLoad(version);
   Value *receiverPtr = lookup->getOperand(0);
   Value *receiver = receiverPtr;
   if (!isSuperMessage) {
     receiver = B.CreateLoad(receiverPtr);
   }
+  // For small objects, we skip the cache entirely.  
+  // FIXME: Class messages are never to small objects...
+  bool is64Bit = llvm::Module::Pointer64 ==
+    B.GetInsertBlock()->getParent()->getParent()->getPointerSize();
+  LLVMType *intPtrTy = is64Bit ? Type::getInt64Ty(Context) :
+    Type::getInt32Ty(Context);
+
+  // Receiver as an integer
+  Value *receiverSmallObject = B.CreatePtrToInt(receiver, intPtrTy);
+  // Receiver is a small object...
+  receiverSmallObject =
+    B.CreateAnd(receiverSmallObject, is64Bit ? 7 : 1);
+  // Receiver is not a small object.
+  receiverSmallObject =
+    B.CreateICmpNE(receiverSmallObject, Constant::getNullValue(intPtrTy));
+  // Ideally, we'd call objc_msgSend() here, but for now just skip the cache
+  // lookup
 
   Value *isCacheEmpty = 
     B.CreateICmpEQ(versionValue, Constant::getNullValue(IntTy));
-  Value *receiverNotNil =
-     B.CreateICmpNE(receiver, Constant::getNullValue(receiver->getType()));
-  isCacheEmpty = B.CreateAnd(isCacheEmpty, receiverNotNil);
+  Value *receiverNil =
+     B.CreateICmpEQ(receiver, Constant::getNullValue(receiver->getType()));
+
+  isCacheEmpty = B.CreateOr(isCacheEmpty, receiverNil);
+  isCacheEmpty = B.CreateOr(isCacheEmpty, receiverSmallObject);
       
   BasicBlock *cacheLookupBB = BasicBlock::Create(Context, "cache_check",
       lookupBB->getParent());
@@ -63,6 +81,7 @@ void GNUstep::IMPCacher::CacheLookup(Instruction *lookup, Value *slot, Value
 
   // Check the cache node is current
   B.SetInsertPoint(cacheLookupBB);
+  Value *slotValue = B.CreateLoad(slot, "slot_value");
   Value *slotVersion = B.CreateStructGEP(slotValue, 3);
   // Note: Volatile load because the slot version might have changed in
   // another thread.
@@ -76,14 +95,15 @@ void GNUstep::IMPCacher::CacheLookup(Instruction *lookup, Value *slot, Value
   // If this slot is still valid, skip the lookup.
   B.CreateCondBr(isSlotValid, afterLookupBB, lookupBB);
 
-  // Replace the looked up slot with the loaded one
-  B.SetInsertPoint(afterLookupBB, afterLookupBB->begin());
-  // Not volatile, so a redundant load elimination pass can do some phi
-  // magic with this later.
-  lookup->replaceAllUsesWith(B.CreateLoad(slot));
-
   // Perform the real lookup and cache the result
   removeTerminator(lookupBB);
+  // Replace the looked up slot with the loaded one
+  B.SetInsertPoint(afterLookupBB, afterLookupBB->begin());
+  PHINode *newLookup = IRBuilderCreatePHI(&B, lookup->getType(), 3, "new_lookup");
+  // Not volatile, so a redundant load elimination pass can do some phi
+  // magic with this later.
+  lookup->replaceAllUsesWith(newLookup);
+
   B.SetInsertPoint(lookupBB);
   Value * newReceiver = receiver;
   if (!isSuperMessage) {
@@ -93,18 +113,25 @@ void GNUstep::IMPCacher::CacheLookup(Instruction *lookup, Value *slot, Value
       lookupBB->getParent());
 
   // Don't store the cached lookup if we are doing forwarding tricks.
-  B.CreateCondBr(B.CreateICmpEQ(receiver, newReceiver), storeCacheBB,
-      afterLookupBB);
+  // Also skip caching small object messages for now
+  Value *skipCacheWrite =
+    B.CreateOr(B.CreateICmpNE(receiver, newReceiver), receiverSmallObject);
+  skipCacheWrite = B.CreateOr(skipCacheWrite, receiverNil);
+  B.CreateCondBr(skipCacheWrite, afterLookupBB, storeCacheBB);
   B.SetInsertPoint(storeCacheBB);
 
   // Store it even if the version is 0, because we always check that the
   // version is not 0 at the start and an occasional redundant store is
   // probably better than a branch every time.
   B.CreateStore(lookup, slot);
-  B.CreateStore(B.CreateLoad(B.CreateStructGEP(lookup, 3)), version);
+  //B.CreateStore(B.CreateLoad(B.CreateStructGEP(lookup, 3)), version);
   cls = B.CreateLoad(B.CreateBitCast(receiver, IdTy));
   B.CreateStore(cls, B.CreateStructGEP(lookup, 1));
   B.CreateBr(afterLookupBB);
+
+  newLookup->addIncoming(lookup, lookupBB);
+  newLookup->addIncoming(slotValue, cacheLookupBB);
+  newLookup->addIncoming(lookup, storeCacheBB);
 }
 
 
