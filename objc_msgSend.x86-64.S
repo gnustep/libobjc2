@@ -123,7 +123,7 @@
 	pop   %rax
 	jmp   *%r10
 6:                                        # smallObject:
-	and   %rdi, %r10                      # Find the small int type
+	and   \receiver, %r10                 # Find the small int type
 	shll  $3, %r10d
 	lea   SmallObjectClasses(%rip), %r11
 	add   %r11, %r10
