@@ -77,7 +77,6 @@ namespace
             Function *func = dyn_cast<Function>(callee);
             if (func) {
               if (func == lookupFn) {
-                func->dump();
                 modified = true;
                 Lookups.push_back(call);
               } else if ((func == sendFn) || (func == send_fpretFn) ||

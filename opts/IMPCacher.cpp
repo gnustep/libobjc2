@@ -248,7 +248,6 @@ CallSite GNUstep::IMPCacher::SplitSend(CallSite msgSend)
     self = msgSend.getArgument(1);
     cmd = msgSend.getArgument(2);
   } else {
-    msgSend.getCalledFunction()->dump();
     abort();
     return CallSite();
   }
