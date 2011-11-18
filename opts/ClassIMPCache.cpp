@@ -29,7 +29,14 @@ namespace
     ClassIMPCachePass() : ModulePass(ID) {}
 
     virtual bool runOnModule(Module &M) {
-        return false;
+      Function *sendFn = M.getFunction("objc_msgSend");
+      Function *send_stretFn = M.getFunction("objc_msgSend_stret");
+      Function *send_fpretFn = M.getFunction("objc_msgSend_fpret");
+      Function *lookupFn =M.getFunction("objc_msg_lookup_sender");
+      // If this module doesn't contain any message sends, then skip it
+      if ((sendFn == 0) && (send_stretFn == 0) && (send_fpretFn == 0) &&
+          (lookupFn ==0)) { return false; }
+
       GNUstep::IMPCacher cacher = GNUstep::IMPCacher(M.getContext(), this);
       IntTy = (sizeof(int) == 4 ) ? Type::getInt32Ty(M.getContext()) :
           Type::getInt64Ty(M.getContext()) ;
@@ -43,6 +50,7 @@ namespace
         if (F->isDeclaration()) { continue; }
 
         SmallVector<std::pair<CallSite, bool>, 16> Lookups;
+        SmallVector<CallSite, 16> Sends;
 
         for (Function::iterator i=F->begin(), end=F->end() ;
             i != end ; ++i) {
@@ -52,12 +60,17 @@ namespace
             if (call.getInstruction()) {
               Value *callee = call.getCalledValue()->stripPointerCasts();
               if (Function *func = dyn_cast<Function>(callee)) {
-                if (func->getName() == "objc_msg_lookup_sender") {
+                if ((func == lookupFn) || (func == sendFn) ||
+                    (func == send_fpretFn) || (func == send_stretFn)) {
                   MDNode *messageType = 
                     call.getInstruction()->getMetadata(MessageSendMDKind);
                   if (0 == messageType) { continue; }
                   if (cast<ConstantInt>(messageType->getOperand(2))->isOne()) {
-                    Lookups.push_back(std::pair<CallSite, bool>(call, false));
+                    if (func == lookupFn) {
+                      Lookups.push_back(std::pair<CallSite, bool>(call, false));
+                    } else {
+                      Sends.push_back(call);
+                    }
                   }
                 } else if (func->getName() == "objc_slot_lookup_super") {
                   Lookups.push_back(std::pair<CallSite, bool>(call, true));
@@ -65,6 +78,10 @@ namespace
               }
             }
           }
+        }
+        for (SmallVectorImpl<CallSite>::iterator i=Sends.begin(), 
+            e=Sends.end() ; e!=i ; i++) {
+          Lookups.push_back(std::pair<CallSite, bool>(cacher.SplitSend(*i), false));
         }
         for (SmallVectorImpl<std::pair<CallSite, bool> >::iterator
             i=Lookups.begin(), e=Lookups.end() ; e!=i ; i++) {

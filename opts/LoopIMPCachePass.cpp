@@ -23,6 +23,11 @@ namespace
     GNUstep::IMPCacher *cacher;
     LLVMIntegerType *IntTy;
     Module *M;
+    bool skip;
+    Function *sendFn;
+    Function *lookupFn;
+    Function *send_stretFn;
+    Function *send_fpretFn;
 
     public:
     static char ID;
@@ -34,6 +39,16 @@ namespace
       IntTy = (sizeof(int) == 4 ) ? Type::getInt32Ty(Mod.getContext()) :
           Type::getInt64Ty(Mod.getContext()) ;
       M = &Mod;
+      skip = false;
+      sendFn = M->getFunction("objc_msgSend");
+      send_stretFn = M->getFunction("objc_msgSend_stret");
+      send_fpretFn = M->getFunction("objc_msgSend_fpret");
+      lookupFn =M->getFunction("objc_msg_lookup_sender");
+      // If this module doesn't contain any message sends, then skip it
+      if ((sendFn == 0) && (send_stretFn == 0) && (send_fpretFn == 0) &&
+          (lookupFn ==0)) {
+        skip = true;
+      }
       return false;  
     }
 
@@ -43,9 +58,11 @@ namespace
 
 
     virtual bool runOnFunction(Function &F) {
+      if (skip) { return false; }
       LoopInfo &LI = getAnalysis<LoopInfo>();
       bool modified = false;
-      SmallVector<CallInst*, 16> Lookups;
+      SmallVector<CallSite, 16> Lookups;
+      SmallVector<CallSite, 16> Sends;
       BasicBlock *entry = &F.getEntryBlock();
 
       for (Function::iterator i=F.begin(), end=F.end() ;
@@ -54,19 +71,30 @@ namespace
         if (LI.getLoopDepth(i) == 0) { continue; }
         for (BasicBlock::iterator b=i->begin(), last=i->end() ;
             b != last ; ++b) {
-          if (CallInst *call = dyn_cast<CallInst>(b)) {
-            Value *callee = call->getCalledValue()->stripPointerCasts();
-            if (Function *func = dyn_cast<Function>(callee)) {
-              if (func->getName() == "objc_msg_lookup_sender") {
+          CallSite call = CallSite(b);
+          if (CallSite() != call) {
+            Value *callee = call.getCalledValue()->stripPointerCasts();
+            Function *func = dyn_cast<Function>(callee);
+            if (func) {
+              if (func == lookupFn) {
+                func->dump();
                 modified = true;
                 Lookups.push_back(call);
+              } else if ((func == sendFn) || (func == send_fpretFn) ||
+                         (func == send_stretFn)) {
+                modified = true;
+                Sends.push_back(call);
               }
             }
           }
         }
       }
+      for (SmallVectorImpl<CallSite>::iterator i=Sends.begin(), 
+          e=Sends.end() ; e!=i ; i++) {
+        Lookups.push_back(cacher->SplitSend(*i));
+      }
       IRBuilder<> B = IRBuilder<>(entry);
-      for (SmallVectorImpl<CallInst*>::iterator i=Lookups.begin(), 
+      for (SmallVectorImpl<CallSite>::iterator i=Lookups.begin(), 
           e=Lookups.end() ; e!=i ; i++) {
         LLVMType *SlotPtrTy = (*i)->getType();
         B.SetInsertPoint(entry, entry->begin());
@@ -75,11 +103,13 @@ namespace
 
         B.CreateStore(Constant::getNullValue(SlotPtrTy), slot);
         B.CreateStore(Constant::getNullValue(IntTy), version);
-        cacher->CacheLookup(*i, slot, version);
+        cacher->CacheLookup(i->getInstruction(), slot, version);
       }
+#ifdef DEBUG
       if (modified){
         verifyFunction(F);
       }
+#endif
       return modified;
     }
   };
