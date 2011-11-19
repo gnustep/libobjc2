@@ -139,7 +139,7 @@ void GNUstep::IMPCacher::CacheLookup(Instruction *lookup, Value *slot, Value
   // version is not 0 at the start and an occasional redundant store is
   // probably better than a branch every time.
   B.CreateStore(lookup, slot);
-  //B.CreateStore(B.CreateLoad(B.CreateStructGEP(lookup, 3)), version);
+  B.CreateStore(B.CreateLoad(B.CreateStructGEP(lookup, 3)), version);
   cls = B.CreateLoad(B.CreateBitCast(receiver, IdTy));
   B.CreateStore(cls, B.CreateStructGEP(lookup, 1));
   B.CreateBr(afterLookupBB);
@@ -232,7 +232,8 @@ void GNUstep::IMPCacher::SpeculativelyInline(Instruction *call, Function
 CallSite GNUstep::IMPCacher::SplitSend(CallSite msgSend)
 {
   BasicBlock *lookupBB = msgSend->getParent();
-  Module *M = lookupBB->getParent()->getParent();
+  Function *F = lookupBB->getParent();
+  Module *M = F->getParent();
   Function *send = M->getFunction("objc_msgSend");
   Function *send_stret = M->getFunction("objc_msgSend_stret");
   Function *send_fpret = M->getFunction("objc_msgSend_fpret");
@@ -251,8 +252,9 @@ CallSite GNUstep::IMPCacher::SplitSend(CallSite msgSend)
     abort();
     return CallSite();
   }
-  CGBuilder B(msgSend.getInstruction());
+  CGBuilder B(&F->getEntryBlock(), F->getEntryBlock().begin());
   Value *selfPtr = B.CreateAlloca(self->getType());
+  B.SetInsertPoint(msgSend.getInstruction());
   B.CreateStore(self, selfPtr, true);
   LLVMType *impTy = msgSend.getCalledValue()->getType();
   LLVMType *slotTy = PointerType::getUnqual(StructType::get(PtrTy, PtrTy, PtrTy,
