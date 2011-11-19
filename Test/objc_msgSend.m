@@ -41,6 +41,13 @@ Class TestCls;
 	s st = {1,2,3,4,5};
 	return st;
 }
+- (s)sret
+{
+	assert((id)3 == self);
+	assert(strcmp("sret", sel_getName(_cmd)) == 0);
+	s st = {1,2,3,4,5};
+	return st;
+}
 + (void)printf: (const char*)str, ...
 {
 	va_list ap;
@@ -80,7 +87,7 @@ int main(void)
 	assert((id)0x42 == a);
 	a = objc_msgSend(TestCls, @selector(foo));
 	assert((id)0x42 == a);
-	objc_registerSmallObjectClass_np(objc_getClass("Test"), 1);
+	assert(objc_registerSmallObjectClass_np(objc_getClass("Test"), 1));
 	a = objc_msgSend((id)01, @selector(foo));
 	assert((id)0x42 == a);
 	s ret = objc_msgSend_stret(TestCls, @selector(sret));
@@ -89,6 +96,16 @@ int main(void)
 	assert(ret.c == 3);
 	assert(ret.d == 4);
 	assert(ret.e == 5);
+	if (sizeof(id) == 8)
+	{
+		assert(objc_registerSmallObjectClass_np(objc_getClass("Test"), 3));
+		ret = objc_msgSend_stret((id)3, @selector(sret));
+		assert(ret.a == 1);
+		assert(ret.b == 2);
+		assert(ret.c == 3);
+		assert(ret.d == 4);
+		assert(ret.e == 5);
+	}
 	Fake *f = nil;
 	assert(0 == [f izero]);
 	assert(0 == [f dzero]);
