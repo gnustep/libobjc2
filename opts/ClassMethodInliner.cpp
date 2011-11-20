@@ -80,7 +80,7 @@ namespace
                 cast<MDString>(messageType->getOperand(1))->getString();
           bool isClassMethod = 
                 cast<ConstantInt>(messageType->getOperand(2))->isOne();
-          StringRef functionName = SymbolNameForMethod(cls, "", sel, isClassMethod);
+          std::string functionName = SymbolNameForMethod(cls, "", sel, isClassMethod);
           Function *method = M.getFunction(functionName);
 
           if (0 == method || method->isDeclaration()) { continue; }
