@@ -464,7 +464,8 @@ BOOL class_addProperty(Class cls,
 	// If there is a name mismatch, the attributes are invalid.
 	if ((p.name != 0) && (strcmp(name, p.name) != 0)) { return NO; }
 
-	struct objc_property_list *l = calloc(1, sizeof(struct objc_property_list));
+	struct objc_property_list *l = calloc(1, sizeof(struct objc_property_list)
+			+ sizeof(struct objc_property));
 	l->count = 0;
 	memcpy(&l->properties, &p, sizeof(struct objc_property));
 	LOCK_RUNTIME_FOR_SCOPE();
