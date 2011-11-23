@@ -53,9 +53,10 @@ of GCC APIs for legacy compatibility.
 
 This library is based on the Étoilé Objective-C Runtime, an earlier research
 prototype, and includes support for non-fragile instance variables,
-type-dependent dispatch, and object planes.  It is fully compatible with the
-FSF's GCC Objective-C ABI and also implements a new ABI that is supported by
-Clang and Étoilé's LanguageKit and is required for some of the newer features.
+type-dependent dispatch, and object planes.  It is fully backwards compatible
+with the FSF's GCC 4.2.1 Objective-C ABI and also implements a new ABI that is
+supported by Clang and Étoilé's LanguageKit and is required for some of the
+newer features.
 
 Although the runtime has been tested by several people, and is being used
 extensively by the Étoilé project, it is relatively new code and may still
