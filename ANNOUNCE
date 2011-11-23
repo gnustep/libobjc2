@@ -14,16 +14,16 @@ release include:
   are used by LanguageKit for message sending to small integers. 
 
 - Support for prototype-style object orientation.  You can now add methods, as
-  well as associated references, to individual objects, as well as cloning
-  them.  The runtime now supports everything required for the JavaScript object
-  model, including the ability to use blocks as methods on x86, x86-64 and ARM.
+  well as associated references, to individual objects, and clone them.  The
+  runtime now supports everything required for the JavaScript object model,
+  including the ability to use blocks as methods on x86, x86-64 and ARM.
 
 - Support for Apple-compatible objc_msgSend() functions for x86, x86-64, and
   ARM.  Using these approximately halves the cost of message sending operations
   and results in a 10% smaller total binary size.  
 
 - A fully maintained POSIX Makefile to make bootstrapping builds and packaging
-  easier.  This will be used automatically if GNUstep Make is not installled.
+  easier.  This will be used automatically if GNUstep Make is not installed.
 
 - Improvements to the included LLVM optimisation passes.  Testing on a 2.8GHz
   Xeon, a loop of 200,000,000 class messages took 0.8 seconds with all
