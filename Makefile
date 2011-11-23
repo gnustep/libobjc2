@@ -21,7 +21,8 @@ CPPFLAGS += -D__OBJC_RUNTIME_INTERNAL__=1 -D_XOPEN_SOURCE=500 -D__BSD_VISIBLE=1 
 # Suppress warnings about incorrect selectors
 CPPFLAGS += -DNO_SELECTOR_MISMATCH_WARNINGS
 # Some helpful flags for debugging.
-CPPFLAGS += -g -O0 -fno-inline
+#CPPFLAGS += -g -O0 -fno-inline
+CPPFLAGS += -O3
 
 PREFIX?= /usr/local
 LIB_DIR= ${PREFIX}/lib
