@@ -164,8 +164,6 @@ _Unwind_Reason_Code name(_Unwind_State state,\
                          struct _Unwind_Exception *exceptionObject,\
                          struct _Unwind_Context *context)\
 {\
-	fprintf(stderr, "LSDA: %p\n", (void*)_Unwind_GetLanguageSpecificData(context));\
-	fprintf(stderr, "IP: %p\n", (void*)_Unwind_GetIP(context));\
 	int version = 1;\
 	uint64_t exceptionClass = exceptionObject->exception_class;\
 	int actions;\
