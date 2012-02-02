@@ -12,6 +12,12 @@
 #include "lock.h"
 #include "visibility.h"
 
+
+/* QNX needs a special header for asprintf() */
+#ifdef __QNXNTO__
+#include <nbutil.h>
+#endif
+
 #define PAGE_SIZE 4096
 
 static void *executeBuffer;
