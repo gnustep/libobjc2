@@ -71,7 +71,7 @@ PRIVATE void call_cxx_construct(id obj)
 	call_cxx_construct_for_class(classForObject(obj), obj);
 }
 
-/** 
+/**
  * Looks up the instance method in a specific class, without recursing into
  * superclasses.
  */
@@ -199,7 +199,7 @@ BOOL class_addProtocol(Class cls, Protocol *protocol)
 	CHECK_ARG(cls);
 	CHECK_ARG(protocol);
 	if (class_conformsToProtocol(cls, protocol)) { return NO; }
-	struct objc_protocol_list *protocols = 
+	struct objc_protocol_list *protocols =
 		malloc(sizeof(struct objc_protocol_list) + sizeof(Protocol2*));
 	if (protocols == NULL) { return NO; }
 	protocols->next = cls->protocols;
@@ -285,7 +285,7 @@ Method * class_copyMethodList(Class cls, unsigned int *outCount)
 }
 
 Protocol*__unsafe_unretained* class_copyProtocolList(Class cls, unsigned int *outCount)
-{ 
+{
 	CHECK_ARG(cls);
 	struct objc_protocol_list *protocolList = NULL;
 	struct objc_protocol_list *list;
@@ -383,7 +383,7 @@ Method class_getInstanceMethod(Class aClass, SEL aSelector)
 
 		// Now find the typed variant of the selector, with the correct types.
 		aSelector = slot->selector;
-		
+
 		// Then do the slow lookup to find the method.
 		return class_getInstanceMethodNonrecursive(slot->owner, aSelector);
 	}
@@ -496,7 +496,7 @@ void class_setIvarLayout(Class cls, const char *layout)
 {
 	if ((Nil == cls) || (NULL == layout)) { return; }
 	struct objc_ivar_list *list = (struct objc_ivar_list*)layout;
-	size_t listsize = sizeof(struct objc_ivar_list) + 
+	size_t listsize = sizeof(struct objc_ivar_list) +
 			sizeof(struct objc_ivar) * (list->count);
 	cls->ivars = malloc(listsize);
 	memcpy(cls->ivars, list, listsize);
@@ -684,11 +684,23 @@ Class objc_allocateClassPair(Class superclass, const char *name, size_t extraByt
 	// Create the metaclass
 	Class metaClass = gc->malloc(sizeof(struct objc_class));
 
-	// Initialize the metaclass
-	// Set the meta-metaclass pointer to the name.  The runtime will fix this
-	// in objc_resolve_class().
-	metaClass->isa = (Class)superclass->isa->isa->name;
-	metaClass->super_class = superclass->isa;
+	if (Nil == superclass)
+	{
+		/*
+		 * Metaclasses of root classes are precious little flowers and work a
+		 * little differently:
+		 */
+		metaClass->isa = metaClass;
+		metaClass->super_class = newClass;
+	}
+	else
+	{
+		// Initialize the metaclass
+		// Set the meta-metaclass pointer to the name.  The runtime will fix this
+		// in objc_resolve_class().
+		metaClass->isa = (Class)superclass->isa->isa->name;
+		metaClass->super_class = superclass->isa;
+	}
 	metaClass->name = strdup(name);
 	metaClass->info = objc_class_flag_meta | objc_class_flag_user_created |
 		objc_class_flag_new_abi;
@@ -699,12 +711,21 @@ Class objc_allocateClassPair(Class superclass, const char *name, size_t extraByt
 	newClass->isa = metaClass;
 	// Set the superclass pointer to the name.  The runtime will fix this when
 	// the class links are resolved.
-	newClass->super_class = (Class)(superclass->name);
+	newClass->super_class = (Nil == superclass) ? Nil : (Class)(superclass->name);
+
 	newClass->name = strdup(name);
 	newClass->info = objc_class_flag_class | objc_class_flag_user_created |
 		objc_class_flag_new_abi;
 	newClass->dtable = uninstalled_dtable;
-	newClass->instance_size = superclass->instance_size;
+
+	if (Nil == superclass)
+	{
+		newClass->instance_size = sizeof(struct objc_class);
+	}
+	else
+	{
+		newClass->instance_size = superclass->instance_size;
+	}
 
 	return newClass;
 }
