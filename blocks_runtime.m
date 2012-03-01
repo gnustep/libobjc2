@@ -203,7 +203,7 @@ void _Block_object_dispose(const void *object, const int flags)
 				int refcount = (src->flags & BLOCK_REFCOUNT_MASK) == 0 ? 0 : decrement24(&src->flags);
 				if (refcount == 0)
 				{
-					if (0 != src->byref_dispose)
+					if(IS_SET(src->flags, BLOCK_HAS_COPY_DISPOSE) && (0 != src->byref_dispose))
 					{
 						src->byref_dispose(src);
 					}
@@ -212,8 +212,8 @@ void _Block_object_dispose(const void *object, const int flags)
 			}
 			else
 			{
-				// Call nontrivial destructors, but don't
-				if (IS_SET(src->flags, BLOCK_HAS_COPY_DISPOSE))
+				// Call nontrivial destructors, but don't free the storage
+				if(IS_SET(src->flags, BLOCK_HAS_COPY_DISPOSE) && (0 != src->byref_dispose))
 				{
 					src->byref_dispose(src);
 				}
