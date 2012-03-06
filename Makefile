@@ -18,6 +18,8 @@ CXXFLAGS += -fPIC -fexceptions
 CPPFLAGS += -DTYPE_DEPENDENT_DISPATCH -DGNUSTEP
 CPPFLAGS += -D__OBJC_RUNTIME_INTERNAL__=1 -D_XOPEN_SOURCE=500 -D__BSD_VISIBLE=1 -D_BSD_SOURCE=1
 
+STRIP=`if [ "$(strip)" = "yes" ] ; then echo -s ; fi`
+
 # Suppress warnings about incorrect selectors
 CPPFLAGS += -DNO_SELECTOR_MISMATCH_WARNINGS
 # Some helpful flags for debugging.
@@ -97,15 +99,9 @@ $(LIBOBJC).a: $(OBJECTS)
 install: all
 	$(SILENT)echo Installing libraries...
 	$(SILENT)install -d $(LIB_DIR)
-	$(SILENT)install -m 444 $(LIBOBJC).so.$(VERSION) $(LIB_DIR)
-	$(SILENT)install -m 444 $(LIBOBJCXX).so.$(VERSION) $(LIB_DIR)
-	$(SILENT)install -m 444 $(LIBOBJC).a $(LIB_DIR)
-	$(SILENT)if [ "$(strip)" = "yes" ]; then \
-		echo Stripping installed libraries...; \
-		strip $(LIB_DIR)/$(LIBOBJC).so.$(VERSION); \
-		strip $(LIB_DIR)/$(LIBOBJCXX).so.$(VERSION); \
-		strip $(LIB_DIR)/$(LIBOBJC).a; \
-	fi
+	$(SILENT)install -m 444 $(STRIP) $(LIBOBJC).so.$(VERSION) $(LIB_DIR)
+	$(SILENT)install -m 444 $(STRIP) $(LIBOBJCXX).so.$(VERSION) $(LIB_DIR)
+	$(SILENT)install -m 444 $(STRIP) $(LIBOBJC).a $(LIB_DIR)
 	$(SILENT)echo Creating symbolic links...
 	$(SILENT)ln -sf $(LIB_DIR)/$(LIBOBJC).so.$(VERSION) $(LIB_DIR)/$(LIBOBJC).so
 	$(SILENT)ln -sf $(LIB_DIR)/$(LIBOBJC).so.$(VERSION) $(LIB_DIR)/$(LIBOBJC).so.$(MAJOR_VERSION)
