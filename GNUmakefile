@@ -100,6 +100,7 @@ ${LIBOBJC}_HEADER_FILES = \
 	Availability.h\
 	Object.h\
 	Protocol.h\
+	blocks_private.h\
 	blocks_runtime.h\
 	capabilities.h\
 	developer.h\

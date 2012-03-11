@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2009 Remy Demarest
  * Portions Copyright (c) 2009 David Chisnall
- *  
+ *
  *  Permission is hereby granted, free of charge, to any person
  *  obtaining a copy of this software and associated documentation
  *  files (the "Software"), to deal in the Software without
@@ -10,10 +10,10 @@
  *  copies of the Software, and to permit persons to whom the
  *  Software is furnished to do so, subject to the following
  *  conditions:
- *   
+ *
  *  The above copyright notice and this permission notice shall be
  *  included in all copies or substantial portions of the Software.
- *   
+ *
  *  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  *  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  *  OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -44,14 +44,14 @@ static void *_HeapBlockByRef = (void*)1;
  */
 const char *block_getType_np(void *b)
 {
-	struct block_literal *block = b;
+	struct Block_layout *block = b;
 	if ((NULL == block) || !(block->flags & BLOCK_HAS_SIGNATURE))
 	{
 		return NULL;
 	}
 	if (!(block->flags & BLOCK_HAS_COPY_DISPOSE))
 	{
-		return ((struct block_descriptor*)block->descriptor)->encoding;
+		return ((struct Block_descriptor_basic*)block->descriptor)->encoding;
 	}
 	return block->descriptor->encoding;
 }
@@ -121,7 +121,7 @@ void _Block_object_assign(void *destAddr, const void *object, const int flags)
 			struct block_byref_obj *src = (struct block_byref_obj *)object;
 			struct block_byref_obj **dst = destAddr;
 			src = src->forwarding;
-			
+
 			if ((src->flags & BLOCK_REFCOUNT_MASK) == 0)
 			{
 				*dst = gc->malloc(src->size);
@@ -161,9 +161,9 @@ void _Block_object_assign(void *destAddr, const void *object, const int flags)
 		}
 		else if (IS_SET(flags, BLOCK_FIELD_IS_BLOCK))
 		{
-			struct block_literal *src = (struct block_literal*)object;
-			struct block_literal **dst = destAddr;
-			
+			struct Block_layout *src = (struct Block_layout*)object;
+			struct Block_layout **dst = destAddr;
+
 			*dst = Block_copy(src);
 		}
 		else if (IS_SET(flags, BLOCK_FIELD_IS_OBJECT) &&
@@ -196,7 +196,7 @@ void _Block_object_dispose(const void *object, const int flags)
 	{
 		if (IS_SET(flags, BLOCK_FIELD_IS_BYREF))
 		{
-			struct block_byref_obj *src = 
+			struct block_byref_obj *src =
 				(struct block_byref_obj*)object;
 			if (src->isa == _HeapBlockByRef)
 			{
@@ -228,7 +228,7 @@ void _Block_object_dispose(const void *object, const int flags)
 		}
 		else if (IS_SET(flags, BLOCK_FIELD_IS_BLOCK))
 		{
-			struct block_literal *src = (struct block_literal*)object;
+			struct Block_layout *src = (struct Block_layout*)object;
 			Block_release(src);
 		}
 		else if (IS_SET(flags, BLOCK_FIELD_IS_OBJECT) &&
@@ -248,12 +248,12 @@ void _Block_object_dispose(const void *object, const int flags)
 void *_Block_copy(void *src)
 {
 	if (NULL == src) { return NULL; }
-	struct block_literal *self = src;
-	struct block_literal *ret = self;
+	struct Block_layout *self = src;
+	struct Block_layout *ret = self;
 
 	extern void _NSConcreteStackBlock;
 	extern void _NSConcreteMallocBlock;
-	
+
 	// If the block is Global, there's no need to copy it on the heap.
 	if(self->isa == &_NSConcreteStackBlock)
 	{
@@ -282,8 +282,8 @@ void *_Block_copy(void *src)
 void _Block_release(void *src)
 {
 	if (NULL == src) { return; }
-	struct block_literal *self = src;
-	
+	struct Block_layout *self = src;
+
 	extern void _NSConcreteStackBlock;
 	extern void _NSConcreteMallocBlock;
 
@@ -305,6 +305,6 @@ void _Block_release(void *src)
 
 PRIVATE void* block_load_weak(void *block)
 {
-	struct block_literal *self = block;
+	struct Block_layout *self = block;
 	return (self->reserved) > 0 ? block : 0;
 }

@@ -72,7 +72,7 @@ extern void __objc_block_trampoline_end_sret;
 
 IMP imp_implementationWithBlock(void *block)
 {
-	struct block_literal *b = block;
+	struct Block_layout *b = block;
 	void *start;
 	void *end;
 
