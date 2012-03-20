@@ -123,10 +123,12 @@ bool gnustep::libobjc::__objc_id_type_info::__do_catch(const type_info *thrownTy
 	// Id catch matches any ObjC throw
 	if (dynamic_cast<const __objc_class_type_info*>(thrownType))
 	{
+		*obj = **(id**)obj;
 		return true;
 	}
 	if (dynamic_cast<const __objc_id_type_info*>(thrownType))
 	{
+		*obj = **(id**)obj;
 		return true;
 	}
 	return false;
