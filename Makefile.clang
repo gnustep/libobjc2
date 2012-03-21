@@ -56,7 +56,7 @@ libobjc.a: libobjc.o
 
 libobjc.o: libobjc.bc
 	@echo Generating native object code...
-	@llc -O3 -filetype=obj -o libobjc.o libobjc.bc
+	@llc -relocation-model=pic -O3 -filetype=obj -o libobjc.o libobjc.bc
 
 libobjc.bc: $(OBJECTS)
 	@echo Linking bitcode...
