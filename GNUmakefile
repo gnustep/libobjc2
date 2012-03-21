@@ -21,9 +21,9 @@ else
 #
 # Start of GNUstep-make specific section.
 #
+-include version.make
 
 PACKAGE_NAME = gnustep-objc2
-VERSION=4.6.0
 SVN_MODULE_NAME = libobjc2
 SVN_BASE_URL = svn+ssh://svn.gna.org/svn/gnustep/libs
 SVN_TAG_NAME=objc2
