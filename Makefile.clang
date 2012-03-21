@@ -1,8 +1,8 @@
 .POSIX:
 
-.SUFFIXES: .c .cc .bc .m .S .o
+.SUFFIXES: .c .bc .m
 
--include version.make
+VERSION = 4
 
 #CC=clang
 
@@ -23,7 +23,6 @@ OBJECTS = \
 	abi_version.bc\
 	alias_table.bc\
 	blocks_runtime.bc\
-	block_to_imp.bc\
 	caps.bc\
 	category_loader.bc\
 	class_table.bc\
@@ -45,37 +44,17 @@ OBJECTS = \
 	statics_loader.bc\
 	toydispatch.bc
 
-NATIVE_OBJECTS=\
-	block_trampolines.o\
-	objc_msgSend.o
-
-CXX_OBJECTS=\
-	objcxx_eh.bc
-
-all: libobjc.so.$(VERSION) libobjc.a libobjcxx.so.$(VERSION)
-	@echo "'Makefile.clang' is deprecated. Please use 'Makefile' or 'GNUmakefile'"
-
-libobjcxx.so.$(VERSION): libobjc.so.$(VERSION) libobjcxx.o
-	@echo Linking shared C++ library...
-	@clang++ -shared -o $@ libobjcxx.o -L./ -lobjc
-
-libobjcxx.o: libobjcxx.bc
-	@echo Generating native C++ object code...
-	@llc -relocation-model=pic -O3 -filetype=obj -o $@ libobjcxx.bc
-
-libobjcxx.bc: $(CXX_OBJECTS)
-	@echo Linking C++ bitcode...
-	@llvm-ld -internalize -link-as-library -native -o libobjcxx.bc $(CXX_OBJECTS)
+all: libobjc.so.$(VERSION) libobjc.a
 
 libobjc.so.$(VERSION): libobjc.o
 	@echo Linking shared library...
 	@clang -shared -o $@ libobjc.o -lpthread
 
-libobjc.a: libobjc.o $(NATIVE_OBJECTS)
+libobjc.a: libobjc.o
 	@echo Linking static library...
-	@ld -r -s -o $@  libobjc.o $(NATIVE_OBJECTS)
+	@ld -r -s -o $@ libobjc.o
 
-libobjc.o: libobjc.bc 
+libobjc.o: libobjc.bc
 	@echo Generating native object code...
 	@llc -relocation-model=pic -O3 -filetype=obj -o libobjc.o libobjc.bc
 
@@ -87,18 +66,9 @@ libobjc.bc: $(OBJECTS)
 	@echo Compiling $<...
 	@clang $(CPPFLAGS) $(CFLAGS) -emit-llvm -c $< -o $@
 
-.cc.bc:
-	@echo Compiling $<...
-	@clang++ $(CPPFLAGS) $(CFLAGS) -emit-llvm -c $< -o $@
-
 .m.bc: 
 	@echo Compiling $<...
 	@clang $(CPPFLAGS) $(CFLAGS) -emit-llvm -c $< -o $@
-
-.S.o:
-	@echo Assembling `basename $<`...
-	@clang $(CPPFLAGS) -no-integrated-as -c $< -o $@
-
 
 install: all
 	install -m 444 libobjc.so.$(VERSION) $(LIB_DIR)
@@ -109,8 +79,4 @@ install: all
 
 clean:
 	@echo Cleaning...
-	@rm -f $(NATIVE_OBJECTS)
-	@rm -f $(OBJECTS)
-	@rm -f $(CXX_OBJECTS)
-	@rm -f libobjc.a libobjc.o libobjcxx.o libobjc.bc libobjcxx.bc
-	@rm -f libobjc.so.$(VERSION) libobjcxx.so.$(VERSION)
+	@rm -f obj/*

@@ -2,7 +2,10 @@
 
 .SUFFIXES: .cc .c .m .o .S
 
--include version.make
+MAJOR_VERSION = 4
+MINOR_VERSION = 6
+SUBMINOR_VERSION = 0
+VERSION = $(MAJOR_VERSION).$(MINOR_VERSION).$(SUBMINOR_VERSION)
 
 LIBOBJCLIBNAME=objc
 LIBOBJC=libobjc
@@ -14,12 +17,6 @@ CFLAGS += -std=gnu99 -fPIC -fexceptions
 CXXFLAGS += -fPIC -fexceptions
 CPPFLAGS += -DTYPE_DEPENDENT_DISPATCH -DGNUSTEP
 CPPFLAGS += -D__OBJC_RUNTIME_INTERNAL__=1 -D_XOPEN_SOURCE=500 -D__BSD_VISIBLE=1 -D_BSD_SOURCE=1
-
-ifeq ($(CC),clang)
-ASMFLAGS += -no-integrated-as
-else
-ASMFLAGS +=
-endif
 
 STRIP=`if [ "$(strip)" = "yes" ] ; then echo -s ; fi`
 
@@ -101,7 +98,7 @@ $(LIBOBJC).a: $(OBJECTS)
 
 .S.o: Makefile
 	$(SILENT)echo Assembling `basename $<`...
-	$(SILENT)$(CC) $(CPPFLAGS) $(ASMFLAGS) -c $< -o $@
+	$(SILENT)$(CC) $(CPPFLAGS) -no-integrated-as -c $< -o $@
 
 install: all
 	$(SILENT)echo Installing libraries...
