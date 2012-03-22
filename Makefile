@@ -18,7 +18,7 @@ CXXFLAGS += -fPIC -fexceptions
 CPPFLAGS += -DTYPE_DEPENDENT_DISPATCH -DGNUSTEP
 CPPFLAGS += -D__OBJC_RUNTIME_INTERNAL__=1 -D_XOPEN_SOURCE=500 -D__BSD_VISIBLE=1 -D_BSD_SOURCE=1
 
-ASMFLAGS += `if [ "$(CC)" = "clang" ] ; then echo -no-integrated-as ; fi`
+ASMFLAGS += `if $(CC) -v 2>&1| grep -q 'clang' ; then echo -no-integrated-as ; fi`
 
 STRIP=`if [ "$(strip)" = "yes" ] ; then echo -s ; fi`
 
