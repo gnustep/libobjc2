@@ -18,6 +18,8 @@ CXXFLAGS += -fPIC -fexceptions
 CPPFLAGS += -DTYPE_DEPENDENT_DISPATCH -DGNUSTEP
 CPPFLAGS += -D__OBJC_RUNTIME_INTERNAL__=1 -D_XOPEN_SOURCE=500 -D__BSD_VISIBLE=1 -D_BSD_SOURCE=1
 
+ASMFLAGS += `if [ "$(CC)" = "clang" ] ; then echo -no-integrated-as ; fi`
+
 STRIP=`if [ "$(strip)" = "yes" ] ; then echo -s ; fi`
 
 # Suppress warnings about incorrect selectors
@@ -98,7 +100,7 @@ $(LIBOBJC).a: $(OBJECTS)
 
 .S.o: Makefile
 	$(SILENT)echo Assembling `basename $<`...
-	$(SILENT)$(CC) $(CPPFLAGS) -no-integrated-as -c $< -o $@
+	$(SILENT)$(CC) $(CPPFLAGS) $(ASMFLAGS) -c $< -o $@
 
 install: all
 	$(SILENT)echo Installing libraries...
