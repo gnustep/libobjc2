@@ -14,6 +14,7 @@ LIBOBJCXX=libobjcxx
 SILENT=@
 
 CFLAGS += -std=gnu99 -fPIC -fexceptions
+CFLAGS += -Wno-deprecated-objc-isa-usage
 CXXFLAGS += -fPIC -fexceptions
 CPPFLAGS += -DTYPE_DEPENDENT_DISPATCH -DGNUSTEP
 CPPFLAGS += -D__OBJC_RUNTIME_INTERNAL__=1 -D_XOPEN_SOURCE=500 -D__BSD_VISIBLE=1 -D_BSD_SOURCE=1

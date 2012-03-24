@@ -143,7 +143,7 @@ static uint64_t read_value(char encoding, unsigned char **data)
 {
 	enum dwarf_data_encoding type = get_encoding(encoding);
 	uint64_t v;
-	switch (type)
+	switch ((int)type)
 	{
 		// Read fixed-length types
 #define READ(dwarf, type) \
