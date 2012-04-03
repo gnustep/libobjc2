@@ -198,6 +198,7 @@ void _Block_object_dispose(const void *object, const int flags)
 		{
 			struct block_byref_obj *src =
 				(struct block_byref_obj*)object;
+			src = src->forwarding;
 			if (src->isa == _HeapBlockByRef)
 			{
 				int refcount = (src->flags & BLOCK_REFCOUNT_MASK) == 0 ? 0 : decrement24(&src->flags);
@@ -208,21 +209,6 @@ void _Block_object_dispose(const void *object, const int flags)
 						src->byref_dispose(src);
 					}
 					gc->free(src);
-				}
-			}
-			else
-			{
-				// Call nontrivial destructors, but don't free the storage
-				if(IS_SET(src->flags, BLOCK_HAS_COPY_DISPOSE) && (0 != src->byref_dispose))
-				{
-					src->byref_dispose(src);
-				}
-				// If this block has been promoted to the heap, decrement its
-				// reference count / destroy it if the heap version is already
-				// dead.
-				if (src->forwarding != src)
-				{
-					_Block_object_dispose(src->forwarding, flags | BLOCK_BYREF_CALLER);
 				}
 			}
 		}
