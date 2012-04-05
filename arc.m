@@ -303,12 +303,15 @@ id objc_autorelease(id obj)
 
 id objc_autoreleaseReturnValue(id obj)
 {
-	struct arc_tls* tls = getARCThreadData();
-	if (NULL != tls)
+	if (!useARCAutoreleasePool) 
 	{
-		objc_autorelease(tls->returnRetained);
-		tls->returnRetained = obj;
-		return obj;
+		struct arc_tls* tls = getARCThreadData();
+		if (NULL != tls)
+		{
+			objc_autorelease(tls->returnRetained);
+			tls->returnRetained = obj;
+			return obj;
+		}
 	}
 	return objc_autorelease(obj);
 }
@@ -326,7 +329,17 @@ id objc_retainAutoreleasedReturnValue(id obj)
 	struct arc_tls* tls = getARCThreadData();
 	if (NULL != tls)
 	{
-		if (obj == tls->returnRetained)
+		// If we're using our own autorelease pool, just pop the object from the top
+		if (useARCAutoreleasePool)
+		{
+			if ((NULL != tls->pool) &&
+			    (*(tls->pool->insert-1) == obj))
+			{
+				tls->pool->insert--;
+				return obj;
+			}
+		}
+		else if (obj == tls->returnRetained)
 		{
 			tls->returnRetained = NULL;
 			return obj;
