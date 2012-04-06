@@ -104,6 +104,10 @@ extern "C" {
  * The runtime supports prototype-based object orientation.
  */
 #define OBJC_CAP_PROTOTYPES 15
+/**
+ * The runtime provides APIs for debugging ARC-managed autorelease pools.
+ */
+#define OBJC_ARC_AUTORELEASE_DEBUG 16
 
 /**
  * Macro used to require the existence of a specific capability.  This creates

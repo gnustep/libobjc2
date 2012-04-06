@@ -93,5 +93,14 @@ void objc_release(id obj);
  * Nonstandard extension.
  */
 void objc_delete_weak_refs(id obj);
+/**
+ * Returns the total number of objects in the ARC-managed autorelease pool.
+ */
+unsigned long objc_arc_autorelease_count_np(void);
+/**
+ * Returns the total number of times that an object has been autoreleased in
+ * this thread.
+ */
+unsigned long objc_arc_autorelease_count_for_object_np(id);
 #endif // __OBJC_ARC_INCLUDED__
 

@@ -70,7 +70,8 @@ static inline struct arc_tls* getARCThreadData(void)
 	return tls;
 #endif
 }
-
+int count = 0;
+int poolCount = 0;
 static inline void release(id obj);
 
 /**
@@ -83,20 +84,25 @@ static void emptyPool(struct arc_tls *tls, id *stop)
 	if (NULL != stop)
 	{
 		stopPool = tls->pool;
-		do
+		while (1)
 		{
 			// Invalid stop location
 			if (NULL == stopPool)
 			{
 				return;
 			}
+			// NULL is the placeholder for the top-level pool
+			if (NULL == stop && stopPool->previous == NULL)
+			{
+				break;
+			}
 			// Stop location was found in this pool
-			if ((stop > tls->pool->pool) && (stop < &tls->pool->pool[POOL_SIZE]))
+			if ((stop >= stopPool->pool) && (stop < &stopPool->pool[POOL_SIZE]))
 			{
 				break;
 			}
 			stopPool = stopPool->previous;
-		} while (1);
+		}
 	}
 	while (tls->pool != stopPool)
 	{
@@ -106,6 +112,7 @@ static void emptyPool(struct arc_tls *tls, id *stop)
 			// This may autorelease some other objects, so we have to work in
 			// the case where the autorelease pool is extended during a -release.
 			release(*tls->pool->insert);
+			count--;
 		}
 		void *old = tls->pool;
 		tls->pool = tls->pool->previous;
@@ -113,12 +120,15 @@ static void emptyPool(struct arc_tls *tls, id *stop)
 	}
 	if (NULL != tls->pool)
 	{
-		while ((tls->pool->insert > stop) && (tls->pool->insert > tls->pool->pool))
+		while ((stop == NULL || (tls->pool->insert > stop)) &&
+		       (tls->pool->insert > tls->pool->pool))
 		{
 			tls->pool->insert--;
+			count--;
 			release(*tls->pool->insert);
 		}
 	}
+	//fprintf(stderr, "New insert: %p.  Stop: %p\n", tls->pool->insert, stop);
 }
 
 static void cleanupPools(struct arc_tls* tls)
@@ -227,6 +237,7 @@ static inline id autorelease(id obj)
 				pool->insert = pool->pool;
 				tls->pool = pool;
 			}
+			count++;
 			*pool->insert = obj;
 			pool->insert++;
 			return obj;
@@ -244,9 +255,45 @@ static inline id autorelease(id obj)
 	return [obj autorelease];
 }
 
+unsigned long objc_arc_autorelease_count_np(void)
+{
+	struct arc_tls* tls = getARCThreadData();
+	unsigned long count = 0;
+	if (!tls) { return 0; }
+
+	for (struct arc_autorelease_pool *pool=tls->pool ;
+	     NULL != pool ;
+	     pool = pool->previous)
+	{
+		count += (((intptr_t)pool->insert) - ((intptr_t)pool->pool)) / sizeof(id);
+	}
+	return count;
+}
+unsigned long objc_arc_autorelease_count_for_object_np(id obj)
+{
+	struct arc_tls* tls = getARCThreadData();
+	unsigned long count = 0;
+	if (!tls) { return 0; }
+
+	for (struct arc_autorelease_pool *pool=tls->pool ;
+	     NULL != pool ;
+	     pool = pool->previous)
+	{
+		for (id* o = pool->insert-1 ; o >= pool->pool ; o--)
+		{
+			if (*o == obj)
+			{
+				count++;
+			}
+		}
+	}
+	return count;
+}
+
 
 void *objc_autoreleasePoolPush(void)
 {
+	initAutorelease();
 	struct arc_tls* tls = getARCThreadData();
 	// If there is an object in the return-retained slot, then we need to
 	// promote it to the real autorelease pool BEFORE pushing the new
@@ -260,6 +307,14 @@ void *objc_autoreleasePoolPush(void)
 	{
 		if (NULL != tls)
 		{
+			struct arc_autorelease_pool *pool = tls->pool;
+			if (NULL == pool || (pool->insert >= &pool->pool[POOL_SIZE]))
+			{
+				pool = calloc(sizeof(struct arc_autorelease_pool), 1);
+				pool->previous = tls->pool;
+				pool->insert = pool->pool;
+				tls->pool = pool;
+			}
 			// If there is no autorelease pool allocated for this thread, then
 			// we lazily allocate one the first time something is autoreleased.
 			return (NULL != tls->pool) ? tls->pool->insert : NULL;
