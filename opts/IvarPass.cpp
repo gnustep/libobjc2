@@ -47,7 +47,11 @@ namespace {
       User *super = cast<User>(ClsStruct->getOperand(1));
       if (isa<ConstantPointerNull>(super)) return "";
       GlobalVariable *name = cast<GlobalVariable>(super->getOperand(0));
+#if (LLVM_MAJOR > 3) || ((LLVM_MAJOR == 3) && (LLVM_MINOR > 0))
+      return cast<ConstantDataArray>(name->getInitializer())->getAsString();
+#else
       return cast<ConstantArray>(name->getInitializer())->getAsString();
+#endif
     }
 
     size_t sizeOfClass(const std::string &className) {
@@ -88,7 +92,11 @@ namespace {
           cast<GlobalVariable>(
               cast<User>(ivar->getOperand(0))->getOperand(0));
         std::string ivarNameStr = 
+#if (LLVM_MAJOR > 3) || ((LLVM_MAJOR == 3) && (LLVM_MINOR > 0))
+          cast<ConstantDataArray>(name->getInitializer())->getAsString();
+#else
           cast<ConstantArray>(name->getInitializer())->getAsString();
+#endif
         // Remove the NULL terminator from the metadata string
         ivarNameStr.resize(ivarNameStr.size() - 1);
         if (ivarNameStr == ivarName.str())

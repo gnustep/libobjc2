@@ -56,8 +56,13 @@ namespace
                 GlobalVariable *classNameVar = dyn_cast<GlobalVariable>(
                     call->getOperand(0)->stripPointerCasts());
                 if (0 == classNameVar) { continue; }
+#if (LLVM_MAJOR > 3) || ((LLVM_MAJOR == 3) && (LLVM_MINOR > 0))
+                ConstantDataArray *init = dyn_cast<ConstantDataArray>(
+                    classNameVar->getInitializer());
+#else
                 ConstantArray *init = dyn_cast<ConstantArray>(
                     classNameVar->getInitializer());
+#endif
                 if (0 == init || !init->isCString()) { continue; }
                 lookup.first = call;
                 lookup.second = init->getAsString();

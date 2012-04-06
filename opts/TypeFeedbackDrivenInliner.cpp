@@ -68,9 +68,14 @@ namespace {
           Function *method = M.getFunction(Entry->begin()->getKey());
           if (0 == method || method->isDeclaration()) { continue; }
 
+#if (LLVM_MAJOR > 3) || ((LLVM_MAJOR == 3) && (LLVM_MINOR > 0))
+          InlineCost IC = CA.getInlineCost((*i), method, 200);
+#else
           InlineCost IC = CA.getInlineCost((*i), method, NeverInline);
+#define getCost getValue
+#endif
           // FIXME: 200 is a random number.  Pick a better one!
-          if (IC.isAlways() || (IC.isVariable() && IC.getValue() < 200)) {
+          if (IC.isAlways() || (IC.isVariable() && IC.getCost() < 200)) {
             cacher.SpeculativelyInline((*i).getInstruction(), method);
             modified = true;
           }

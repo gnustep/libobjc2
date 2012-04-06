@@ -55,7 +55,11 @@ namespace {
       Int32Ty = IntegerType::get(VMContext, 32);
       LLVMPointerType *PtrTy = Type::getInt8PtrTy(VMContext);
       Constant *moduleName = 
+#if (LLVM_MAJOR > 3) || ((LLVM_MAJOR == 3) && (LLVM_MINOR > 0))
+        ConstantDataArray::getString(VMContext, M.getModuleIdentifier(), true);
+#else
         ConstantArray::get(VMContext, M.getModuleIdentifier(), true);
+#endif
       moduleName = new GlobalVariable(M, moduleName->getType(), true,
           GlobalValue::InternalLinkage, moduleName,
           ".objc_profile_module_name");
@@ -75,7 +79,11 @@ namespace {
         functions.push_back(ConstantExpr::getBitCast(F, PtrTy));
 
         Constant * ConstStr = 
+#if (LLVM_MAJOR > 3) || ((LLVM_MAJOR == 3) && (LLVM_MINOR > 0))
+          llvm::ConstantDataArray::getString(VMContext, F->getName(), true);
+#else
           llvm::ConstantArray::get(VMContext, F->getName());
+#endif
         ConstStr = new GlobalVariable(M, ConstStr->getType(), true,
             GlobalValue::PrivateLinkage, ConstStr, "str");
         functions.push_back(
