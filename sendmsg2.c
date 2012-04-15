@@ -24,7 +24,7 @@ static Slot_t objc_msg_forward3_null(id receiver, SEL op) { return &nil_slot; }
 id (*objc_proxy_lookup)(id receiver, SEL op) = objc_proxy_lookup_null;
 Slot_t (*__objc_msg_forward3)(id receiver, SEL op) = objc_msg_forward3_null;
 
-#ifdef NO_SELECTOR_MISMATCH_WARNINGS
+#ifndef NO_SELECTOR_MISMATCH_WARNINGS
 static struct objc_slot* objc_selector_type_mismatch(Class cls, SEL
 		selector, Slot_t result)
 {

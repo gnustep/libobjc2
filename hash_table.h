@@ -163,35 +163,6 @@ static int PREFIX(_table_resize)(PREFIX(_table) *table)
 }
 #else
 
-#	if !(defined(MAP_TABLE_SINGLE_THREAD) || defined(ENABLE_GC))
-// Collects garbage in the background
-void objc_collect_garbage_data(void(*)(void*), void*);
-
-/**
- * Free the memory from an old table.  By the time that this is reached, there
- * are no heap pointers pointing to this table.  There may be iterators, in
- * which case we push this cleanup to the back of the queue and try it again
- * later.  Alternatively, there may be some lookups in progress.  These all
- * take a maximum of 32 hash lookups to complete.  The time taken for the hash
- * function, however, is not deterministic.  To be on the safe side, we
- * calculate the hash of every single element in the table before freeing it.
- */
-static void PREFIX(_table_collect_garbage)(void *t)
-{
-	PREFIX(_table) *table = t;
-	usleep(5000);
-	// If there are outstanding enumerators on this table, try again later.
-	if (table->enumerator_count > 0)
-	{
-		objc_collect_garbage_data(PREFIX(_table_collect_garbage), t);
-		return;
-	}
-	sleep(30);
-	free(table->table);
-	free(table);
-}
-#	endif
-
 static int PREFIX(_insert)(PREFIX(_table) *table, MAP_TABLE_VALUE_TYPE value);
 
 static int PREFIX(_table_resize)(PREFIX(_table) *table)
@@ -225,13 +196,10 @@ static int PREFIX(_table_resize)(PREFIX(_table) *table)
 			PREFIX(_insert)(table, value);
 		}
 	}
+	__sync_synchronize();
 	table->old = NULL;
-#	ifndef ENABLE_GC
-#		ifdef MAP_TABLE_SINGLE_THREAD
+#	if !defined(ENABLE_GC) && defined(MAP_TABLE_SINGLE_THREAD)
 	free(copy);
-#		else 
-	objc_collect_garbage_data(PREFIX(_table_collect_garbage), copy);
-#		endif
 #	endif
 	return 1;
 }
