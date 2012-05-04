@@ -9,7 +9,7 @@
 
 void objc_send_initialize(id object);
 
-static id nil_method(id self, SEL _cmd) { return nil; }
+static long long nil_method(id self, SEL _cmd) { return 0; }
 
 static struct objc_slot nil_slot = { Nil, Nil, 0, 1, (IMP)nil_method };
 

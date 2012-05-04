@@ -57,9 +57,11 @@
 	jmp   *%eax
 4:                                       # returnNil:
 .if \fpret
-	fldz 
+	fldz
 .else 
 	xor   %eax, %eax                     # return 0 (int)
+	xor   %edx, %edx                     # Return 64-bit zero (%edx is
+	                                     # caller-save, so it's safe to do this in the general case.
 .endif
 	ret
 5:                                       # slowSend:
