@@ -59,8 +59,8 @@ static int isEmptyProtocol(struct objc_protocol2 *aProto)
 		struct objc_protocol2 *p2 = (struct objc_protocol2*)aProto;
 		isEmpty &= (p2->optional_instance_methods->count == 0);
 		isEmpty &= (p2->optional_class_methods->count == 0);
-		isEmpty &= (p2->properties->count == 0);
-		isEmpty &= (p2->optional_properties->count == 0);
+		isEmpty &= (p2->properties == 0) || (p2->properties->count == 0);
+		isEmpty &= (p2->optional_properties == 0) || (p2->optional_properties->count == 0);
 	}
 	return isEmpty;
 }
