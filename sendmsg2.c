@@ -10,8 +10,14 @@
 void objc_send_initialize(id object);
 
 static long long nil_method(id self, SEL _cmd) { return 0; }
+static long double nil_method_D(id self, SEL _cmd) { return 0; }
+static double nil_method_d(id self, SEL _cmd) { return 0; }
+static float nil_method_f(id self, SEL _cmd) { return 0; }
 
 static struct objc_slot nil_slot = { Nil, Nil, 0, 1, (IMP)nil_method };
+static struct objc_slot nil_slot_D = { Nil, Nil, 0, 1, (IMP)nil_method_D };
+static struct objc_slot nil_slot_d = { Nil, Nil, 0, 1, (IMP)nil_method_d };
+static struct objc_slot nil_slot_f = { Nil, Nil, 0, 1, (IMP)nil_method_f };
 
 typedef struct objc_slot *Slot_t;
 
@@ -134,6 +140,23 @@ Slot_t objc_msg_lookup_sender(id *receiver, SEL selector, id sender)
 	// inlined trivially.
 	if (UNLIKELY(*receiver == nil))
 	{
+		// Return the correct kind of zero, depending on the type encoding.
+		if (selector->types)
+		{
+			const char *t = selector->types;
+			// Skip type qualifiers
+			while ('r' == *t || 'n' == *t || 'N' == *t || 'o' == *t ||
+			       'O' == *t || 'R' == *t || 'V' == *t) 
+			{
+				t++;
+			}
+			switch (selector->types[0])
+			{
+				case 'D': return &nil_slot_D;
+				case 'd': return &nil_slot_d;
+				case 'f': return &nil_slot_f;
+			}
+		}
 		return &nil_slot;
 	}
 
