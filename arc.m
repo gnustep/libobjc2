@@ -519,6 +519,7 @@ id objc_storeWeak(id *addr, id obj)
 					break;
 				}
 			}
+			oldRef = oldRef->next;
 		}
 	}
 	if (nil == obj)
@@ -569,6 +570,7 @@ id objc_storeWeak(id *addr, id obj)
 			{
 				break;
 			}
+			ref = ref->next;
 		}
 		if (NULL != ref)
 		{
