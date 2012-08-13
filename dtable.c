@@ -666,14 +666,11 @@ PRIVATE void objc_send_initialize(id object)
 		objc_send_initialize((id)class->super_class);
 	}
 
-	LOCK(&initialize_lock);
-
 	// Superclass +initialize might possibly send a message to this class, in
 	// which case this method would be called again.  See NSObject and
 	// NSAutoreleasePool +initialize interaction in GNUstep.
 	if (objc_test_class_flag(class, objc_class_flag_initialized))
 	{
-		UNLOCK(&initialize_lock);
 		// We know that initialization has started because the flag is set.
 		// Check that it's finished by grabbing the class lock.  This will be
 		// released once the class has been fully initialized
@@ -684,6 +681,11 @@ PRIVATE void objc_send_initialize(id object)
 	}
 
 	LOCK_OBJECT_FOR_SCOPE((id)meta);
+	LOCK(&initialize_lock);
+	if (objc_test_class_flag(meta, objc_class_flag_initialized))
+	{
+		return;
+	}
 
 	// Set the initialized flag on both this class and its metaclass, to make
 	// sure that +initialize is only ever sent once.
