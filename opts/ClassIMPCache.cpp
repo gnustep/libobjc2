@@ -6,7 +6,6 @@
 #include "llvm/Constants.h"
 #include "llvm/GlobalVariable.h"
 #include "llvm/Support/CallSite.h"
-#include "llvm/Support/IRBuilder.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/DefaultPasses.h"
 #include "ObjectiveCOpts.h"

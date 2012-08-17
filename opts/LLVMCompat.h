@@ -10,7 +10,11 @@
 #include <llvm/Instructions.h>
 #include <llvm/Metadata.h>
 #include <llvm/Intrinsics.h>
+#if LLVM_MAJOR < 3 || (LLVM_MAJOR >=3 && LLVM_MINOR < 2)
 #include <llvm/Support/IRBuilder.h>
+#else
+#include <llvm/IRBuilder.h>
+#endif
 
 
 // Only preserve names in a debug build.  This simplifies the
