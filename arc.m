@@ -17,6 +17,7 @@ pthread_key_t ARCThreadKey;
 #endif
 
 extern void _NSConcreteMallocBlock;
+extern void _NSConcreteStackBlock;
 extern void _NSConcreteGlobalBlock;
 
 @interface NSAutoreleasePool
@@ -167,7 +168,8 @@ static inline id retain(id obj)
 {
 	if (isSmallObject(obj)) { return obj; }
 	Class cls = obj->isa;
-	if ((Class)&_NSConcreteMallocBlock == cls)
+	if ((Class)&_NSConcreteMallocBlock == cls ||
+	    (Class)&_NSConcreteStackBlock == cls)
 	{
 		return Block_copy(obj);
 	}
