@@ -21,6 +21,8 @@ CPPFLAGS += -D__OBJC_RUNTIME_INTERNAL__=1 -D_XOPEN_SOURCE=500 -D__BSD_VISIBLE=1 
 
 ASMFLAGS += `if $(CC) -v 2>&1| grep -q 'clang' ; then echo -no-integrated-as ; fi`
 
+THE_LD=`if [ "$(LD)" = "" ]; then echo "ld"; else echo "$(LD)"; fi` 
+
 STRIP=`if [ "$(strip)" = "yes" ] ; then echo -s ; fi`
 
 # Suppress warnings about incorrect selectors
@@ -85,7 +87,7 @@ $(LIBOBJC).so.$(VERSION): $(OBJECTS)
 
 $(LIBOBJC).a: $(OBJECTS)
 	$(SILENT)echo Linking static Objective-C runtime library...
-	$(SILENT)ld -r -s -o $@ $(OBJECTS)
+	$(SILENT)$(THE_LD) -r -s -o $@ $(OBJECTS)
 
 .cc.o: Makefile
 	$(SILENT)echo Compiling `basename $<`...
