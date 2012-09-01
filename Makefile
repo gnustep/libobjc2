@@ -76,13 +76,13 @@ all: $(LIBOBJC).a $(LIBOBJCXX).so.$(VERSION)
 $(LIBOBJCXX).so.$(VERSION): $(LIBOBJC).so.$(VERSION) $(OBJCXX_OBJECTS)
 	$(SILENT)echo Linking shared Objective-C++ runtime library...
 	$(SILENT)$(CXX) -shared \
-            -Wl,-soname=$(LIBOBJCXX).so.$(MAJOR_VERSION) \
+            -Wl,-soname=$(LIBOBJCXX).so.$(MAJOR_VERSION) $(LDFLAGS) \
             -o $@ $(OBJCXX_OBJECTS)
 
 $(LIBOBJC).so.$(VERSION): $(OBJECTS)
 	$(SILENT)echo Linking shared Objective-C runtime library...
 	$(SILENT)$(CC) -shared -rdynamic \
-            -Wl,-soname=$(LIBOBJC).so.$(MAJOR_VERSION) \
+            -Wl,-soname=$(LIBOBJC).so.$(MAJOR_VERSION) $(LDFLAGS) \
             -o $@ $(OBJECTS)
 
 $(LIBOBJC).a: $(OBJECTS)
