@@ -684,6 +684,7 @@ PRIVATE void objc_send_initialize(id object)
 	LOCK(&initialize_lock);
 	if (objc_test_class_flag(meta, objc_class_flag_initialized))
 	{
+		UNLOCK(&initialize_lock);
 		return;
 	}
 
