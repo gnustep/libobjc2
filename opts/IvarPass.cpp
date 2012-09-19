@@ -156,7 +156,6 @@ namespace {
               end=replacements.end() ; i != end ; ++i) {
         if (i->second) 
           i->first->replaceAllUsesWith(i->second);
-        i->first->removeFromParent();
       }
       verifyFunction(F);
       return modified;
