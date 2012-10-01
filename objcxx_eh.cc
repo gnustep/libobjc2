@@ -29,7 +29,6 @@ namespace std
 				bool operator==(const type_info &) const;
 				bool operator!=(const type_info &) const;
 				bool before(const type_info &) const;
-				const char* name() const;
 				type_info();
 				private:
 				type_info(const type_info& rhs);
@@ -38,6 +37,7 @@ namespace std
 				protected:
 				type_info(const char *name): __type_name(name) { }
 				public:
+				const char* name() const { return __type_name; }
 				virtual bool __is_pointer_p() const;
 				virtual bool __is_function_p() const;
 				virtual bool __do_catch(const type_info *thrown_type,
