@@ -52,7 +52,7 @@ static void call_cxx_construct_for_class(Class cls, id obj)
 	static SEL cxx_construct;
 	if (NULL == cxx_construct)
 	{
-		cxx_construct = sel_registerName(".cxx_contruct");
+		cxx_construct = sel_registerName(".cxx_construct");
 	}
 	struct objc_slot *slot = objc_get_slot(cls, cxx_construct);
 	if (NULL != slot)
