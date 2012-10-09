@@ -466,7 +466,7 @@ BOOL class_addProperty(Class cls,
 
 	struct objc_property_list *l = calloc(1, sizeof(struct objc_property_list)
 			+ sizeof(struct objc_property));
-	l->count = 0;
+	l->count = 1;
 	memcpy(&l->properties, &p, sizeof(struct objc_property));
 	LOCK_RUNTIME_FOR_SCOPE();
 	l->next = cls->properties;
