@@ -52,6 +52,8 @@ install: all
 	$(SILENT)install -d $(HEADER_DIR)/objc
 	$(SILENT)install -m 444 objc/*.h $(HEADER_DIR)/objc
 
+distclean: clean
+
 #
 # End of GNUstep-make specific section.
 #
