@@ -11,10 +11,11 @@ LIBOBJCLIBNAME=objc
 LIBOBJC=libobjc
 LIBOBJCXX=libobjcxx
 
+INSTALL ?= install
 SILENT ?= @
 
 CFLAGS += -std=gnu99 -fPIC -fexceptions
-CFLAGS += -Wno-deprecated-objc-isa-usage
+#CFLAGS += -Wno-deprecated-objc-isa-usage
 CXXFLAGS += -fPIC -fexceptions
 CPPFLAGS += -DTYPE_DEPENDENT_DISPATCH -DGNUSTEP
 CPPFLAGS += -D__OBJC_RUNTIME_INTERNAL__=1 -D_XOPEN_SOURCE=500 -D__BSD_VISIBLE=1 -D_BSD_SOURCE=1
@@ -105,7 +106,7 @@ $(LIBOBJC).a: $(OBJECTS)
 	$(SILENT)echo Assembling `basename $<`...
 	$(SILENT)$(CC) $(CPPFLAGS) $(ASMFLAGS) -c $< -o $@
 
-install: all
+$(INSTALL): all
 	$(SILENT)echo Installing libraries...
 	$(SILENT)install -d $(LIB_DIR)
 	$(SILENT)install -m 444 $(STRIP) $(LIBOBJC).so.$(VERSION) $(LIB_DIR)
