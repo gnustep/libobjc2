@@ -210,7 +210,7 @@ objc_property_t* class_copyPropertyList(Class cls, unsigned int *outCount)
 	{
 		for (int i=0 ; i<properties->count ; i++)
 		{
-			list[out] = &l->properties[i];
+			list[out++] = &l->properties[i];
 		}
 	}
 	return list;
@@ -238,6 +238,7 @@ PRIVATE size_t lengthOfTypeEncoding(const char *types);
 static const char *property_getTypeEncoding(objc_property_t property)
 {
 	if (NULL == property) { return NULL; }
+	if (NULL == property->getter_types) { return NULL; }
 
 	const char *name = property->getter_types;
 	if (name[0] == 0)
@@ -256,19 +257,14 @@ static const char *property_getTypeEncoding(objc_property_t property)
 	return &property->getter_types[1];
 }
 
-const char *property_getAttributes(objc_property_t property)
+PRIVATE const char *constructPropertyAttributes(objc_property_t property,
+                                                const char *iVarName)
 {
-	if (NULL == property) { return NULL; }
-
 	const char *name = (char*)property->name;
-	if (name[0] == 0)
-	{
-		return name + 2;
-	}
-
 	const char *typeEncoding = property_getTypeEncoding(property);
-	size_t typeSize = strlen(typeEncoding);
+	size_t typeSize = (NULL == typeEncoding) ? 0 : strlen(typeEncoding);
 	size_t nameSize = strlen(property->name);
+	size_t iVarNameSize = strlen(iVarName);
 	// Encoding is T{type},V{name}, so 4 bytes for the "T,V" that we always
 	// need.  We also need two bytes for the leading null and the length.
 	size_t encodingSize = typeSize + nameSize + 6;
@@ -277,22 +273,34 @@ const char *property_getAttributes(objc_property_t property)
 	// Flags that are a comma then a character
 	if ((property->attributes & OBJC_PR_readonly) == OBJC_PR_readonly)
 	{
-		flags[i++] = ',';
+		if (i > 0)
+		{
+			flags[i++] = ',';
+		}
 		flags[i++] = 'R';
 	}
 	if ((property->attributes & OBJC_PR_copy) == OBJC_PR_copy)
 	{
-		flags[i++] = ',';
+		if (i > 0)
+		{
+			flags[i++] = ',';
+		}
 		flags[i++] = 'C';
 	}
 	if ((property->attributes & OBJC_PR_retain) == OBJC_PR_retain)
 	{
-		flags[i++] = ',';
+		if (i > 0)
+		{
+			flags[i++] = ',';
+		}
 		flags[i++] = '&';
 	}
 	if ((property->attributes & OBJC_PR_nonatomic) == OBJC_PR_nonatomic)
 	{
-		flags[i++] = ',';
+		if (i > 0)
+		{
+			flags[i++] = ',';
+		}
 		flags[i++] = 'N';
 	}
 	encodingSize += i;
@@ -309,34 +317,61 @@ const char *property_getAttributes(objc_property_t property)
 		setterLength = strlen(property->setter_name);
 		encodingSize += 2 + setterLength;
 	}
+	if (NULL != iVarName)
+	{
+		encodingSize += 2 + iVarNameSize;
+	}
 	unsigned char *encoding = malloc(encodingSize);
 	// Set the leading 0 and the offset of the name
 	unsigned char *insert = encoding;
 	*(insert++) = 0;
 	*(insert++) = 0;
 	// Set the type encoding
-	*(insert++) = 'T';
-	memcpy(insert, typeEncoding, typeSize);
-	insert += typeSize;
+	if (NULL != typeEncoding)
+	{
+		*(insert++) = 'T';
+		memcpy(insert, typeEncoding, typeSize);
+		insert += typeSize;
+	}
 	// Set the flags
 	memcpy(insert, flags, i);
 	insert += i;
 	if ((property->attributes & OBJC_PR_getter) == OBJC_PR_getter)
 	{
-		*(insert++) = ',';
+		if (i > 0)
+		{
+			*(insert++) = ',';
+		}
+		i++;
 		*(insert++) = 'G';
 		memcpy(insert, property->getter_name, getterLength);
 		insert += getterLength;
 	}
 	if ((property->attributes & OBJC_PR_setter) == OBJC_PR_setter)
 	{
-		*(insert++) = ',';
+		if (i > 0)
+		{
+			*(insert++) = ',';
+		}
+		i++;
 		*(insert++) = 'S';
 		memcpy(insert, property->setter_name, setterLength);
 		insert += setterLength;
 	}
-	*(insert++) = ',';
+	if (i > 0)
+	{
+		*(insert++) = ',';
+	}
 	*(insert++) = 'V';
+	// If the instance variable name is the same as the property name, then we
+	// use the same string for both, otherwise we write the ivar name in the
+	// attributes string and then a null and then the name.
+	if (NULL != iVarName)
+	{
+		memcpy(insert, iVarName, iVarNameSize);
+		insert += iVarNameSize;
+		*(insert++) = '\0';
+	}
 	encoding[1] = (unsigned char)(uintptr_t)(insert - encoding);
 	memcpy(insert, property->name, nameSize);
 	insert += nameSize;
@@ -351,6 +386,19 @@ const char *property_getAttributes(objc_property_t property)
 	return (const char*)(encoding + 2);
 }
 
+
+const char *property_getAttributes(objc_property_t property)
+{
+	if (NULL == property) { return NULL; }
+
+	const char *name = (char*)property->name;
+	if (name[0] == 0)
+	{
+		return name + 2;
+	}
+	return constructPropertyAttributes(property, NULL);
+}
+
 objc_property_attribute_t *property_copyAttributeList(objc_property_t property,
                                                       unsigned int *outCount)
 {
@@ -358,9 +406,13 @@ objc_property_attribute_t *property_copyAttributeList(objc_property_t property,
 	objc_property_attribute_t attrs[10];
 	int count = 0;
 
-	attrs[count].name = "T";
-	attrs[count].value = property_getTypeEncoding(property);
-	count++;
+	const char *types = property_getTypeEncoding(property);
+	if (NULL != types)
+	{
+		attrs[count].name = "T";
+		attrs[count].value = types;
+		count++;
+	}
 	if ((property->attributes & OBJC_PR_copy) == OBJC_PR_copy)
 	{
 		attrs[count].name = "C";
@@ -405,7 +457,8 @@ objc_property_attribute_t *property_copyAttributeList(objc_property_t property,
 }
 
 PRIVATE struct objc_property propertyFromAttrs(const objc_property_attribute_t *attributes,
-                                               unsigned int attributeCount)
+                                               unsigned int attributeCount,
+                                               const char **name)
 {
 	struct objc_property p = { 0 };
 	for (unsigned int i=0 ; i<attributeCount ; i++)
@@ -434,7 +487,7 @@ PRIVATE struct objc_property propertyFromAttrs(const objc_property_attribute_t *
 			}
 			case 'V':
 			{
-				p.name = strdup(attributes[i].value);
+				*name = attributes[i].value;
 				break;
 			}
 			case 'C':
@@ -460,9 +513,19 @@ BOOL class_addProperty(Class cls,
                        unsigned int attributeCount)
 {
 	if ((Nil == cls) || (NULL == name) || (class_getProperty(cls, name) != 0)) { return NO; }
-	struct objc_property p = propertyFromAttrs(attributes, attributeCount);
-	// If there is a name mismatch, the attributes are invalid.
-	if ((p.name != 0) && (strcmp(name, p.name) != 0)) { return NO; }
+	const char *iVarname = NULL;
+	struct objc_property p = propertyFromAttrs(attributes, attributeCount, &iVarname);
+	// If the iVar name is not the same as the name, then we need to construct
+	// the attributes string now, otherwise we can construct it lazily.
+	if (iVarname)
+	{
+		p.name = name;
+		constructPropertyAttributes(&p, iVarname);
+	}
+	else
+	{
+		p.name = strdup(name);
+	}
 
 	struct objc_property_list *l = calloc(1, sizeof(struct objc_property_list)
 			+ sizeof(struct objc_property));
@@ -486,12 +549,16 @@ void class_replaceProperty(Class cls,
 		class_addProperty(cls, name, attributes, attributeCount);
 		return;
 	}
-	struct objc_property p = propertyFromAttrs(attributes, attributeCount);
-	memcpy(old, &p, sizeof(struct objc_property));
-	if (NULL == old->name)
+	const char *iVarname = name;
+	struct objc_property p = propertyFromAttrs(attributes, attributeCount, &iVarname);
+	LOCK_RUNTIME_FOR_SCOPE();
+	// If the iVar name is not the same as the name, then we need to construct
+	// the attributes string now, otherwise we can construct it lazily.
+	if (iVarname != name)
 	{
-		old->name = name;
+		constructPropertyAttributes(&p, iVarname);
 	}
+	memcpy(old, &p, sizeof(struct objc_property));
 }
 char *property_copyAttributeValue(objc_property_t property,
                                   const char *attributeName)
@@ -501,7 +568,8 @@ char *property_copyAttributeValue(objc_property_t property,
 	{
 		case 'T':
 		{
-			return strdup(property_getTypeEncoding(property));
+			const char *types = property_getTypeEncoding(property);
+			return (NULL == types) ? NULL : strdup(types);
 		}
 		case 'V':
 		{

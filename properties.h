@@ -99,7 +99,16 @@ struct objc_property_list
 };
 
 /**
- * Constructs a property description from a list of attributes.
+ * Constructs a property description from a list of attributes, returning the
+ * instance variable name via the third parameter.
  */
 PRIVATE struct objc_property propertyFromAttrs(const objc_property_attribute_t *attributes,
-                                               unsigned int attributeCount);
+                                               unsigned int attributeCount,
+                                               const char **iVarName);
+
+/**
+ * Constructs and installs a property attribute string from the property
+ * attributes and, optionally, an ivar string.
+ */
+PRIVATE const char *constructPropertyAttributes(objc_property_t property,
+                                                const char *iVarName);
