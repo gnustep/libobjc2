@@ -134,13 +134,12 @@ static void emptyPool(struct arc_tls *tls, id *stop)
 
 static void cleanupPools(struct arc_tls* tls)
 {
-	struct arc_autorelease_pool *pool = tls->pool;
 	if (tls->returnRetained)
 	{
 		release(tls->returnRetained);
 		tls->returnRetained = nil;
 	}
-	while(NULL != pool)
+	if (NULL != tls->pool)
 	{
 		emptyPool(tls, NULL);
 		assert(NULL == tls->pool);
