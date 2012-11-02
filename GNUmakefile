@@ -1,6 +1,8 @@
  
 # Check to see if GNUstep-config is available.
+ifeq ($(GNUSTEP_MAKEFILES),)
 GNUSTEP_MAKEFILES := $(shell gnustep-config --variable=GNUSTEP_MAKEFILES 2>/dev/null)
+endif
 
 ifeq ($(GNUSTEP_MAKEFILES),)
 #
@@ -37,7 +39,20 @@ INSTALL := dummy_install
 include Makefile
 
 LIB_DIR := $(shell gnustep-config --variable=GNUSTEP_$(GNUSTEP_INSTALLATION_DOMAIN)_LIBRARIES 2>/dev/null)
+ifeq ($(LIB_DIR),)
+LIB_DIR := $(shell gmake -s -f "$(GNUSTEP_MAKEFILES)/empty.make" print-gnustep-install-libraries GNUSTEP_INSTALLATION_DOMAIN=$(GNUSTEP_INSTALLATION_DOMAIN) quiet=yes 2>/dev/null)
+endif
+ifeq ($(LIB_DIR),)
+$(error Unable to use gnustep-config to get install directory - is gnustep-config in your PATH?)
+endif
+
 HEADER_DIR := $(shell gnustep-config --variable=GNUSTEP_$(GNUSTEP_INSTALLATION_DOMAIN)_HEADERS 2>/dev/null)
+ifeq ($(HEADER_DIR),)
+HEADER_DIR := $(shell gmake -s -f "$(GNUSTEP_MAKEFILES)/empty.make" print-gnustep-install-headers GNUSTEP_INSTALLATION_DOMAIN=$(GNUSTEP_INSTALLATION_DOMAIN) quiet=yes 2>/dev/null)
+endif
+ifeq ($(HEADER_DIR),)
+$(error Unable to use gnustep-config to get install directory - is gnustep-config in your PATH?)
+endif
 
 install: all
 	$(SILENT)echo Installing libraries...
