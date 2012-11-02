@@ -6,6 +6,8 @@ ifeq ($(GNUSTEP_MAKEFILES),)
 #
 # Start of section for building without GNUstep
 #
+$(warning GNUstep not found ...\
+building for standalone installation.)
 
 include Makefile
 
@@ -16,6 +18,8 @@ else
 #
 # Start of GNUstep specific section.
 #
+$(warning GNUstep found ...\
+building for install in the GNUstep filesystem.)
 
 PACKAGE_NAME = gnustep-objc2
 SVN_MODULE_NAME = libobjc2
