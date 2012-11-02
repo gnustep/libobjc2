@@ -6,7 +6,7 @@ ifeq ($(GNUSTEP_MAKEFILES),)
 #
 # Start of section for building without GNUstep
 #
-$(warning GNUstep not found ...\
+$(warning GNUstep not found -\
 building for standalone installation.)
 
 include Makefile
@@ -18,7 +18,7 @@ else
 #
 # Start of GNUstep specific section.
 #
-$(warning GNUstep found ...\
+$(warning GNUstep found -\
 building for install in the GNUstep filesystem.)
 
 PACKAGE_NAME = gnustep-objc2
@@ -55,6 +55,12 @@ install: all
 	$(SILENT)echo Installing headers...
 	$(SILENT)install -d $(HEADER_DIR)/objc
 	$(SILENT)install -m 444 objc/*.h $(HEADER_DIR)/objc
+	$(SILENT)install -m 444 objc/*.h $(HEADER_DIR)/objc
+	$(SILENT)echo "To use the newly installed objc2 library with GNUstep,"
+	$(SILENT)echo "please change to your gnustep-make directory and"
+	$(SILENT)echo "type 'configure; make install' to tell gnustep-make"
+	$(SILENT)echo "to use the new library (you will then need to configure" 
+	$(SILENT)echo "and build gnustep-base to use the new library too)." 
 
 distclean: clean
 
