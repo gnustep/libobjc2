@@ -20,17 +20,46 @@ CXXFLAGS += -fPIC -fexceptions
 CPPFLAGS += -DTYPE_DEPENDENT_DISPATCH -DGNUSTEP
 CPPFLAGS += -D__OBJC_RUNTIME_INTERNAL__=1 -D_XOPEN_SOURCE=500 -D__BSD_VISIBLE=1 -D_BSD_SOURCE=1
 
+# Suppress warnings about incorrect selectors
+CPPFLAGS += -DNO_SELECTOR_MISMATCH_WARNINGS
+
+# Some helpful flags for debugging.
+ifeq ($(debug), yes)
+  CPPFLAGS += -g -O0 -fno-inline
+  OBJCFLAGS += -fno-inline
+  CPPFLAGS += -DGC_DEBUG
+else
+  CPP_FLAGS += -O3
+endif
+
+# Hack to support -03 and get the __sync_* GCC builtins work
+# -O3 requires -march=i586 on Linux x86-32, otherwise Clang compiles 
+# programs that segfaults if -fobjc-nonfragile-abi is used.
+ifneq ($(findstring gcc, $(CC)),) 
+  # TODO: Detect target CPU even if GNUstep.sh is not sourced
+  ifeq ($(GNUSTEP_TARGET_CPU), ix86)
+    CFLAGS += -march=i586
+  endif
+endif
+
+# Hack to get mingw to provide declaration for strdup (since it is non-standard)
+# TODO: Detect mingw32 target even if GNUstep.sh is not sourced
+ifeq ($(GNUSTEP_TARGET_OS), mingw32)
+  ${LIBOBJC}_CPPFLAGS += -U__STRICT_ANSI__
+endif
+
+ifeq ($(findstring openbsd, `$CC -dumpmachine`), openbsd)
+  LDFLAGS += -pthread 
+else
+  LDFLAGS += -lpthread 
+endif
+
 ASMFLAGS += `if $(CC) -v 2>&1| grep -q 'clang' ; then echo -no-integrated-as ; fi`
 
 THE_LD=`if [ "$(LD)" = "" ]; then echo "ld"; else echo "$(LD)"; fi` 
 
 STRIP=`if [ "$(strip)" = "yes" ] ; then echo -s ; fi`
 
-# Suppress warnings about incorrect selectors
-CPPFLAGS += -DNO_SELECTOR_MISMATCH_WARNINGS
-# Some helpful flags for debugging.
-#CPPFLAGS += -g -O0 -fno-inline
-CPPFLAGS += -O3
 
 PREFIX?= /usr/local
 LIB_DIR= ${PREFIX}/lib
