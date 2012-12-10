@@ -263,8 +263,8 @@ PRIVATE const char *constructPropertyAttributes(objc_property_t property,
 	const char *name = (char*)property->name;
 	const char *typeEncoding = property_getTypeEncoding(property);
 	size_t typeSize = (NULL == typeEncoding) ? 0 : strlen(typeEncoding);
-	size_t nameSize = strlen(property->name);
-	size_t iVarNameSize = strlen(iVarName);
+	size_t nameSize = (NULL == name) ? 0 : strlen(name);
+	size_t iVarNameSize = (NULL == iVarName) ? 0 : strlen(iVarName);
 	// Encoding is T{type},V{name}, so 4 bytes for the "T,V" that we always
 	// need.  We also need two bytes for the leading null and the length.
 	size_t encodingSize = typeSize + nameSize + 6;
