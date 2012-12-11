@@ -173,7 +173,7 @@ objc_property_t class_getProperty(Class cls, const char *name)
 		for (int i=0 ; i<properties->count ; i++)
 		{
 			objc_property_t p = &properties->properties[i];
-			if (strcmp(p->name, name) == 0)
+			if (strcmp(property_getName(p), name) == 0)
 			{
 				return p;
 			}
@@ -373,7 +373,7 @@ PRIVATE const char *constructPropertyAttributes(objc_property_t property,
 		*(insert++) = '\0';
 	}
 	encoding[1] = (unsigned char)(uintptr_t)(insert - encoding);
-	memcpy(insert, property->name, nameSize);
+	memcpy(insert, name, nameSize);
 	insert += nameSize;
 	*insert = '\0';
 	// If another thread installed the encoding string while we were computing
