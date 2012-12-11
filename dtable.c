@@ -682,11 +682,12 @@ PRIVATE void objc_send_initialize(id object)
 
 	LOCK_OBJECT_FOR_SCOPE((id)meta);
 	LOCK(&initialize_lock);
-	if (objc_test_class_flag(meta, objc_class_flag_initialized))
+	if (objc_test_class_flag(class, objc_class_flag_initialized))
 	{
 		UNLOCK(&initialize_lock);
 		return;
 	}
+	BOOL skipMeta = objc_test_class_flag(meta, objc_class_flag_initialized);
 
 	// Set the initialized flag on both this class and its metaclass, to make
 	// sure that +initialize is only ever sent once.
@@ -694,7 +695,7 @@ PRIVATE void objc_send_initialize(id object)
 	objc_set_class_flag(meta, objc_class_flag_initialized);
 
 	dtable_t class_dtable = create_dtable_for_class(class, uninstalled_dtable);
-	dtable_t dtable = create_dtable_for_class(meta, class_dtable);
+	dtable_t dtable = skipMeta ? 0 : create_dtable_for_class(meta, class_dtable);
 
 	static SEL initializeSel = 0;
 	if (0 == initializeSel)
@@ -702,14 +703,17 @@ PRIVATE void objc_send_initialize(id object)
 		initializeSel = sel_registerName("initialize");
 	}
 
-	struct objc_slot *initializeSlot = 
-		objc_dtable_lookup(dtable, initializeSel->index);
+	struct objc_slot *initializeSlot = skipMeta ? 0 :
+			objc_dtable_lookup(dtable, initializeSel->index);
 
 	// If there's no initialize method, then don't bother installing and
 	// removing the initialize dtable, just install both dtables correctly now
 	if (0 == initializeSlot)
 	{
-		meta->dtable = dtable;
+		if (!skipMeta)
+		{
+			meta->dtable = dtable;
+		}
 		class->dtable = class_dtable;
 		checkARCAccessors(class);
 		UNLOCK(&initialize_lock);
