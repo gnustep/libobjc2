@@ -1,27 +1,28 @@
-GNUstep Objective-C Runtime 1.6.1
+GNUstep Objective-C Runtime 1.7
 ===============================
 
-This is a point release to the seventh official release of the GNUstep
+This is a point release to the eighth official release of the GNUstep
 Objective-C runtime (a.k.a.  libobjc2).  This runtime was designed to support
 the features of Objective-C 2 for use with GNUstep and other Objective-C
 programs.  Highlights of this release include:
 
-- Improved support for ARC autorelease pools.
+- A new CMake-based build system
 
-- Some small bug fixes in blocks support.
+- A new exception implementation providing better integration with foreign
+  exceptions (e.g. C++ exceptions) (TODO)
 
-- Improvements to the Objective-C++ unified exception model support.
+- MIPS64 support in the assembly routines (TODO)
 
-- Updated optimisation passes to work with LLVM 3.1
+- Updated optimisation passes to work with LLVM 3.2
 
 You may obtain the code for this release from subversion at the following
 subversion branch:
 
-svn://svn.gna.org/svn/gnustep/libs/libobjc2/1.6.1
+svn://svn.gna.org/svn/gnustep/libs/libobjc2/1.7
 
 Alternatively, a tarball is available from:
 
-http://download.gna.org/gnustep/libobjc2-1.6.1.tar.bz2
+http://download.gna.org/gnustep/libobjc2-1.7.tar.bz2
 
 The runtime library is responsible for implementing the core features of the
 object model, as well as exposing introspection features to the user.  The
@@ -35,7 +36,5 @@ with the FSF's GCC 4.2.1 Objective-C ABI and also implements a new ABI that is
 supported by Clang and Étoilé's LanguageKit and is required for some of the
 newer features.
 
-Although the runtime has been tested by several people, and is being used
-extensively by the Étoilé project, it is relatively new code and may still
-contain bugs.  If you come across any problems, please report them to the
-GNUstep Developer mailing list <gnustep-dev@gnu.org>.  
+If you come across any problems, please report them to the GNUstep Developer
+mailing list <gnustep-dev@gnu.org>.  
