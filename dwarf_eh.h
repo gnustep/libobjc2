@@ -274,6 +274,7 @@ static inline struct dwarf_eh_lsda parse_lsda(struct _Unwind_Context *context, u
 struct dwarf_eh_action
 {
 	dw_eh_ptr_t landing_pad;
+	dw_eh_ptr_t cleanup_landing_pad;
 	dw_eh_ptr_t action_record;
 };
 
@@ -308,6 +309,12 @@ static struct dwarf_eh_action
 				// record can be stored.
 				result.action_record = lsda->action_table + action - 1;
 			}
+			else
+			{
+				// We've found a cleanup, but we may also find something else...
+				result.cleanup_landing_pad = lsda->landing_pads + landing_pad;
+				continue;
+			}
 			// No landing pad means keep unwinding.
 			if (landing_pad)
 			{
@@ -317,7 +324,9 @@ static struct dwarf_eh_action
 			break;
 		}
 	}
+	if (result.cleanup_landing_pad && result.landing_pad)
+		fprintf(stderr, "Found both cleanup and catch\n");
 	return result;
 }
 
-#define EXCEPTION_CLASS(a,b,c,d,e,f,g,h) (((uint64_t)a << 56) + ((uint64_t)b << 48) + ((uint64_t)c << 40) + ((uint64_t)d << 32) + ((uint64_t)e << 24) + ((uint64_t)f << 16) + ((uint64_t)g << 8) + ((uint64_t)h))
+#define EXCEPTION_CLASS(a,b,c,d,e,f,g,h) ((((uint64_t)a) << 56) + (((uint64_t)b) << 48) + (((uint64_t)c) << 40) + (((uint64_t)d) << 32) + (((uint64_t)e) << 24) + (((uint64_t)f) << 16) + (((uint64_t)g) << 8) + (((uint64_t)h)))
