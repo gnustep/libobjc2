@@ -3,9 +3,9 @@ cmake_minimum_required(VERSION 2.8)
 
 project(libobjc)
 
-list(INSERT CMAKE_C_FLAGS_DEBUG 0 "-g -O0 -fno-inline")
-list(INSERT CMAKE_C_FLAGS_RELEASE 0 "-O3")
-list(APPEND CMAKE_C_FLAGS "-std=gnu99")
+set(CMAKE_C_FLAGS_DEBUG "-g -O0 -fno-inline ${CMAKE_C_FLAGS_DEBUG}")
+set(CMAKE_C_FLAGS_RELEASE "-O3 ${CMAKE_C_FLAGS_RELEASE}")
+set(CMAKE_C_FLAGS "-std=gnu99 ${CMAKE_C_FLAGS}")
 
 set(libobjc_VERSION 4.6)
 
