@@ -8,6 +8,9 @@ programs.  Highlights of this release include:
 
 - A new CMake-based build system
 
+- Added specialised property accessor functions and support for atomic
+  properties with C++ non-POD types.
+
 - A new exception implementation providing better integration with foreign
   exceptions (e.g. C++ exceptions) (TODO)
 
