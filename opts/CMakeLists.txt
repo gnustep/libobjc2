@@ -20,7 +20,7 @@ add_llvm_loadable_module( libGNUObjCRuntime
   TypeFeedback.cpp
 )
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-variadic-macros -DLLVM_MAJOR=3 -DLLVM_MINOR=2")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-variadic-macros")
 
 set(CMAKE_CXX "clang++")
 
@@ -30,5 +30,12 @@ EXEC_PROGRAM(llvm-config
 EXEC_PROGRAM(llvm-config
 	ARGS --obj-root
 	OUTPUT_VARIABLE LLVM_OBJ)
+EXEC_PROGRAM(llvm-config
+	ARGS --version
+	OUTPUT_VARIABLE LLVM_VER)
+
+string(REGEX REPLACE "([0-9]*).([0-9]*).*" "-DLLVM_MAJOR=\\1 -DLLVM_MINOR=\\2" LLVM_VERSION "${LLVM_VER}")
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${LLVM_VERSION}")
 include_directories( ${LLVM_INCLUDE_DIRS} "${LLVM_SRC}/include/" "${LLVM_OBJ}/include/")
 
