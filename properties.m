@@ -84,6 +84,52 @@ void objc_setProperty(id obj, SEL _cmd, ptrdiff_t offset, id arg, BOOL isAtomic,
 	objc_release(old);
 }
 
+void objc_setProperty_atomic(id obj, SEL _cmd, ptrdiff_t offset, id arg)
+{
+	char *addr = (char*)obj;
+	addr += offset;
+	arg = objc_retain(arg);
+	volatile int *lock = lock_for_pointer(addr);
+	lock_spinlock(lock);
+	id old = *(id*)addr;
+	*(id*)addr = arg;
+	unlock_spinlock(lock);
+	objc_release(old);
+}
+
+void objc_setProperty_atomic_copy(id obj, SEL _cmd, ptrdiff_t offset, id arg)
+{
+	char *addr = (char*)obj;
+	addr += offset;
+
+	arg = [arg copy];
+	volatile int *lock = lock_for_pointer(addr);
+	lock_spinlock(lock);
+	id old = *(id*)addr;
+	*(id*)addr = arg;
+	unlock_spinlock(lock);
+	objc_release(old);
+}
+
+void objc_setProperty_nonatomic(id obj, SEL _cmd, ptrdiff_t offset, id arg)
+{
+	char *addr = (char*)obj;
+	addr += offset;
+	arg = objc_retain(arg);
+	id old = *(id*)addr;
+	*(id*)addr = arg;
+	objc_release(old);
+}
+
+void objc_setProperty_nonatomic_copy(id obj, SEL _cmd, ptrdiff_t offset, id arg)
+{
+	char *addr = (char*)obj;
+	addr += offset;
+	id old = *(id*)addr;
+	*(id*)addr = [arg copy];
+	objc_release(old);
+}
+
 /**
  * Structure copy function.  This is provided for compatibility with the Apple
  * APIs (it's an ABI function, so it's semi-public), but it's a bad design so
