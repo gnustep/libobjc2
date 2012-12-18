@@ -114,7 +114,7 @@ endif ()
 set(LLVM_OPTS TRUE CACHE BOOL
 	"Build LLVM Objective-C optimisations")
 if (LLVM_OPTS)
-	add_subdirectory(opts)
+	#add_subdirectory(opts)
 endif ()
 
 
@@ -169,13 +169,25 @@ else (CXX_RUNTIME)
 		)
 endif (CXX_RUNTIME)
 
-add_library(objc SHARED ${libobjc_C_SRCS} ${libobjc_ASM_SRCS} ${libobjc_OBJC_SRCS} ${libobjc_CXX_SRCS} ${libobjc_HDRS})
+add_library(objc SHARED ${libobjc_C_SRCS} ${libobjc_ASM_SRCS} ${libobjc_OBJC_SRCS} ${libobjc_CXX_SRCS})
 
 set_target_properties(objc PROPERTIES
 	LINKER_LANGUAGE C
-	PUBLIC_HEADER "${libobjc_HDRS}"
 	SOVERSION ${libobjc_VERSION}
 	)
+set(INSTALL_TARGETS objc)
+
+
+set(BUILD_STATIC_LIBOBJC false CACHE BOOL
+	"Build the static version of libobjc")
+if (BUILD_STATIC_LIBOBJC)
+	add_library(objc-static STATIC ${libobjc_C_SRCS} ${libobjc_ASM_SRCS} ${libobjc_OBJC_SRCS} ${libobjc_CXX_SRCS})
+	set_target_properties(objc-static PROPERTIES
+		POSITION_INDEPENDENT_CODE true
+		OUTPUT_NAME objc)
+	list(APPEND INSTALL_TARGETS objc-static)
+endif ()
+
 
 # Currently, we actually need pthreads, but we should use the platform's native
 # threading implementation (we do for everything except thread-local storage)
@@ -218,11 +230,30 @@ else ()
 	EXEC_PROGRAM(gnustep-config
 		ARGS "--variable=GNUSTEP_${GNUSTEP_INSTALL_TYPE}_HEADERS"
 		OUTPUT_VARIABLE HEADER_INSTALL_PATH)
-else ()
-elseif (${GNUSTEP_INSTALL_TYPE} EQUAL "Local")
 endif ()
 
-install(TARGETS objc
+install(TARGETS ${INSTALL_TARGETS}
 	LIBRARY DESTINATION ${LIB_INSTALL_PATH}
-	ARCHIVE DESTINATION ${LIB_INSTALL_PATH}
-	PUBLIC_HEADER DESTINATION "${HEADER_INSTALL_PATH}/objc")
+	ARCHIVE DESTINATION ${LIB_INSTALL_PATH})
+install(FILES ${libobjc_HDRS}
+	DESTINATION "${HEADER_INSTALL_PATH}/objc")
+
+
+
+set(CPACK_GENERATOR TGZ CACHE STRING
+	"Installer types to generate.  Sensible options include TGZ, RPM and DEB")
+
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "GNUstep Objective-C Runtime")
+set(CPACK_PACKAGE_VENDOR "The GNUstep Project")
+set(CPACK_PACKAGE_DESCRIPTION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/README")
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/COPYING")
+set(CPACK_PACKAGE_VERSION_MAJOR "1")
+set(CPACK_PACKAGE_VERSION_MINOR "7")
+set(CPACK_PACKAGE_VERSION_PATCH "0")
+set(CPACK_PACKAGE_CONTACT "GNUstep Developer <gnustep-dev@gnu.org>")
+set(CPACK_PACKAGE_INSTALL_DIRECTORY "CMake ${CMake_VERSION_MAJOR}.${CMake_VERSION_MINOR}")
+if (UNIX)
+	set(CPACK_STRIP_FILES true CACHE BOOL "Strip libraries when packaging")
+endif ()
+include (CPack)
+
