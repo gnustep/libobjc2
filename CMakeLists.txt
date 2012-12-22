@@ -97,7 +97,7 @@ if (BOEHM_GC)
 	else ()
 		find_library(LIBGC gc PATHS GC_LIBRARY_DIRS)
 	endif ()
-	message("-- Using Boehm GC library: ${LIBGC}")
+	message(STATUS "Using Boehm GC library: ${LIBGC}")
 	include_directories(GC_INCLUDE_DIRS)
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${GC_CFLAGS}")
 	set(CMAKE_OBJC_FLAGS "${CMAKE_OBJC_FLAGS} -fobjc-gc")
@@ -158,13 +158,13 @@ endif (NOT CXX_RUNTIME)
 # for Objective-C and Objective-C++.  If not, then we need to provide a
 # separate libobjcxx.
 if (CXX_RUNTIME)
-	message("-- Using ${CXX_RUNTIME} as the C++ runtime library")
+	message(STATUS "Using ${CXX_RUNTIME} as the C++ runtime library")
 	set(libobjc_CXX_SRCS ${libobjcxx_CXX_SRCS})
 	# We don't want to link the STL implementation (e.g. libstdc++) if we have
 	# a separate C++ runtime.
 	set(CMAKE_CXX_IMPLICIT_LINK_LIBRARIES "")
 else (CXX_RUNTIME)
-	message("-- No C++ runtime library found")
+	message(STATUS "No C++ runtime library found")
 	add_library(objcxx SHARED ${libobjcxx_CXX_SRCS})
 	set_target_properties(objcxx PROPERTIES
 		LINKER_LANGUAGE C
@@ -261,4 +261,13 @@ if (UNIX)
 	set(CPACK_STRIP_FILES true CACHE BOOL "Strip libraries when packaging")
 endif ()
 include (CPack)
+
+# uninstall target
+configure_file(
+	"${CMAKE_CURRENT_SOURCE_DIR}/cmake_uninstall.cmake.in"
+	"${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
+	IMMEDIATE @ONLY)
+
+add_custom_target(uninstall
+	COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
 
