@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 2.8)
 
 
 project(libobjc)
+enable_language(ASM)
 
 set(CMAKE_C_FLAGS_DEBUG "-g -O0 -fno-inline ${CMAKE_C_FLAGS_DEBUG}")
 set(CMAKE_C_FLAGS_RELEASE "-O3 ${CMAKE_C_FLAGS_RELEASE}")
@@ -119,6 +120,8 @@ endif ()
 
 set(LIBOBJC_NAME "objc" CACHE STRING 
 	"Name of the Objective-C runtime library (e.g. objc2 for libobjc2)")
+set(INCLUDE_DIRECTORY "objc" CACHE STRING 
+	"Subdirectory of the include path to install the headers.")
 
 
 if (${CMAKE_C_COMPILER_ID} MATCHES Clang*)
@@ -245,7 +248,7 @@ install(TARGETS ${INSTALL_TARGETS}
 	LIBRARY DESTINATION ${LIB_INSTALL_PATH}
 	ARCHIVE DESTINATION ${LIB_INSTALL_PATH})
 install(FILES ${libobjc_HDRS}
-	DESTINATION "${HEADER_INSTALL_PATH}/objc")
+	DESTINATION "${HEADER_INSTALL_PATH}/${INCLUDE_DIRECTORY}")
 
 
 
