@@ -81,11 +81,13 @@ set(TYPE_DEPENDENT_DISPATCH TRUE CACHE BOOL
 if (TYPE_DEPENDENT_DISPATCH)
 	add_definitions(-DTYPE_DEPENDENT_DISPATCH)
 endif ()
+
 set(LOW_MEMORY FALSE CACHE BOOL
 	"Enable low-memory profile *HIGHLY EXPERIMENTAL*")
 if (LOW_MEMORY)
 	add_definitions(-D__OBJC_LOW_MEMORY__)
 endif ()
+
 set(BOEHM_GC FALSE CACHE BOOL
 	"Enable garbage collection support (not recommended)")
 if (BOEHM_GC)
@@ -102,9 +104,10 @@ if (BOEHM_GC)
 	include_directories(GC_INCLUDE_DIRS)
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${GC_CFLAGS}")
 	set(CMAKE_OBJC_FLAGS "${CMAKE_OBJC_FLAGS} -fobjc-gc")
-	set(CMAKE_LINK_FLAGS "${CMAKE_LINK_FLAGS} ${GC_CFLAGS}")
+	set(objc_LINK_FLAGS "${objc_LINK_FLAGS} ${GC_CFLAGS}")
 	add_definitions(-DENABLE_GC)
 endif ()
+
 set(LEGACY_COMPAT FALSE CACHE BOOL
 	"Enable legacy compatibility features")
 if (LEGACY_COMPAT)
@@ -112,14 +115,16 @@ if (LEGACY_COMPAT)
 else ()
 	add_definitions(-DNO_LEGACY)
 endif ()
+
 set(LLVM_OPTS TRUE CACHE BOOL
 	"Build LLVM Objective-C optimisations")
 if (LLVM_OPTS)
-	#add_subdirectory(opts)
+	add_subdirectory(opts)
 endif ()
 
 set(LIBOBJC_NAME "objc" CACHE STRING 
 	"Name of the Objective-C runtime library (e.g. objc2 for libobjc2)")
+
 set(INCLUDE_DIRECTORY "objc" CACHE STRING 
 	"Subdirectory of the include path to install the headers.")
 
@@ -176,12 +181,21 @@ else (CXX_RUNTIME)
 	set(CXX_RUNTIME "")
 endif (CXX_RUNTIME)
 
+# Currently, we actually need pthreads, but we should use the platform's native
+# threading implementation (we do for everything except thread-local storage)
+set(CMAKE_THREAD_PREFER_PTHREAD)
+include(FindThreads)
+set(objc_LINK_FLAGS "${objc_LINK_FLAGS} ${CMAKE_THREAD_LIBS_INIT}")
+
+
+
 add_library(objc SHARED ${libobjc_C_SRCS} ${libobjc_ASM_SRCS} ${libobjc_OBJC_SRCS} ${libobjc_CXX_SRCS})
 
 set_target_properties(objc PROPERTIES
 	LINKER_LANGUAGE C
 	SOVERSION ${libobjc_VERSION}
 	OUTPUT_NAME ${LIBOBJC_NAME}
+	LINK_FLAGS "${objc_LINK_FLAGS}"
 	)
 set(INSTALL_TARGETS objc)
 
@@ -197,11 +211,6 @@ if (BUILD_STATIC_LIBOBJC)
 endif ()
 
 
-# Currently, we actually need pthreads, but we should use the platform's native
-# threading implementation (we do for everything except thread-local storage)
-set(CMAKE_THREAD_PREFER_PTHREAD)
-include(FindThreads)
-list(APPEND CMAKE_LINK_FLAGS CMAKE_THREAD_LIBS_INIT)
 
 # Explicitly link the C++ runtime and libgc if we are compiling with gc support.
 target_link_libraries(objc ${CXX_RUNTIME})
@@ -277,4 +286,7 @@ configure_file(
 
 add_custom_target(uninstall
 	COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
+
+#enable_testing()
+#add_subdirectory(Test)
 
