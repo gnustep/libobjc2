@@ -167,6 +167,7 @@ else (CXX_RUNTIME)
 		LINKER_LANGUAGE C
 		SOVERSION ${libobjc_VERSION}
 		)
+	set(CXX_RUNTIME "")
 endif (CXX_RUNTIME)
 
 add_library(objc SHARED ${libobjc_C_SRCS} ${libobjc_ASM_SRCS} ${libobjc_OBJC_SRCS} ${libobjc_CXX_SRCS})
