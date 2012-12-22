@@ -211,9 +211,12 @@ endif ()
 #
 
 
-EXEC_PROGRAM(gnustep-config
-	ARGS "--installation-domain-for=libobjc2"
-	OUTPUT_VARIABLE DEFAULT_INSTALL_TYPE)
+find_program(GNUSTEP_CONFIG gnustep-config)
+if (GNUSTEP_CONFIG)
+	EXEC_PROGRAM(gnustep-config
+		ARGS "--installation-domain-for=libobjc2"
+		OUTPUT_VARIABLE DEFAULT_INSTALL_TYPE)
+endif ()
 
 
 # If we have GNUstep environment variables, then default to installing in the
@@ -222,9 +225,9 @@ if (DEFAULT_INSTALL_TYPE)
 else ()
 	set(DEFAULT_INSTALL_TYPE "NONE")
 endif ()
+
 set(GNUSTEP_INSTALL_TYPE ${DEFAULT_INSTALL_TYPE} CACHE STRING
 	"GNUstep installation type.  Options are NONE, SYSTEM, NETWORK or LOCAL.")
-
 if (${GNUSTEP_INSTALL_TYPE} STREQUAL "NONE")
 	SET(LIB_INSTALL_PATH lib)
 	SET(HEADER_INSTALL_PATH "include")
@@ -236,6 +239,7 @@ else ()
 		ARGS "--variable=GNUSTEP_${GNUSTEP_INSTALL_TYPE}_HEADERS"
 		OUTPUT_VARIABLE HEADER_INSTALL_PATH)
 endif ()
+message(STATUS "GNUstep install type set to ${GNUSTEP_INSTALL_TYPE}")
 
 install(TARGETS ${INSTALL_TARGETS}
 	LIBRARY DESTINATION ${LIB_INSTALL_PATH}
