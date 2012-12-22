@@ -117,6 +117,9 @@ if (LLVM_OPTS)
 	#add_subdirectory(opts)
 endif ()
 
+set(LIBOBJC_NAME "objc" CACHE STRING 
+	"Name of the Objective-C runtime library (e.g. objc2 for libobjc2)")
+
 
 if (${CMAKE_C_COMPILER_ID} MATCHES Clang*)
 	set(CMAKE_OBJC_FLAGS "${CMAKE_OBJC_FLAGS} -Wno-deprecated-objc-isa-usage -Wno-objc-root-class")
@@ -175,6 +178,7 @@ add_library(objc SHARED ${libobjc_C_SRCS} ${libobjc_ASM_SRCS} ${libobjc_OBJC_SRC
 set_target_properties(objc PROPERTIES
 	LINKER_LANGUAGE C
 	SOVERSION ${libobjc_VERSION}
+	OUTPUT_NAME ${LIBOBJC_NAME}
 	)
 set(INSTALL_TARGETS objc)
 
@@ -185,7 +189,7 @@ if (BUILD_STATIC_LIBOBJC)
 	add_library(objc-static STATIC ${libobjc_C_SRCS} ${libobjc_ASM_SRCS} ${libobjc_OBJC_SRCS} ${libobjc_CXX_SRCS})
 	set_target_properties(objc-static PROPERTIES
 		POSITION_INDEPENDENT_CODE true
-		OUTPUT_NAME objc)
+		OUTPUT_NAME ${LIBOBJC_NAME})
 	list(APPEND INSTALL_TARGETS objc-static)
 endif ()
 
