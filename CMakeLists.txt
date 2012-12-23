@@ -183,6 +183,7 @@ else (CXX_RUNTIME)
 		SOVERSION ${libobjc_VERSION}
 		)
 	set(CXX_RUNTIME "")
+	list(APPEND INSTALL_TARGETS objcxx)
 endif (CXX_RUNTIME)
 
 # Currently, we actually need pthreads, but we should use the platform's native
