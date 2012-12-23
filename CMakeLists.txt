@@ -10,8 +10,10 @@ set(CMAKE_C_FLAGS "-std=gnu99 ${CMAKE_C_FLAGS}")
 
 set(libobjc_VERSION 4.6)
 
-add_definitions(
-	-DGNUSTEP -D__OBJC_RUNTIME_INTERNAL__=1  -D_XOPEN_SOURCE=500 -D__BSD_VISIBLE=1 -D_BSD_SOURCE=1)
+# Build configuration
+add_definitions( -DGNUSTEP -D__OBJC_RUNTIME_INTERNAL__=1)
+# Probably not needed anymore?
+#add_definitions( -D_XOPEN_SOURCE=500 -D__BSD_VISIBLE=1 -D_BSD_SOURCE=1)
 
 set(libobjc_ASM_SRCS 
 	block_trampolines.S
@@ -71,9 +73,9 @@ set(libobjcxx_CXX_SRCS objcxx_eh.cc)
 # For release builds, we disable spamming the terminal with warnings about
 # selector type mismatches
 if (CMAKE_BUILD_TYPE STREQUAL Release)
-	ADD_DEFINITIONS(-DNO_SELECTOR_MISMATCH_WARNINGS)
+	add_definitions(-DNO_SELECTOR_MISMATCH_WARNINGS)
 else ()
-	ADD_DEFINITIONS(-DGC_DEBUG)
+	add_definitions(-DGC_DEBUG)
 endif ()
 
 set(TYPE_DEPENDENT_DISPATCH TRUE CACHE BOOL
