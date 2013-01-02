@@ -145,7 +145,7 @@ else (${CMAKE_C_COMPILER_ID} MATCHES Clang*)
 	MESSAGE("WARNING: It is strongly recommended that you compile with clang")
 endif (${CMAKE_C_COMPILER_ID} MATCHES Clang*)
 
-
+set(INSTALL_TARGETS objc)
 
 set_source_files_properties(
 	${libobjc_OBJC_SRCS}
@@ -202,7 +202,6 @@ set_target_properties(objc PROPERTIES
 	OUTPUT_NAME ${LIBOBJC_NAME}
 	LINK_FLAGS "${objc_LINK_FLAGS}"
 	)
-set(INSTALL_TARGETS objc)
 
 
 set(BUILD_STATIC_LIBOBJC false CACHE BOOL
