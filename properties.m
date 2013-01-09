@@ -434,10 +434,7 @@ PRIVATE const char *constructPropertyAttributes(objc_property_t property,
 		memcpy(insert, property->setter_name, setterLength);
 		insert += setterLength;
 	}
-	if (i > 0)
-	{
-		*(insert++) = ',';
-	}
+	*(insert++) = ',';
 	*(insert++) = 'V';
 	// If the instance variable name is the same as the property name, then we
 	// use the same string for both, otherwise we write the ivar name in the
