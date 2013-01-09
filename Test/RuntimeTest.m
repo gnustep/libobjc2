@@ -1,5 +1,7 @@
-#import <Foundation/Foundation.h>
-#include <objc/runtime.h>
+#include "objc/runtime.h"
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
 
 static int exitStatus = 0;
 
@@ -18,6 +20,47 @@ static int stringsEqual(const char *a, const char *b)
   return 0 == strcmp(a,b);
 }
 
+@protocol NSCoding
+@end
+
+#ifdef __has_attribute
+#if __has_attribute(objc_root_class)
+__attribute__((objc_root_class))
+#endif
+#endif
+@interface NSObject <NSCoding>
+{
+	id isa;
+	int refcount;
+}
+@end
+@implementation NSObject
+- (id)class
+{
+	return object_getClass(self);
+}
++ (id)class
+{
+	return self;
+}
++ (id)new
+{
+	return class_createInstance(self, 0);
+}
+- (void)release
+{
+	if (refcount == 0)
+	{
+		object_dispose(self);
+	}
+	refcount--;
+}
+- (id)retain
+{
+	refcount++;
+	return self;
+}
+@end
 
 
 @interface Foo : NSObject
@@ -43,6 +86,7 @@ static int stringsEqual(const char *a, const char *b)
 - (id) aBool: (BOOL)d andAnInt: (int) w;
 @end
 
+id exceptionObj = @"Exception";
 
 @implementation Foo
 - (void) aMethod
@@ -70,7 +114,7 @@ static int stringsEqual(const char *a, const char *b)
 }
 - (void) throwException
 {
-	@throw [NSException exceptionWithName: @"RuntimeTestException" reason: @"" userInfo: nil];
+	@throw exceptionObj;
 }
 - (BOOL) basicThrowAndCatchException
 {
@@ -78,9 +122,9 @@ static int stringsEqual(const char *a, const char *b)
 	{
 		[self throwException];
 	}
-	@catch (NSException *e)
+	@catch (id e)
 	{
-		NSLog(@"Caught %@", e);
+		test(e == exceptionObj);
 	}
 	@finally
 	{
@@ -181,9 +225,6 @@ void testMultiTypedSelector()
   Method intMethod = class_getInstanceMethod([Foo class], @selector(manyTypes));
   Method idMethod = class_getInstanceMethod([Bar class], @selector(manyTypes));
 
-  test(method_getName(intMethod) == @selector(manyTypes));
-  test(method_getName(idMethod) == @selector(manyTypes));
-
   test(sel_isEqual(method_getName(intMethod), @selector(manyTypes)));
   test(sel_isEqual(method_getName(idMethod), @selector(manyTypes)));
 
@@ -252,12 +293,13 @@ void testRegisterAlias()
   printf("testRegisterAlias() ran\n");
 }
 
-@interface SlowInit1
+@interface SlowInit1 : NSObject
 + (void)doNothing;
 @end
-@interface SlowInit2
+@interface SlowInit2 : NSObject
 + (void)doNothing;
 @end
+
 @implementation SlowInit1
 + (void)initialize
 {
@@ -267,7 +309,7 @@ void testRegisterAlias()
 + (void)doNothing {}
 @end
 static int initCount;
-@implementation SlowInit1
+@implementation SlowInit2
 + (void)initialize
 {
 	sleep(1);
@@ -288,11 +330,9 @@ int main (int argc, const char * argv[])
   testAllocateClass();
   printf("Instance of NSObject: %p\n", class_createInstance([NSObject class], 0));
 
-  NSAutoreleasePool *pool = [NSAutoreleasePool new];
   testSynchronized();
   testExceptions();
   testRegisterAlias();
-  [pool release];
 
   return exitStatus;
 }

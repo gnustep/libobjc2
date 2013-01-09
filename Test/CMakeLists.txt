@@ -8,6 +8,7 @@ set(TESTS
 	BlockImpTest.m
 	PropertyIntrospectionTest.m
 	ProtocolCreation.m
+	RuntimeTest.m
 )
 
 #ExceptionTest.m
