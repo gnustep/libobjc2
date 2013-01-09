@@ -3,6 +3,11 @@
 #include <string.h>
 #include <assert.h>
 
+#ifdef __has_attribute
+#if __has_attribute(objc_root_class)
+__attribute__((objc_root_class))
+#endif
+#endif
 @interface Foo
 @property (getter=bar, setter=setBar:, nonatomic, copy) id foo;
 @end

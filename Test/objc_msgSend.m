@@ -1,17 +1,15 @@
 #include <time.h>
 #include <stdio.h>
-#include <objc/runtime.h>
 #include <assert.h>
 #include <string.h>
-#include <class.h>
 #include <stdarg.h>
+#include "objc/runtime.h"
 
 //#define assert(x) if (!(x)) { printf("Failed %d\n", __LINE__); }
 
 id objc_msgSend(id, SEL, ...);
 
 typedef struct { int a,b,c,d,e; } s;
-s objc_msgSend_stret(id, SEL, ...);
 @interface Fake
 - (int)izero;
 - (float)fzero;
@@ -20,6 +18,11 @@ s objc_msgSend_stret(id, SEL, ...);
 @end
 
 Class TestCls;
+#ifdef __has_attribute
+#if __has_attribute(objc_root_class)
+__attribute__((objc_root_class))
+#endif
+#endif
 @interface Test { id isa; }@end
 @implementation Test 
 - foo
@@ -90,7 +93,7 @@ int main(void)
 	assert(objc_registerSmallObjectClass_np(objc_getClass("Test"), 1));
 	a = objc_msgSend((id)01, @selector(foo));
 	assert((id)0x42 == a);
-	s ret = objc_msgSend_stret(TestCls, @selector(sret));
+	s ret = ((s(*)(id, SEL))objc_msgSend_stret)(TestCls, @selector(sret));
 	assert(ret.a == 1);
 	assert(ret.b == 2);
 	assert(ret.c == 3);
@@ -99,7 +102,7 @@ int main(void)
 	if (sizeof(id) == 8)
 	{
 		assert(objc_registerSmallObjectClass_np(objc_getClass("Test"), 3));
-		ret = objc_msgSend_stret((id)3, @selector(sret));
+		ret = ((s(*)(id, SEL))objc_msgSend_stret)((id)3, @selector(sret));
 		assert(ret.a == 1);
 		assert(ret.b == 2);
 		assert(ret.c == 3);

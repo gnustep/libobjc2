@@ -10,6 +10,7 @@ set(CMAKE_C_FLAGS "-std=gnu99 ${CMAKE_C_FLAGS}")
 
 set(libobjc_VERSION 4.6)
 
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fexceptions")
 # Build configuration
 add_definitions( -DGNUSTEP -D__OBJC_RUNTIME_INTERNAL__=1)
 # Probably not needed anymore?
@@ -291,6 +292,6 @@ configure_file(
 add_custom_target(uninstall
 	COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
 
-#enable_testing()
-#add_subdirectory(Test)
+enable_testing()
+add_subdirectory(Test)
 
