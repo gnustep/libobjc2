@@ -4,11 +4,12 @@
 
 
 set(TESTS
-	objc_msgSend.m
 	BlockImpTest.m
+	PropertyAttributeTest.m
 	PropertyIntrospectionTest.m
 	ProtocolCreation.m
 	RuntimeTest.m
+	objc_msgSend.m
 )
 
 #ExceptionTest.m

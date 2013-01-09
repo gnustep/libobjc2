@@ -400,6 +400,7 @@ PRIVATE const char *constructPropertyAttributes(objc_property_t property,
 	unsigned char *encoding = malloc(encodingSize);
 	// Set the leading 0 and the offset of the name
 	unsigned char *insert = encoding;
+	BOOL needsComma = NO;
 	*(insert++) = 0;
 	*(insert++) = 0;
 	// Set the type encoding
@@ -408,33 +409,39 @@ PRIVATE const char *constructPropertyAttributes(objc_property_t property,
 		*(insert++) = 'T';
 		memcpy(insert, typeEncoding, typeSize);
 		insert += typeSize;
+		needsComma = YES;
 	}
 	// Set the flags
 	memcpy(insert, flags, i);
 	insert += i;
 	if ((property->attributes & OBJC_PR_getter) == OBJC_PR_getter)
 	{
-		if (i > 0)
+		if (needsComma)
 		{
 			*(insert++) = ',';
 		}
 		i++;
+		needsComma = YES;
 		*(insert++) = 'G';
 		memcpy(insert, property->getter_name, getterLength);
 		insert += getterLength;
 	}
 	if ((property->attributes & OBJC_PR_setter) == OBJC_PR_setter)
 	{
-		if (i > 0)
+		if (needsComma)
 		{
 			*(insert++) = ',';
 		}
 		i++;
+		needsComma = YES;
 		*(insert++) = 'S';
 		memcpy(insert, property->setter_name, setterLength);
 		insert += setterLength;
 	}
-	*(insert++) = ',';
+	if (needsComma)
+	{
+		*(insert++) = ',';
+	}
 	*(insert++) = 'V';
 	// If the instance variable name is the same as the property name, then we
 	// use the same string for both, otherwise we write the ivar name in the

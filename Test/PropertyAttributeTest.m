@@ -1,9 +1,14 @@
 #include <stdio.h>
-#import <Foundation/NSObject.h>
 #import <objc/runtime.h>
+#include <string.h>
 #include <assert.h>
 
-@interface helloclass : NSObject {
+#ifdef __has_attribute
+#if __has_attribute(objc_root_class)
+__attribute__((objc_root_class))
+#endif
+#endif
+@interface helloclass {
 	@private int varName;
 }
 @property (readwrite,assign) int propName;
@@ -11,6 +16,7 @@
 
 @implementation helloclass
 @synthesize propName = varName;
++ (id)class { return self; }
 @end
 
 int main()
