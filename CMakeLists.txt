@@ -292,6 +292,11 @@ configure_file(
 add_custom_target(uninstall
 	COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
 
-enable_testing()
-add_subdirectory(Test)
+set(TESTS TRUE CACHE BOOL
+	"Enable building the tests")
+
+if (TESTS)
+	enable_testing()
+	add_subdirectory(Test)
+endif (TESTS)
 
