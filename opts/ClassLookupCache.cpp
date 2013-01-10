@@ -1,13 +1,6 @@
-#include "llvm/Pass.h"
-#include "llvm/Function.h"
-#include "llvm/Module.h"
-#include "llvm/Instructions.h"
-#include "llvm/Constants.h"
-#include "llvm/GlobalVariable.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include "llvm/DefaultPasses.h"
 #include "ObjectiveCOpts.h"
 #include <string>
 

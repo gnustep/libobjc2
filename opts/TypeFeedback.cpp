@@ -1,10 +1,5 @@
-#include "llvm/Constants.h"
-#include "llvm/Pass.h"
-#include "llvm/Module.h"
-#include "llvm/Function.h"
-#include "llvm/Instructions.h"
-#include "llvm/Support/CallSite.h"
-#include "llvm/Linker.h"
+#include <llvm/Support/CallSite.h>
+#include <llvm/Linker.h>
 #include <vector>
 
 using namespace llvm;
