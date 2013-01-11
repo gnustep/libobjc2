@@ -37,6 +37,28 @@ endif
 INSTALL := dummy_install
 
 include Makefile
+include $(GNUSTEP_MAKEFILES)/names.make
+
+# Hack to support -03 for Clang and get the __sync_* GCC builtins work
+# -O3 requires -march=i586 on Linux x86-32, otherwise Clang compiles 
+# programs that segfaults if -fobjc-nonfragile-abi is used.
+ifeq ($(findstring linux, $(GNUSTEP_TARGET_OS)), linux)
+  ifeq ($(GNUSTEP_TARGET_CPU), ix86)
+    CFLAGS += -march=i586
+  endif
+endif
+
+# Hack to get mingw to provide declaration for strdup (since it is non-standard)
+ifeq ($(GNUSTEP_TARGET_OS), mingw32)
+  ${LIBOBJC}_CPPFLAGS += -U__STRICT_ANSI__
+endif
+
+# Shouldn't be needed starting with OpenBSD 5.2
+ifeq ($(findstring openbsd, `$CC -dumpmachine`), openbsd)
+  LDFLAGS += -pthread 
+else
+  LDFLAGS += -lpthread 
+endif
 
 LIB_DIR := $(shell gnustep-config --variable=GNUSTEP_$(GNUSTEP_INSTALLATION_DOMAIN)_LIBRARIES 2>/dev/null)
 ifeq ($(LIB_DIR),)
