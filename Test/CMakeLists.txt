@@ -9,6 +9,7 @@ set(TESTS
 	BoxedForeignException.m
 	ExceptionTest.m
 	ForeignException.m
+	Forward.m
 	NestedExceptions.m
 	PropertyAttributeTest.m
 	PropertyIntrospectionTest.m
