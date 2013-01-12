@@ -23,7 +23,7 @@ function(addtest_flags TEST FLAGS TEST_SOURCE)
 	add_executable(${TEST} ${TEST_SOURCE})
 	add_test(${TEST} ${TEST})
 	set_target_properties(${TEST} PROPERTIES
-		INCLUDE_DIRECTORIES ".."
+		INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}"
 		COMPILE_FLAGS "-fobjc-runtime=gnustep-1.7 -fblocks ${FLAGS}"
 		LINKER_LANGUAGE C
 	)

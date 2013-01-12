@@ -1,8 +1,8 @@
+#define _GNU_SOURCE
 #include "../unwind.h"
 #include "Test.h"
 #include <objc/hooks.h>
 #include <stdlib.h>
-#include <stdio.h>
 
 
 struct foreign_exception
@@ -45,13 +45,11 @@ void finally(void)
 + (id) exceptionWithForeignException: (struct _Unwind_Exception*)ex
 {
 	BoxedException *b = [BoxedException new];
-	fprintf(stderr, "Foreign exception allocated b: %p (isa: %p)\n", b, b->isa);
 	b->exception = (struct foreign_exception*)ex;
 	return b;
 }
 - (void)dealloc
 {
-	fprintf(stderr, "Foreign exception deallocated\n");
 	free(exception);
 	[super dealloc];
 }
@@ -68,7 +66,6 @@ void finally(void)
 	struct _Unwind_Exception *ex = &exception->header;
 	exception = 0;
 	[self dealloc];
-	fprintf(stderr, "Foreign exception rethrown\n");
 	_Unwind_Resume_or_Rethrow(ex);
 	abort();
 }
