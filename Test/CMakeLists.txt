@@ -3,8 +3,13 @@
 # the installed version
 
 
+# List of single-file tests.
 set(TESTS
 	BlockImpTest.m
+	BoxedForeignException.m
+	ExceptionTest.m
+	ForeignException.m
+	NestedExceptions.m
 	PropertyAttributeTest.m
 	PropertyIntrospectionTest.m
 	ProtocolCreation.m
@@ -12,23 +17,29 @@ set(TESTS
 	objc_msgSend.m
 )
 
-#ExceptionTest.m
-#PropertyAttributeTest.m
-#RuntimeTest.m
-foreach(TEST_SOURCE ${TESTS})
-	get_filename_component(TEST ${TEST_SOURCE} NAME_WE)
+# Function for adding a test.  This takes the name of the test and the list of
+# source files as arguments.
+function(addtest_flags TEST FLAGS TEST_SOURCE)
 	add_executable(${TEST} ${TEST_SOURCE})
 	add_test(${TEST} ${TEST})
 	set_target_properties(${TEST} PROPERTIES
 		INCLUDE_DIRECTORIES ".."
-		COMPILE_FLAGS "-fobjc-runtime=gnustep-1.6 -fblocks"
-		LANGUAGE C
+		COMPILE_FLAGS "-fobjc-runtime=gnustep-1.7 -fblocks ${FLAGS}"
 		LINKER_LANGUAGE C
 	)
 	set_property(TEST ${TEST} PROPERTY
-	ENVIRONMENT "LD_LIBRARY_PATH="
+		ENVIRONMENT "LD_LIBRARY_PATH="
 	)
 	target_link_libraries(${TEST} objc)
+endfunction(addtest_flags)
+
+foreach(TEST_SOURCE ${TESTS})
+	get_filename_component(TEST ${TEST_SOURCE} NAME_WE)
+	addtest_flags(${TEST} "-O0" ${TEST_SOURCE})
+	addtest_flags("${TEST}_optimised" "-O3" ${TEST_SOURCE})
 endforeach()
 
+# Tests that are more than a single file.
+addtest_flags(CXXExceptions "-O0" "CXXException.m;CXXException.cc")
+addtest_flags(CXXExceptions_optimised "-O3" "CXXException.m;CXXException.cc")
 

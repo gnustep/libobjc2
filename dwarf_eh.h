@@ -274,7 +274,6 @@ static inline struct dwarf_eh_lsda parse_lsda(struct _Unwind_Context *context, u
 struct dwarf_eh_action
 {
 	dw_eh_ptr_t landing_pad;
-	dw_eh_ptr_t cleanup_landing_pad;
 	dw_eh_ptr_t action_record;
 };
 
@@ -285,7 +284,7 @@ __attribute__((unused))
 static struct dwarf_eh_action 
 	dwarf_eh_find_callsite(struct _Unwind_Context *context, struct dwarf_eh_lsda *lsda)
 {
-	struct dwarf_eh_action result = { 0, 0};
+	struct dwarf_eh_action result = { 0, 0 };
 	uint64_t ip = _Unwind_GetIP(context) - _Unwind_GetRegionStart(context);
 	unsigned char *callsite_table = (unsigned char*)lsda->call_site_table;
 	while (callsite_table <= lsda->action_table)
@@ -309,12 +308,6 @@ static struct dwarf_eh_action
 				// record can be stored.
 				result.action_record = lsda->action_table + action - 1;
 			}
-			else
-			{
-				// We've found a cleanup, but we may also find something else...
-				result.cleanup_landing_pad = lsda->landing_pads + landing_pad;
-				continue;
-			}
 			// No landing pad means keep unwinding.
 			if (landing_pad)
 			{
@@ -324,8 +317,6 @@ static struct dwarf_eh_action
 			break;
 		}
 	}
-	if (result.cleanup_landing_pad && result.landing_pad)
-		fprintf(stderr, "Found both cleanup and catch\n");
 	return result;
 }
 

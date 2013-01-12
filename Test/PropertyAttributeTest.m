@@ -1,6 +1,7 @@
 #include <stdio.h>
 #import <objc/runtime.h>
 #include <string.h>
+#include <stdlib.h>
 #include <assert.h>
 
 #ifdef __has_attribute
