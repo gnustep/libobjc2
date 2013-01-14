@@ -700,16 +700,8 @@ Class objc_allocateClassPair(Class superclass, const char *name, size_t extraByt
 		// in objc_resolve_class().
 		// If the superclass is not yet resolved, then we need to look it up
 		// via the class table.
-		if (!objc_test_class_flag(superclass, objc_class_flag_resolved))
-		{
-			metaClass->super_class = (Class)objc_getClass((char*)superclass->super_class);
-			metaClass->isa = (Class)metaClass->super_class->isa->name;
-		}
-		else
-		{
-			metaClass->isa = (Class)superclass->isa->isa->name;
-			metaClass->super_class = superclass->isa;
-		}
+		metaClass->isa = (Class)superclass->isa->isa->name;
+		metaClass->super_class = superclass->isa;
 	}
 	metaClass->name = strdup(name);
 	metaClass->info = objc_class_flag_meta | objc_class_flag_user_created |
@@ -788,9 +780,12 @@ const char *object_getClassName(id obj)
 	return class_getName(object_getClass(obj));
 }
 
+PRIVATE void objc_resolve_class(Class);
+
 void objc_registerClassPair(Class cls)
 {
 	LOCK_RUNTIME_FOR_SCOPE();
 	class_table_insert(cls);
+	objc_resolve_class(cls);
 }
 

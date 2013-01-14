@@ -244,7 +244,10 @@ PRIVATE BOOL objc_resolve_class(Class cls)
 	// Fix up the ivar offsets
 	objc_compute_ivar_offsets(cls);
 	// Send the +load message, if required
-	objc_send_load_message(cls);
+	if (!objc_test_class_flag(cls, objc_class_flag_user_created))
+	{
+		objc_send_load_message(cls);
+	}
 	if (_objc_load_callback)
 	{
 		_objc_load_callback(cls, 0);
@@ -486,7 +489,7 @@ Class class_getSuperclass(Class cls)
 	if (Nil == cls) { return Nil; }
 	if (!objc_test_class_flag(cls, objc_class_flag_resolved))
 	{
-		return objc_getClass((const char*)cls->super_class);
+		objc_resolve_class(cls);
 	}
 	return cls->super_class;
 }
