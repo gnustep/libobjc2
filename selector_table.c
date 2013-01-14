@@ -354,7 +354,19 @@ static SEL objc_register_selector_copy(SEL aSel, BOOL copyArgs)
 	}
 	// Create a copy of this selector.
 	copy = selector_pool_alloc();
-	copy->name = copyArgs ? strdup(aSel->name) : aSel->name;
+	copy->name = aSel->name;
+	if (copyArgs)
+	{
+		SEL untyped = selector_lookup(aSel->name, 0);
+		if (untyped != NULL)
+		{
+			copy->name = sel_getName(untyped);
+		}
+		else
+		{
+			copy->name = strdup(aSel->name);
+		}
+	}
 	copy->types = (NULL == aSel->types) ? NULL :
 	                 (copyArgs ? strdup(aSel->types) : aSel->types);
 	// Try to register the copy as the authoritative version
