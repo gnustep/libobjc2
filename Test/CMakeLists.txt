@@ -5,6 +5,7 @@
 
 # List of single-file tests.
 set(TESTS
+	AllocatePair.m
 	BlockImpTest.m
 	BoxedForeignException.m
 	ExceptionTest.m

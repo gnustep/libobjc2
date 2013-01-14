@@ -698,8 +698,18 @@ Class objc_allocateClassPair(Class superclass, const char *name, size_t extraByt
 		// Initialize the metaclass
 		// Set the meta-metaclass pointer to the name.  The runtime will fix this
 		// in objc_resolve_class().
-		metaClass->isa = (Class)superclass->isa->isa->name;
-		metaClass->super_class = superclass->isa;
+		// If the superclass is not yet resolved, then we need to look it up
+		// via the class table.
+		if (!objc_test_class_flag(superclass, objc_class_flag_resolved))
+		{
+			metaClass->super_class = (Class)objc_getClass((char*)superclass->super_class);
+			metaClass->isa = (Class)metaClass->super_class->isa->name;
+		}
+		else
+		{
+			metaClass->isa = (Class)superclass->isa->isa->name;
+			metaClass->super_class = superclass->isa;
+		}
 	}
 	metaClass->name = strdup(name);
 	metaClass->info = objc_class_flag_meta | objc_class_flag_user_created |

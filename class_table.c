@@ -486,7 +486,7 @@ Class class_getSuperclass(Class cls)
 	if (Nil == cls) { return Nil; }
 	if (!objc_test_class_flag(cls, objc_class_flag_resolved))
 	{
-		objc_resolve_class(cls);
+		return objc_getClass((const char*)cls->super_class);
 	}
 	return cls->super_class;
 }
