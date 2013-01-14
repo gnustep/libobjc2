@@ -211,6 +211,7 @@ static inline uint32_t hash_selector(const void *s)
 }
 
 #define MAP_TABLE_NAME selector
+#define MAP_TABLE_SINGLE_THREAD
 #define MAP_TABLE_COMPARE_FUNCTION selector_identical
 #define MAP_TABLE_HASH_KEY hash_selector
 #define MAP_TABLE_HASH_VALUE hash_selector
@@ -245,6 +246,7 @@ PRIVATE void init_selector_tables()
 static SEL selector_lookup(const char *name, const char *types)
 {
 	struct objc_selector sel = {{name}, types};
+	LOCK_FOR_SCOPE(&selector_table_lock);
 	return selector_table_get(sel_table, &sel);
 }
 static inline void add_selector_to_table(SEL aSel, int32_t uid, uint32_t idx)
