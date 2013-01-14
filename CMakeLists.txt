@@ -60,6 +60,7 @@ set(libobjc_HDRS
 	objc/developer.h
 	objc/encoding.h
 	objc/hooks.h
+	objc/message.h
 	objc/objc-api.h
 	objc/objc-arc.h
 	objc/objc-auto.h
