@@ -18,7 +18,8 @@ PRIVATE dtable_t uninstalled_dtable;
 PRIVATE InitializingDtable *temporary_dtables;
 /** Lock used to protect the temporary dtables list. */
 PRIVATE mutex_t initialize_lock;
-/** The size of the largest dtable, rounded up to the nearest power of two. */
+/** The size of the largest dtable.  This is a sparse array shift value, so is
+ * 2^x in increments of 8. */
 static uint32_t dtable_depth = 8;
 
 struct objc_slot* objc_get_slot(Class cls, SEL selector);
@@ -555,11 +556,13 @@ PRIVATE void objc_resize_dtables(uint32_t newSize)
 
 	LOCK_RUNTIME_FOR_SCOPE();
 
-	dtable_depth <<= 1;
+	if (1<<dtable_depth > newSize) { return; }
+
+	dtable_depth += 8;
 
 	uint32_t oldMask = uninstalled_dtable->mask;
 
-	SparseArrayExpandingArray(uninstalled_dtable);
+	SparseArrayExpandingArray(uninstalled_dtable, dtable_depth);
 	// Resize all existing dtables
 	void *e = NULL;
 	struct objc_class *next;
@@ -569,7 +572,8 @@ PRIVATE void objc_resize_dtables(uint32_t newSize)
 			NULL != next->dtable &&
 			((SparseArray*)next->dtable)->mask == oldMask)
 		{
-			SparseArrayExpandingArray((void*)next->dtable);
+			SparseArrayExpandingArray((void*)next->dtable, dtable_depth);
+			SparseArrayExpandingArray((void*)next->isa->dtable, dtable_depth);
 		}
 	}
 }

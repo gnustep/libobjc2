@@ -112,7 +112,7 @@ SparseArray *SparseArrayNewWithDepth(uint32_t depth);
  * Returns a new sparse array created by adding this one as the first child
  * node in an expanded one.
  */
-SparseArray *SparseArrayExpandingArray(SparseArray *sarray);
+SparseArray *SparseArrayExpandingArray(SparseArray *sarray, uint32_t new_depth);
 /**
  * Insert a value at the specified index.
  */

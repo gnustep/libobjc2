@@ -11,6 +11,7 @@ set(TESTS
 	ExceptionTest.m
 	ForeignException.m
 	Forward.m
+	ManyManySelectors.m
 	NestedExceptions.m
 	PropertyAttributeTest.m
 	PropertyIntrospectionTest.m
