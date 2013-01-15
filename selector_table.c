@@ -22,7 +22,6 @@
 #	define TDD(x)
 #endif
 
-#define fprintf(...)
 
 
 // Define the pool allocator for selectors.  This is a simple bump-the-pointer
@@ -42,6 +41,12 @@ static uint32_t selector_count = 1;
  * Mapping from selector numbers to selector names.
  */
 PRIVATE SparseArray *selector_list  = NULL;
+
+#ifdef DEBUG_SELECTOR_TABLE
+#define DEBUG_LOG(...) fprintf(stderr, __VA_ARGS__)
+#else
+#define DEBUG_LOG(...)
+#endif
 
 // Get the functions for string hashing
 #include "string_hash.h"
@@ -156,7 +161,7 @@ static int selector_identical(const void *k,
                               const SEL value)
 {
 	SEL key = (SEL)k;
-	fprintf(stderr, "Comparing %s %s, %s %s\n", sel_getNameNonUnique(key), sel_getNameNonUnique(value), sel_getType_np(key), sel_getType_np(value));
+	DEBUG_LOG("Comparing %s %s, %s %s\n", sel_getNameNonUnique(key), sel_getNameNonUnique(value), sel_getType_np(key), sel_getType_np(value));
 	return string_compare(sel_getNameNonUnique(key), sel_getNameNonUnique(value)) &&
 		selector_types_equal(sel_getType_np(key), sel_getType_np(value));
 }
@@ -226,6 +231,20 @@ static selector_table *sel_table;
  */
 mutex_t selector_table_lock;
 
+static int selector_name_copies;
+
+PRIVATE void log_selector_memory_usage(void)
+{
+	fprintf(stderr, "%d bytes in selector name list.\n", SparseArraySize(selector_list));
+	fprintf(stderr, "%d bytes in selector names.\n", selector_name_copies);
+	fprintf(stderr, "%d bytes (%d entries) in selector hash table.\n", (int)(sel_table->table_size *
+	        sizeof(struct selector_table_cell_struct)), sel_table->table_size);
+	fprintf(stderr, "%d selectors registered.\n", selector_count);
+	fprintf(stderr, "%d hash table cells per selector (%.2f%% full)\n", sel_table->table_size / selector_count,  ((float)selector_count) /  sel_table->table_size * 100);
+}
+
+
+
 
 /**
  * Resizes the dtables to ensure that they can store as many selectors as
@@ -251,7 +270,7 @@ static SEL selector_lookup(const char *name, const char *types)
 }
 static inline void add_selector_to_table(SEL aSel, int32_t uid, uint32_t idx)
 {
-	//fprintf(stderr, "Sel %s uid: %d, idx: %d, hash: %d\n", sel_getNameNonUnique(aSel), uid, idx, hash_selector(aSel));
+	DEBUG_LOG("Sel %s uid: %d, idx: %d, hash: %d\n", sel_getNameNonUnique(aSel), uid, idx, hash_selector(aSel));
 	struct sel_type_list *typeList =
 		(struct sel_type_list *)selector_pool_alloc();
 	typeList->value = aSel->name;
@@ -271,7 +290,7 @@ static inline void register_selector_locked(SEL aSel)
 	uintptr_t idx = selector_count++;
 	if (NULL == aSel->types)
 	{
-		fprintf(stderr, "Registering selector %d %s\n", (int)idx, sel_getNameNonUnique(aSel));
+		DEBUG_LOG("Registering selector %d %s\n", (int)idx, sel_getNameNonUnique(aSel));
 		add_selector_to_table(aSel, idx, idx);
 		objc_resize_dtables(selector_count);
 		return;
@@ -283,7 +302,7 @@ static inline void register_selector_locked(SEL aSel)
 		untyped = selector_pool_alloc();
 		untyped->name = aSel->name;
 		untyped->types = 0;
-		fprintf(stderr, "Registering selector %d %s\n", (int)idx, sel_getNameNonUnique(aSel));
+		DEBUG_LOG("Registering selector %d %s\n", (int)idx, sel_getNameNonUnique(aSel));
 		add_selector_to_table(untyped, idx, idx);
 		// If we are in type dependent dispatch mode, the uid for the typed
 		// and untyped versions will be different
@@ -296,7 +315,7 @@ static inline void register_selector_locked(SEL aSel)
 	}
 	uintptr_t uid = (uintptr_t)untyped->name;
 	TDD(uid = idx);
-	fprintf(stderr, "Registering typed selector %d %s %s\n", (int)uid, sel_getNameNonUnique(aSel), sel_getType_np(aSel));
+	DEBUG_LOG("Registering typed selector %d %s %s\n", (int)uid, sel_getNameNonUnique(aSel), sel_getType_np(aSel));
 	add_selector_to_table(aSel, uid, idx);
 
 	// Add this set of types to the list.
@@ -340,10 +359,10 @@ static SEL objc_register_selector_copy(SEL aSel, BOOL copyArgs)
 {
 	// If an identical selector is already registered, return it.
 	SEL copy = selector_lookup(aSel->name, aSel->types);
-	//fprintf(stderr, "Checking if old selector is registered: %d (%d)\n", NULL != copy ? selector_equal(aSel, copy) : 0, ((NULL != copy) && selector_equal(aSel, copy)));
+	DEBUG_LOG("Checking if old selector is registered: %d (%d)\n", NULL != copy ? selector_equal(aSel, copy) : 0, ((NULL != copy) && selector_equal(aSel, copy)));
 	if ((NULL != copy) && selector_identical(aSel, copy))
 	{
-	//fprintf(stderr, "Not adding new copy\n");
+		DEBUG_LOG("Not adding new copy\n");
 		return copy;
 	}
 	LOCK_FOR_SCOPE(&selector_table_lock);
@@ -355,6 +374,7 @@ static SEL objc_register_selector_copy(SEL aSel, BOOL copyArgs)
 	// Create a copy of this selector.
 	copy = selector_pool_alloc();
 	copy->name = aSel->name;
+	copy->types = (NULL == aSel->types) ? NULL : aSel->types;
 	if (copyArgs)
 	{
 		SEL untyped = selector_lookup(aSel->name, 0);
@@ -365,10 +385,14 @@ static SEL objc_register_selector_copy(SEL aSel, BOOL copyArgs)
 		else
 		{
 			copy->name = strdup(aSel->name);
+			selector_name_copies += strlen(copy->name);
+		}
+		if (copy->types != NULL)
+		{
+			copy->types = strdup(copy->types);
+			selector_name_copies += strlen(copy->types);
 		}
 	}
-	copy->types = (NULL == aSel->types) ? NULL :
-	                 (copyArgs ? strdup(aSel->types) : aSel->types);
 	// Try to register the copy as the authoritative version
 	register_selector_locked(copy);
 	return copy;

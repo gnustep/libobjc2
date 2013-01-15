@@ -243,3 +243,24 @@ PRIVATE void SparseArrayDestroy(SparseArray * sarray)
 	free(sarray);
 }
 
+PRIVATE int SparseArraySize(SparseArray *sarray)
+{
+	int size = 0;
+	if (sarray->shift == 0)
+	{
+		return 256*sizeof(void*) + sizeof(SparseArray);
+	}
+	size += 256*sizeof(void*) + sizeof(SparseArray);
+	for(unsigned i=0 ; i<=MAX_INDEX(sarray) ; i++)
+	{
+		SparseArray *child = sarray->data[i];
+		if (child == &EmptyArray || 
+		    child == &EmptyArray8 || 
+		    child == &EmptyArray16)
+		{
+			continue;
+		}
+		size += SparseArraySize(child);
+	}
+	return size;
+}

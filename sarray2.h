@@ -136,4 +136,9 @@ void * SparseArrayNext(SparseArray * sarray, uint32_t * index);
  */
 SparseArray *SparseArrayCopy(SparseArray * sarray);
 
+/**
+ * Returns the total memory usage of a sparse array.  
+ */
+int SparseArraySize(SparseArray *sarray);
+
 #endif //_SARRAY_H_INCLUDED_
