@@ -34,10 +34,20 @@ id objc_msgSend(id self, SEL _cmd, ...);
  * architecture, so take great care if using this function for small (two
  * integer) structures.
  */
-#ifdef __cplusplus
+#ifdef __cplusplus 
 id objc_msgSend_stret(id self, SEL _cmd, ...);
 #else
+// There is a bug in older versions of clang that incorrectly declares the
+// signature of this function as a builtin.
+#	ifdef __clang__
+#		if (__clang_major__ > 3) || ((__clang_major__ == 3) && __clang_minor__ >= 2)
 void objc_msgSend_stret(id self, SEL _cmd, ...);
+#		else
+id objc_msgSend_stret(id self, SEL _cmd, ...);
+#		endif
+#	else 
+void objc_msgSend_stret(id self, SEL _cmd, ...);
+#	endif
 #endif
 /**
  * Standard message sending function.  This function must be cast to the
