@@ -40,7 +40,7 @@ id objc_msgSend_stret(id self, SEL _cmd, ...);
 // There is a bug in older versions of clang that incorrectly declares the
 // signature of this function as a builtin.
 #	ifdef __clang__
-#		if (__clang_major__ > 3) || ((__clang_major__ == 3) && __clang_minor__ >= 2)
+#		if (__clang_major__ > 3) || ((__clang_major__ == 3) && __clang_minor__ >= 3)
 void objc_msgSend_stret(id self, SEL _cmd, ...);
 #		else
 id objc_msgSend_stret(id self, SEL _cmd, ...);
