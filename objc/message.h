@@ -1,3 +1,7 @@
+#if defined(__clang__) && !defined(__OBJC_RUNTIME_INTERNAL__)
+#pragma clang system_header
+#endif
+
 #ifndef _OBJC_MESSAGE_H_
 #define _OBJC_MESSAGE_H_
 
@@ -37,17 +41,7 @@ id objc_msgSend(id self, SEL _cmd, ...);
 #ifdef __cplusplus 
 id objc_msgSend_stret(id self, SEL _cmd, ...);
 #else
-// There is a bug in older versions of clang that incorrectly declares the
-// signature of this function as a builtin.
-#	ifdef __clang__
-#		if (__clang_major__ > 3) || ((__clang_major__ == 3) && __clang_minor__ >= 3)
 void objc_msgSend_stret(id self, SEL _cmd, ...);
-#		else
-id objc_msgSend_stret(id self, SEL _cmd, ...);
-#		endif
-#	else 
-void objc_msgSend_stret(id self, SEL _cmd, ...);
-#	endif
 #endif
 /**
  * Standard message sending function.  This function must be cast to the
