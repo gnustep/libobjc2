@@ -14,7 +14,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fexceptions")
 # Build configuration
 add_definitions( -DGNUSTEP -D__OBJC_RUNTIME_INTERNAL__=1)
 # Probably not needed anymore?
-#add_definitions( -D_XOPEN_SOURCE=500 -D__BSD_VISIBLE=1 -D_BSD_SOURCE=1)
+add_definitions( -D_XOPEN_SOURCE=500 -D__BSD_VISIBLE=1 -D_BSD_SOURCE=1)
 
 set(libobjc_ASM_SRCS 
 	block_trampolines.S
