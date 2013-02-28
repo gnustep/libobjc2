@@ -15,6 +15,7 @@ set(TESTS
 	NestedExceptions.m
 	PropertyAttributeTest.m
 	PropertyIntrospectionTest.m
+	PropertyIntrospectionTest2.m
 	ProtocolCreation.m
 	RuntimeTest.m
 	objc_msgSend.m

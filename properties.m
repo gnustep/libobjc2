@@ -14,6 +14,11 @@
 
 PRIVATE int spinlocks[spinlock_count];
 
+static inline BOOL checkAttribute(char field, int attr)
+{
+	return (field & attr) == attr;
+}
+
 /**
  * Public function for getting a property.  
  */
@@ -291,12 +296,28 @@ objc_property_t* class_copyPropertyList(Class cls, unsigned int *outCount)
 	}
 	return list;
 }
+static const char* property_getIVar(objc_property_t property) {
+	const char *iVar = property_getAttributes(property);
+	if (iVar != 0)
+	{
+		while ((*iVar != 0) && (*iVar != 'V'))
+		{
+			iVar++;
+		}
+		if (*iVar == 'V')
+		{
+			return iVar+1;
+		}
+	}
+	return 0;
+}
 
 const char *property_getName(objc_property_t property)
 {
 	if (NULL == property) { return NULL; }
 
 	const char *name = property->name;
+	if (NULL == name) { return NULL; }
 	if (name[0] == 0)
 	{
 		name += name[1];
@@ -344,39 +365,37 @@ PRIVATE const char *constructPropertyAttributes(objc_property_t property,
 	// Encoding is T{type},V{name}, so 4 bytes for the "T,V" that we always
 	// need.  We also need two bytes for the leading null and the length.
 	size_t encodingSize = typeSize + nameSize + 6;
-	char flags[16];
+	char flags[20];
 	size_t i = 0;
 	// Flags that are a comma then a character
-	if ((property->attributes & OBJC_PR_readonly) == OBJC_PR_readonly)
+	if (checkAttribute(property->attributes, OBJC_PR_readonly))
 	{
-		if (i > 0)
-		{
-			flags[i++] = ',';
-		}
+		flags[i++] = ',';
 		flags[i++] = 'R';
 	}
-	if ((property->attributes & OBJC_PR_copy) == OBJC_PR_copy)
+	if (checkAttribute(property->attributes, OBJC_PR_retain))
 	{
-		if (i > 0)
-		{
-			flags[i++] = ',';
-		}
+		flags[i++] = ',';
+		flags[i++] = '&';
+	}
+	if (checkAttribute(property->attributes, OBJC_PR_copy))
+	{
+		flags[i++] = ',';
 		flags[i++] = 'C';
 	}
-	if ((property->attributes & OBJC_PR_retain) == OBJC_PR_retain)
+	if (checkAttribute(property->attributes2, OBJC_PR_weak))
 	{
-		if (i > 0)
-		{
-			flags[i++] = ',';
-		}
-		flags[i++] = '&';
+		flags[i++] = ',';
+		flags[i++] = 'W';
+	}
+	if (checkAttribute(property->attributes2, OBJC_PR_dynamic))
+	{
+		flags[i++] = ',';
+		flags[i++] = 'D';
 	}
 	if ((property->attributes & OBJC_PR_nonatomic) == OBJC_PR_nonatomic)
 	{
-		if (i > 0)
-		{
-			flags[i++] = ',';
-		}
+		flags[i++] = ',';
 		flags[i++] = 'N';
 	}
 	encodingSize += i;
@@ -438,20 +457,20 @@ PRIVATE const char *constructPropertyAttributes(objc_property_t property,
 		memcpy(insert, property->setter_name, setterLength);
 		insert += setterLength;
 	}
-	if (needsComma)
-	{
-		*(insert++) = ',';
-	}
-	*(insert++) = 'V';
 	// If the instance variable name is the same as the property name, then we
 	// use the same string for both, otherwise we write the ivar name in the
 	// attributes string and then a null and then the name.
 	if (NULL != iVarName)
 	{
+		if (needsComma)
+		{
+			*(insert++) = ',';
+		}
+		*(insert++) = 'V';
 		memcpy(insert, iVarName, iVarNameSize);
 		insert += iVarNameSize;
-		*(insert++) = '\0';
 	}
+	*(insert++) = '\0';
 	encoding[1] = (unsigned char)(uintptr_t)(insert - encoding);
 	memcpy(insert, name, nameSize);
 	insert += nameSize;
@@ -479,11 +498,12 @@ const char *property_getAttributes(objc_property_t property)
 	return constructPropertyAttributes(property, NULL);
 }
 
+
 objc_property_attribute_t *property_copyAttributeList(objc_property_t property,
                                                       unsigned int *outCount)
 {
 	if (NULL == property) { return NULL; }
-	objc_property_attribute_t attrs[10];
+	objc_property_attribute_t attrs[12];
 	int count = 0;
 
 	const char *types = property_getTypeEncoding(property);
@@ -493,15 +513,35 @@ objc_property_attribute_t *property_copyAttributeList(objc_property_t property,
 		attrs[count].value = types;
 		count++;
 	}
-	if ((property->attributes & OBJC_PR_copy) == OBJC_PR_copy)
+	if (checkAttribute(property->attributes, OBJC_PR_readonly))
+	{
+		attrs[count].name = "R";
+		attrs[count].value = "";
+		count++;
+	}
+	if (checkAttribute(property->attributes, OBJC_PR_copy))
 	{
 		attrs[count].name = "C";
 		attrs[count].value = "";
 		count++;
 	}
-	if ((property->attributes & OBJC_PR_retain) == OBJC_PR_retain)
+	if (checkAttribute(property->attributes, OBJC_PR_retain) ||
+	    checkAttribute(property->attributes2, OBJC_PR_strong))
 	{
 		attrs[count].name = "&";
+		attrs[count].value = "";
+		count++;
+	}
+	if (checkAttribute(property->attributes2, OBJC_PR_dynamic) &&
+	    !checkAttribute(property->attributes2, OBJC_PR_synthesized))
+	{
+		attrs[count].name = "D";
+		attrs[count].value = "";
+		count++;
+	}
+	if (checkAttribute(property->attributes2, OBJC_PR_weak))
+	{
+		attrs[count].name = "W";
 		attrs[count].value = "";
 		count++;
 	}
@@ -523,9 +563,13 @@ objc_property_attribute_t *property_copyAttributeList(objc_property_t property,
 		attrs[count].value = property->setter_name;
 		count++;
 	}
-	attrs[count].name = "V";
-	attrs[count].value = property_getName(property);
-	count++;
+	const char *name = property_getIVar(property);
+	if (name != NULL)
+	{
+		attrs[count].name = "V";
+		attrs[count].value = name;
+		count++;
+	}
 
 	objc_property_attribute_t *propAttrs = calloc(sizeof(objc_property_attribute_t), count);
 	memcpy(propAttrs, attrs, count * sizeof(objc_property_attribute_t));
@@ -573,14 +617,32 @@ PRIVATE struct objc_property propertyFromAttrs(const objc_property_attribute_t *
 			case 'C':
 			{
 				p.attributes |= OBJC_PR_copy;
+				break;
+			}
+			case 'R':
+			{
+				p.attributes |= OBJC_PR_readonly;
+				break;
+			}
+			case 'W':
+			{
+				p.attributes2 |= OBJC_PR_weak;
+				break;
 			}
 			case '&':
 			{
 				p.attributes |= OBJC_PR_retain;
+				break;
 			}
 			case 'N':
 			{
 				p.attributes |= OBJC_PR_nonatomic;
+				break;
+			}
+			case 'D':
+			{
+				p.attributes2 |= OBJC_PR_dynamic;
+				break;
 			}
 		}
 	}
@@ -597,15 +659,8 @@ BOOL class_addProperty(Class cls,
 	struct objc_property p = propertyFromAttrs(attributes, attributeCount, &iVarname);
 	// If the iVar name is not the same as the name, then we need to construct
 	// the attributes string now, otherwise we can construct it lazily.
-	if (iVarname)
-	{
-		p.name = name;
-		constructPropertyAttributes(&p, iVarname);
-	}
-	else
-	{
-		p.name = strdup(name);
-	}
+	p.name = name;
+	constructPropertyAttributes(&p, iVarname);
 
 	struct objc_property_list *l = calloc(1, sizeof(struct objc_property_list)
 			+ sizeof(struct objc_property));
@@ -629,15 +684,11 @@ void class_replaceProperty(Class cls,
 		class_addProperty(cls, name, attributes, attributeCount);
 		return;
 	}
-	const char *iVarname = name;
+	const char *iVarname = 0;
 	struct objc_property p = propertyFromAttrs(attributes, attributeCount, &iVarname);
+	p.name = name;
 	LOCK_RUNTIME_FOR_SCOPE();
-	// If the iVar name is not the same as the name, then we need to construct
-	// the attributes string now, otherwise we can construct it lazily.
-	if (iVarname != name)
-	{
-		constructPropertyAttributes(&p, iVarname);
-	}
+	constructPropertyAttributes(&p, iVarname);
 	memcpy(old, &p, sizeof(struct objc_property));
 }
 char *property_copyAttributeValue(objc_property_t property,
@@ -651,9 +702,14 @@ char *property_copyAttributeValue(objc_property_t property,
 			const char *types = property_getTypeEncoding(property);
 			return (NULL == types) ? NULL : strdup(types);
 		}
+		case 'D':
+		{
+			return checkAttribute(property->attributes2, OBJC_PR_dynamic) &&
+			       !checkAttribute(property->attributes2, OBJC_PR_synthesized) ? strdup("") : 0;
+		}
 		case 'V':
 		{
-			return strdup(property_getName(property));
+			return strdup(property_getIVar(property));
 		}
 		case 'S':
 		{
@@ -663,17 +719,26 @@ char *property_copyAttributeValue(objc_property_t property,
 		{
 			return strdup(property->getter_name);
 		}
+		case 'R':
+		{
+			return checkAttribute(property->attributes, OBJC_PR_readonly) ? strdup("") : 0;
+		}
+		case 'W':
+		{
+			return checkAttribute(property->attributes2, OBJC_PR_weak) ? strdup("") : 0;
+		}
 		case 'C':
 		{
-			return ((property->attributes |= OBJC_PR_copy) == OBJC_PR_copy) ? strdup("") : 0;
+			return checkAttribute(property->attributes, OBJC_PR_copy) ? strdup("") : 0;
 		}
 		case '&':
 		{
-			return ((property->attributes |= OBJC_PR_retain) == OBJC_PR_retain) ? strdup("") : 0;
+			return checkAttribute(property->attributes, OBJC_PR_retain) ||
+			       checkAttribute(property->attributes2, OBJC_PR_strong) ? strdup("") : 0;
 		}
 		case 'N':
 		{
-			return ((property->attributes |= OBJC_PR_nonatomic) == OBJC_PR_nonatomic) ? strdup("") : 0;
+			return checkAttribute(property->attributes, OBJC_PR_nonatomic) ? strdup("") : 0;
 		}
 	}
 	return 0;

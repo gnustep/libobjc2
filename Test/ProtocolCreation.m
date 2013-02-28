@@ -11,8 +11,8 @@ int main(void)
 	protocol_addMethodDescription(p, @selector(someMethod), "@:", YES, NO);
 	assert(objc_getProtocol("Test2"));
 	protocol_addProtocol(p, objc_getProtocol("Test2"));
-	objc_property_attribute_t attrs[] = { {"T", "@" } };
-	protocol_addProperty(p, "foo", attrs, 1, YES, YES);
+	objc_property_attribute_t attrs[] = { {"T", "@" }, {"V", "foo"} };
+	protocol_addProperty(p, "foo", attrs, 2, YES, YES);
 	objc_registerProtocol(p);
 	Protocol *p1 = objc_getProtocol("Test");
 	assert(p == p1);

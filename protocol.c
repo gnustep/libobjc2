@@ -409,7 +409,7 @@ objc_property_t protocol_getProperty(Protocol *protocol,
 		for (int i=0 ; i<properties->count ; i++)
 		{
 			objc_property_t prop = &properties->properties[i];
-			if (strcmp(prop->name, name) == 0)
+			if (strcmp(property_getName(prop), name) == 0)
 			{
 				return prop;
 			}
@@ -610,11 +610,8 @@ void protocol_addProperty(Protocol *aProtocol,
 	int index = list->count-1;
 	const char *iVarName = NULL;
 	struct objc_property p = propertyFromAttrs(attributes, attributeCount, &iVarName);
-	if (iVarName)
-	{
-		constructPropertyAttributes(&p, iVarName);
-	}
-	p.name = strdup(name);
+	p.name = name;
+	constructPropertyAttributes(&p, iVarName);
 	memcpy(&(list->properties[index]), &p, sizeof(p));
 }
 
