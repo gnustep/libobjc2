@@ -570,7 +570,7 @@ IMP method_setImplementation(Method method, IMP imp)
 {
 	if (NULL == method) { return (IMP)NULL; }
 	IMP old = (IMP)method->imp;
-	method->imp = old;
+	method->imp = imp;
 	objc_updateDtableForClassContainingMethod(method);
 	return old;
 }
