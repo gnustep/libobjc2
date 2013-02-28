@@ -1,36 +1,10 @@
-#if __APPLE__
-// Compile command: clang -o PropertyAttributeTest2 -framework Foundation PropertyAttributeTest2.m
-#include <Foundation/Foundation.h>
-#include <objc/runtime.h>
-
-__attribute__((objc_root_class))
-@interface Test { id isa; }
-@end
-@implementation Test
-+ (id)class { return self; }
-+ (id)new
-{
-	return class_createInstance(self, 0);
-}
-- (void)dealloc
-{
-	object_dispose(self);
-}
-- (id)retain
-{
-	return self;
-}
-- (oneway void)release
-{
-}
-@end
-#else
 #include "Test.h"
-#endif
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+
+#pragma GCC diagnostic ignored "-Wobjc-property-no-attribute"
 
 enum FooManChu { FOO, MAN, CHU };
 struct YorkshireTeaStruct { int pot; char lady; };
@@ -100,10 +74,7 @@ __attribute__((objc_root_class))
 @property(getter=isIntReadOnlyGetter, readonly) int intReadonlyGetter;
 @property(readwrite) int intReadwrite;
 @property(assign) int intAssign;
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wobjc-property-no-attribute"
 @property id idDefault;
-#pragma GCC diagnostic pop
 @property(retain) id idRetain;
 @property(copy) id idCopy;
 @property(weak) id idWeak;
@@ -116,6 +87,14 @@ __attribute__((objc_root_class))
 @property(retain) id idDynamic;
 @property(retain, nonatomic, getter=dynamicGetterSetter, setter=setDynamicGetterSetter:) id idDynamicGetterSetter;
 @end
+
+@interface PropertyTest (Informal)
+- (void)setStructDefault2: (struct YorkshireTeaStruct)tp;
+- (void)setIntDefault2: (int)i;
+- (struct YorkshireTeaStruct)structDefault2;
+- (int)intDefault2;
+@end
+
 
 @implementation PropertyTest
 @synthesize charDefault;
@@ -173,10 +152,7 @@ __attribute__((objc_root_class))
 @property(getter=isIntReadOnlyGetter, readonly) int intReadonlyGetter;
 @property(readwrite) int intReadwrite;
 @property(assign) int intAssign;
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wobjc-property-no-attribute"
 @property id idDefault;
-#pragma GCC diagnostic pop
 @property(retain) id idRetain;
 @property(copy) id idCopy;
 @property(weak) id idWeak;
@@ -463,10 +439,7 @@ static int intDefault2Getter(id self, SEL _cmd) {
 
 static void intDefault2Setter(id self, SEL _cmd, int value) {
     Ivar ivar = class_getInstanceVariable(objc_getClass("PropertyTest"), "intDefault");
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wint-to-pointer-cast"
-    object_setIvar(self, ivar, (id)value);
-#pragma GCC diagnostic pop
+    object_setIvar(self, ivar, (id)(intptr_t)value);
 }
 
 static struct YorkshireTeaStruct* structDefault2Getter(id self, SEL _cmd) {
@@ -481,9 +454,6 @@ void structDefault2Setter(id self, SEL _cmd, struct YorkshireTeaStruct* value) {
 
 int main(void)
 {
-#if 0
-	return 1;
-#else
 	testProperty("charDefault", "Tc,VcharDefault", ATTRS(ATTR("T", "c"), ATTR("V", "charDefault")));
 	testProperty("doubleDefault", "Td,VdoubleDefault", ATTRS(ATTR("T", "d"), ATTR("V", "doubleDefault")));
 	testProperty("enumDefault", "Ti,VenumDefault", ATTRS(ATTR("T", "i"), ATTR("V", "enumDefault")));
@@ -646,11 +616,8 @@ int main(void)
     object_setClass(t, testClass);
     t.intDefault = 2;
     assert(t.intDefault == 2);
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wobjc-method-access"
     [t setIntDefault2:3];
     assert((int)[t intDefault2] == 3);
-#pragma GCC diagnostic pop
     assert(t.intDefault == 3);
     
     struct YorkshireTeaStruct struct1 = { 2, 'A' };
@@ -658,12 +625,9 @@ int main(void)
     struct YorkshireTeaStruct readStruct = t.structDefault;
     assert(memcmp(&struct1, &readStruct, sizeof(struct1)) == 0);
     struct YorkshireTeaStruct struct2 = { 3, 'B' };
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wobjc-method-access"
     [t setStructDefault2:struct2];
-    id readStruct2 = [t structDefault2];
+    struct YorkshireTeaStruct readStruct2 = [t structDefault2];
     assert(memcmp(&struct2, &readStruct2, sizeof(struct2)) == 0);
-#pragma GCC diagnostic pop
     readStruct = t.structDefault;
     assert(memcmp(&struct2, &readStruct, sizeof(struct2)) == 0);
     
@@ -679,17 +643,14 @@ int main(void)
     assert(t->idRetain == testValue);
     assert(t->_idOther == nil);
     
-#if __APPLE__
-	// why does this test fail with gnu runtime?
     Method idRetainSetter = class_getInstanceMethod(testClass, @selector(setIdRetain:));
     Method idOtherSetter = class_getInstanceMethod(testClass, @selector(setIdOther:));
     method_setImplementation(idRetainSetter, method_getImplementation(idOtherSetter));
+    idRetainSetter = class_getInstanceMethod(testClass, @selector(setIdRetain:));
     
     id testValue2 = [Test new];
     t.idRetain = testValue2;
     assert(t->idRetain == testValue);
     assert(t->_idOther == testValue2);
-#endif // __APPLE__
 	return 0;
-#endif // __has_feature(objc_property_clean_abi)
 }
