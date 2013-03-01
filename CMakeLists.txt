@@ -120,8 +120,23 @@ else ()
 	add_definitions(-DNO_LEGACY)
 endif ()
 
-find_package(LLVM)
-set(LLVM_OPTS ${LLVM_FOUND} CACHE BOOL
+find_package(LLVM QUIET)
+set(DEFAULT_ENABLE_LLVM ${LLVM_FOUND})
+if (DEFAULT_ENABLE_LLVM)
+	exec_program(llvm-config
+		ARGS --version
+		OUTPUT_VARIABLE LLVM_VER)
+	if (LLVM_VER MATCHES ".*svnn")
+		set(DEFAULT_ENABLE_LLVM FALSE)
+		message(STATUS "svn version of LLVM found.")
+		message(STATUS "Disabling LLVM options unless explicitly enabled.")
+	elseif (LLVM_VER VERSION_GREATER 3.2)
+		set(DEFAULT_ENABLE_LLVM FALSE)
+		message(STATUS "Untested version of LLVM (${LLVM_VER}) found.")
+		message(STATUS "Disabling LLVM options unless explicitly enabled.")
+	endif()
+endif()
+set(LLVM_OPTS ${DEFAULT_ENABLE_LLVM} CACHE BOOL
 	"Build LLVM Objective-C optimisations")
 if (LLVM_OPTS)
 	add_subdirectory(opts)
