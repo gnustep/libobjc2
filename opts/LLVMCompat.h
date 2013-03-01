@@ -37,6 +37,9 @@
 #include <llvm/PassSupport.h>
 #endif
 
+#if (LLVM_MAJOR > 3) || ((LLVM_MAJOR == 3) && (LLVM_MINOR >= 3))
+#	define InlineCostAnalyzer InlineCostAnalysis
+#endif
 
 // Only preserve names in a debug build.  This simplifies the
 // IR in a release build, but makes it much harder to debug.
