@@ -18,6 +18,9 @@ Objective-C programs.  Highlights of this release include:
 - Added specialised property accessor functions and support for atomic
   properties with C++ non-POD types.
 
+- Significant improvements in property introspection and an exhaustive test
+  suite.
+
 - A new exception implementation providing better integration with foreign
   exceptions (e.g. C++ exceptions).  The new ABI is supported by clang 3.3 when
   compiling with -fobjc-runtime=gnustep-1.7 (or higher).  The old ABI is still
