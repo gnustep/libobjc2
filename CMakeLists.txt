@@ -203,6 +203,8 @@ else (CXX_RUNTIME)
 	list(APPEND INSTALL_TARGETS objcxx)
 endif (CXX_RUNTIME)
 
+
+
 # Currently, we actually need pthreads, but we should use the platform's native
 # threading implementation (we do for everything except thread-local storage)
 set(CMAKE_THREAD_PREFER_PTHREAD)
@@ -237,6 +239,12 @@ endif ()
 target_link_libraries(objc ${CXX_RUNTIME})
 if (LIBGC)
 	target_link_libraries(objc ${LIBGC})
+endif ()
+
+# Link libdispatch if available (we'll miss symbols for toydispatch otherwise)
+find_library(LIBDISPATCH dispatch)
+if (LIBDISPATCH)
+	target_link_libraries(objc ${LIBDISPATCH})
 endif ()
 
 #
