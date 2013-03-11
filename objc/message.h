@@ -1,4 +1,4 @@
-#if defined(__clang__) && !defined(__OBJC_RUNTIME_INTERNAL__)
+#if defined(__clang__)
 #pragma clang system_header
 #endif
 
