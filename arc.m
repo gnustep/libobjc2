@@ -185,6 +185,16 @@ static inline void release(id obj)
 {
 	if (isSmallObject(obj)) { return; }
 	Class cls = obj->isa;
+	if (cls == &_NSConcreteMallocBlock)
+	{
+		_Block_release(obj);
+		return;
+	}
+	if ((cls == &_NSConcreteStackBlock) ||
+	    (cls == &_NSConcreteGlobalBlock))
+	{
+		return;
+	}
 	if (objc_test_class_flag(cls, objc_class_flag_fast_arc))
 	{
 		intptr_t *refCount = ((intptr_t*)obj) - 1;

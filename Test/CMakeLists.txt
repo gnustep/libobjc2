@@ -7,6 +7,7 @@
 set(TESTS
 	AllocatePair.m
 	BlockImpTest.m
+	BlockTest_arc.m
 	BoxedForeignException.m
 	ExceptionTest.m
 	ForeignException.m
@@ -26,9 +27,13 @@ set(TESTS
 function(addtest_flags TEST FLAGS TEST_SOURCE)
 	add_executable(${TEST} ${TEST_SOURCE})
 	add_test(${TEST} ${TEST})
+	set(ARC "")
+	if (TEST MATCHES ".*_arc")
+		set(ARC "-fobjc-arc")
+	endif()
 	set_target_properties(${TEST} PROPERTIES
 		INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}"
-		COMPILE_FLAGS "-fobjc-runtime=gnustep-1.7 -fblocks ${FLAGS}"
+		COMPILE_FLAGS "-fobjc-runtime=gnustep-1.7 -fblocks ${FLAGS} ${ARC}"
 		LINKER_LANGUAGE C
 	)
 	set_property(TEST ${TEST} PROPERTY
