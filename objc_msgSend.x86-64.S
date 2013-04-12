@@ -20,8 +20,6 @@
 	mov   (\receiver), %r10               # Load the dtable from the class
 1:                                        # classLoaded
 	mov   DTABLE_OFFSET(%r10), %r10       # Load the dtable from the class
-	cmpq  uninstalled_dtable(%rip), %r10  # If this is not (yet) a valid dtable
-	je    5f                              # Do a slow lookup
 	
 	push  %r12
 	push  %r13
