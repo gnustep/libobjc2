@@ -34,12 +34,6 @@
 
 	ldr    r4, [r4, #DTABLE_OFFSET]        // Dtable -> r4
 
-	ldr    r5, LUninstalledDtable          // &uninstalled_dtable -> r5
-	ldr    r5, [r5]
-
-	teq    r4, r5                          // If dtable == &uninstalled_dtable
-	beq    5f                              // Do a slow lookup
-
 	ldr    r5, [\sel]                      // selector->index -> r5
 
 	ldr    r6, [r4, #SHIFT_OFFSET]        // dtable->shift -> r6
@@ -107,7 +101,4 @@ objc_msgSend_stret:
 
 LSmallIntClass:
 	.long   SmallObjectClasses
-	.align  2
-LUninstalledDtable:
-	.long   uninstalled_dtable
 	.align  2
