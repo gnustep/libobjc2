@@ -61,6 +61,34 @@ next_line2:
 	mov   %ebx, 8(%esp)        # Store the block pointer in the first argument
 	jmp   *-13(%eax)           # Call the block function
 __objc_block_trampoline_end_sret:
+#elif __mips__
+#	ifdef _ABI64
+__objc_block_trampoline:
+	move     $a1, $a0
+	ld       $a0, -16($25)
+	ld       $25, -8($25)
+	jr       $25
+__objc_block_trampoline_end:
+__objc_block_trampoline_sret:
+	move     $a2, $a1
+	ld       $a1, -16($25)
+	ld       $25, -8($25)
+	jr       $25
+__objc_block_trampoline_end_sret:
+#	else
+__objc_block_trampoline:
+	move   $a1, $a0
+	lw     $a0, -8($25)
+	lw     $25, -4($25)
+	jr     $25
+__objc_block_trampoline_end:
+__objc_block_trampoline_sret:
+	move   $a2, $a1
+	lw     $a1, -8($25)
+	lw     $25, -4($25)
+	jr     $25
+__objc_block_trampoline_end_sret:
+#	endif
 #elif __arm__
 __objc_block_trampoline:
 	mov r1, r0                 // Move self over _cmd
@@ -79,3 +107,4 @@ __objc_block_trampoline_end:
 __objc_block_trampoline_sret:
 __objc_block_trampoline_end_sret:
 #endif
+.section .note.GNU-stack,"",%progbits
