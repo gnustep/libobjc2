@@ -21,6 +21,10 @@ Objective-C programs.  Highlights of this release include:
 - Significant improvements in property introspection and an exhaustive test
   suite.
 
+- Improved integration with libdispatch.  The runtime will correctly register
+  work queues with the garbage collector or create autorelease pools around
+  block invocations.
+
 - A new exception implementation providing better integration with foreign
   exceptions (e.g. C++ exceptions).  The new ABI is supported by clang 3.3 when
   compiling with -fobjc-runtime=gnustep-1.7 (or higher).  The old ABI is still
