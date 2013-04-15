@@ -29,7 +29,12 @@ Objective-C programs.  Highlights of this release include:
   It is strongly recommended that anyone using exceptions with Objective-C++
   switches to the new version.
 
-- MIPS64 support in the assembly routines. (TODO)
+- MIPS64 support in the assembly routines.  Currently these are only tested
+  with the n64 ABI.  They are believed to work with n32 and o32, but should be
+  considered unsupported on these platforms.
+
+- Small algorithmic improvement to the objc_msgSend() implementation, giving
+  approximately a 10% speedup (architecture-dependent) on message sends.
 
 - Updated optimisation passes to work with LLVM 3.2 and recent LLVM trunk.
 
