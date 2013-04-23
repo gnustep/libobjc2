@@ -1,5 +1,4 @@
 #include "Test.h"
-#include <objc/runtime.h>
 #include <stdio.h>
 
 // Regression test for a bug where allocating a class as a subclass of an

@@ -1,7 +1,7 @@
 #define _GNU_SOURCE
 #include "../unwind.h"
 #include "Test.h"
-#include <objc/hooks.h>
+#include "../objc/hooks.h"
 #include <stdlib.h>
 
 

@@ -1,5 +1,5 @@
 #include "Test.h"
-#include <objc/hooks.h>
+#include "../objc/hooks.h"
 
 @interface Forward : Test
 - (id)forwardingTargetForSelector: (SEL)sel;

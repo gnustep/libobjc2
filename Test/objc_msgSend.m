@@ -3,7 +3,7 @@
 #include <assert.h>
 #include <string.h>
 #include <stdarg.h>
-#include "objc/runtime.h"
+#include "../objc/runtime.h"
 
 //#define assert(x) if (!(x)) { printf("Failed %d\n", __LINE__); }
 

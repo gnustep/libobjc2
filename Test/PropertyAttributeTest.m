@@ -1,5 +1,5 @@
 #include <stdio.h>
-#import <objc/runtime.h>
+#import "Test.h"
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>

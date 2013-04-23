@@ -1,4 +1,4 @@
-#import <objc/runtime.h>
+#import "Test.h"
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
