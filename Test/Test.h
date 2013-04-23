@@ -1,4 +1,4 @@
-#import "objc/runtime.h"
+#import "../objc/runtime.h"
 #include <assert.h>
 
 #ifndef __has_attribute
