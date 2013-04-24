@@ -1,7 +1,10 @@
 Installing the GNUstep Objective-C Runtime
 ==========================================
 
-This file describes how to configure, install, and 
+This file describes how to configure, install, and package the Objective-C
+runtime.  Note that although this runtime should build with gcc, it is strongly
+recommended that you compile it with clang and clang++ as your [Objective-]C and
+[Objective-]C++ compilers.
 
 Basic Building
 --------------
