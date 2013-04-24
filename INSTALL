@@ -107,3 +107,8 @@ and then build with the package target.  For example, to build a .deb:
 	$ cmake .. -DCPACK_GENERATOR=DEB
 	$ make -j8
 	$ make package
+
+Note that you almost certainly want to set CMAKE_BUILD_TYPE to Release when
+packaging.  Debug builds are slower and will print extra messages to help with
+development.  This is useful when writing Objective-C code, but not as useful
+for end users.
