@@ -12,7 +12,7 @@ namespace {
     typedef std::vector<callPair > replacementVector;
       static char ID;
     uint32_t callsiteCount;
-    LLVMIntegerType *Int32Ty;
+    LLVMIntegerTy *Int32Ty;
       GNUObjCTypeFeedback() : ModulePass(ID), callsiteCount(0) {}
 
     void profileFunction(Function &F, Constant *ModuleID) {
@@ -47,7 +47,7 @@ namespace {
     {
       LLVMContext &VMContext = M.getContext();
       Int32Ty = IntegerType::get(VMContext, 32);
-      LLVMPointerType *PtrTy = Type::getInt8PtrTy(VMContext);
+      LLVMPointerTy *PtrTy = Type::getInt8PtrTy(VMContext);
       Constant *moduleName = 
 #if (LLVM_MAJOR > 3) || ((LLVM_MAJOR == 3) && (LLVM_MINOR > 0))
         ConstantDataArray::getString(VMContext, M.getModuleIdentifier(), true);

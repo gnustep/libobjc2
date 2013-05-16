@@ -157,16 +157,16 @@ llvm::Constant* GetConstantStruct(llvm::LLVMContext &C, const std::vector<llvm::
 
 #if LLVM_MAJOR < 3
 typedef const llvm::Type LLVMType;
-typedef const llvm::StructType LLVMStructType;
-typedef const llvm::ArrayType LLVMArrayType;
-typedef const llvm::PointerType LLVMPointerType;
-typedef const llvm::IntegerType LLVMIntegerType;
+typedef const llvm::StructType LLVMStructTy;
+typedef const llvm::ArrayType LLVMArrayTy;
+typedef const llvm::PointerType LLVMPointerTy;
+typedef const llvm::IntegerType LLVMIntegerTy;
 #else
 typedef llvm::Type LLVMType;
-typedef llvm::StructType LLVMStructType;
-typedef llvm::ArrayType LLVMArrayType;
-typedef llvm::PointerType LLVMPointerType;
-typedef llvm::IntegerType LLVMIntegerType;
+typedef llvm::StructType LLVMStructTy;
+typedef llvm::ArrayType LLVMArrayTy;
+typedef llvm::PointerType LLVMPointerTy;
+typedef llvm::IntegerType LLVMIntegerTy;
 #endif
 
 #endif

@@ -14,7 +14,7 @@ namespace
 {
   class ClassIMPCachePass : public ModulePass 
   {
-    LLVMIntegerType *IntTy;
+    LLVMIntegerTy *IntTy;
 
     public:
     static char ID;

@@ -14,7 +14,7 @@ namespace
   class GNULoopIMPCachePass : public FunctionPass 
   {
     GNUstep::IMPCacher *cacher;
-    LLVMIntegerType *IntTy;
+    LLVMIntegerTy *IntTy;
     Module *M;
     bool skip;
     Function *sendFn;
