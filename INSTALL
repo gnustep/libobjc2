@@ -37,6 +37,10 @@ This will also allow you to make changes.  If you prefer a GUI, then there is
 almost certainly a CMake GUI for your platform, but documenting them all is
 beyond the scope of this quick guide.
 
+If you have gcc and clang both installed, then cmake currently defaults to
+selecting gcc.  You should override this by adding `-DCMAKE_C_COMPILER=clang
+-DCMAKE_CXX_COMPILER` to your Objective-C flags.
+
 Running the Tests
 -----------------
 
