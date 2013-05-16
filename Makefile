@@ -72,7 +72,28 @@ OBJECTS = \
 	statics_loader.o\
 	toydispatch.o
 
-all: $(LIBOBJC).a $(LIBOBJCXX).so.$(VERSION)
+
+all: warning $(LIBOBJC).a $(LIBOBJCXX).so.$(VERSION)
+	@echo '********************************************************************************'
+	@echo '*********************************** WARNING ************************************'
+	@echo '********************************************************************************'
+	@echo The Makfile build is deprecated, and should not be used.
+	@echo Please use cmake.  The recommended procedure is:
+	@echo $ mkdir Build
+	@echo $ cd Build
+	@echo cmake .. -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+	@echo "make && sudo -E make install"
+
+warning:
+	@echo '********************************************************************************'
+	@echo '*********************************** WARNING ************************************'
+	@echo '********************************************************************************'
+	@echo The Makfile build is deprecated, and should not be used.
+	@echo Please use cmake.  The recommended procedure is:
+	@echo $ mkdir Build
+	@echo $ cd Build
+	@echo cmake .. -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+	@echo "make && sudo -E make install"
 
 $(LIBOBJCXX).so.$(VERSION): $(LIBOBJC).so.$(VERSION) $(OBJCXX_OBJECTS)
 	$(SILENT)echo Linking shared Objective-C++ runtime library...
