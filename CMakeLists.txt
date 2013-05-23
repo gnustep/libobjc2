@@ -174,34 +174,52 @@ set_source_files_properties(
 # C++ Runtime interaction
 #
 
-# Try to find libcxxrt.so.  We can link to this to provide the C++ ABI layer,
-# if it exists.
-find_library(CXX_RUNTIME cxxrt)
-# If it doesn't, then look for GNU libsupc++.so instead (either works, they're
-# ABI compatible).
-if (NOT CXX_RUNTIME)
-	find_library(CXX_RUNTIME supc++)
-endif (NOT CXX_RUNTIME)
+set(ENABLE_OBJCXX true CACHE BOOL
+	"Enable support for Objective-C++")
+set(FORCE_LIBOBJCXX false CACHE BOOL
+	"Force building a separate Objective-C++ runtime library")
+if (ENABLE_OBJCXX)
+	# Try to find libcxxrt.so.  We can link to this to provide the C++ ABI
+	# layer, if it exists.
+	find_library(CXX_RUNTIME cxxrt)
+	# If it doesn't, then look for GNU libsupc++.so instead (either works,
+	# they're ABI compatible).
+	if (NOT CXX_RUNTIME)
+		find_library(CXX_RUNTIME supc++)
+	endif (NOT CXX_RUNTIME)
 
-# If we have a C++ ABI library, then we can produce a single libobjc that works
-# for Objective-C and Objective-C++.  If not, then we need to provide a
-# separate libobjcxx.
-if (CXX_RUNTIME)
-	message(STATUS "Using ${CXX_RUNTIME} as the C++ runtime library")
-	set(libobjc_CXX_SRCS ${libobjcxx_CXX_SRCS})
-	# We don't want to link the STL implementation (e.g. libstdc++) if we have
-	# a separate C++ runtime.
-	set(CMAKE_CXX_IMPLICIT_LINK_LIBRARIES "")
-else (CXX_RUNTIME)
-	message(STATUS "No C++ runtime library found")
-	add_library(objcxx SHARED ${libobjcxx_CXX_SRCS})
-	set_target_properties(objcxx PROPERTIES
-		LINKER_LANGUAGE C
-		SOVERSION ${libobjc_VERSION}
-		)
-	set(CXX_RUNTIME "")
-	list(APPEND INSTALL_TARGETS objcxx)
-endif (CXX_RUNTIME)
+	# If we have a C++ ABI library, then we can produce a single libobjc that
+	# works for Objective-C and Objective-C++.  If not, then we need to provide
+	# a separate libobjcxx.
+	if (CXX_RUNTIME)
+		message(STATUS "Using ${CXX_RUNTIME} as the C++ runtime library")
+		if (FORCE_LIBOBJCXX)
+			message(STATUS "Forcing build of stand-alone libobjcxx")
+			add_library(objcxx SHARED ${libobjcxx_CXX_SRCS})
+			set_target_properties(objcxx PROPERTIES
+				LINKER_LANGUAGE C
+				SOVERSION ${libobjc_VERSION}
+				)
+			target_link_libraries(objcxx ${CXX_RUNTIME})
+			set(CXX_RUNTIME "")
+			list(APPEND INSTALL_TARGETS objcxx)
+		else ()
+			set(libobjc_CXX_SRCS ${libobjcxx_CXX_SRCS})
+			# We don't want to link the STL implementation (e.g. libstdc++) if
+			# we have a separate C++ runtime.
+			set(CMAKE_CXX_IMPLICIT_LINK_LIBRARIES "")
+		endif ()
+	else ()
+		message(STATUS "No C++ runtime library found")
+		add_library(objcxx SHARED ${libobjcxx_CXX_SRCS})
+		set_target_properties(objcxx PROPERTIES
+			LINKER_LANGUAGE C
+			SOVERSION ${libobjc_VERSION}
+			)
+		set(CXX_RUNTIME "")
+		list(APPEND INSTALL_TARGETS objcxx)
+	endif ()
+endif (ENABLE_OBJCXX)
 
 
 
