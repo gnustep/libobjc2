@@ -181,11 +181,11 @@ set(FORCE_LIBOBJCXX false CACHE BOOL
 if (ENABLE_OBJCXX)
 	# Try to find libcxxrt.so.  We can link to this to provide the C++ ABI
 	# layer, if it exists.
-	find_library(CXX_RUNTIME cxxrt)
+	find_library(CXX_RUNTIME NAMES libcxxrt.so)
 	# If it doesn't, then look for GNU libsupc++.so instead (either works,
 	# they're ABI compatible).
 	if (NOT CXX_RUNTIME)
-		find_library(CXX_RUNTIME supc++)
+		find_library(CXX_RUNTIME NAMES libsupc++.so)
 	endif (NOT CXX_RUNTIME)
 
 	# If we have a C++ ABI library, then we can produce a single libobjc that
