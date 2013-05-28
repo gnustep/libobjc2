@@ -1,3 +1,7 @@
+// On some platforms, we need _GNU_SOURCE to expose asprintf()
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE 1
+#endif
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
