@@ -509,11 +509,11 @@ int main(void)
 	testProperty("intNonatomic", "Ti,N,VintNonatomic", ATTRS(ATTR("T", "i"),
                                                              ATTR("N", ""),
                                                              ATTR("V", "intNonatomic")));
-	testProperty("idReadonlyCopyNonatomic", "T@,R,N,VidReadonlyCopyNonatomic", ATTRS(ATTR("T", "@"),
+	testProperty("idReadonlyCopyNonatomic", "T@,R,C,N,VidReadonlyCopyNonatomic", ATTRS(ATTR("T", "@"),
                                                                                      ATTR("R", ""),
                                                                                      ATTR("N", ""),
                                                                                      ATTR("V", "idReadonlyCopyNonatomic")));
-	testProperty("idReadonlyRetainNonatomic", "T@,R,N,VidReadonlyRetainNonatomic", ATTRS(ATTR("T", "@"),
+	testProperty("idReadonlyRetainNonatomic", "T@,R,&,N,VidReadonlyRetainNonatomic", ATTRS(ATTR("T", "@"),
                                                                                          ATTR("R", ""),
                                                                                          ATTR("N", ""),
                                                                                          ATTR("V", "idReadonlyRetainNonatomic")));
@@ -574,10 +574,10 @@ int main(void)
 																 ATTR("&", "")));
 	testPropertyForProtocol(testProto, "intNonatomic", "Ti,N", ATTRS(ATTR("T", "i"),
 																	 ATTR("N", "")));
-	testPropertyForProtocol(testProto, "idReadonlyCopyNonatomic", "T@,R,N", ATTRS(ATTR("T", "@"),
+	testPropertyForProtocol(testProto, "idReadonlyCopyNonatomic", "T@,R,C,N", ATTRS(ATTR("T", "@"),
 																				  ATTR("R", ""),
 																				  ATTR("N", "")));
-	testPropertyForProtocol(testProto, "idReadonlyRetainNonatomic", "T@,R,N", ATTRS(ATTR("T", "@"),
+	testPropertyForProtocol(testProto, "idReadonlyRetainNonatomic", "T@,R,&,N", ATTRS(ATTR("T", "@"),
 																					ATTR("R", ""),
 																					ATTR("N", "")));
 	testPropertyForProtocol(testProto, "idReadonlyWeakNonatomic", "T@,R,N", ATTRS(ATTR("T", "@"),
