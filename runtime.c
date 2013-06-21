@@ -143,13 +143,17 @@ BOOL class_addIvar(Class cls, const char *name, size_t size, uint8_t alignment,
 	ivar->name = strdup(name);
 	ivar->type = strdup(types);
 	// Round up the offset of the ivar so it is correctly aligned.
-	long offset = cls->instance_size >> alignment;
-
-	if (offset << alignment != cls->instance_size)
+	long offset = cls->instance_size;
+	if (alignment != 0)
 	{
-		offset++;
+		offset >>= alignment;
+
+		if (offset << alignment != cls->instance_size)
+		{
+			offset++;
+		}
+		offset <<= alignment;
 	}
-	offset <<= alignment;
 
 	ivar->offset = offset;
 	// Increase the instance size to make space for this.
