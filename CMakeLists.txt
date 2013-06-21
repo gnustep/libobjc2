@@ -193,7 +193,13 @@ if (ENABLE_OBJCXX)
 	# a separate libobjcxx.
 	if (CXX_RUNTIME)
 		message(STATUS "Using ${CXX_RUNTIME} as the C++ runtime library")
-		if (FORCE_LIBOBJCXX)
+		try_compile( USERUNTIME 
+			"${CMAKE_BINARY_DIR}/CMake"
+			"${CMAKE_SOURCE_DIR}/CMake"
+			test_cxx_runtime
+			CMAKE_FLAGS "-DCXX_RUNTIME=${CXX_RUNTIME}")
+		message(STATUS "Is runtime useable? ${USERUNTIME}")
+		if (${FORCE_LIBOBJCXX} OR NOT ${USERUNTIME})
 			message(STATUS "Forcing build of stand-alone libobjcxx")
 			add_library(objcxx SHARED ${libobjcxx_CXX_SRCS})
 			set_target_properties(objcxx PROPERTIES
