@@ -294,7 +294,7 @@ endif ()
 set(GNUSTEP_INSTALL_TYPE ${DEFAULT_INSTALL_TYPE} CACHE STRING
 	"GNUstep installation type.  Options are NONE, SYSTEM, NETWORK or LOCAL.")
 if (${GNUSTEP_INSTALL_TYPE} STREQUAL "NONE")
-	SET(LIB_INSTALL_PATH "lib" CACHE STRING
+	SET(LIB_INSTALL_PATH "${CMAKE_INSTALL_LIBDIR}" CACHE STRING
 		"Subdirectory of the root prefix where libraries are installed.")
 	SET(HEADER_INSTALL_PATH "include")
 else ()
