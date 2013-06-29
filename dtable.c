@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include "objc/runtime.h"
+#include "objc/hooks.h"
 #include "sarray2.h"
 #include "selector.h"
 #include "class.h"
@@ -11,8 +12,12 @@
 #include "slot_pool.h"
 #include "dtable.h"
 #include "visibility.h"
+#include "errno.h"
 
 PRIVATE dtable_t uninstalled_dtable;
+#if defined(WITH_TRACING) && defined (__x86_64)
+PRIVATE dtable_t tracing_dtable;
+#endif
 
 /** Head of the list of temporary dtables.  Protected by initialize_lock. */
 PRIVATE InitializingDtable *temporary_dtables;
@@ -358,6 +363,82 @@ PRIVATE void init_dispatch_tables ()
 {
 	INIT_LOCK(initialize_lock);
 	uninstalled_dtable = SparseArrayNewWithDepth(dtable_depth);
+#if defined(WITH_TRACING) && defined (__x86_64)
+	tracing_dtable = SparseArrayNewWithDepth(dtable_depth);
+#endif
+}
+
+#if defined(WITH_TRACING) && defined (__x86_64)
+static int init;
+
+static void free_thread_stack(void* x)
+{
+	free(*(void**)x);
+}
+static pthread_key_t thread_stack_key;
+static void alloc_thread_stack(void)
+{
+	pthread_key_create(&thread_stack_key, free_thread_stack);
+	init = 1;
+}
+
+PRIVATE void* pushTraceReturnStack(void)
+{
+	static pthread_once_t once_control = PTHREAD_ONCE_INIT;
+	if (!init)
+	{
+		pthread_once(&once_control, alloc_thread_stack);
+	}
+	void **stack = pthread_getspecific(thread_stack_key);
+	if (stack == 0)
+	{
+		stack = malloc(4096*sizeof(void*));
+	}
+	pthread_setspecific(thread_stack_key, stack + 5);
+	return stack;
+}
+
+PRIVATE void* popTraceReturnStack(void)
+{
+	void **stack = pthread_getspecific(thread_stack_key);
+	stack -= 5;
+	pthread_setspecific(thread_stack_key, stack);
+	return stack;
+}
+#endif
+
+int objc_registerTracingHook(SEL aSel, objc_tracing_hook aHook)
+{
+#if defined(WITH_TRACING) && defined (__x86_64)
+	// If this is an untyped selector, register it for every typed variant
+	if (sel_getType_np(aSel) == 0)
+	{
+		SEL buffer[16];
+		SEL *overflow = 0;
+		int count = sel_copyTypedSelectors_np(sel_getName(aSel), buffer, 16);
+		if (count > 16)
+		{
+			overflow = calloc(count, sizeof(SEL));
+			sel_copyTypedSelectors_np(sel_getName(aSel), buffer, 16);
+			for (int i=0 ; i<count ; i++)
+			{
+				SparseArrayInsert(tracing_dtable, overflow[i]->index, aHook);
+			}
+			free(overflow);
+		}
+		else
+		{
+			for (int i=0 ; i<count ; i++)
+			{
+				SparseArrayInsert(tracing_dtable, buffer[i]->index, aHook);
+			}
+		}
+	}
+	SparseArrayInsert(tracing_dtable, aSel->index, aHook);
+	return 0;
+#else
+	return ENOTSUP;
+#endif
 }
 
 static BOOL installMethodInDtable(Class class,
@@ -762,3 +843,4 @@ PRIVATE void objc_send_initialize(id object)
 	// because we will clean it up after this function.
 	initializeSlot->method((id)class, initializeSel);
 }
+

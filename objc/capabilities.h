@@ -112,6 +112,10 @@ extern "C" {
  * The runtime provides APIs for debugging ARC-managed autorelease pools.
  */
 #define OBJC_ARC_AUTORELEASE_DEBUG 16
+/**
+ * The runtime provides support for tracing message sends.
+ */
+#define OBJC_CAP_TRACING 17
 
 /**
  * Macro used to require the existence of a specific capability.  This creates

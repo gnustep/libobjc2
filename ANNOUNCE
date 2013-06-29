@@ -6,7 +6,8 @@ Objective-C runtime (a.k.a.  libobjc2).  This runtime was designed to support
 the features of modern dialects of Objective-C for use with GNUstep and other
 Objective-C programs.  Highlights of this release include:
 
--
+- Added API for tracing, allowing interposition on all message sends matching a
+  given selector.
 
 You may obtain the code for this release from subversion at the following
 subversion branch:

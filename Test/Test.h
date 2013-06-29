@@ -1,4 +1,7 @@
 #import "../objc/runtime.h"
+#ifdef NDEBUG
+#undef NDEBUG
+#endif
 #include <assert.h>
 
 #ifndef __has_attribute

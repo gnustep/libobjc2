@@ -20,6 +20,7 @@ set(TESTS
 	ProtocolCreation.m
 	RuntimeTest.m
 	objc_msgSend.m
+	msgInterpose.m
 )
 
 # Function for adding a test.  This takes the name of the test and the list of
