@@ -2,8 +2,8 @@
 #include <time.h>
 #include <stdio.h>
 #include "Test.h"
-#include "objc/hooks.h"
-#include "objc/capabilities.h"
+#include "../objc/hooks.h"
+#include "../objc/capabilities.h"
 
 
 int count;
