@@ -234,7 +234,7 @@
 .endif
 
 	.cfi_adjust_cfa_offset 0xD8
-	call  slowMsgLookup                  # Call the slow lookup function
+	call  CDECL(slowMsgLookup)           # Call the slow lookup function
 	mov   %rax, %r10                     # Load the returned IMP
 
 	pop   %rdx
@@ -260,20 +260,20 @@
 6:                                        # smallObject:
 	and   \receiver, %r10                 # Find the small int type
 	shll  $3, %r10d
-	lea   SmallObjectClasses(%rip), %r11
+	lea   CDECL(SmallObjectClasses)(%rip), %r11
 	add   %r11, %r10
 	mov   (%r10), %r10
 	jmp   1b 
 	.cfi_endproc
 .endm
-.globl objc_msgSend
-	.type	objc_msgSend, @function
-.globl objc_msgSend_fpret
-	.type	objc_msgSend_fpret, @function
-objc_msgSend_fpret:
-objc_msgSend:
+.globl CDECL(objc_msgSend)
+TYPE_DIRECTIVE(CDECL(objc_msgSend), @function)
+.globl CDECL(objc_msgSend_fpret)
+TYPE_DIRECTIVE(CDECL(objc_msgSend_fpret), @function)
+CDECL(objc_msgSend_fpret):
+CDECL(objc_msgSend):
 	MSGSEND %rdi, %rsi
-.globl objc_msgSend_stret
-	.type	objc_msgSend_stret, @function
-objc_msgSend_stret:
+.globl CDECL(objc_msgSend_stret)
+TYPE_DIRECTIVE(CDECL(objc_msgSend_stret), @function)
+CDECL(objc_msgSend_stret):
 	MSGSEND %rsi, %rdx

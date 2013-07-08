@@ -87,15 +87,15 @@
 	jmp   1b 
 	.cfi_endproc
 .endm
-.globl objc_msgSend_fpret
-	.type	objc_msgSend_fpret, @function
-objc_msgSend_fpret:
+.globl CDECL(objc_msgSend_fpret)
+TYPE_DIRECTIVE(CDECL(objc_msgSend_fpret), @function)
+CDECL(objc_msgSend_fpret):
 	MSGSEND 4, 8, 1
-.globl objc_msgSend
-	.type	objc_msgSend, @function
-objc_msgSend:
+.globl CDECL(objc_msgSend)
+TYPE_DIRECTIVE(CDECL(objc_msgSend), @function)
+CDECL(objc_msgSend):
 	MSGSEND 4, 8, 0
-.globl objc_msgSend_stret
-	.type	objc_msgSend_stret, @function
-objc_msgSend_stret:
+.globl CDECL(objc_msgSend_stret)
+TYPE_DIRECTIVE(CDECL(objc_msgSend_stret), @function)
+CDECL(objc_msgSend_stret):
 	MSGSEND 8, 12, 0

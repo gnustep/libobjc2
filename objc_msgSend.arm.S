@@ -77,7 +77,7 @@
 	.save  {\receiver}
 	mov    r1, \sel
 
-	bl     slowMsgLookup(PLT)             // This is the only place where the CFI directives have to be accurate...
+	bl     CDECL(slowMsgLookup)(PLT)             // This is the only place where the CFI directives have to be accurate...
 	mov    ip, r0                         // IMP -> ip
 
 	pop    {r5}                           // restore (modified) self to r5
@@ -87,16 +87,16 @@
 	.fnend
 .endm
 
-.globl objc_msgSend_fpret
-	.type	objc_msgSend_fpret, %function
-.globl objc_msgSend
-	.type	objc_msgSend, %function
-objc_msgSend:
-objc_msgSend_fpret:
+.globl CDECL(objc_msgSend_fpret)
+TYPE_DIRECTIVE(CDECL(objc_msgSend_fpret), %function)
+.globl CDECL(objc_msgSend)
+TYPE_DIRECTIVE(CDECL(objc_msgSend), %function)
+CDECL(objc_msgSend):
+CDECL(objc_msgSend_fpret):
 	MSGSEND r0, r1
-.globl objc_msgSend_stret
-	.type	objc_msgSend_stret, %function
-objc_msgSend_stret:
+.globl CDECL(objc_msgSend_stret)
+TYPE_DIRECTIVE(CDECL(objc_msgSend_stret), %function)
+CDECL(objc_msgSend_stret):
 	MSGSEND r1, r2
 
 LSmallIntClass:

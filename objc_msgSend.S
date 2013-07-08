@@ -1,3 +1,4 @@
+#include "common.S"
 #if __x86_64
 #include "objc_msgSend.x86-64.S"
 #elif __i386
@@ -9,4 +10,6 @@
 #else
 #warning objc_msgSend() not implemented for your architecture
 #endif
+#if HAS_SECTION_DIRECTIVE
 .section .note.GNU-stack,"",%progbits
+#endif

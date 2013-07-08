@@ -275,6 +275,19 @@ if (LIBDISPATCH)
 	target_link_libraries(objc ${LIBDISPATCH})
 endif ()
 
+# Enable .type and .section assembly directives on platforms other than OS X
+if (NOT APPLE)
+	add_definitions(-DHAS_SECTION_DIRECTIVE=1 -DHAS_TYPE_DIRECTIVE=1)
+endif ()
+
+# Make weak symbols work on OS X
+if (APPLE)
+	set(CMAKE_SHARED_LIBRARY_CREATE_C_FLAGS
+		"${CMAKE_SHARED_LIBRARY_CREATE_C_FLAGS} -undefined dynamic_lookup")
+	set(CMAKE_C_LINK_FLAGS "${CMAKE_C_LINK_FLAGS} -Wl,-undefined,dynamic_lookup")
+	set(CMAKE_CXX_LINK_FLAGS "${CMAKE_CXX_LINK_FLAGS} -Wl,-undefined,dynamic_lookup")
+endif ()
+
 #
 # Installation
 #

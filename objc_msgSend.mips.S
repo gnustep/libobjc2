@@ -127,7 +127,7 @@ lw     $zero, ($zero)
 	# MIPS implementations.
 	# Note: A better linker ought to be able to turn this into a single
 	# jump-immediate, so revisit this decision later...
-	LP     $25, %got_disp(slowMsgLookup)($t8) 
+	LP     $25, %got_disp(CDECL(slowMsgLookup))($t8) 
 
 	daddiu $sp, $sp, -SAVE_SIZE             # We need to preserve all registers that may contain arguments:
 
@@ -193,24 +193,24 @@ lw     $zero, ($zero)
 6:                                          # smallObject:
 #if _ABI64
 	dsll   $t4, $t4, 3                      # Convert tag to pointer offset
-	LP     $t6, %got_disp(SmallObjectClasses)($t8) # Load small object classes array address
+	LP     $t6, %got_disp(CDECL(SmallObjectClasses))($t8) # Load small object classes array address
 	daddu  $t4, $t4, $t6                    # Add the base address to the offset
 	b      1b                               # Return to the normal path
 	LP     $t4, ($t4)                       # Load the class (in delay slot)
 #else
 	b      1b
-	LP     $t4, %got_disp(SmallIntClass)($t8)
+	LP     $t4, %got_disp(CDECL(SmallIntClass))($t8)
 #endif
 	.cfi_endproc
 .endm
-.globl objc_msgSend
-	.type	objc_msgSend, @function
-.globl objc_msgSend_fpret
-	.type	objc_msgSend_fpret, @function
-objc_msgSend_fpret:
-objc_msgSend:
+.globl CDECL(objc_msgSend)
+TYPE_DIRECTIVE(CDECL(objc_msgSend), @function)
+.globl CDECL(objc_msgSend_fpret)
+TYPE_DIRECTIVE(CDECL(objc_msgSend_fpret), @function)
+CDECL(objc_msgSend_fpret):
+CDECL(objc_msgSend):
 	MSGSEND $a0, $a1
-.globl objc_msgSend_stret
-	.type	objc_msgSend_stret, @function
-objc_msgSend_stret:
+.globl CDECL(objc_msgSend_stret)
+TYPE_DIRECTIVE(CDECL(objc_msgSend_stret), @function)
+CDECL(objc_msgSend_stret):
 	MSGSEND $a1, $a2
