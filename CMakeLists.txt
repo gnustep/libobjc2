@@ -277,7 +277,7 @@ endif ()
 
 # Enable .type and .section assembly directives on platforms other than OS X
 if (NOT APPLE)
-	add_definitions(-DHAS_SECTION_DIRECTIVE=1 -DHAS_TYPE_DIRECTIVE=1)
+	add_definitions(-DHAS_SECTION_DIRECTIVE=1)
 endif ()
 
 # Make weak symbols work on OS X
