@@ -39,7 +39,10 @@ beyond the scope of this quick guide.
 
 If you have gcc and clang both installed, then cmake currently defaults to
 selecting gcc.  You should override this by adding `-DCMAKE_C_COMPILER=clang
--DCMAKE_CXX_COMPILER` to your Objective-C flags.
+-DCMAKE_CXX_COMPILER=clang` to your Objective-C flags.
+You will probably also need to add 
+'-DCMAKE_ASM_COMPILER=clang -DCMAKE_ASM_FLAGS=-c -DTESTS=OFF'
+
 
 Running the Tests
 -----------------
