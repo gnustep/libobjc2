@@ -17,6 +17,9 @@
 PRIVATE dtable_t uninstalled_dtable;
 #if defined(WITH_TRACING) && defined (__x86_64)
 PRIVATE dtable_t tracing_dtable;
+#	ifndef ENOTSUP
+#		define ENOTSUP -1
+#	endif
 #endif
 
 /** Head of the list of temporary dtables.  Protected by initialize_lock. */
