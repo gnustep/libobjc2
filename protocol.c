@@ -361,7 +361,7 @@ objc_property_t *protocol_copyPropertyList(Protocol *protocol,
 	}
 	if (NULL != p->optional_properties)
 	{
-		count = p->optional_properties->count;
+		count += p->optional_properties->count;
 	}
 	if (0 == count)
 	{
@@ -373,7 +373,7 @@ objc_property_t *protocol_copyPropertyList(Protocol *protocol,
 	{
 		for (int i=0 ; i<properties->count ; i++)
 		{
-			list[out] = &properties->properties[i];
+			list[out++] = &properties->properties[i];
 		}
 	}
 	properties = p->optional_properties;
@@ -381,7 +381,7 @@ objc_property_t *protocol_copyPropertyList(Protocol *protocol,
 	{
 		for (int i=0 ; i<properties->count ; i++)
 		{
-			list[out] = &properties->properties[i];
+			list[out++] = &properties->properties[i];
 		}
 	}
 	*outCount = count;

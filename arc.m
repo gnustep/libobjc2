@@ -488,7 +488,6 @@ const static WeakRef NullWeakRef;
 #define MAP_TABLE_COMPARE_FUNCTION weak_ref_compare
 #define MAP_TABLE_HASH_KEY ptr_hash
 #define MAP_TABLE_HASH_VALUE weak_ref_hash
-#define MAP_TABLE_HASH_VALUE weak_ref_hash
 #define MAP_TABLE_VALUE_TYPE struct objc_weak_ref
 #define MAP_TABLE_VALUE_NULL weak_ref_is_null
 #define MAP_TABLE_VALUE_PLACEHOLDER NullWeakRef
