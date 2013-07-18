@@ -198,7 +198,7 @@ PRIVATE void objc_init_protocols(struct objc_protocol_list *protocols)
 		set_buffered_object_at_index(protocols, buffered_objects++);
 		return;
 	}
-	if (buffered_objects > 0) { return; }
+	if (buffered_objects == 0) { return; }
 
 	// If we can load one protocol, then we can load all of them.
 	for (unsigned i=0 ; i<buffered_objects ; i++)
