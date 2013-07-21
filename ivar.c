@@ -54,6 +54,7 @@ PRIVATE void objc_compute_ivar_offsets(Class class)
 				long ivar_size = (i+1 == class->ivars->count)
 					? (class_size - ivar->offset)
 					: ivar->offset - class->ivars->ivar_list[i+1].offset;
+#if 0
 				// We only need to do the realignment for things that are
 				// bigger than a pointer, and we don't need to do it in GC mode
 				// where we don't add any extra padding.
@@ -76,6 +77,7 @@ PRIVATE void objc_compute_ivar_offsets(Class class)
 						}
 					}
 				}
+#endif
 				ivar->offset += ivar_start;
 				/* If we're using the new ABI then we also set up the faster ivar
 				* offset variables.
