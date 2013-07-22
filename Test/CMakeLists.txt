@@ -5,7 +5,7 @@
 
 # List of single-file tests.
 set(TESTS
-	alignTest.m
+	#alignTest.m
 	AllocatePair.m
 	BlockImpTest.m
 	BlockTest_arc.m
