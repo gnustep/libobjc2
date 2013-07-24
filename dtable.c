@@ -647,6 +647,9 @@ PRIVATE void objc_resize_dtables(uint32_t newSize)
 	uint32_t oldMask = uninstalled_dtable->mask;
 
 	SparseArrayExpandingArray(uninstalled_dtable, dtable_depth);
+#if defined(WITH_TRACING) && defined (__x86_64)
+	tracing_dtable = SparseArrayExpandingArray(tracing_dtable, dtable_depth);
+#endif
 	// Resize all existing dtables
 	void *e = NULL;
 	struct objc_class *next;
