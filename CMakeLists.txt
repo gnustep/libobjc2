@@ -36,7 +36,6 @@ set(libobjc_C_SRCS
 	dtable.c
 	eh_personality.c
 	encoding2.c
-	gc_none.c
 	hash_table.c
 	hooks.c
 	ivar.c
@@ -114,6 +113,9 @@ if (BOEHM_GC)
 	set(CMAKE_OBJC_FLAGS "${CMAKE_OBJC_FLAGS} -fobjc-gc")
 	set(objc_LINK_FLAGS "${objc_LINK_FLAGS} ${GC_CFLAGS}")
 	add_definitions(-DENABLE_GC)
+	list(APPEND libobjc_OBJC_SRCS gc_boehm.c)
+else ()
+	list(APPEND libobjc_OBJC_SRCS gc_none.c)
 endif ()
 
 set(LEGACY_COMPAT FALSE CACHE BOOL

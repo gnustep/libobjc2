@@ -76,7 +76,7 @@ struct __cxa_exception
 	unexpected_handler unexpectedHandler;
 	terminate_handler terminateHandler;
 	__cxa_exception *nextException;
-	unsigned int handlerCount;
+	int handlerCount;
 	int handlerSwitchValue;
 	const char *actionRecord;
 	const char *languageSpecificData;
