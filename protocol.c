@@ -341,7 +341,7 @@ Protocol*__unsafe_unretained* protocol_copyProtocolList(Protocol *p, unsigned in
 	{
 		out[i] = (Protocol*)p->protocol_list->list[i];
 	}
-	return NULL;
+	return out;
 }
 
 objc_property_t *protocol_copyPropertyList(Protocol *protocol,
