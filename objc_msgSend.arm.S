@@ -46,11 +46,11 @@
 
 	and    r6, r5, #0xff0000
 	ldr    r4, [r4, r6, asr#14]
-	ldr    r4, [r4, #DTABLE_OFFSET]        
+	ldr    r4, [r4, #DATA_OFFSET]        
 1:                                        // dtable16
 	and    r6, r5, #0xff00
 	ldr    r4, [r4, r6, asr#6]
-	ldr    r4, [r4, #DTABLE_OFFSET]        
+	ldr    r4, [r4, #DATA_OFFSET]        
 2:                                        // dtable8
 	and    r6, r5, #0xff
 	ldr    ip, [r4, r6, asl#2]
@@ -75,9 +75,10 @@
 
 	push   {\receiver}                    // &self, _cmd in arguments
 	.save  {\receiver}
+	mov    r0, sp
 	mov    r1, \sel
 
-	bl     CDECL(slowMsgLookup)(PLT)             // This is the only place where the CFI directives have to be accurate...
+	bl     CDECL(slowMsgLookup)(PLT)      // This is the only place where the CFI directives have to be accurate...
 	mov    ip, r0                         // IMP -> ip
 
 	pop    {r5}                           // restore (modified) self to r5
