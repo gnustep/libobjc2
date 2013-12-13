@@ -782,6 +782,7 @@ PRIVATE void objc_send_initialize(id object)
 	if (objc_test_class_flag(class, objc_class_flag_initialized))
 	{
 		UNLOCK(&initialize_lock);
+		UNLOCK_RUNTIME();
 		return;
 	}
 	BOOL skipMeta = objc_test_class_flag(meta, objc_class_flag_initialized);
