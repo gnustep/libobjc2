@@ -109,6 +109,6 @@ CDECL(__objc_block_trampoline_end):
 CDECL(__objc_block_trampoline_sret):
 CDECL(__objc_block_trampoline_end_sret):
 #endif
-#if HAS_SECTION_DIRECTIVE
+#ifdef __ELF__
 .section .note.GNU-stack,"",%progbits
 #endif

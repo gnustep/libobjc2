@@ -10,6 +10,6 @@
 #else
 #warning objc_msgSend() not implemented for your architecture
 #endif
-#if HAS_SECTION_DIRECTIVE
+#ifdef __ELF__
 .section .note.GNU-stack,"",%progbits
 #endif
