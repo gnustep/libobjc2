@@ -336,6 +336,7 @@ Protocol*__unsafe_unretained* protocol_copyProtocolList(Protocol *p, unsigned in
 		return NULL;
 	}
 
+	*count  = p->protocol_list->count;
 	Protocol **out = calloc(sizeof(Protocol*), p->protocol_list->count);
 	for (int i=0 ; i<p->protocol_list->count ; i++)
 	{
