@@ -72,7 +72,7 @@ lw     $zero, ($zero)
 	daddi  $v0, $t6, -8
 
 	beq    $0, $v0, 2f
-	lui    $t6, 0xff0000                    # The mask for a big dtable won't fit in an and immediate
+	lui    $t6, 0x00ff                      # The mask for a big dtable won't fit in an and immediate
 	and    $t6, $t6, $t5                    # mask the selector
 #ifdef _ABI64         
 	dsrl   $t6, $t6, 13                     # Right shift 16, but then left shift by pointer size
