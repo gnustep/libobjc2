@@ -219,15 +219,18 @@ static inline void initAutorelease(void)
 		}
 		else
 		{
-			[AutoreleasePool class];
-			useARCAutoreleasePool = class_respondsToSelector(AutoreleasePool,
-			                                                 SELECTOR(_ARCCompatibleAutoreleasePool));
-			NewAutoreleasePool = class_getMethodImplementation(object_getClass(AutoreleasePool),
-			                                                   SELECTOR(new));
-			DeleteAutoreleasePool = class_getMethodImplementation(AutoreleasePool,
-			                                                      SELECTOR(release));
-			AutoreleaseAdd = class_getMethodImplementation(object_getClass(AutoreleasePool),
-			                                               SELECTOR(addObject:));
+			useARCAutoreleasePool = (0 != class_getInstanceMethod(AutoreleasePool,
+			                                                      SELECTOR(_ARCCompatibleAutoreleasePool)));
+			if (!useARCAutoreleasePool)
+			{
+				[AutoreleasePool class];
+				NewAutoreleasePool = class_getMethodImplementation(object_getClass(AutoreleasePool),
+				                                                   SELECTOR(new));
+				DeleteAutoreleasePool = class_getMethodImplementation(AutoreleasePool,
+				                                                      SELECTOR(release));
+				AutoreleaseAdd = class_getMethodImplementation(object_getClass(AutoreleasePool),
+				                                               SELECTOR(addObject:));
+			}
 		}
 	}
 }

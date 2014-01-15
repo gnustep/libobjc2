@@ -252,6 +252,7 @@ set_target_properties(objc PROPERTIES
 	LINK_FLAGS "${objc_LINK_FLAGS}"
 	)
 
+set_property(TARGET PROPERTY NO_SONAME true)
 
 set(BUILD_STATIC_LIBOBJC false CACHE BOOL
 	"Build the static version of libobjc")
@@ -359,6 +360,7 @@ configure_file(
 
 add_custom_target(uninstall
 	COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
+
 
 set(TESTS TRUE CACHE BOOL
 	"Enable building the tests")
