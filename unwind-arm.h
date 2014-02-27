@@ -1,3 +1,5 @@
+#include <stdint.h>
+
 /**
  * ARM-specific unwind definitions.  These are taken from the ARM EHABI
  * specification.
