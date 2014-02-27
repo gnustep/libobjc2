@@ -13,11 +13,7 @@
 __attribute__((objc_root_class))
 #endif
 @interface Test { id isa; }
-+ (Class)class;
-+ (id)new;
 @end
-
-#if !__has_feature(objc_arc)
 @implementation Test
 + (Class)class { return self; }
 + (id)new
@@ -41,15 +37,4 @@ __attribute__((objc_root_class))
 	objc_release(self);
 }
 - (void)_ARCCompliantRetainRelease {}
-@end
-#endif
-
-@interface NSAutoreleasePool : Test
-@end
-@implementation NSAutoreleasePool
-- (void)_ARCCompatibleAutoreleasePool {}
-+ (void)addObject:(id)anObject
-{
-	objc_autorelease(anObject);
-}
 @end

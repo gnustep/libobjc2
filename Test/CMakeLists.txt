@@ -20,6 +20,7 @@ set(TESTS
 	PropertyIntrospectionTest.m
 	PropertyIntrospectionTest2.m
 	ProtocolCreation.m
+	ResurrectInDealloc_arc.m
 	RuntimeTest.m
 	objc_msgSend.m
 	msgInterpose.m
@@ -28,15 +29,19 @@ set(TESTS
 # Function for adding a test.  This takes the name of the test and the list of
 # source files as arguments.
 function(addtest_flags TEST FLAGS TEST_SOURCE)
+	if (TEST MATCHES ".*_arc")
+		# Only compile the main file with ARC
+		set_source_files_properties(${TEST_SOURCE}
+			COMPILE_FLAGS "-fobjc-arc")
+		# Add the ARC-incompatible definitions of the test class.
+		list(APPEND TEST_SOURCE "Test.m")
+	endif()
 	add_executable(${TEST} ${TEST_SOURCE})
 	add_test(${TEST} ${TEST})
 	set(ARC "")
-	if (TEST MATCHES ".*_arc")
-		set(ARC "-fobjc-arc")
-	endif()
 	set_target_properties(${TEST} PROPERTIES
 		INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}"
-		COMPILE_FLAGS "-fobjc-runtime=gnustep-1.7 -fblocks ${FLAGS} ${ARC}"
+		COMPILE_FLAGS "-fobjc-runtime=gnustep-1.7 -fblocks ${FLAGS}"
 		LINKER_LANGUAGE C
 	)
 	set_property(TEST ${TEST} PROPERTY

@@ -175,7 +175,13 @@ static inline id retain(id obj)
 	if (objc_test_class_flag(cls, objc_class_flag_fast_arc))
 	{
 		intptr_t *refCount = ((intptr_t*)obj) - 1;
-		__sync_add_and_fetch(refCount, 1);
+		// Note: this should be an atomic read, so that a sufficiently clever
+		// compiler doesn't notice that there's no happens-before relationship
+		// here.
+		if (*refCount >= 0)
+		{
+			__sync_add_and_fetch(refCount, 1);
+		}
 		return obj;
 	}
 	return [obj retain];
@@ -198,7 +204,9 @@ static inline void release(id obj)
 	if (objc_test_class_flag(cls, objc_class_flag_fast_arc))
 	{
 		intptr_t *refCount = ((intptr_t*)obj) - 1;
-		if (__sync_sub_and_fetch(refCount, 1) < 0)
+		// We allow refcounts to run into the negative, but should only
+		// deallocate once.
+		if (__sync_sub_and_fetch(refCount, 1) == -1)
 		{
 			objc_delete_weak_refs(obj);
 			[obj dealloc];
@@ -517,6 +525,11 @@ void* block_load_weak(void *block);
 id objc_storeWeak(id *addr, id obj)
 {
 	id old = *addr;
+	intptr_t *refCount = ((intptr_t*)obj) - 1;
+	if (obj && *refCount < 0)
+	{
+		obj = nil;
+	}
 	LOCK_FOR_SCOPE(&weakRefLock);
 	if (nil != old)
 	{
