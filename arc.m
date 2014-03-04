@@ -632,10 +632,6 @@ static void zeroRefs(WeakRef *ref, BOOL shouldFree)
 	{
 		free(ref);
 	}
-	else
-	{
-		memset(ref, 0, sizeof(WeakRef));
-	}
 }
 
 void objc_delete_weak_refs(id obj)
@@ -645,6 +641,7 @@ void objc_delete_weak_refs(id obj)
 	if (0 != oldRef)
 	{
 		zeroRefs(oldRef, NO);
+		weak_ref_remove(weakRefs, obj);
 	}
 }
 
