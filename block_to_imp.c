@@ -17,6 +17,13 @@
 #include "lock.h"
 #include "visibility.h"
 
+#if __has_builtin(__builtin___clear_cache)
+#	define clear_cache __builtin___clear_cache
+#else
+void __clear_cache(void* start, void* end);
+#	define clear_cache __clear_cache
+#endif
+
 
 /* QNX needs a special header for asprintf() */
 #ifdef __QNXNTO__
@@ -122,7 +129,9 @@ IMP imp_implementationWithBlock(void *block)
 	out[1] = Block_copy(b);
 	memcpy(&out[2], start, trampolineSize);
 	out = buf.x;
-	return (IMP)&out[2];
+	char *newIMP = (char*)&out[2];
+	clear_cache(newIMP, newIMP+trampolineSize);
+	return (IMP)newIMP;
 }
 
 static void* isBlockIMP(void *anIMP)
