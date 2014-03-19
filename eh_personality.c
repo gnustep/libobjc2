@@ -369,7 +369,10 @@ static inline _Unwind_Reason_Code internal_objc_personality(int version,
 	DEBUG_LOG("LSDA: %p\n", lsda_addr);
 
 	// No LSDA implies no landing pads - try the next frame
-	if (0 == lsda_addr) { return _URC_CONTINUE_UNWIND; }
+	if (0 == lsda_addr)
+	{
+		return continueUnwinding(exceptionObject, context);
+	}
 
 	// These two variables define how the exception will be handled.
 	struct dwarf_eh_action action = {0};
@@ -393,7 +396,7 @@ static inline _Unwind_Reason_Code internal_objc_personality(int version,
 			DEBUG_LOG("Found handler! %d\n", handler);
 			return _URC_HANDLER_FOUND;
 		}
-		return _URC_CONTINUE_UNWIND;
+		return continueUnwinding(exceptionObject, context);
 	}
 	DEBUG_LOG("Phase 2: Fight!\n");
 
@@ -407,7 +410,7 @@ static inline _Unwind_Reason_Code internal_objc_personality(int version,
 		// If there's no cleanup here, continue unwinding.
 		if (0 == action.landing_pad)
 		{
-			return _URC_CONTINUE_UNWIND;
+			return continueUnwinding(exceptionObject, context);
 		}
 		handler_type handler = check_action_record(context, foreignException,
 				&lsda, action.action_record, thrown_class, &selector);
@@ -418,7 +421,7 @@ static inline _Unwind_Reason_Code internal_objc_personality(int version,
 		if (handler != handler_cleanup)
 		{
 			DEBUG_LOG("Ignoring handler! %d\n",handler);
-			return _URC_CONTINUE_UNWIND;
+			return continueUnwinding(exceptionObject, context);
 		}
 		DEBUG_LOG("Installing cleanup...\n");
 		// If there is a cleanup, we need to return the exception structure
