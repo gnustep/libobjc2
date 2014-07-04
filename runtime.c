@@ -771,8 +771,7 @@ Class object_setClass(id obj, Class cls)
 {
 	CHECK_ARG(obj);
 	// If this is a small object, then don't set its class.
-	uintptr_t addr = (uintptr_t)obj;
-	if (addr & 1) { return classForObject(obj); }
+	if (isSmallObject(obj)) { return classForObject(obj); }
 	Class oldClass =  obj->isa;
 	obj->isa = cls;
 	return oldClass;
