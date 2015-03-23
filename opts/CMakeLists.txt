@@ -1,7 +1,12 @@
 cmake_minimum_required(VERSION 2.8)
 
 find_package(LLVM)
-include(AddLLVM)
+include(AddLLVM OPTIONAL RESULT_VARIABLE INCLUDED_LLVM)
+
+if (${INCLUDED_LLVM} STREQUAL "NOTFOUND")
+	message(WARNING "Failed to include AddLLVM CMake module")
+else()
+message("Included: '${INCLUDED_LLVM}'")
 
 add_definitions(${LLVM_DEFINITIONS})
 include_directories(${LLVM_INCLUDE_DIRS})
@@ -39,3 +44,4 @@ string(REGEX REPLACE "([0-9]*).([0-9]*).*" "-DLLVM_MAJOR=\\1 -DLLVM_MINOR=\\2" L
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${LLVM_VERSION} -fno-rtti")
 include_directories( ${LLVM_INCLUDE_DIRS} "${LLVM_SRC}/include/" "${LLVM_OBJ}/include/")
 
+endif() # AddLLVM include failed
