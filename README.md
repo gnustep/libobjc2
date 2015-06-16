@@ -45,51 +45,53 @@ Non-Fragile Instance Variables
 ------------------------------
 
 When a class is compiled to support non-fragile instance variables, the
-instance_size field in the class is set to 0 - the size of the instance
+`instance_size` field in the class is set to 0 - the size of the instance
 variables declared on that class (excluding those inherited.  For example, an
-NSObject subclass declaring an int ivar would have its instance_size set to 0 -
-sizeof(int)).  The offsets of each instance variable in the class's ivar_list
-field are then set to the offset from the start of the superclass's ivars.
+NSObject subclass declaring an int ivar would have its `instance_size` set to
+`0 - sizeof(int))`.  The offsets of each instance variable in the class's
+`ivar_list` field are then set to the offset from the start of the superclass's
+ivars.
 
 When the class is loaded, the runtime library uses the size of the superclass
 to calculate the correct size for this new class and the correct offsets.  Each
 instance variable should have two other variables exported as global symbols.
 Consider the following class:
 
-@interface NewClass : SuperClass {
-	int anIvar;
-}
-@end
+	@interface NewClass : SuperClass {
+		int anIvar;
+	}
+	@end
 
-This would have its instance_size initialized to 0-sizeof(int), and anIvar's
-offset initialized to 0.  It should also export the following two symbols:
+This would have its `instance_size` initialized to `0-sizeof(int)`, and
+`anIvar`'s offset initialized to 0.  It should also export the following two
+symbols:
 
-int __objc_ivar_offset_value_NewClass.anIvar;
-int *__objc_ivar_offset_NewClass.anIvar;
+	int __objc_ivar_offset_value_NewClass.anIvar;
+	int *__objc_ivar_offset_NewClass.anIvar;
 
-The latter should point to the former or to the ivar_offset field in the ivar
+The latter should point to the former or to the `ivar_offset` field in the ivar
 metadata.  The former should be pointed to by the only element in the
-ivar_offsets array in the class structure.  
+`ivar_offsets` array in the class structure.  
 
 In other compilation units referring to this ivar, the latter symbol should be
 exported as a weak symbol pointing to an internal symbol containing the
 compiler's guess at the ivar offset.  The ivar will then work as a fragile ivar
-when NewClass is compiled with the old ABI.  If NewClass is compiled with the
-new ABI, then the linker will replace the weak symbol with the version in the
-class's compilation unit and references which use this offset will function
+when `NewClass` is compiled with the old ABI.  If `NewClass` is compiled with
+the new ABI, then the linker will replace the weak symbol with the version in
+the class's compilation unit and references which use this offset will function
 correctly.
 
-If the compiler can guarantee that NewClass is compiled with the new ABI, for
+If the compiler can guarantee that `NewClass` is compiled with the new ABI, for
 example if it is declared in the same compilation unit, by finding the symbol
 during a link-time optimization phase, or as a result of a command-line
-argument, then it may use the __objc_ivar_offset_value_NewClass.anIvar symbol
+argument, then it may use the `__objc_ivar_offset_value_NewClass.anIvar` symbol
 as the ivar offset.  This eliminates the need for one load for every ivar
 access.  
 
 Protocols
 ---------
 
-The runtime now provides a __ObjC_Protocol_Holder_Ugly_Hack class.  All
+The runtime now provides a `__ObjC_Protocol_Holder_Ugly_Hack` class.  All
 protocols that are referenced but not defined should be registered as
 categories on this class.  This ensures that every protocol is registered with
 the runtime.  
@@ -100,8 +102,8 @@ to match the defined version.
 
 Protocols have been extended to provide space for introspection on properties
 and optional methods.  These fields only exist on protocols compiled with a
-compiler that supports Objective-C 2.  To differentiate the two, the isa
-pointer for new protocols will be set to the Protocol2 class.
+compiler that supports Objective-C 2.  To differentiate the two, the `isa`
+pointer for new protocols will be set to the `Protocol2` class.
 
 Blocks
 ------
@@ -113,22 +115,22 @@ Fast Proxies and Cacheable Lookups
 ----------------------------------
 
 The new runtime provides two mechanisms for faster lookup.  The older
-Vobjc_msg_lookup() function, which returns an IMP, is still supported, however
+`objc_msg_lookup()` function, which returns an IMP, is still supported, however
 it is no longer recommended.  The new lookup functions is:
 
-Slot_t objc_msg_lookup_sender(id *receiver, SEL selector, id sender)
+	Slot_t objc_msg_lookup_sender(id *receiver, SEL selector, id sender)
 
 The receiver is passed by pointer, and so may be modified during the lookup
 process.  The runtime itself will never modify the receiver.  The following
 hook is provided to allow fast proxy support:
 
-id (*objc_proxy_lookup)(id receiver, SEL op);
+	id (*objc_proxy_lookup)(id receiver, SEL op);
 
 This function takes an object and selector as arguments and returns a new
 objects.  The lookup will then be re-run and the final message should be sent to
 the new object.
 
-The returned Slot_t from the new lookup function is a pointer to a structure
+The returned `Slot_t` from the new lookup function is a pointer to a structure
 which contains both an IMP and a version (among other things).  The version is
 incremented every time the method is overridden, allowing this to be cached by
 the caller.  User code wishing to perform IMP caching may use the old mechanism
@@ -137,9 +139,9 @@ mechanism.  Note that a modern compiler should insert caching automatically,
 ideally with the aid of run-time profiling results.  To support this, a new hook
 has been added:
 
-Slot_t objc_msg_forward3(id receiver, SEL op);
+	Slot_t objc_msg_forward3(id receiver, SEL op);
 
-This is identical to objc_msg_forward2(), but returns a pointer to a slot,
+This is identical to `objc_msg_forward2()`, but returns a pointer to a slot,
 instead of an IMP.  The slot should have its version set to 0, to prevent
 caching.
 
@@ -165,10 +167,10 @@ they words immediately before their isa pointers are the same.  In this case,
 the runtime's usual dispatch mechanisms will be used.  In all other cases, the
 runtime will delegate message lookup to another library via the following hook:
 
-Slot_t (*objc_plane_lookup)(id *receiver, SEL op, id sender);
+	Slot_t (*objc_plane_lookup)(id *receiver, SEL op, id sender);
 
 From the perspective of the runtime, the plane identifier is opaque.  In
-GNUstep, it is a pointer to an NSZone structure.
+GNUstep, it is a pointer to an `NSZone` structure.
 
 Threading
 ---------
@@ -226,21 +228,21 @@ through Objective-C stack frames containing an @finally or @catch(id) block.
 It also could not differentiate between @catch(id) (catch any object type) and
 @catch(...) (catch any exception and discard it).
 
-The new ABI makes a small number of changes.  Most importantly, @catch(id) is
-now indicated by using the string "@id" as the type ID, in the same way that
-"Foo" is used for @catch(Foo*).  Catchalls remain identified by a NULL pointer
-in this field, as with the GCC ABI.  The runtime will still deliver the
+The new ABI makes a small number of changes.  Most importantly, `@catch(id)` is
+now indicated by using the string `"@id"` as the type ID, in the same way that
+`"Foo"` is used for `@catch(Foo*)`.  Catchalls remain identified by a NULL
+pointer in this field, as with the GCC ABI.  The runtime will still deliver the
 exception object to catchalls, for interoperability with old code and with the
 old ABI, but this comes with all of the same problems that the old ABI had
 (i.e. code using this ABI will break in exciting and spectacular ways when
 mixed with C++).
 
-The runtime provides a hook, _objc_class_for_boxing_foreign_exception(), which
+The runtime provides a hook, `_objc_class_for_boxing_foreign_exception()`, which
 takes an exception class (64-bit integer value) as an argument, and returns a
 class for boxing exceptions using this ABI.  The returned class must implement
-a +exceptionWithForeignException: method, taking a pointer to the ABI-defined
+a `+exceptionWithForeignException:` method, taking a pointer to the ABI-defined
 generic exception structure as the argument.  It should also implement a
--rethrow method, used for rethrowing the exception.  If this is omitted, then
+`-rethrow` method, used for rethrowing the exception.  If this is omitted, then
 the boxed version of the exception, rather than the original, will propagate
 out from @finally blocks.
 
@@ -347,7 +349,7 @@ In Objective-C++ code, the personality function is:
 
 This is a very thin wrapper around the C++ personality function.  If it is
 called with an exception coming from Objective-C code, then it wraps it in a
-__cxa_exception structure (defined by the C++ ABI spec).  For any other
+`__cxa_exception` structure (defined by the C++ ABI spec).  For any other
 exception type (including C++ exceptions), it passes it directly to the C++
 personality function.
 
@@ -365,7 +367,7 @@ memory.  The NeXT runtime avoided this problem by not providing dispatch tables
 at all.  Instead, it did a linear search of the method lists, caching a few
 results.  Although this is O(n), it performed reasonably well.  Most message
 sends are to a small number of methods.  For example, an NSMutableDictionary is
-most often sent -objectForKey: and -setObject:forKey:.  If these two methods
+most often sent `-objectForKey:` and `-setObject:forKey:`.  If these two methods
 are in the cache, then the O(n) algorithm is almost never used.
 
 The GNUstep runtime's low memory profile stores the slots in a sorted array.
@@ -378,7 +380,8 @@ above and can be combined with caching at the call site.  The runtime will not
 create dispatch tables, which can save a few MB of RAM in projects with a lot
 of classes, but can make message sending a lot slower in the worst case.
 
-To enable the low memory profile, add low_memory=yes to your make command line.
+To enable the low memory profile, add `low_memory=yes` to your make command
+line.
 
 Objective-C 2 Features
 ----------------------
@@ -397,7 +400,7 @@ implement parts of Cocoa that rely on private interfaces between Cocoa, Apple
 libobjc, and Autozone.
 
 Garbage collection is implemented using the Boehm-Demers-Weiser garbage
-collector.  If built with boehm_gc=no, this support will not be compiled into
+collector.  If built with `boehm_gc=no`, this support will not be compiled into
 the runtime.  When built with GC support, the runtime will use garbage
 collection for its internal tables, irrespective of whether linked Objective-C
 code is using it.
@@ -407,28 +410,28 @@ the value (making it invisible to the collector) at the designated address.
 The read barrier reads the value while holding the collector lock.  This
 ensures that reads of weak variables never point to finalised objects.
 
-The runtime uses the objc_assign_global() write barrier to add static roots.
+The runtime uses the `objc_assign_global()` write barrier to add static roots.
 Currently, GNUstep crashes if the collector relies on every write of a pointer
 to a static location being through this write barrier, so this requirement is
 relaxed.  It will be enabled at some point in the future.
 
 Several environment variables can be used for debugging programs
 
-- LIBOBJC_DUMP_GC_STATUS_ON_EXIT.  I this is set, then the program will dump
+- `LIBOBJC_DUMP_GC_STATUS_ON_EXIT`.  I this is set, then the program will dump
   information about the garbage collector when it exits.
-- LIBOBJC_DUMP_GC_STATUS_ON_SIGNAL.  This should be set to a signal number.
+- `LIBOBJC_DUMP_GC_STATUS_ON_SIGNAL`.  This should be set to a signal number.
   The program will dump GC statistics when it receives the corresponding signal
-  (SIGUSR2 if this environment variable is set to something that is not a
+  (`SIGUSR2` if this environment variable is set to something that is not a
   number).
-- LIBOBJC_LOG_ALLOCATIONS.  This may be set to the name of a file.  The runtime
-  will dump a stack trace on every allocation and finalisation to the named
-  file.  This can be used to implement tools like Apple's malloc_history().
-  Note: Enabling this causes a significant speed decrease.
-- LIBOBJC_CANARIES.  If this environment variable is set, then every allocation
-  of garbage-collected memory will have a canary value appended to it.  On
-  finalisation, the runtime will check that this value has not been modified,
-  and abort if it has.  This can help to catch heap buffer overflows.  It is
-  most useful when debugging.
+- `LIBOBJC_LOG_ALLOCATIONS`.  This may be set to the name of a file.  The
+  runtime will dump a stack trace on every allocation and finalisation to the
+  named file.  This can be used to implement tools like Apple's
+  `malloc_history()`.  Note: Enabling this causes a significant speed decrease.
+- `LIBOBJC_CANARIES`.  If this environment variable is set, then every
+  allocation of garbage-collected memory will have a canary value appended to
+  it.  On finalisation, the runtime will check that this value has not been
+  modified, and abort if it has.  This can help to catch heap buffer overflows.
+  It is most useful when debugging.
 
 Automatic Reference Counting
 ----------------------------
@@ -450,15 +453,15 @@ The runtime implements the following optimisations:
 
 ARC requires the ability to interoperate perfectly with manual retain / release
 code, including the ability for non-ARC code to implement custom reference
-counting behaviour.  If an object implements -_ARCCompliantRetainRelease, then
-it is advertising that its retain, release, and autorelease implementations are
-ARC-compatible.  These methods may be called explicitly in non-ARC code, but
-will not be called from ARC.
+counting behaviour.  If an object implements `-_ARCCompliantRetainRelease`, then
+it is advertising that its `-retain`, `-release`, and `-autorelease`
+implementations are ARC-compatible.  These methods may be called explicitly in
+non-ARC code, but will not be called from ARC.
 
-ARC moves autorelease pools into the runtime.  If NSAutoreleasePool exists and
-does not implement a -_ARCCompatibleAutoreleasePool method, then it will be
-used directly.  If it does not exist, ARC will implement its own autorelease
-pools.  If it exists and does implement -_ARCCompatibleAutoreleasePool then it
-must call objc_autoreleasePoolPush() and objc_autoreleasePoolPop() to manage
-autoreleased object storage and call objc_autorelease() in its -addObject:
-method.
+ARC moves autorelease pools into the runtime.  If `NSAutoreleasePool` exists
+and does not implement a `-_ARCCompatibleAutoreleasePool` method, then it will
+be used directly.  If it does not exist, ARC will implement its own
+`-autorelease` pools.  If it exists and does implement
+`-_ARCCompatibleAutoreleasePool` then it must call `objc_autoreleasePoolPush()`
+and `objc_autoreleasePoolPop()` to manage autoreleased object storage and call
+`objc_autorelease()` in its `-addObject:` method.
