@@ -9,16 +9,16 @@ Objective-C programs.  Highlights of this release include:
 - Added API for tracing, allowing interposition on all message sends matching a
   given selector.
 
-You may obtain the code for this release from subversion at the following
-subversion branch:
+- Numerous bug fixes and stability improvements.
 
-svn://svn.gna.org/svn/gnustep/libs/libobjc2/releases/1.8
+You may obtain the code for this release from git and use the 1.8 branch:
+
+https://github.com/gnustep/libobjc2.git
 
 Alternatively, a tarball is available from:
 
-http://download.gna.org/gnustep/libobjc2-1.8.txz
-http://download.gna.org/gnustep/libobjc2-1.8.tar.bz2
-http://download.gna.org/gnustep/libobjc2-1.8.tgz
+https://github.com/gnustep/libobjc2/archive/v1.8.zip
+https://github.com/gnustep/libobjc2/archive/v1.8.tar.gz
 
 The runtime library is responsible for implementing the core features of the
 object model, as well as exposing introspection features to the user.  The
@@ -32,5 +32,6 @@ with the FSF's GCC 4.2.1 Objective-C ABI and also implements a new ABI that is
 supported by Clang and Étoilé's LanguageKit and is required for some of the
 newer features.
 
-If you come across any problems, please report them to the GNUstep Developer
-mailing list <gnustep-dev@gnu.org>.  
+If you come across any problems, please file them in the issue tracker:
+
+https://github.com/gnustep/libobjc2/issues
