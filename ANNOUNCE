@@ -1,15 +1,15 @@
-GNUstep Objective-C Runtime 1.8
-===============================
+GNUstep Objective-C Runtime 1.8.1
+=================================
 
-This the ninth official release of the GNUstep Objective-C runtime (a.k.a.
-libobjc2).  This runtime was designed to support the features of modern
-dialects of Objective-C for use with GNUstep and other Objective-C programs.
-Highlights of this release include:
+This a bugfix release for the ninth official release of the GNUstep Objective-C
+runtime (a.k.a.  libobjc2).  This runtime was designed to support the features
+of modern dialects of Objective-C for use with GNUstep and other Objective-C
+programs.  Highlights of this release include:
 
-- Added API for tracing, allowing interposition on all message sends matching a
-  given selector.
+- Better build system detection of LLVM not being present
 
-- Numerous bug fixes and stability improvements.
+- Fix for a bug causing corruption of runtime state when hidden classes are
+  deallocated.
 
 You may obtain the code for this release from git and use the 1.8 branch:
 
