@@ -214,6 +214,7 @@ static Class allocateHiddenClass(Class superclass)
 	newClass->dtable = uninstalled_dtable;
 	newClass->instance_size = superclass->instance_size;
 
+	LOCK_RUNTIME_FOR_SCOPE();
 	newClass->sibling_class = superclass->subclass_list;
 	superclass->subclass_list = newClass;
 
@@ -238,14 +239,36 @@ static inline Class initHiddenClassForObject(id obj)
 
 static void deallocHiddenClass(id obj, SEL _cmd)
 {
+	LOCK_RUNTIME_FOR_SCOPE();
 	Class hiddenClass = findHiddenClass(obj);
 	// After calling [super dealloc], the object will no longer exist.
-	// Free the hidden
+	// Free the hidden class.
 	struct reference_list *list = object_getIndexedIvars(hiddenClass);
 	DESTROY_LOCK(&list->lock);
 	cleanupReferenceList(list);
 	freeReferenceList(list->next);
+	fprintf(stderr, "Deallocating dtable %p\n", hiddenClass->dtable);
 	free_dtable(hiddenClass->dtable);
+	// We shouldn't have any subclasses left at this point
+	assert(hiddenClass->subclass_list == 0);
+	// Remove the class from the subclass list of its superclass
+	Class sub = hiddenClass->super_class->subclass_list;
+	if (sub == hiddenClass)
+	{
+		hiddenClass->super_class->subclass_list = hiddenClass->sibling_class;
+	}
+	else
+	{
+		while (sub != NULL)
+		{
+			if ((Class)sub->sibling_class == hiddenClass)
+			{
+				sub->sibling_class = hiddenClass->sibling_class;
+				break;
+			}
+			sub = sub->sibling_class;
+		}
+	}
 	// Free the class
 	free(hiddenClass);
 }
