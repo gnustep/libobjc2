@@ -8,6 +8,7 @@ set(TESTS
 	#alignTest.m
 	AllocatePair.m
 	AssociatedObject.m
+	AssociatedObject2.m
 	BlockImpTest.m
 	BlockTest_arc.m
 	BoxedForeignException.m

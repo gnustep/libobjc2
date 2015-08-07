@@ -15,6 +15,12 @@ __attribute__((objc_root_class))
 @interface Test { id isa; }
 + (Class)class;
 + (id)new;
+#if !__has_feature(objc_arc)
+- (void)dealloc;
+- (id)autorelease;
+- (id)retain;
+- (void)release;
+#endif
 @end
 
 #if !__has_feature(objc_arc)
