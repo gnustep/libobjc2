@@ -433,7 +433,7 @@ unsigned method_get_number_of_arguments(struct objc_method *method)
 char* method_copyArgumentType(Method method, unsigned int index)
 {
 	if (NULL == method) { return NULL; }
-	const char *types = findParameterStart(method->types, index);
+	const char *types = findParameterStart(method->types, index + 1);
 	if (NULL == types)
 	{
 		return NULL;
