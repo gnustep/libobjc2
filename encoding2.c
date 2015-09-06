@@ -393,7 +393,7 @@ void method_getArgumentType(Method method,
                             size_t dst_len)
 {
 	if (NULL == method) { return; }
-	const char *types = findParameterStart(method->types, index);
+	const char *types = findParameterStart(method->types, index + 1);
 	if (NULL == types)
 	{
 		strncpy(dst, "", dst_len);
