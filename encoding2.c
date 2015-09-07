@@ -59,7 +59,9 @@ static char* copyTypeEncoding(const char *types)
 
 static const char * findParameterStart(const char *types, unsigned int index)
 {
-	for (unsigned int i=0 ; i<index ; i++)
+	// the upper bound of the loop is inclusive because the return type
+	// is the first element in the method signature
+	for (unsigned int i=0 ; i <= index ; i++)
 	{
 		types = objc_skip_argspec(types);
 		if ('\0' == *types)

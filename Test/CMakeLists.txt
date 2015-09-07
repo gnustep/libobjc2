@@ -27,6 +27,7 @@ set(TESTS
 	objc_msgSend.m
 	msgInterpose.m
 	NilException.m
+	MethodArguments.m
 )
 
 # Function for adding a test.  This takes the name of the test and the list of
