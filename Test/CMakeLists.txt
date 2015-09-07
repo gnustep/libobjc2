@@ -26,6 +26,7 @@ set(TESTS
 	WeakReferences_arc.m
 	objc_msgSend.m
 	msgInterpose.m
+	NilException.m
 	MethodArguments.m
 )
 

@@ -358,7 +358,10 @@ static inline _Unwind_Reason_Code internal_objc_personality(int version,
 	else if (!foreignException)
 	{
 		ex = objc_exception_from_header(exceptionObject);
-		thrown_class = classForObject(ex->object);
+		if (ex->object != nil)
+	        {
+			thrown_class = classForObject(ex->object);
+		}
 	}
 	else if (_objc_class_for_boxing_foreign_exception)
 	{
