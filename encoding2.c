@@ -59,7 +59,9 @@ static char* copyTypeEncoding(const char *types)
 
 static const char * findParameterStart(const char *types, unsigned int index)
 {
-	for (unsigned int i=0 ; i<index ; i++)
+	// the upper bound of the loop is inclusive because the return type
+	// is the first element in the method signature
+	for (unsigned int i=0 ; i <= index ; i++)
 	{
 		types = objc_skip_argspec(types);
 		if ('\0' == *types)
@@ -393,7 +395,7 @@ void method_getArgumentType(Method method,
                             size_t dst_len)
 {
 	if (NULL == method) { return; }
-	const char *types = findParameterStart(method->types, index + 1);
+	const char *types = findParameterStart(method->types, index);
 	if (NULL == types)
 	{
 		strncpy(dst, "", dst_len);
@@ -433,7 +435,7 @@ unsigned method_get_number_of_arguments(struct objc_method *method)
 char* method_copyArgumentType(Method method, unsigned int index)
 {
 	if (NULL == method) { return NULL; }
-	const char *types = findParameterStart(method->types, index + 1);
+	const char *types = findParameterStart(method->types, index);
 	if (NULL == types)
 	{
 		return NULL;
