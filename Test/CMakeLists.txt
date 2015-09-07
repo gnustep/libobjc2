@@ -26,6 +26,7 @@ set(TESTS
 	WeakReferences_arc.m
 	objc_msgSend.m
 	msgInterpose.m
+	MethodArguments.m
 )
 
 # Function for adding a test.  This takes the name of the test and the list of
