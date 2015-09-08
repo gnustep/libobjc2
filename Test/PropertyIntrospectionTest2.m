@@ -244,6 +244,52 @@ __attribute__((objc_root_class))
 #define ATTR(n, v)  (objc_property_attribute_t){(n), (v)}
 #define ATTRS(...)  (objc_property_attribute_t[]){ __VA_ARGS__ }, \
 						sizeof((objc_property_attribute_t[]){ __VA_ARGS__ }) / sizeof(objc_property_attribute_t)
+#define OPT_ASSERT(stmt) if (abort) { \
+	assert(stmt);\
+} else { \
+	if (!(stmt)) { return NO; } \
+}
+
+static BOOL testPropertyForProperty_alt(objc_property_t p,
+									const char *name,
+									const char *types,
+									objc_property_attribute_t* list,
+									unsigned int size, BOOL abort)
+{
+	OPT_ASSERT(0 != p);
+	OPT_ASSERT(strcmp(name, property_getName(p)) == 0);
+	const char *attrs = property_getAttributes(p);
+	OPT_ASSERT(0 != attrs);
+	OPT_ASSERT(strcmp(types, attrs) == 0);
+	unsigned int attrsCount = 0;
+	objc_property_attribute_t *attrsList = property_copyAttributeList(p, &attrsCount);
+	OPT_ASSERT(0 != attrsList);
+        OPT_ASSERT(attrsCount == size);
+    for (unsigned int index=0; index<size; index++) {
+        int found = 0;
+        for (unsigned int attrsIndex=0; attrsIndex<attrsCount; attrsIndex++) {
+            if (strcmp(attrsList[attrsIndex].name, list[index].name) == 0) {
+                OPT_ASSERT(strcmp(attrsList[attrsIndex].value, list[index].value) == 0);
+                found = 1;
+            }
+        }
+        OPT_ASSERT(found);
+    }
+	free(attrsList);
+	attrsList = property_copyAttributeList(p, NULL);
+	OPT_ASSERT(0 != attrsList);
+	objc_property_attribute_t *ra;
+	for (attrsCount = 0, ra = attrsList; ra->name != NULL; attrsCount++, ra++) {}
+    OPT_ASSERT(attrsCount == size);
+	free(attrsList);
+    for (unsigned int index=0; index<size; index++) {
+        const char* value = property_copyAttributeValue(p, list[index].name);
+        OPT_ASSERT(0 != value);
+        OPT_ASSERT(strcmp(value, list[index].value) == 0);
+    }
+    return YES;
+}
+
 
 static void testPropertyForProperty(objc_property_t p,
 									const char *name,
@@ -251,37 +297,7 @@ static void testPropertyForProperty(objc_property_t p,
 									objc_property_attribute_t* list,
 									unsigned int size)
 {
-	assert(0 != p);
-	assert(strcmp(name, property_getName(p)) == 0);
-	const char *attrs = property_getAttributes(p);
-	assert(0 != attrs);
-	assert(strcmp(types, attrs) == 0);
-	unsigned int attrsCount = 0;
-	objc_property_attribute_t *attrsList = property_copyAttributeList(p, &attrsCount);
-	assert(0 != attrsList);
-    assert(attrsCount == size);
-    for (unsigned int index=0; index<size; index++) {
-        int found = 0;
-        for (unsigned int attrsIndex=0; attrsIndex<attrsCount; attrsIndex++) {
-            if (strcmp(attrsList[attrsIndex].name, list[index].name) == 0) {
-                assert(strcmp(attrsList[attrsIndex].value, list[index].value) == 0);
-                found = 1;
-            }
-        }
-        assert(found);
-    }
-	free(attrsList);
-	attrsList = property_copyAttributeList(p, NULL);
-	assert(0 != attrsList);
-	objc_property_attribute_t *ra;
-	for (attrsCount = 0, ra = attrsList; ra->name != NULL; attrsCount++, ra++) {}
-    assert(attrsCount == size);
-	free(attrsList);
-    for (unsigned int index=0; index<size; index++) {
-        const char* value = property_copyAttributeValue(p, list[index].name);
-        assert(0 != value);
-        assert(strcmp(value, list[index].value) == 0);
-    }
+	testPropertyForProperty_alt(p, name, types, list, size, YES);
 }
 
 static void testPropertyForClass(Class testClass,
@@ -299,25 +315,43 @@ static void testPropertyForClass(Class testClass,
     testPropertyForProperty(class_getProperty(testClass, addPropertyName), addPropertyName, types, list, size);
 }
 
+static BOOL testPropertyForProtocol_alt(Protocol *testProto,
+									const char *name,
+									const char *types,
+									objc_property_attribute_t* list,
+									unsigned int size, BOOL abort)
+{
+    if (!testPropertyForProperty_alt(protocol_getProperty(testProto, name, YES, YES), name, types, list, size, abort))
+	{
+			return NO;
+	}
+
+   	static int addPropertyForProtocolIndex = 0;
+	char addPropertyName[32];
+	sprintf(addPropertyName, "addPropertyForProtocol%d", ++addPropertyForProtocolIndex);
+	protocol_addProperty(testProto, addPropertyName, list, size, YES, YES);
+	OPT_ASSERT(0 == protocol_getProperty(testProto, addPropertyName, YES, YES));
+	return YES;
+}
+
 static void testPropertyForProtocol(Protocol *testProto,
 									const char *name,
 									const char *types,
 									objc_property_attribute_t* list,
 									unsigned int size)
 {
-    testPropertyForProperty(protocol_getProperty(testProto, name, YES, YES), name, types, list, size);
+		testPropertyForProtocol_alt(testProto, name, types, list, size, YES);
+}
 
-   	static int addPropertyForProtocolIndex = 0;
-	char addPropertyName[32];
-	sprintf(addPropertyName, "addPropertyForProtocol%d", ++addPropertyForProtocolIndex);
-    protocol_addProperty(testProto, addPropertyName, list, size, YES, YES);
-	assert(0 == protocol_getProperty(testProto, addPropertyName, YES, YES));
+static BOOL testProperty_alt(const char *name, const char *types, objc_property_attribute_t* list, unsigned int size, BOOL abort)
+{
+    return testPropertyForProperty_alt(class_getProperty(objc_getClass("PropertyTest"), name), name, types, list, size, abort)
+	    && testPropertyForProperty_alt(class_getProperty(objc_getClass("PropertyProtocolTest"), name), name, types, list, size, abort);
 }
 
 static void testProperty(const char *name, const char *types, objc_property_attribute_t* list, unsigned int size)
 {
-    testPropertyForProperty(class_getProperty(objc_getClass("PropertyTest"), name), name, types, list, size);
-    testPropertyForProperty(class_getProperty(objc_getClass("PropertyProtocolTest"), name), name, types, list, size);
+  testProperty_alt(name, types, list, size, YES);
 }
 
 static void testAddPropertyForClass(Class testClass)
@@ -517,10 +551,20 @@ int main(void)
                                                                                          ATTR("R", ""),
                                                                                          ATTR("N", ""),
                                                                                          ATTR("V", "idReadonlyRetainNonatomic")));
-	testProperty("idReadonlyWeakNonatomic", "T@,R,N,VidReadonlyWeakNonatomic", ATTRS(ATTR("T", "@"),
+	/**
+	 * The weak attribute was not present for earlier versions of clang, so we test
+	 * for all variants that the compiler may produce.
+	 */
+	if (!testProperty_alt("idReadonlyWeakNonatomic", "T@,R,W,N,VidReadonlyWeakNonatomic", ATTRS(ATTR("T", "@"),
+                                                                                     ATTR("R", ""),
+                                                                                     ATTR("N", ""),
+                                                                                     ATTR("V", "idReadonlyWeakNonatomic")), NO))
+	  {
+	    testProperty("idReadonlyWeakNonatomic", "T@,R,N,VidReadonlyWeakNonatomic", ATTRS(ATTR("T", "@"),
                                                                                      ATTR("R", ""),
                                                                                      ATTR("N", ""),
                                                                                      ATTR("V", "idReadonlyWeakNonatomic")));
+	  }
 	testProperty("idOther", "T@,&,V_idOther", ATTRS(ATTR("T", "@"), ATTR("&", ""), ATTR("V", "_idOther")));
 	testProperty("idDynamic", "T@,&,D", ATTRS(ATTR("T", "@"), ATTR("&", ""), ATTR("D", "")));
 	testProperty("idDynamicGetterSetter", "T@,&,D,N,GdynamicGetterSetter,SsetDynamicGetterSetter:", ATTRS(ATTR("T", "@"),
@@ -580,9 +624,18 @@ int main(void)
 	testPropertyForProtocol(testProto, "idReadonlyRetainNonatomic", "T@,R,&,N", ATTRS(ATTR("T", "@"),
 																					ATTR("R", ""),
 																					ATTR("N", "")));
-	testPropertyForProtocol(testProto, "idReadonlyWeakNonatomic", "T@,R,N", ATTRS(ATTR("T", "@"),
+	/*
+	 * Again, different clang versions emit slightly different property declarations.
+	 */
+	if (!testPropertyForProtocol_alt(testProto, "idReadonlyWeakNonatomic", "T@,R,W,N", ATTRS(ATTR("T", "@"),
+																				  ATTR("R", ""),
+																				  ATTR("N", "")), NO))
+	{
+
+	   testPropertyForProtocol(testProto, "idReadonlyWeakNonatomic", "T@,R,N", ATTRS(ATTR("T", "@"),
 																				  ATTR("R", ""),
 																				  ATTR("N", "")));
+	}
 	testPropertyForProtocol(testProto, "idOther", "T@,&", ATTRS(ATTR("T", "@"), ATTR("&", "")));
 	testPropertyForProtocol(testProto, "idDynamic", "T@,&", ATTRS(ATTR("T", "@"), ATTR("&", "")));
 	testPropertyForProtocol(testProto, "idDynamicGetterSetter", "T@,&,N,GdynamicGetterSetter,SsetDynamicGetterSetter:", ATTRS(ATTR("T", "@"),
