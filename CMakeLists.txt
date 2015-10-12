@@ -240,9 +240,7 @@ endif (ENABLE_OBJCXX)
 set(CMAKE_THREAD_PREFER_PTHREAD)
 include(FindThreads)
 set(objc_LINK_FLAGS "${objc_LINK_FLAGS} ${CMAKE_THREAD_LIBS_INIT}")
-if(CMAKE_USE_PTHREADS_INIT)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")
-endif()
+
 
 
 add_library(objc SHARED ${libobjc_C_SRCS} ${libobjc_ASM_SRCS} ${libobjc_OBJC_SRCS} ${libobjc_CXX_SRCS})
