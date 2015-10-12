@@ -161,12 +161,13 @@ if (${CMAKE_C_COMPILER_ID} MATCHES Clang*)
 	if (${CMAKE_C_COMPILER_VERSION} VERSION_GREATER 3.1)
 		set(CMAKE_OBJC_FLAGS "${CMAKE_OBJC_FLAGS} -fobjc-runtime=gnustep-1.7")
 	endif ()
-	if (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "i686")
-		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -march=i586")
-	endif ()
 else (${CMAKE_C_COMPILER_ID} MATCHES Clang*)
 	MESSAGE("WARNING: It is strongly recommended that you compile with clang")
 endif (${CMAKE_C_COMPILER_ID} MATCHES Clang*)
+
+if (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "i686")
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -march=i586")
+endif ()
 
 set(INSTALL_TARGETS objc)
 
