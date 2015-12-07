@@ -726,7 +726,7 @@ Class objc_allocateClassPair(Class superclass, const char *name, size_t extraByt
 
 	if (Nil == superclass)
 	{
-		newClass->instance_size = sizeof(struct objc_class);
+		newClass->instance_size = sizeof(struct objc_class*);
 	}
 	else
 	{
