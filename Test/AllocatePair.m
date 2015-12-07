@@ -17,7 +17,6 @@ int main()
 
 	assert(class_getInstanceSize(objc_allocateClassPair(Nil, "Empty", 0)) == sizeof(Class));
 	a = objc_allocateClassPair([Test class], "A", 0);
-	a = objc_allocateClassPair([Test class], "A", 0);
 	objc_registerClassPair(a);
 
 	b = objc_allocateClassPair(a, "B", 0);
