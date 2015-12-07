@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
-#include <malloc.h>
+#include <stdlib.h>
 
 #ifdef __has_attribute
 #if __has_attribute(objc_root_class)
