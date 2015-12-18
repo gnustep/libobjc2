@@ -23,6 +23,7 @@ set(TESTS
 	ProtocolCreation.m
 	ResurrectInDealloc_arc.m
 	RuntimeTest.m
+	WeakBlock_arc.m
 	WeakReferences_arc.m
 	objc_msgSend.m
 	msgInterpose.m
