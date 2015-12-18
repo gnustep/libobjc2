@@ -32,14 +32,23 @@ TYPE_DIRECTIVE(CDECL(__objc_block_trampoline), @function)
 .globl CDECL(__objc_block_trampoline_end)
 #endif
 #if __x86_64
+#ifdef _WIN64
+#define ARG0 %rcx
+#define ARG1 %rdx
+#define ARG2 %r8
+#else
+#define ARG0 %rdi
+#define ARG1 %rsi
+#define ARG2 %rdx
+#endif
 CDECL(__objc_block_trampoline):
-	mov   -15(%rip), %rsi      # Load the block pointer into the second argument
-	xchg  %rdi, %rsi           # Swap the first and second arguments
+	mov   -15(%rip), ARG1      # Load the block pointer into the second argument
+	xchg  ARG1, ARG0           # Swap the first and second arguments
 	jmp   *-32(%rip)           # Call the block function
 CDECL(__objc_block_trampoline_end):
 CDECL(__objc_block_trampoline_sret):
-	mov   -15(%rip), %rdx      # Load the block pointer into the second argument
-	xchg  %rdx, %rsi           # Swap the first and second arguments
+	mov   -15(%rip), ARG2      # Load the block pointer into the second argument
+	xchg  ARG1, ARG2           # Swap the first and second arguments
 	jmp   *-32(%rip)           # Call the block function
 CDECL(__objc_block_trampoline_end_sret):
 #elif __i386
