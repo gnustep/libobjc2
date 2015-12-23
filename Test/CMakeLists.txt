@@ -47,7 +47,7 @@ function(addtest_flags TEST_NAME FLAGS TEST_SOURCE)
 	set(ARC "")
 	set_target_properties(${TEST_NAME} PROPERTIES
 		INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}"
-		COMPILE_FLAGS "-fobjc-runtime=gnustep-1.7 -fblocks ${FLAGS}"
+		COMPILE_FLAGS "-fblocks ${FLAGS}"
 		LINKER_LANGUAGE C
 	)
 	set_property(TEST ${TEST_NAME} PROPERTY
@@ -58,8 +58,10 @@ endfunction(addtest_flags)
 
 foreach(TEST_SOURCE ${TESTS})
 	get_filename_component(TEST ${TEST_SOURCE} NAME_WE)
-	addtest_flags(${TEST} "-O0" ${TEST_SOURCE})
-	addtest_flags("${TEST}_optimised" "-O3" ${TEST_SOURCE})
+	addtest_flags(${TEST} "-O0 -fobjc-runtime=gnustep-2.0" ${TEST_SOURCE})
+	addtest_flags("${TEST}_optimised" "-O3 -fobjc-runtime=gnustep-2.0" ${TEST_SOURCE})
+	addtest_flags("${TEST}_legacy" "-O0 -fobjc-runtime=gnustep-1.7" ${TEST_SOURCE})
+	addtest_flags("${TEST}_legacy_optimised" "-O3 -fobjc-runtime=gnustep-1.7" ${TEST_SOURCE})
 endforeach()
 
 # Tests that are more than a single file.

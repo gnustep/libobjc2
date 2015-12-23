@@ -136,7 +136,7 @@ set(INCLUDE_DIRECTORY "objc" CACHE STRING
 if (${CMAKE_C_COMPILER_ID} MATCHES Clang*)
 	set(CMAKE_OBJC_FLAGS "${CMAKE_OBJC_FLAGS} -Wno-deprecated-objc-isa-usage -Wno-objc-root-class")
 	if (${CMAKE_C_COMPILER_VERSION} VERSION_GREATER 3.1)
-		set(CMAKE_OBJC_FLAGS "${CMAKE_OBJC_FLAGS} -fobjc-runtime=gnustep-1.7")
+		set(CMAKE_OBJC_FLAGS "${CMAKE_OBJC_FLAGS} -fobjc-runtime=gnustep-2.0")
 	endif ()
 else (${CMAKE_C_COMPILER_ID} MATCHES Clang*)
 	MESSAGE("WARNING: It is strongly recommended that you compile with clang")

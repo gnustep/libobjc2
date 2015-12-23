@@ -521,6 +521,11 @@ void objc_registerProtocol(Protocol *proto)
 	proto->isa = ObjC2ProtocolClass;
 	protocol_table_insert((struct objc_protocol2*)proto);
 }
+PRIVATE void registerProtocol(Protocol *proto)
+{
+	LOCK_RUNTIME_FOR_SCOPE();
+	protocol_table_insert((struct objc_protocol2*)proto);
+}
 void protocol_addMethodDescription(Protocol *aProtocol,
                                    SEL name,
                                    const char *types,

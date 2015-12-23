@@ -43,15 +43,9 @@ __attribute__((weak)) void (*dispatch_end_thread_4GC)(void);
 __attribute__((weak)) void *(*_dispatch_begin_NSAutoReleasePool)(void);
 __attribute__((weak)) void (*_dispatch_end_NSAutoReleasePool)(void *);
 
-void __objc_exec_class(struct objc_module_abi_8 *module)
+static void init_runtime(void)
 {
 	static BOOL first_run = YES;
-
-	// Check that this module uses an ABI version that we recognise.  
-	// In future, we should pass the ABI version to the class / category load
-	// functions so that we can change various structures more easily.
-	assert(objc_check_abi_version(module));
-
 	if (first_run)
 	{
 #if ENABLE_GC
@@ -94,6 +88,117 @@ void __objc_exec_class(struct objc_module_abi_8 *module)
 			_dispatch_end_NSAutoReleasePool = objc_autoreleasePoolPop;
 		}
 	}
+}
+
+struct objc_init
+{
+	uint64_t version;
+	SEL sel_begin;
+	SEL sel_end;
+	Class *cls_begin;
+	Class *cls_end;
+	char **cls_ref_begin;
+	char **cls_ref_end;
+	struct objc_category *cat_begin;
+	struct objc_category *cat_end;
+	struct objc_protocol2 *proto_begin;
+	struct objc_protocol2 *proto_end;
+};
+#include <dlfcn.h>
+
+void registerProtocol(Protocol *proto);
+
+void __objc_load(struct objc_init *init)
+{
+	init_runtime();
+#ifdef DEBUG_LOADING
+	Dl_info info;
+	if (dladdr(init, &info))
+	{
+		fprintf(stderr, "Loading %p from object: %s (%p)\n", init, info.dli_fname, __builtin_return_address(0));
+	}
+	else
+	{
+		fprintf(stderr, "Loading %p from unknown object\n", init);
+	}
+#endif
+	LOCK_RUNTIME_FOR_SCOPE();
+	assert(init->version == 0);
+	assert((((uintptr_t)init->sel_end-(uintptr_t)init->sel_begin) % sizeof(*init->sel_begin)) == 0);
+	assert((((uintptr_t)init->cls_end-(uintptr_t)init->cls_begin) % sizeof(*init->cls_begin)) == 0);
+	assert((((uintptr_t)init->cat_end-(uintptr_t)init->cat_begin) % sizeof(*init->cat_begin)) == 0);
+	for (SEL sel = init->sel_begin ; sel < init->sel_end ; sel++)
+	{
+		if (sel->name == 0)
+		{
+			continue;
+		}
+		objc_register_selector(sel);
+	}
+	int i = 0;
+	for (struct objc_protocol2 *proto = init->proto_begin ; proto < init->proto_end ;
+	     proto++)
+	{
+		if (proto->name == NULL)
+		{
+			continue;
+		}
+		registerProtocol((struct objc_protocol*)proto);
+	}
+	for (Class *cls = init->cls_begin ; cls < init->cls_end ; cls++)
+	{
+		if (*cls == NULL)
+		{
+			continue;
+		}
+		objc_load_class(*cls);
+	}
+	for (char **cls = init->cls_ref_begin ; cls < init->cls_ref_end ; cls++)
+	{
+		id *out = (id*)cls;
+		if (*out == nil)
+		{
+			continue;
+		}
+		*out = objc_getClass(*cls);
+		assert(*out);
+	}
+	for (struct objc_category *cat = init->cat_begin ; cat < init->cat_end ;
+	     cat++)
+	{
+		if (cat == NULL)
+		{
+			continue;
+		}
+		objc_try_load_category(cat);
+	}
+	// Load categories and statics that were deferred.
+	objc_load_buffered_categories();
+	// Fix up the class links for loaded classes.
+	objc_resolve_class_links();
+	for (struct objc_category *cat = init->cat_begin ; cat < init->cat_end ;
+	     cat++)
+	{
+		Class class = (Class)objc_getClass(cat->class_name);
+		if ((Nil != class) && 
+		    objc_test_class_flag(class, objc_class_flag_resolved))
+		{
+			objc_send_load_message(class);
+		}
+	}
+	init->version = 0xffffffffffffffffULL;
+}
+
+void __objc_exec_class(struct objc_module_abi_8 *module)
+{
+	init_runtime();
+
+	// Check that this module uses an ABI version that we recognise.  
+	// In future, we should pass the ABI version to the class / category load
+	// functions so that we can change various structures more easily.
+	assert(objc_check_abi_version(module));
+	fprintf(stderr, "Loading %s\n", module->name);
+
 
 	// The runtime mutex is held for the entire duration of a load.  It does
 	// not need to be acquired or released in any of the called load functions.
