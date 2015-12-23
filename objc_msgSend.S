@@ -1,4 +1,5 @@
 #include "common.S"
+#include "asmconstants.h"
 #if __x86_64
 #include "objc_msgSend.x86-64.S"
 #elif __i386
