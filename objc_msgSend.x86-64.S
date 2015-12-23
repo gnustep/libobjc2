@@ -15,6 +15,8 @@
 	mov   (\receiver), %r10               # Load the dtable from the class
 1:	                                      # classLoaded
 	mov   DTABLE_OFFSET(%r10), %r10       # Load the dtable from the class into r10
+	mov   %rax, -8(%rsp)                  # %rax contains information for variadic calls
+	mov   %rbx, -16(%rsp)                 # On the fast path, spill into the red zone
 	mov   (\sel), %eax                    # Load the selector index into %eax
 	mov   SHIFT_OFFSET(%r10), %r11d       # Load the shift (dtable size) into r11
 	cmpl  $8, %r11d                       # If this is a small dtable, jump to the small dtable handlers
@@ -26,11 +28,13 @@
 	shrl  $16, %r11d
 	movq  DATA_OFFSET(%r10, %r11, 8), %r10
 2:                                        # dtable16:
-	movzbl %ah, %r11d
-	movq  DATA_OFFSET(%r10, %r11, 8), %r10
+	movzbl %ah, %ebx
+	movq  DATA_OFFSET(%r10, %rbx, 8), %r10
 3:                                       # dtable8:
-	movzbl %al, %r11d
-	movq  DATA_OFFSET(%r10, %r11, 8), %r10
+	movzbl %al, %ebx
+	mov   -8(%rsp), %rax
+	movq  DATA_OFFSET(%r10, %rbx, 8), %r10
+	mov   -16(%rsp), %rbx
 	test  %r10, %r10
 	jz    5f                             # Nil slot - invoke some kind of forwarding mechanism
 	mov   SLOT_OFFSET(%r10), %r10
@@ -180,7 +184,9 @@
 	pxor  %xmm0, %xmm0                   # Return 0 as a floating point value
 	ret
 5:                                       # slowSend:
-	push  %rcx                           # We need to preserve all registers that may contain arguments:
+	push  %rax                           # We need to preserve all registers that may contain arguments:
+	push  %rbx
+	push  %rcx
 	push  %r8
 	push  %r9
 	
@@ -209,7 +215,7 @@
 	mov   %rdx, %rsi                     # move _cmd to where the callee expects it to be
 .endif
 
-	.cfi_adjust_cfa_offset 0xc8
+	.cfi_adjust_cfa_offset 0xD8
 	call  CDECL(slowMsgLookup)           # Call the slow lookup function
 	mov   %rax, %r10                     # Load the returned IMP
 
@@ -230,13 +236,13 @@
 	pop   %r9
 	pop   %r8
 	pop   %rcx
+	pop   %rbx
+	pop   %rax
 	jmp   7b
 6:                                        # smallObject:
 	and   \receiver, %r10                 # Find the small int type
-	shll  $3, %r10d
 	lea   CDECL(SmallObjectClasses)(%rip), %r11
-	add   %r11, %r10
-	mov   (%r10), %r10
+	mov   (%r11, %r10, 8), %r10
 	jmp   1b 
 	.cfi_endproc
 .endm
