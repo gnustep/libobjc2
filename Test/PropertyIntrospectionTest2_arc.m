@@ -480,7 +480,7 @@ static void intDefault2Setter(id self, SEL _cmd, int value) {
 
 static struct YorkshireTeaStruct structDefault2Getter(id self, SEL _cmd) {
     struct YorkshireTeaStruct *s;
-    object_getInstanceVariable(self, "structDefault", &s);
+    object_getInstanceVariable(self, "structDefault", (void**)&s);
     return *s;
 }
 
