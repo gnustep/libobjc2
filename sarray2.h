@@ -70,7 +70,7 @@ typedef struct
 static inline void* SparseArrayLookup(SparseArray * sarray, uint32_t index)
 {
 	// This unrolled version of the commented-out segment below only works with
-	// sarrays that use one-byte leaves.  It's really ugly, but seems to be faster.
+	// sarrays that use one-byte leafs.  It's really ugly, but seems to be faster.
 	// With this version, we get the same performance as the old GNU code, but
 	// with about half the memory usage.
 	uint32_t i = index;
