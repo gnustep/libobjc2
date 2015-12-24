@@ -43,7 +43,7 @@ __attribute__((objc_root_class))
 	int intReadonlyGetter;
 	int intReadwrite;
 	int intAssign;
-	id idDefault;
+	__unsafe_unretained id idDefault;
 	id idRetain;
 	id idCopy;
 	__weak id idWeak;
@@ -74,7 +74,7 @@ __attribute__((objc_root_class))
 @property(getter=isIntReadOnlyGetter, readonly) int intReadonlyGetter;
 @property(readwrite) int intReadwrite;
 @property(assign) int intAssign;
-@property id idDefault;
+@property(unsafe_unretained) id idDefault;
 @property(retain) id idRetain;
 @property(copy) id idCopy;
 @property(weak) id idWeak;
@@ -129,6 +129,7 @@ __attribute__((objc_root_class))
 @synthesize idOther = _idOther;
 @dynamic idDynamic;
 @dynamic idDynamicGetterSetter;
+- (void)_ARCCompliantRetainRelease {}
 @end
 
 @protocol ProtocolTest
@@ -152,7 +153,7 @@ __attribute__((objc_root_class))
 @property(getter=isIntReadOnlyGetter, readonly) int intReadonlyGetter;
 @property(readwrite) int intReadwrite;
 @property(assign) int intAssign;
-@property id idDefault;
+@property(unsafe_unretained) id idDefault;
 @property(retain) id idRetain;
 @property(copy) id idCopy;
 @property(weak) id idWeak;
@@ -193,7 +194,7 @@ __attribute__((objc_root_class))
 	int intReadonlyGetter;
 	int intReadwrite;
 	int intAssign;
-	id idDefault;
+	__unsafe_unretained id idDefault;
 	id idRetain;
 	id idCopy;
 	__weak id idWeak;
@@ -239,6 +240,7 @@ __attribute__((objc_root_class))
 @synthesize idOther = _idOther;
 @dynamic idDynamic;
 @dynamic idDynamicGetterSetter;
+- (void)_ARCCompliantRetainRelease {}
 @end
 
 #define ATTR(n, v)  (objc_property_attribute_t){(n), (v)}
@@ -666,6 +668,7 @@ int main(void)
                                                                                                        ATTR("V", "structDefault")));
     
     PropertyTest* t = class_createInstance(testClass, 0);
+    assert(t != nil);
     object_setClass(t, testClass);
     t.intDefault = 2;
     assert(t.intDefault == 2);
