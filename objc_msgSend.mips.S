@@ -3,20 +3,10 @@
 #ifdef _ABI64
 #define LP             ld
 #define SP             sd
-#define DTABLE_OFFSET  64
-#define SMALLOBJ_MASK  7
-#define SHIFT_OFFSET   4
-#define DATA_OFFSET    16
-#define SLOT_OFFSET    32
 #else
 #warning N32 is untested, O32 is unsupported.
 #define LP             lw
 #define SP             sw
-#define DTABLE_OFFSET  32
-#define SMALLOBJ_MASK  1
-#define SHIFT_OFFSET   4
-#define DATA_OFFSET    12
-#define SLOT_OFFSET    16
 #endif
 
 .macro dump_and_crash reg
@@ -64,8 +54,8 @@ lw     $zero, ($zero)
 1:                                          # class loaded, stored in $t4
 	LP     $t4, DTABLE_OFFSET($t4)          # Load the dtable from the class
 	lw     $t6, SHIFT_OFFSET($t4)           # Load the shift (dtable size)
-                                            # $t4 = dtable, $t5 = sel index
-	LP     $t7, DATA_OFFSET($t4)            # Load the address of the start of the array
+	                                        # $t4 = dtable, $t5 = sel index
+	daddi  $t7, $t4, DATA_OFFSET            # Compute the address of the start of the array
 
 
 	beq    $0, $t6, 3f                      # If this is a small dtable, jump to the small dtable handlers
@@ -81,7 +71,7 @@ lw     $zero, ($zero)
 #endif
 	dadd   $t6, $t6, $t7
 	LP     $t7, ($t6)
-	LP     $t7, DATA_OFFSET($t7)
+	daddi  $t7, $t7, DATA_OFFSET            # Compute the address of the start of the array
 2:                                          # dtable16:
 	andi   $t6, $t5, 0xff00                 # mask the selector
 #ifdef _ABI64        
@@ -91,7 +81,7 @@ lw     $zero, ($zero)
 #endif
 	dadd   $t6, $t6, $t7
 	LP     $t7, ($t6)
-	LP     $t7, DATA_OFFSET($t7)
+	daddi  $t7, $t7, DATA_OFFSET            # Compute the address of the start of the array
 3:                                          # dtable8:
 	andi   $t6, $t5, 0xff                   # mask the selector
 #ifdef _ABI64         

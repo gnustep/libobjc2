@@ -1,8 +1,3 @@
-#define DTABLE_OFFSET  32
-#define SMALLOBJ_MASK  1
-#define SHIFT_OFFSET   4
-#define DATA_OFFSET    12
-#define SLOT_OFFSET    16
 .syntax unified
 .fpu neon
 
@@ -44,16 +39,17 @@
 	teq    r6, #0
 	beq    2f
 
-	and    r6, r5, #0xff0000
-	ldr    r4, [r4, r6, asr#14]
-	ldr    r4, [r4, #DATA_OFFSET]        
+	ubfx   r6, r5, #16, #8                // Put byte 3 of the sel id in r6
+	add    r6, r4, r6, lsl #2             // r6 = dtable address + dtable data offset
+	ldr    r4, [r6, #DATA_OFFSET]         // Load, adding in the data offset
 1:                                        // dtable16
-	and    r6, r5, #0xff00
-	ldr    r4, [r4, r6, asr#6]
-	ldr    r4, [r4, #DATA_OFFSET]        
+	ubfx   r6, r5, #8, #8                 // Put byte 2 of the sel id in r6
+	add    r6, r4, r6, lsl #2             // r6 = dtable address + dtable data offset
+	ldr    r4, [r6, #DATA_OFFSET]         // Load, adding in the data offset
 2:                                        // dtable8
-	and    r6, r5, #0xff
-	ldr    ip, [r4, r6, asl#2]
+	uxtb   r6, r5                         // Low byte of sel id into r5
+	add    r6, r4, r6, lsl #2             // r6 = dtable address + dtable data offset
+	ldr    r4, [r6, #DATA_OFFSET]         // Load, adding in the data offset
 
 	teq    ip, #0                         // If the slot is nil
 	beq    5f                             // Go to the slow path and do the forwarding stuff
