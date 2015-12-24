@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
 #include "objc/runtime.h"
 #include "class.h"
@@ -150,13 +151,24 @@ void object_setIvar(id object, Ivar ivar, id value)
 {
 	char *addr = (char*)object;
 	addr += ivar_getOffset(ivar);
+	// FIXME: ARC ownership!  We don't have enough information to do this
+	// correctly with the current ABI.  We need to fix it with the next ABI
+	// bump.
 	*(id*)addr = value;
 }
 
 Ivar object_setInstanceVariable(id obj, const char *name, void *value)
 {
 	Ivar ivar = class_getInstanceVariable(object_getClass(obj), name);
-	object_setIvar(obj, ivar, value);
+	if (ivar_getTypeEncoding(ivar)[0] == '@')
+	{
+		object_setIvar(obj, ivar, *(id*)value);
+	}
+	else
+	{
+		size_t size = objc_sizeof_type(ivar_getTypeEncoding(ivar));
+		memcpy((char*)obj + ivar_getOffset(ivar), value, size);
+	}
 	return ivar;
 }
 
@@ -170,7 +182,7 @@ Ivar object_getInstanceVariable(id obj, const char *name, void **outValue)
 	Ivar ivar = class_getInstanceVariable(object_getClass(obj), name);
 	if (NULL != outValue)
 	{
-		*outValue = object_getIvar(obj, ivar);
+		*outValue = (((char*)obj) + ivar_getOffset(ivar));
 	}
 	return ivar;
 }
