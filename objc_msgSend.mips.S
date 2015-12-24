@@ -153,7 +153,8 @@ lw     $zero, ($zero)
 	daddiu $a1, $a2, 0                      # replace self with _cmd in $a1
 .endif
 
-	.cfi_adjust_cfa_offset -SAVE_SIZE
+	.cfi_def_cfa_offset SAVE_SIZE
+	.cfi_offset 31, (64 - SAVE_SIZE)
 	jalr   $25                              # Call the slow lookup function
 	nop
 
