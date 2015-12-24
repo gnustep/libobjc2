@@ -46,12 +46,12 @@ __attribute__((objc_root_class))
 	id idDefault;
 	id idRetain;
 	id idCopy;
-	id idWeak;
+	__weak id idWeak;
 	id idStrong;
 	int intNonatomic;
 	id idReadonlyCopyNonatomic;
 	id idReadonlyRetainNonatomic;
-	id idReadonlyWeakNonatomic;
+	__weak id idReadonlyWeakNonatomic;
 	id _idOther;
 }
 @property char charDefault;
@@ -196,12 +196,12 @@ __attribute__((objc_root_class))
 	id idDefault;
 	id idRetain;
 	id idCopy;
-	id idWeak;
+	__weak id idWeak;
 	id idStrong;
 	int intNonatomic;
 	id idReadonlyCopyNonatomic;
 	id idReadonlyRetainNonatomic;
-	id idReadonlyWeakNonatomic;
+	__weak id idReadonlyWeakNonatomic;
 	id _idOther;
 }
 @end
@@ -473,17 +473,17 @@ static int intDefault2Getter(id self, SEL _cmd) {
 
 static void intDefault2Setter(id self, SEL _cmd, int value) {
     Ivar ivar = class_getInstanceVariable(objc_getClass("PropertyTest"), "intDefault");
-    object_setIvar(self, ivar, (id)(intptr_t)value);
+    object_setIvar(self, ivar, (__bridge id)(void*)(intptr_t)value);
 }
 
 static struct YorkshireTeaStruct* structDefault2Getter(id self, SEL _cmd) {
     Ivar ivar = class_getInstanceVariable(objc_getClass("PropertyTest"), "structDefault");
-    return (struct YorkshireTeaStruct*)object_getIvar(self, ivar);
+    return (__bridge struct YorkshireTeaStruct*)object_getIvar(self, ivar);
 }
 
 void structDefault2Setter(id self, SEL _cmd, struct YorkshireTeaStruct* value) {
     Ivar ivar = class_getInstanceVariable(objc_getClass("PropertyTest"), "structDefault");
-    object_setIvar(self, ivar, (id)value);
+    object_setIvar(self, ivar, (__bridge id)value);
 }
 
 int main(void)
