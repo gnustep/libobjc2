@@ -126,3 +126,9 @@ void add_method_list_to_class(Class cls,
  * Destroys a dtable.
  */
 void free_dtable(dtable_t dtable);
+
+/**
+ * Checks whether the class supports ARC.  This can be used before the dtable
+ * is installed.
+ */
+void checkARCAccessorsSlow(Class cls);

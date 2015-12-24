@@ -91,6 +91,50 @@ static void checkARCAccessors(Class cls)
 	objc_set_class_flag(cls, objc_class_flag_fast_arc);
 }
 
+PRIVATE void checkARCAccessorsSlow(Class cls)
+{
+	if (cls->dtable != uninstalled_dtable)
+	{
+		return;
+	}
+	static SEL retain, release, autorelease, isARC;
+	if (NULL == retain)
+	{
+		retain = sel_registerName("retain");
+		release = sel_registerName("release");
+		autorelease = sel_registerName("autorelease");
+		isARC = sel_registerName("_ARCCompliantRetainRelease");
+	}
+	if (cls->super_class != Nil)
+	{
+		checkARCAccessorsSlow(cls->super_class);
+	}
+	BOOL superIsFast = objc_test_class_flag(cls, objc_class_flag_fast_arc);
+	BOOL selfImplementsRetainRelease = NO;
+	for (struct objc_method_list *l=cls->methods ; l != NULL ; l= l->next)
+	{
+		for (int i=0 ; i<l->count ; i++)
+		{
+			SEL s = l->methods[i].selector;
+			if (sel_isEqual(s, retain) ||
+			    sel_isEqual(s, release) ||
+			    sel_isEqual(s, autorelease))
+			{
+				selfImplementsRetainRelease = YES;
+			}
+			else if (sel_isEqual(s, isARC))
+			{
+				objc_set_class_flag(cls, objc_class_flag_fast_arc);
+				return;
+			}
+		}
+	}
+	if (superIsFast && ! selfImplementsRetainRelease)
+	{
+		objc_set_class_flag(cls, objc_class_flag_fast_arc);
+	}
+}
+
 static void collectMethodsForMethodListToSparseArray(
 		struct objc_method_list *list,
 		SparseArray *sarray,

@@ -20,6 +20,8 @@
 - (id)self { return self; }
 @end
 @implementation Protocol2 @end
+@interface __IncompleteProtocol : Protocol2 @end
+@implementation __IncompleteProtocol @end
 
 /**
  * This class exists for the sole reason that the legacy GNU ABI did not
