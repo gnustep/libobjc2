@@ -478,14 +478,14 @@ static void intDefault2Setter(id self, SEL _cmd, int value) {
     object_setIvar(self, ivar, (__bridge id)(void*)(intptr_t)value);
 }
 
-static struct YorkshireTeaStruct* structDefault2Getter(id self, SEL _cmd) {
-    Ivar ivar = class_getInstanceVariable(objc_getClass("PropertyTest"), "structDefault");
-    return (__bridge struct YorkshireTeaStruct*)object_getIvar(self, ivar);
+static struct YorkshireTeaStruct structDefault2Getter(id self, SEL _cmd) {
+    struct YorkshireTeaStruct *s;
+    object_getInstanceVariable(self, "structDefault", &s);
+    return *s;
 }
 
-void structDefault2Setter(id self, SEL _cmd, struct YorkshireTeaStruct* value) {
-    Ivar ivar = class_getInstanceVariable(objc_getClass("PropertyTest"), "structDefault");
-    object_setIvar(self, ivar, (__bridge id)value);
+void structDefault2Setter(id self, SEL _cmd, struct YorkshireTeaStruct value) {
+    object_setInstanceVariable(self, "structDefault", &value);
 }
 
 int main(void)
