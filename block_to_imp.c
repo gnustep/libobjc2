@@ -93,7 +93,6 @@ extern char __objc_block_trampoline_end_sret;
 
 PRIVATE void init_trampolines(void)
 {
-	fprintf(stderr, "Trampoline size: %d, header size: %d\n", (int)(&__objc_block_trampoline_end - &__objc_block_trampoline), (int)sizeof(struct block_header));
 	assert(&__objc_block_trampoline_end - &__objc_block_trampoline <= sizeof(struct block_header));
 	assert(&__objc_block_trampoline_end_sret - &__objc_block_trampoline_sret <= sizeof(struct block_header));
 	INIT_LOCK(trampoline_lock);
