@@ -14,56 +14,92 @@ static long double nil_method_D(id self, SEL _cmd) { return 0; }
 static double nil_method_d(id self, SEL _cmd) { return 0; }
 static float nil_method_f(id self, SEL _cmd) { return 0; }
 
-static struct objc_slot nil_slot = { Nil, Nil, 0, 1, (IMP)nil_method };
-static struct objc_slot nil_slot_D = { Nil, Nil, 0, 1, (IMP)nil_method_D };
-static struct objc_slot nil_slot_d = { Nil, Nil, 0, 1, (IMP)nil_method_d };
-static struct objc_slot nil_slot_f = { Nil, Nil, 0, 1, (IMP)nil_method_f };
+static struct objc_slot_v1 nil_slot_v1 = { Nil, Nil, 0, 1, (IMP)nil_method };
+static struct objc_slot_v1 nil_slot_D_v1 = { Nil, Nil, 0, 1, (IMP)nil_method_D };
+static struct objc_slot_v1 nil_slot_d_v1 = { Nil, Nil, 0, 1, (IMP)nil_method_d };
+static struct objc_slot_v1 nil_slot_f_v1 = { Nil, Nil, 0, 1, (IMP)nil_method_f };
 
-typedef struct objc_slot *Slot_t;
+static struct objc_slot nil_slot = { (IMP)nil_method, 1, NULL, Nil };
+static struct objc_slot nil_slot_D = { (IMP)nil_method_D, 1, NULL, Nil };
+static struct objc_slot nil_slot_d = { (IMP)nil_method_d, 1, NULL, Nil };
+static struct objc_slot nil_slot_f = { (IMP)nil_method_f, 1, NULL, Nil };
 
-Slot_t objc_msg_lookup_sender(id *receiver, SEL selector, id sender);
+struct objc_slot* objc_slot_lookup(id *receiver, SEL selector);
 
 // Default implementations of the two new hooks.  Return NULL.
 static id objc_proxy_lookup_null(id receiver, SEL op) { return nil; }
-static Slot_t objc_msg_forward3_null(id receiver, SEL op) { return &nil_slot; }
+static struct objc_slot_v1 *objc_msg_forward3_null(id receiver, SEL op) { return &nil_slot_v1; }
 
 id (*objc_proxy_lookup)(id receiver, SEL op) = objc_proxy_lookup_null;
-Slot_t (*__objc_msg_forward3)(id receiver, SEL op) = objc_msg_forward3_null;
+struct objc_slot_v1 *(*__objc_msg_forward3)(id receiver, SEL op) = objc_msg_forward3_null;
+
+static IMP forward2(id self, SEL _cmd)
+{
+	return __objc_msg_forward3(self, _cmd)->method;
+}
+IMP (*__objc_msg_forward2)(id, SEL) = forward2;
+
+__thread struct objc_slot uncacheable_slot = { (IMP)nil_method, 0, NULL, Nil };
+__thread struct objc_slot_v1 uncacheable_slot_v1 = { Nil, Nil, 0, 0, (IMP)nil_method };
 
 #ifndef NO_SELECTOR_MISMATCH_WARNINGS
 static struct objc_slot* objc_selector_type_mismatch(Class cls, SEL
-		selector, Slot_t result)
+		selector, struct objc_slot *result)
 {
 	fprintf(stderr, "Calling [%s %c%s] with incorrect signature.  "
 			"Method has %s, selector has %s\n",
 			cls->name,
 			class_isMetaClass(cls) ? '+' : '-',
 			sel_getName(selector),
-			result->types,
+			result->method_metadata->types,
 			sel_getType_np(selector));
 	return result;
 }
 #else
 static struct objc_slot* objc_selector_type_mismatch(Class cls, SEL
-		selector, Slot_t result)
+		selector, struct objc_slot *result)
 {
 	return result;
 }
 #endif
 
-struct objc_slot* (*_objc_selector_type_mismatch)(Class cls, SEL
+struct objc_slot *(*_objc_selector_type_mismatch2)(Class cls, SEL
 		selector, struct objc_slot *result) = objc_selector_type_mismatch;
-static 
+struct objc_slot_v1 *(*_objc_selector_type_mismatch)(Class cls, SEL
+		selector, struct objc_slot_v1 *result);
+
+static struct objc_slot *call_mismatch_hook(Class cls, SEL sel, struct objc_slot *slot)
+{
+	if (_objc_selector_type_mismatch &&
+	    (!_objc_selector_type_mismatch2 ||
+	     (_objc_selector_type_mismatch2 == objc_selector_type_mismatch)))
+	{
+		struct objc_slot_v1 fwdslot;
+		fwdslot.owner = slot->owner;
+		fwdslot.types = slot->method_metadata->types;
+		fwdslot.selector = sel;
+		fwdslot.method = slot->method;
+		struct objc_slot_v1 *slot_v1 = _objc_selector_type_mismatch(cls, sel, &uncacheable_slot_v1);
+		if (slot_v1 == &fwdslot)
+		{
+			return slot;
+		}
+		uncacheable_slot.owner = slot_v1->owner;
+		uncacheable_slot.method = slot_v1->method;
+		return &uncacheable_slot;
+	}
+	return _objc_selector_type_mismatch2(cls, sel, slot);
+}
+
+static
 // Uncomment for debugging
 //__attribute__((noinline))
 __attribute__((always_inline))
-Slot_t objc_msg_lookup_internal(id *receiver,
-                                SEL selector, 
-                                id sender)
+struct objc_slot *objc_msg_lookup_internal(id *receiver, SEL selector)
 {
 retry:;
 	Class class = classForObject((*receiver));
-	Slot_t result = objc_dtable_lookup(class->dtable, selector->index);
+	struct objc_slot * result = objc_dtable_lookup(class->dtable, selector->index);
 	if (UNLIKELY(0 == result))
 	{
 		dtable_t dtable = dtable_for_class(class);
@@ -91,7 +127,7 @@ retry:;
 			}
 			if ((result = objc_dtable_lookup(dtable, get_untyped_idx(selector))))
 			{
-				return _objc_selector_type_mismatch(class, selector, result);
+				return call_mismatch_hook(class, selector, result);
 			}
 			id newReceiver = objc_proxy_lookup(*receiver, selector);
 			// If some other library wants us to play forwarding games, try
@@ -99,21 +135,23 @@ retry:;
 			if (nil != newReceiver)
 			{
 				*receiver = newReceiver;
-				return objc_msg_lookup_sender(receiver, selector, sender);
+				return objc_slot_lookup(receiver, selector);
 			}
 			if (0 == result)
 			{
-				result = __objc_msg_forward3(*receiver, selector);
+				uncacheable_slot.method = __objc_msg_forward2(*receiver, selector);
+				result = &uncacheable_slot;
 			}
 		}
 	}
 	return result;
 }
 
-PRIVATE
-IMP slowMsgLookup(id *receiver, SEL cmd)
+PRIVATE IMP slowMsgLookup(id *receiver, SEL cmd)
 {
-	return objc_msg_lookup_sender(receiver, cmd, nil)->method;
+	// By the time we've got here, the assembly version of this function has
+	// already done the nil checks.
+	return objc_msg_lookup_internal(receiver, cmd)->method;
 }
 
 PRIVATE void logInt(void *a)
@@ -121,19 +159,11 @@ PRIVATE void logInt(void *a)
 	fprintf(stderr, "Value: %p\n", a);
 }
 
-Slot_t (*objc_plane_lookup)(id *receiver, SEL op, id sender) =
-	objc_msg_lookup_internal;
-
-Slot_t objc_msg_lookup_sender_non_nil(id *receiver, SEL selector, id sender)
-{
-	return objc_msg_lookup_internal(receiver, selector, sender);
-}
-
 /**
  * New Objective-C lookup function.  This permits the lookup to modify the
- * receiver and also supports multi-dimensional dispatch based on the sender.  
+ * receiver and also supports multi-dimensional dispatch based on the sender.
  */
-Slot_t objc_msg_lookup_sender(id *receiver, SEL selector, id sender)
+struct objc_slot_v1 *objc_msg_lookup_sender(id *receiver, SEL selector, id sender)
 {
 	// Returning a nil slot allows the caller to cache the lookup for nil too,
 	// although this is not particularly useful because the nil method can be
@@ -146,7 +176,42 @@ Slot_t objc_msg_lookup_sender(id *receiver, SEL selector, id sender)
 			const char *t = selector->types;
 			// Skip type qualifiers
 			while ('r' == *t || 'n' == *t || 'N' == *t || 'o' == *t ||
-			       'O' == *t || 'R' == *t || 'V' == *t) 
+			       'O' == *t || 'R' == *t || 'V' == *t)
+			{
+				t++;
+			}
+			switch (selector->types[0])
+			{
+				case 'D': return &nil_slot_D_v1;
+				case 'd': return &nil_slot_d_v1;
+				case 'f': return &nil_slot_f_v1;
+			}
+		}
+		return &nil_slot_v1;
+	}
+
+	struct objc_slot *slot = objc_msg_lookup_internal(receiver, selector);
+	uncacheable_slot_v1.owner = slot->owner;
+	uncacheable_slot_v1.types = slot->method_metadata->types;
+	uncacheable_slot_v1.selector = selector;
+	uncacheable_slot_v1.method = slot->method;
+	return &uncacheable_slot_v1;
+}
+
+struct objc_slot* objc_slot_lookup(id *receiver, SEL selector)
+{
+	// Returning a nil slot allows the caller to cache the lookup for nil too,
+	// although this is not particularly useful because the nil method can be
+	// inlined trivially.
+	if (UNLIKELY(*receiver == nil))
+	{
+		// Return the correct kind of zero, depending on the type encoding.
+		if (selector->types)
+		{
+			const char *t = selector->types;
+			// Skip type qualifiers
+			while ('r' == *t || 'n' == *t || 'N' == *t || 'o' == *t ||
+			       'O' == *t || 'R' == *t || 'V' == *t)
 			{
 				t++;
 			}
@@ -160,40 +225,55 @@ Slot_t objc_msg_lookup_sender(id *receiver, SEL selector, id sender)
 		return &nil_slot;
 	}
 
-	/*
-	 * The self pointer is invalid in some code.  This test is disabled until
-	 * we can guarantee that it is not (e.g. with GCKit)
-	if (__builtin_expect(sender == nil
-		||
-		(sender->isa->info & (*receiver)->isa->info & _CLS_PLANE_AWARE),1))
-	*/
-	{
-		return objc_msg_lookup_internal(receiver, selector, sender);
-	}
-	// If we are in plane-aware code
-	void *senderPlaneID = *((void**)sender - 1);
-	void *receiverPlaneID = *((void**)receiver - 1);
-	if (senderPlaneID == receiverPlaneID)
-	{
-		return objc_msg_lookup_internal(receiver, selector, sender);
-	}
-	return objc_plane_lookup(receiver, selector, sender);
+	return objc_msg_lookup_internal(receiver, selector);
 }
 
-Slot_t objc_slot_lookup_super(struct objc_super *super, SEL selector)
+struct objc_slot *objc_slot_lookup_super2(struct objc_super *super, SEL selector)
 {
 	id receiver = super->receiver;
 	if (receiver)
 	{
 		Class class = super->class;
-		Slot_t result = objc_dtable_lookup(dtable_for_class(class),
+		struct objc_slot * result = objc_dtable_lookup(dtable_for_class(class),
 				selector->index);
 		if (0 == result)
 		{
 			Class class = classForObject(receiver);
-			// Dtable should always be installed in the superclass
-			// Unfortunately, some stupid code (PyObjC) decides to use this
-			// mechanism for everything 
+			// Dtable should always be installed in the superclass in
+			// Objective-C, but may not be for other languages (Python).
+			if (dtable_for_class(class) == uninstalled_dtable)
+			{
+				if (class_isMetaClass(class))
+				{
+					objc_send_initialize(receiver);
+				}
+				else
+				{
+					objc_send_initialize((id)class);
+				}
+				objc_send_initialize((id)class);
+				return objc_slot_lookup_super2(super, selector);
+			}
+			return &nil_slot;
+		}
+		return result;
+	}
+	return &nil_slot;
+}
+
+struct objc_slot_v1 *objc_slot_lookup_super(struct objc_super *super, SEL selector)
+{
+	id receiver = super->receiver;
+	if (receiver)
+	{
+		Class class = super->class;
+		struct objc_slot * result = objc_dtable_lookup(dtable_for_class(class),
+				selector->index);
+		if (0 == result)
+		{
+			Class class = classForObject(receiver);
+			// Dtable should always be installed in the superclass in
+			// Objective-C, but may not be for other languages (Python).
 			if (dtable_for_class(class) == uninstalled_dtable)
 			{
 				if (class_isMetaClass(class))
@@ -207,14 +287,15 @@ Slot_t objc_slot_lookup_super(struct objc_super *super, SEL selector)
 				objc_send_initialize((id)class);
 				return objc_slot_lookup_super(super, selector);
 			}
-			result = &nil_slot;
+			return &nil_slot_v1;
 		}
-		return result;
+		uncacheable_slot_v1.owner = result->owner;
+		uncacheable_slot_v1.types = result->method_metadata->types;
+		uncacheable_slot_v1.selector = selector;
+		uncacheable_slot_v1.method = result->method;
+		return &uncacheable_slot_v1;
 	}
-	else
-	{
-		return &nil_slot;
-	}
+	return &nil_slot_v1;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -234,7 +315,7 @@ static FILE *profileSymbols;
  */
 static FILE *profileData;
 
-struct profile_info 
+struct profile_info
 {
 	const char *module;
 	int32_t callsite;
@@ -246,7 +327,7 @@ static void profile_init(void)
 	INIT_LOCK(profileLock);
 	profileSymbols = fopen("objc_profile.symbols", "a");
 	profileData = fopen("objc_profile.data", "a");
-	// Write markers indicating a new run.  
+	// Write markers indicating a new run.
 	fprintf(profileSymbols, "=== NEW TRACE ===\n");
 	struct profile_info profile_data = { 0, 0, 0 };
 	fwrite(&profile_data, sizeof(profile_data), 1, profileData);
@@ -300,9 +381,9 @@ void objc_msg_profile(id receiver, IMP method,
 /**
  * Looks up a slot without invoking any forwarding mechanisms
  */
-Slot_t objc_get_slot(Class cls, SEL selector)
+struct objc_slot *objc_get_slot2(Class cls, SEL selector)
 {
-	Slot_t result = objc_dtable_lookup(cls->dtable, selector->index);
+	struct objc_slot * result = objc_dtable_lookup(cls->dtable, selector->index);
 	if (0 == result)
 	{
 		void *dtable = dtable_for_class(cls);
@@ -323,15 +404,29 @@ Slot_t objc_get_slot(Class cls, SEL selector)
 			if (!isSelRegistered(selector))
 			{
 				objc_register_selector(selector);
-				return objc_get_slot(cls, selector);
+				return objc_get_slot2(cls, selector);
 			}
 			if ((result = objc_dtable_lookup(dtable, get_untyped_idx(selector))))
 			{
-				return _objc_selector_type_mismatch(cls, selector, result);
+				return call_mismatch_hook(cls, selector, result);
 			}
 		}
 	}
 	return result;
+}
+
+struct objc_slot_v1 *objc_get_slot(Class cls, SEL selector)
+{
+	struct objc_slot *result = objc_get_slot2(cls, selector);
+	if (result == NULL)
+	{
+		return NULL;
+	}
+	uncacheable_slot_v1.owner = result->owner;
+	uncacheable_slot_v1.types = result->method_metadata->types;
+	uncacheable_slot_v1.selector = selector;
+	uncacheable_slot_v1.method = result->method;
+	return &uncacheable_slot_v1;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -342,13 +437,13 @@ BOOL class_respondsToSelector(Class cls, SEL selector)
 {
 	if (0 == selector || 0 == cls) { return NO; }
 
-	return NULL != objc_get_slot(cls, selector);
+	return NULL != objc_get_slot2(cls, selector);
 }
 
 IMP class_getMethodImplementation(Class cls, SEL name)
 {
 	if ((Nil == cls) || (NULL == name)) { return (IMP)0; }
-	Slot_t slot = objc_get_slot(cls, name);
+	struct objc_slot * slot = objc_get_slot2(cls, name);
 	return NULL != slot ? slot->method : __objc_msg_forward2(nil, name);
 }
 
@@ -395,15 +490,17 @@ IMP objc_msg_lookup(id receiver, SEL selector)
 	if (nil == receiver) { return (IMP)nil_method; }
 
 	id self = receiver;
-	Slot_t slot = objc_msg_lookup_internal(&self, selector, nil);
+	struct objc_slot * slot = objc_msg_lookup_internal(&self, selector);
+	// If the receiver is changed by the lookup mechanism then we have to fall
+	// back to old-style forwarding.
 	if (self != receiver)
 	{
-		slot = __objc_msg_forward3(receiver, selector);
+		return __objc_msg_forward2(receiver, selector);
 	}
 	return slot->method;
 }
 
 IMP objc_msg_lookup_super(struct objc_super *super, SEL selector)
 {
-	return objc_slot_lookup_super(super, selector)->method;
+	return objc_slot_lookup_super2(super, selector)->method;
 }

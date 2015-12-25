@@ -27,6 +27,21 @@
  */
 struct objc_slot
 {
+	/** The method pointer for this method. */
+	IMP method;
+	/** The current version.  This changes if the method changes or if a
+	 * subclass overrides this method, potentially invalidating this cache. */
+	int version;
+	/**
+	 * The method for this slot.
+	 */
+	Method method_metadata;
+	/** The class to which this slot is attached (used internally).  */
+	Class owner;
+} OBJC_NONPORTABLE;
+
+struct objc_slot_v1
+{
 	/** The class to which this slot is attached (used internally).  */
 	Class owner;
 	/** The class for which this slot was cached.  Note that this can be

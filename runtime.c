@@ -19,7 +19,6 @@
 #include <stdlib.h>
 #include <assert.h>
 
-struct objc_slot *objc_get_slot(Class cls, SEL selector);
 #define CHECK_ARG(arg) if (0 == arg) { return 0; }
 
 /**
@@ -37,7 +36,7 @@ PRIVATE void call_cxx_destruct(id obj)
 
 	while (cls)
 	{
-		struct objc_slot *slot = objc_get_slot(cls, cxx_destruct);
+		struct objc_slot *slot = objc_get_slot2(cls, cxx_destruct);
 		cls = Nil;
 		if (NULL != slot)
 		{
@@ -54,7 +53,7 @@ static void call_cxx_construct_for_class(Class cls, id obj)
 	{
 		cxx_construct = sel_registerName(".cxx_construct");
 	}
-	struct objc_slot *slot = objc_get_slot(cls, cxx_construct);
+	struct objc_slot *slot = objc_get_slot2(cls, cxx_construct);
 	if (NULL != slot)
 	{
 		cls = slot->owner->super_class;
@@ -377,21 +376,18 @@ Method class_getInstanceMethod(Class aClass, SEL aSelector)
 	if (classHasInstalledDtable(aClass))
 	{
 		// Do a dtable lookup to find out which class the method comes from.
-		struct objc_slot *slot = objc_get_slot(aClass, aSelector);
+		struct objc_slot *slot = objc_get_slot2(aClass, aSelector);
 		if (NULL == slot)
 		{
-			slot = objc_get_slot(aClass, sel_registerName(sel_getName(aSelector)));
+			slot = objc_get_slot2(aClass, sel_registerName(sel_getName(aSelector)));
 			if (NULL == slot)
 			{
 				return NULL;
 			}
 		}
 
-		// Now find the typed variant of the selector, with the correct types.
-		aSelector = slot->selector;
-
 		// Then do the slow lookup to find the method.
-		return class_getInstanceMethodNonrecursive(slot->owner, aSelector);
+		return slot->method_metadata;
 	}
 	Method m = class_getInstanceMethodNonrecursive(aClass, aSelector);
 	if (NULL != m)

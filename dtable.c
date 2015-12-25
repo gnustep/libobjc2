@@ -40,15 +40,13 @@ PRIVATE mutex_t initialize_lock;
  * 2^x in increments of 8. */
 static uint32_t dtable_depth = 8;
 
-struct objc_slot* objc_get_slot(Class cls, SEL selector);
-
 /**
  * Returns YES if the class implements a method for the specified selector, NO
  * otherwise.
  */
 static BOOL ownsMethod(Class cls, SEL sel)
 {
-	struct objc_slot *slot = objc_get_slot(cls, sel);
+	struct objc_slot *slot = objc_get_slot2(cls, sel);
 	if ((NULL != slot) && (slot->owner == cls))
 	{
 		return YES;
@@ -70,19 +68,19 @@ static void checkARCAccessors(Class cls)
 		autorelease = sel_registerName("autorelease");
 		isARC = sel_registerName("_ARCCompliantRetainRelease");
 	}
-	struct objc_slot *slot = objc_get_slot(cls, retain);
+	struct objc_slot *slot = objc_get_slot2(cls, retain);
 	if ((NULL != slot) && !ownsMethod(slot->owner, isARC))
 	{
 		objc_clear_class_flag(cls, objc_class_flag_fast_arc);
 		return;
 	}
-	slot = objc_get_slot(cls, release);
+	slot = objc_get_slot2(cls, release);
 	if ((NULL != slot) && !ownsMethod(slot->owner, isARC))
 	{
 		objc_clear_class_flag(cls, objc_class_flag_fast_arc);
 		return;
 	}
-	slot = objc_get_slot(cls, autorelease);
+	slot = objc_get_slot2(cls, autorelease);
 	if ((NULL != slot) && !ownsMethod(slot->owner, isARC))
 	{
 		objc_clear_class_flag(cls, objc_class_flag_fast_arc);

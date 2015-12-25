@@ -3,12 +3,12 @@
 #define SMALLOBJ_BITS  3
 #define SHIFT_OFFSET   0
 #define DATA_OFFSET    8
-#define SLOT_OFFSET    32
+#define SLOT_OFFSET    0
 #else
 #define DTABLE_OFFSET  32
 #define SMALLOBJ_BITS  1
 #define SHIFT_OFFSET   0
 #define DATA_OFFSET    8
-#define SLOT_OFFSET    16
+#define SLOT_OFFSET    0
 #endif
 #define SMALLOBJ_MASK  ((1<<SMALLOBJ_BITS) - 1)

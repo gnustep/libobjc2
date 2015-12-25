@@ -32,16 +32,15 @@ OBJC_HOOK void (*_objc_load_callback)(Class cls, struct objc_category *category)
  */
 extern id (*objc_proxy_lookup)(id receiver, SEL op);
 /**
- * New runtime forwarding hook.  This might be removed in future - it's
- * actually no more expressive than the forward2 hook and forces Foundation to
- * do some stuff that the runtime is better suited to.
+ * New runtime forwarding hook.  This is no longer used, but is retained to
+ * prevent errors at link time.
  */
-extern struct objc_slot *(*__objc_msg_forward3)(id, SEL);
+extern struct objc_slot_v1 *(*__objc_msg_forward3)(id, SEL) OBJC_DEPRECATED;
 /**
  * Forwarding hook.  Takes an object and a selector and returns a method that
  * handles the forwarding.
  */
-OBJC_HOOK IMP (*__objc_msg_forward2)(id, SEL);
+extern IMP (*__objc_msg_forward2)(id, SEL);
 /**
  * Hook defined for handling unhandled exceptions.  If the unwind library
  * reaches the end of the stack without finding a handler then this hook is
@@ -55,9 +54,6 @@ OBJC_HOOK void (*_objc_unexpected_exception)(id exception);
  * + (id)exceptionWithForeignException: (_Unwind_Exception*)ex;
  *
  * This will return an instance of the class that encapsulates the exception.
- *
- * Note: Due to limitations of the current ABI, there is no way for the handler
- * to 
  */
 OBJC_HOOK Class (*_objc_class_for_boxing_foreign_exception)(int64_t exceptionClass);
 
@@ -66,12 +62,18 @@ OBJC_HOOK Class (*_objc_class_for_boxing_foreign_exception)(int64_t exceptionCla
  * receiver.  This should return the slot to use instead, although it may throw
  * an exception or perform some other action.
  */
-extern struct objc_slot* (*_objc_selector_type_mismatch)(Class cls, 
+extern struct objc_slot* (*_objc_selector_type_mismatch2)(Class cls, 
        SEL selector, struct objc_slot *result);
+/**
+ * Legacy hook for when selector types do not match.  This is only called
+ * `_objc_selector_type_mismatch2` is not installed.
+ */
+OBJC_HOOK struct objc_slot_v1 *(*_objc_selector_type_mismatch)(Class cl
+       SEL selector, struct objc_slot_v1 *result);
 
 /**
  * Returns the object if it is not currently in the process of being
- * deallocated.  Returns nil otherwise.  
+ * deallocated.  Returns nil otherwise
  *
  * This hook must be set for weak references to work with automatic reference counting.
  */
