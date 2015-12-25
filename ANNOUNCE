@@ -9,6 +9,10 @@ Highlights of this release include:
 - Improved the dispatch table representation to improve performance and cache
   usage on the fast path.
 
+- The implementation of `imp_implementationWithBlock`, the function that allows
+  blocks to be used as methods, no longer requires physical pages to be mapped
+  both writeable and executable.
+
 - Numerous improvements to the interaction between runtime functions and ARC.
 
 You may obtain the code for this release from git and use the 1.x branch:
