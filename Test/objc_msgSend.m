@@ -97,58 +97,71 @@ __attribute__((objc_root_class))
 @end
 
 int forwardcalls;
-void fwd(int a0,
-         int a1,
-         int a2,
-         int a3,
-         int a4,
-         int a5,
-         int a6,
-         int a7,
-         int a8,
-         int a9,
-         int a10,
-         float f0,
-         float f1,
-         float f2,
-         float f3,
-         float f4,
-         float f5,
-         float f6,
-         float f7,
-         float f8,
-         float f9,
-         float f10)
+void fwdMany(id self,
+             SEL _cmd,
+             int a0,
+             int a1,
+             int a2,
+             int a3,
+             int a4,
+             int a5,
+             int a6,
+             int a7,
+             int a8,
+             int a9,
+             int a10,
+             float f0,
+             float f1,
+             float f2,
+             float f3,
+             float f4,
+             float f5,
+             float f6,
+             float f7,
+             float f8,
+             float f9,
+             float f10)
 {
 	forwardcalls++;
+	assert(self == objc_getClass("Test"));
+	if (sel_isEqual(_cmd, sel_registerName("manyArgs:::::::::::::::::::::")))
 	assert(a0 == 0);
-	assert(a1 == 0);
-	assert(a2 == 0);
-	assert(a3 == 0);
-	assert(a4 == 0);
-	assert(a5 == 0);
-	assert(a6 == 0);
-	assert(a7 == 0);
-	assert(a8 == 0);
-	assert(a9 == 0);
+	assert(a1 == 1);
+	assert(a2 == 2);
+	assert(a3 == 3);
+	assert(a4 == 4);
+	assert(a5 == 5);
+	assert(a6 == 6);
+	assert(a7 == 7);
+	assert(a8 == 8);
+	assert(a9 == 9);
 	assert(a10 == 10);
 	assert(f0 == 0);
-	assert(f1 == 0);
-	assert(f2 == 0);
-	assert(f3 == 0);
-	assert(f4 == 0);
-	assert(f5 == 0);
-	assert(f6 == 0);
-	assert(f7 == 0);
-	assert(f8 == 0);
-	assert(f9 == 0);
+	assert(f1 == 1);
+	assert(f2 == 2);
+	assert(f3 == 3);
+	assert(f4 == 4);
+	assert(f5 == 5);
+	assert(f6 == 6);
+	assert(f7 == 7);
+	assert(f8 == 8);
+	assert(f9 == 9);
 	assert(f10 == 10);
+}
+
+void fwd(void)
+{
+	forwardcalls++;
 }
 
 IMP forward(id o, SEL s)
 {
 	assert(o == objc_getClass("Test"));
-	return (IMP)fwd;
+	if (sel_isEqual(s, sel_registerName("missing")))
+	{
+		return (IMP)fwd;
+	}
+	return (IMP)fwdMany;
 }
 
 int main(void)
@@ -167,6 +180,7 @@ int main(void)
 	assert((id)0x42 == objc_msgSend(TestCls, @selector(foo)));
 	objc_msgSend(TestCls, @selector(nothing));
 	objc_msgSend(TestCls, @selector(missing));
+	assert(forwardcalls == 1);
 	assert(0 == objc_msgSend(0, @selector(nothing)));
 	id a = objc_msgSend(objc_getClass("Test"), @selector(foo));
 	assert((id)0x42 == a);
@@ -197,6 +211,7 @@ int main(void)
 	assert(0 == [f ldzero]);
 	assert(0 == [f fzero]);
 	[TestCls manyArgs: 0 : 1 : 2 : 3: 4: 5: 6: 7: 8: 9: 10 : 0 : 1 : 2 : 3 : 4 : 5 : 6 : 7 : 8 : 9 : 10];
+	assert(forwardcalls == 2);
 #ifdef BENCHMARK
 	const int iterations = 1000000000;
 	double times[3];
