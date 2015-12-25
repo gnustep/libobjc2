@@ -198,32 +198,35 @@ int main(void)
 	assert(0 == [f fzero]);
 	[TestCls manyArgs: 0 : 1 : 2 : 3: 4: 5: 6: 7: 8: 9: 10 : 0 : 1 : 2 : 3 : 4 : 5 : 6 : 7 : 8 : 9 : 10];
 #ifdef BENCHMARK
+	const int iterations = 1000000000;
+	double times[3];
 	clock_t c1, c2;
 	c1 = clock();
-	for (int i=0 ; i<100000000 ; i++)
+	for (int i=0 ; i<iterations ; i++)
 	{
 		[TestCls nothing];
 	}
 	c2 = clock();
-	printf("Traditional message send took %f seconds. \n", 
-		((double)c2 - (double)c1) / (double)CLOCKS_PER_SEC);
+	times[0] = ((double)c2 - (double)c1) / (double)CLOCKS_PER_SEC;
+	fprintf(stderr, "Traditional message send took %f seconds. \n", times[0]);
 	c1 = clock();
-	for (int i=0 ; i<100000000 ; i++)
+	for (int i=0 ; i<iterations ; i++)
 	{
 		objc_msgSend(TestCls, @selector(nothing));
 	}
 	c2 = clock();
-	printf("objc_msgSend() message send took %f seconds. \n", 
-		((double)c2 - (double)c1) / (double)CLOCKS_PER_SEC);
+	times[1] = ((double)c2 - (double)c1) / (double)CLOCKS_PER_SEC;
+	fprintf(stderr, "objc_msgSend() message send took %f seconds. \n", times[1]);
 	IMP nothing = objc_msg_lookup(TestCls, @selector(nothing));
 	c1 = clock();
-	for (int i=0 ; i<100000000 ; i++)
+	for (int i=0 ; i<iterations ; i++)
 	{
 		nothing(TestCls, @selector(nothing));
 	}
 	c2 = clock();
-	printf("Direct IMP call took %f seconds. \n", 
-		((double)c2 - (double)c1) / (double)CLOCKS_PER_SEC);
+	times[2] = ((double)c2 - (double)c1) / (double)CLOCKS_PER_SEC;
+	fprintf(stderr, "Direct IMP call took %f seconds. \n", times[2]);
+	printf("%f\t%f\t%f\n", times[0], times[1], times[2]);
 #endif
 	return 0;
 }
