@@ -121,7 +121,8 @@ struct objc_class
 	/**
 	* The version of the ABI used for this class.  Zero indicates the ABI first
 	* implemented by clang 1.0.  One indicates the presence of bitmaps
-	* indicating the offsets of strong, weak, and unretained ivars.
+	* indicating the offsets of strong, weak, and unretained ivars.  Two
+	* indicates that the new ivar structure is used.
 	*/
 	long                       abi_version;
 
@@ -264,6 +265,21 @@ static inline BOOL objc_test_class_flag(struct objc_class *aClass,
                                         enum objc_class_flags flag)
 {
 	return (aClass->info & (unsigned long)flag) == (unsigned long)flag;
+}
+/**
+ * Checks the version of a class.  Return values are:
+ * 0. Legacy GCC ABI compatible class.
+ * 1. First release of GNUstep ABI.
+ * 2. Second release of the GNUstep ABI, adds strong / weak ivar bitmaps.
+ * 3. Third release of the GNUstep ABI.  Many cleanups.
+ */
+static inline int objc_get_class_version(struct objc_class *aClass)
+{
+	if (!objc_test_class_flag(aClass, objc_class_flag_new_abi))
+	{
+		return 0;
+	}
+	return aClass->abi_version + 1;
 }
 
 /**

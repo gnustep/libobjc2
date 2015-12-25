@@ -142,6 +142,7 @@ BOOL class_addIvar(Class cls, const char *name, size_t size, uint8_t alignment,
 	Ivar ivar = &cls->ivars->ivar_list[cls->ivars->count - 1];
 	ivar->name = strdup(name);
 	ivar->type = strdup(types);
+	ivar->align = alignment;
 	// Round up the offset of the ivar so it is correctly aligned.
 	long offset = cls->instance_size;
 	if (alignment != 0)
@@ -724,6 +725,9 @@ Class objc_allocateClassPair(Class superclass, const char *name, size_t extraByt
 	newClass->info = objc_class_flag_class | objc_class_flag_user_created |
 		objc_class_flag_new_abi;
 	newClass->dtable = uninstalled_dtable;
+
+	newClass->abi_version = 2;
+	metaClass->abi_version = 2;
 
 	if (Nil == superclass)
 	{

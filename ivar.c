@@ -10,9 +10,18 @@
 
 ptrdiff_t objc_alignof_type(const char *);
 ptrdiff_t objc_sizeof_type(const char *);
+static struct objc_ivar_list *upgradeIvarList(Class cls, struct objc_ivar_list_legacy *l);
 
 PRIVATE void objc_compute_ivar_offsets(Class class)
 {
+	struct objc_ivar_list_legacy *legacy = NULL;
+	// If this is an old ABI class, then replace the ivar list with the new
+	// version
+	if (objc_get_class_version(class) < 3)
+	{
+		legacy = (struct objc_ivar_list_legacy *)class->ivars;
+		class->ivars = upgradeIvarList(class, legacy);
+	}
 	int i = 0;
 	/* If this class was compiled with support for late-bound ivars, the
 	* instance_size field will contain 0 - {the size of the instance variables
@@ -56,30 +65,7 @@ PRIVATE void objc_compute_ivar_offsets(Class class)
 				long ivar_size = (i+1 == class->ivars->count)
 					? (class_size - ivar->offset)
 					: ivar->offset - class->ivars->ivar_list[i+1].offset;
-#if 0
-				// We only need to do the realignment for things that are
-				// bigger than a pointer, and we don't need to do it in GC mode
-				// where we don't add any extra padding.
-				if (!isGCEnabled && (ivar_size > sizeof(void*)))
-				{
-					long fudge = (ivar_start +ivar->offset + sizeof(void*)) % 16;
-					if (fudge != 0)
-					{
-						// If this is the first ivar in the class, then
-						// we can eat some of the padding that the compiler
-						// added...
-						if ((i == 0) && (ivar->offset > 0) && ((ivar_start + sizeof(void*) %16) == 0))
-						{
-							ivar->offset = 0;
-						}
-						else
-						{
-							ivar_start += fudge;
-							class->instance_size += fudge;
-						}
-					}
-				}
-#endif
+				// FIXME: use alignment
 				ivar->offset += ivar_start;
 				/* If we're using the new ABI then we also set up the faster ivar
 				* offset variables.
@@ -88,6 +74,9 @@ PRIVATE void objc_compute_ivar_offsets(Class class)
 				{
 					*(class->ivar_offsets[i]) = ivar->offset;
 				}
+				// If we have a legacy ivar list, update the offset in it too -
+				// code from older compilers may access this directly!
+				legacy->ivar_list[i].offset = ivar->offset;
 			}
 		}
 	}
@@ -144,42 +133,42 @@ PRIVATE void objc_compute_ivar_offsets(Class class)
 	}
 }
 
-typedef enum {
-	ownership_invalid,
-	ownership_strong,
-	ownership_weak,
-	ownership_unsafe
-} ownership;
 
-ownership ownershipForIvar(Class cls, Ivar ivar)
+ivar_ownership ownershipForIvar(Class cls, int idx)
 {
-	struct objc_ivar_list *list = cls->ivars;
-	if ((ivar < list->ivar_list) || (ivar >= &list->ivar_list[list->count]))
-	{
-		// Try the superclass
-		if (cls->super_class)
-		{
-			return ownershipForIvar(cls->super_class, ivar);
-		}
-		return ownership_invalid;
-	}
-	if (!objc_test_class_flag(cls, objc_class_flag_new_abi))
+	if (objc_get_class_version(cls) < 2)
 	{
 		return ownership_unsafe;
 	}
-	if (cls->abi_version < 1)
-	{
-		return ownership_unsafe;
-	}
-	if (objc_bitfield_test(cls->strong_pointers, (ivar - list->ivar_list)))
+	if (objc_bitfield_test(cls->strong_pointers, idx))
 	{
 		return ownership_strong;
 	}
-	if (objc_bitfield_test(cls->weak_pointers, (ivar - list->ivar_list)))
+	if (objc_bitfield_test(cls->weak_pointers, idx))
 	{
 		return ownership_weak;
 	}
 	return ownership_unsafe;
+}
+
+static struct objc_ivar_list *upgradeIvarList(Class cls, struct objc_ivar_list_legacy *l)
+{
+	if (l == NULL)
+	{
+		return NULL;
+	}
+	struct objc_ivar_list *n = calloc(1, sizeof(struct objc_ivar_list) +
+			l->count*sizeof(struct objc_ivar));
+	n->count = l->count;
+	for (int i=0 ; i<l->count ; i++)
+	{
+		n->ivar_list[i].name = l->ivar_list[i].name;
+		n->ivar_list[i].type = l->ivar_list[i].type;
+		n->ivar_list[i].offset = l->ivar_list[i].offset;
+		n->ivar_list[i].align = objc_alignof_type(n->ivar_list[i].type);
+		ivarSetOwnership(&n->ivar_list[i], ownershipForIvar(cls, i));
+	}
+	return n;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -188,9 +177,8 @@ ownership ownershipForIvar(Class cls, Ivar ivar)
 
 void object_setIvar(id object, Ivar ivar, id value)
 {
-	ownershipForIvar(object_getClass(object), ivar);
 	id *addr = (id*)((char*)object + ivar_getOffset(ivar));
-	switch (ownershipForIvar(object_getClass(object), ivar))
+	switch (ivarGetOwnership(ivar))
 	{
 		case ownership_strong:
 			objc_storeStrong(addr, value);
@@ -226,9 +214,8 @@ Ivar object_setInstanceVariable(id obj, const char *name, void *value)
 
 id object_getIvar(id object, Ivar ivar)
 {
-	ownershipForIvar(object_getClass(object), ivar);
 	id *addr = (id*)((char*)object + ivar_getOffset(ivar));
-	switch (ownershipForIvar(object_getClass(object), ivar))
+	switch (ivarGetOwnership(ivar))
 	{
 		case ownership_strong:
 			return objc_retainAutoreleaseReturnValue(*addr);
