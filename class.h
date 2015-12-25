@@ -18,6 +18,24 @@ struct objc_bitfield
 	int32_t values[0];
 };
 
+static inline BOOL objc_bitfield_test(uintptr_t bitfield, uint64_t field)
+{
+	if (bitfield & 1)
+	{
+		uint64_t bit = 1<<(field+1);
+		return (bitfield & bit) == bit;
+	}
+	struct objc_bitfield *bf = (struct objc_bitfield*)bitfield;
+	uint64_t byte = field / 32;
+	if (byte >= bf->length)
+	{
+		return NO;
+	}
+	uint64_t bit = 1<<(field%32);
+	return (bf->values[byte] & bit) == bit;
+}
+
+
 struct objc_class
 {
 	/**
@@ -141,13 +159,13 @@ struct objc_class
 	 * bits are set, from low to high, for each ivar in the object that is a
 	 * strong pointer.
 	 */
-	intptr_t                   strong_pointers;
+	uintptr_t                  strong_pointers;
 	/**
 	 * The location of all zeroing weak pointer ivars declared by this class.
 	 * The format of this field is the same as the format of the
 	 * strong_pointers field.
 	 */
-	intptr_t                   weak_pointers;
+	uintptr_t                  weak_pointers;
 };
 
 /**

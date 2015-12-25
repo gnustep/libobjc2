@@ -25,6 +25,7 @@ set(TESTS
 	RuntimeTest.m
 	WeakBlock_arc.m
 	WeakReferences_arc.m
+	ivar_arc.m
 	objc_msgSend.m
 	msgInterpose.m
 	NilException.m
