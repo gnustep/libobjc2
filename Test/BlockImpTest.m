@@ -21,6 +21,7 @@ __attribute__((objc_root_class))
 +(struct big)sret;
 @end
 
+
 int main(void)
 {
 	__block int b = 0;
@@ -37,7 +38,10 @@ int main(void)
 	assert(4 == [Foo count: 2]);
 	assert(6 == [Foo count: 2]);
 	assert(imp_getBlock(imp) == (blk));
-	imp_removeBlock(blk);
+	IMP imp2 = imp_implementationWithBlock(blk);
+	assert(imp != imp2);
+	imp_removeBlock(imp);
+	assert(imp_getBlock(imp) != (blk));
 
 	blk = ^(id self) {
 		struct big b = {1, 2, 3, 4, 5};
