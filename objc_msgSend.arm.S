@@ -32,7 +32,6 @@
 	ldr    r5, [\sel]                      // selector->index -> r5
 
 	ldr    r6, [r4, #SHIFT_OFFSET]        // dtable->shift -> r6
-	ldr    r4, [r4, #DATA_OFFSET]         // dtable->data -> r4
 	
 	teq    r6, #8                         // If this is a small dtable, jump to the small dtable handlers
 	beq    1f
