@@ -167,9 +167,6 @@ IMP imp_implementationWithBlock(void *block)
 			assert(set->first_free >= -1);
 			h->fnptr = (void(*)(void))b->invoke;
 			h->block = b;
-			fprintf(stderr, "Putting block %d invoke %p (block %p) at %p (block at %p)\n", i, b->invoke, &b, &h->fnptr, &h->block);
-			fprintf(stderr, "Returning imp: %p\n", &set->buffers->rx_buffer[i*sizeof(struct block_header)]);
-
 			return (IMP)&set->buffers->rx_buffer[i*sizeof(struct block_header)];
 		}
 	}
