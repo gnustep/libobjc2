@@ -93,6 +93,12 @@
 
 	push   {\receiver}                    // &self, _cmd in arguments
 	.save  {\receiver}
+#ifndef __SOFTFP__
+	vpush  {q0-q3}
+	.pad   #64
+#endif
+
+
 	mov    r0, sp
 	mov    r1, \sel
 
@@ -100,6 +106,9 @@
 	mov    ip, r0                         // IMP -> ip
 
 	pop    {r5}                           // restore (modified) self to r5
+#ifndef __SOFTFP__
+	vpop   {q0-q3}
+#endif
 	pop    {r0-r4, lr}                    // Load clobbered registers
 	mov    \receiver, r5
 	b      3b
