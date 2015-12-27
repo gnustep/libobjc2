@@ -33,8 +33,9 @@ int main(void)
 	char *type = block_copyIMPTypeEncoding_np(blk);
 	assert(NULL != type);
 	class_addMethod((objc_getMetaClass("Foo")), @selector(count:), imp, type);
+	Class cls = objc_getClass("Foo");
+	assert(2 == ((int(*)(id,SEL,int))imp)(cls, @selector(count:), 2));
 	free(type);
-	assert(2 == [Foo count: 2]);
 	assert(4 == [Foo count: 2]);
 	assert(6 == [Foo count: 2]);
 	assert(imp_getBlock(imp) == (blk));
