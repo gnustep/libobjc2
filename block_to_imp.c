@@ -113,7 +113,7 @@ static struct trampoline_set *alloc_trampolines(char *start, char *end)
 	{
 		metadata->buffers->headers[i].fnptr = (void(*)(void))invalid;
 		metadata->buffers->headers[i].block = &metadata->buffers->headers[i+1].block;
-		char *block = metadata->buffers->rx_buffer + (i * sizeof(struct trampoline_buffers));
+		char *block = metadata->buffers->rx_buffer + (i * sizeof(struct block_header));
 		memcpy(block, start, end-start);
 	}
 	metadata->buffers->headers[HEADERS_PER_PAGE-1].block = NULL;
