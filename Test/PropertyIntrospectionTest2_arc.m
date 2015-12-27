@@ -7,7 +7,7 @@
 #pragma GCC diagnostic ignored "-Wobjc-property-no-attribute"
 
 enum FooManChu { FOO, MAN, CHU };
-struct YorkshireTeaStruct { int pot; char lady; };
+struct YorkshireTeaStruct { int pot; signed char lady; };
 typedef struct YorkshireTeaStruct YorkshireTeaStructType;
 union MoneyUnion { float alone; double down; };
 
@@ -22,7 +22,7 @@ __attribute__((objc_root_class))
 {
 @public
 	Class isa;
-	char charDefault;
+	signed char charDefault;
 	double doubleDefault;
 	enum FooManChu enumDefault;
 	float floatDefault;
@@ -54,7 +54,7 @@ __attribute__((objc_root_class))
 	__weak id idReadonlyWeakNonatomic;
 	id _idOther;
 }
-@property char charDefault;
+@property signed char charDefault;
 @property double doubleDefault;
 @property enum FooManChu enumDefault;
 @property float floatDefault;
@@ -133,7 +133,7 @@ __attribute__((objc_root_class))
 @end
 
 @protocol ProtocolTest
-@property char charDefault;
+@property signed char charDefault;
 @property double doubleDefault;
 @property enum FooManChu enumDefault;
 @property float floatDefault;
@@ -173,7 +173,7 @@ __attribute__((objc_root_class))
 @interface PropertyProtocolTest <ProtocolTest>
 {
 	Class isa;
-	char charDefault;
+	signed char charDefault;
 	double doubleDefault;
 	enum FooManChu enumDefault;
 	float floatDefault;
