@@ -164,9 +164,18 @@ IMP forward(id o, SEL s)
 	return (IMP)fwdMany;
 }
 
+static struct objc_slot slot;
+struct objc_slot *forwardslot(id o, SEL s)
+{
+	slot.method = (IMP)fwd;
+	return &slot;
+}
+
+
 int main(void)
 {
 	__objc_msg_forward2 = forward;
+	__objc_msg_forward3 = forward_slot;
 	TestCls = objc_getClass("Test");
 	int exceptionThrown = 0;
 	@try {
