@@ -48,7 +48,7 @@
 2:                                        // dtable8
 	uxtb   r6, r5                         // Low byte of sel id into r5
 	add    r6, r4, r6, lsl #2             // r6 = dtable address + dtable data offset
-	ldr    r4, [r6, #DATA_OFFSET]         // Load, adding in the data offset
+	ldr    ip, [r6, #DATA_OFFSET]         // Load, adding in the data offset
 
 	teq    ip, #0                         // If the slot is nil
 	beq    5f                             // Go to the slow path and do the forwarding stuff
