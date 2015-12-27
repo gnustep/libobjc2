@@ -89,15 +89,13 @@
 5:                                        // Slow lookup
 	push   {r0-r4, lr}                    // Save anything that will be clobbered by the call
 	.save  {r0-r4, lr}
-
-
-	push   {\receiver}                    // &self, _cmd in arguments
-	.save  {\receiver}
 #ifndef __SOFTFP__
 	vpush  {q0-q3}
 	.pad   #64
 #endif
 
+	push   {\receiver}                    // &self, _cmd in arguments
+	.save  {\receiver}
 
 	mov    r0, sp
 	mov    r1, \sel
