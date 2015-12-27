@@ -104,14 +104,14 @@ CDECL(__objc_block_trampoline_end_sret):
 CDECL(__objc_block_trampoline):
 	sub r12, pc, #4096
 	mov r1, r0                 // Move self over _cmd
-	ldr r0, [r12, #-4]         // Load the block pointer over self
-	ldr pc, [r12]              // Jump to the block function
+	ldr r0, [r12, #-8]         // Load the block pointer over self
+	ldr pc, [r12, #-4]         // Jump to the block function
 CDECL(__objc_block_trampoline_end):
 CDECL(__objc_block_trampoline_sret):
 	sub r12, pc, #4096
 	mov r2, r1                 // Move self over _cmd
-	ldr r0, [r12, #-4]         // Load the block pointer over self
-	ldr pc, [r12]              // Jump to the block function
+	ldr r1, [r12, #-8]         // Load the block pointer over self
+	ldr pc, [r12, #-4]         // Jump to the block function
 CDECL(__objc_block_trampoline_end_sret):
 #else
 #warning imp_implementationWithBlock() not implemented for your architecture
