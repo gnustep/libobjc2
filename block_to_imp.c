@@ -149,6 +149,7 @@ IMP imp_implementationWithBlock(void *block)
 	// If we don't have a trampoline intrinsic for this architecture, return a
 	// null IMP.
 	if (0 >= trampolineSize) { return 0; }
+	block = Block_copy(block);
 	// Allocate some trampolines if this is the first time that we need to do this.
 	if (*setptr == NULL)
 	{
