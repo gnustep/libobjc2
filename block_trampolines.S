@@ -15,8 +15,10 @@
 # argument (the first block argument) and the _cmd parameter excised
 
 .file	"block_trampolines.S"
-#if __arm__
+#ifdef __ARM_ARCH
+#ifdef __arm__
 .syntax unified
+#endif
 .globl CDECL(__objc_block_trampoline_sret)
 TYPE_DIRECTIVE(CDECL(__objc_block_trampoline_sret), %function)
 .globl CDECL(__objc_block_trampoline_end_sret)
@@ -100,6 +102,19 @@ CDECL(__objc_block_trampoline_sret):
 	jr     $25
 CDECL(__objc_block_trampoline_end_sret):
 #	endif
+#elif defined(__ARM_ARCH_ISA_A64)
+.macro trampoline arg0, arg1
+	adr x17, #-4096
+	mov \arg1, \arg0
+	ldp \arg0, x17, [x17]
+	br x17
+.endm
+CDECL(__objc_block_trampoline):
+	trampoline x0, x1
+CDECL(__objc_block_trampoline_end):
+CDECL(__objc_block_trampoline_sret):
+	trampoline x1, x2
+CDECL(__objc_block_trampoline_end_sret):
 #elif __arm__
 CDECL(__objc_block_trampoline):
 	sub r12, pc, #4096
