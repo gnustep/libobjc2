@@ -6,7 +6,7 @@
 #define _OBJC_MESSAGE_H_
 
 #if defined(__x86_64) || defined(__i386) || defined(__arm__) || \
-	defined(__mips_n64) || defined(__mips_n32)
+	defined(__mips_n64) || defined(__mips_n32) || defined(__ARM_ARCH_ISA_A64)
 /**
  * Standard message sending function.  This function must be cast to the
  * correct types for the function before use.  The first argument is the

@@ -6,6 +6,9 @@ libobjc2).  This runtime was designed to support the features of modern
 dialects of Objective-C for use with GNUstep and other Objective-C programs.
 Highlights of this release include:
 
+- Support for 64-bit ARM (AArch64) processors, including assembly fast paths
+  for message sending.
+
 - Improved the dispatch table representation to improve performance and cache
   usage on the fast path.
 
