@@ -165,7 +165,7 @@ IMP forward(id o, SEL s)
 }
 
 static struct objc_slot slot;
-struct objc_slot *forwardslot(id o, SEL s)
+struct objc_slot *forward_slot(id o, SEL s)
 {
 	slot.method = (IMP)fwd;
 	return &slot;
