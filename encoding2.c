@@ -236,7 +236,7 @@ static const char *sizeof_type(const char *type, size_t *size)
 		{
 			// All pointers look the same to me.
 			*size += sizeof(void*) * 8;
-			size_t ignored;
+			size_t ignored = 0;
 			// Skip the definition of the pointeee type.
 			return sizeof_type(type+1, &ignored);
 		}
@@ -329,7 +329,7 @@ static const char *alignof_type(const char *type, size_t *align)
 		{
 			*align = max((alignof(void*) * 8), *align);
 			// All pointers look the same to me.
-			size_t ignored;
+			size_t ignored = 0;
 			// Skip the definition of the pointeee type.
 			return alignof_type(type+1, &ignored);
 		}

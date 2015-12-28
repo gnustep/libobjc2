@@ -9,7 +9,6 @@
 #include <assert.h>
 #include <ctype.h>
 #include "lock.h"
-#include "sarray2.h"
 #include "objc/runtime.h"
 #include "method_list.h"
 #include "class.h"
@@ -38,9 +37,13 @@
  */
 static uint32_t selector_count = 1;
 /**
+ * Size of the buffer.
+ */
+static size_t table_size;
+/**
  * Mapping from selector numbers to selector names.
  */
-PRIVATE SparseArray *selector_list  = NULL;
+PRIVATE struct sel_type_list **selector_list  = NULL;
 
 #ifdef DEBUG_SELECTOR_TABLE
 #define DEBUG_LOG(...) fprintf(stderr, __VA_ARGS__)
@@ -50,6 +53,27 @@ PRIVATE SparseArray *selector_list  = NULL;
 
 // Get the functions for string hashing
 #include "string_hash.h"
+
+
+/**
+ * Lock protecting the selector table.
+ */
+mutex_t selector_table_lock;
+
+static inline struct sel_type_list *selLookup_locked(uint32_t idx)
+{
+	if (idx > selector_count)
+	{
+		return NULL;
+	}
+	return selector_list[idx];
+}
+
+static inline struct sel_type_list *selLookup(uint32_t idx)
+{
+	LOCK_FOR_SCOPE(&selector_table_lock);
+	return selLookup_locked(idx);
+}
 
 PRIVATE inline BOOL isSelRegistered(SEL sel)
 {
@@ -65,8 +89,7 @@ static const char *sel_getNameNonUnique(SEL sel)
 	const char *name = sel->name;
 	if (isSelRegistered(sel))
 	{
-		struct sel_type_list * list =
-			SparseArrayLookup(selector_list, sel->index);
+		struct sel_type_list * list = selLookup_locked(sel->index);
 		name = (list == NULL) ? NULL : list->value;
 	}
 	if (NULL == name)
@@ -226,16 +249,11 @@ static inline uint32_t hash_selector(const void *s)
  */
 static selector_table *sel_table;
 
-/**
- * Lock protecting the selector table.
- */
-mutex_t selector_table_lock;
-
 static int selector_name_copies;
 
 PRIVATE void log_selector_memory_usage(void)
 {
-	fprintf(stderr, "%d bytes in selector name list.\n", SparseArraySize(selector_list));
+	fprintf(stderr, "%lu bytes in selector name list.\n", (unsigned long)(table_size * sizeof(void*)));
 	fprintf(stderr, "%d bytes in selector names.\n", selector_name_copies);
 	fprintf(stderr, "%d bytes (%d entries) in selector hash table.\n", (int)(sel_table->table_size *
 	        sizeof(struct selector_table_cell_struct)), sel_table->table_size);
@@ -257,7 +275,8 @@ void objc_resize_dtables(uint32_t);
  */
 PRIVATE void init_selector_tables()
 {
-	selector_list = SparseArrayNew();
+	selector_list = calloc(sizeof(void*), 4096);
+	table_size = 4096;
 	INIT_LOCK(selector_table_lock);
 	selector_initialize(&sel_table, 4096);
 }
@@ -276,7 +295,19 @@ static inline void add_selector_to_table(SEL aSel, int32_t uid, uint32_t idx)
 	typeList->value = aSel->name;
 	typeList->next = 0;
 	// Store the name.
-	SparseArrayInsert(selector_list, idx, typeList);
+	if (idx >= table_size)
+	{
+		table_size *= 2;
+		struct sel_type_list **newList = calloc(sizeof(struct sel_type_list*), table_size);
+		if (newList == NULL)
+		{
+			abort();
+		}
+		memcpy(newList, selector_list, sizeof(void*)*(table_size/2));
+		free(selector_list);
+		selector_list = newList;
+	}
+	selector_list[idx] = typeList;
 	// Store the selector.
 	selector_insert(sel_table, aSel);
 	// Set the selector's name to the uid.
@@ -321,8 +352,7 @@ static inline void register_selector_locked(SEL aSel)
 	// Add this set of types to the list.
 	// This is quite horrible.  Most selectors will only have one type
 	// encoding, so we're wasting a lot of memory like this.
-	struct sel_type_list *typeListHead =
-		SparseArrayLookup(selector_list, untyped->index);
+	struct sel_type_list *typeListHead = selLookup_locked(untyped->index);
 	struct sel_type_list *typeList =
 		(struct sel_type_list *)selector_pool_alloc();
 	typeList->value = aSel->types;
@@ -400,8 +430,7 @@ static SEL objc_register_selector_copy(SEL aSel, BOOL copyArgs)
 
 PRIVATE uint32_t sel_nextTypeIndex(uint32_t untypedIdx, uint32_t idx)
 {
-	struct sel_type_list *list =
-		SparseArrayLookup(selector_list, untypedIdx);
+	struct sel_type_list *list = selLookup(untypedIdx);
 
 	if (NULL == list) { return 0; }
 
@@ -431,8 +460,7 @@ const char *sel_getName(SEL sel)
 	const char *name = sel->name;
 	if (isSelRegistered(sel))
 	{
-		struct sel_type_list * list =
-			SparseArrayLookup(selector_list, sel->index);
+		struct sel_type_list * list = selLookup(sel->index);
 		name = (list == NULL) ? NULL : list->value;
 	}
 	else
@@ -498,8 +526,7 @@ unsigned sel_copyTypes_np(const char *selName, const char **types, unsigned coun
 	SEL untyped = selector_lookup(selName, 0);
 	if (untyped == NULL) { return 0; }
 
-	struct sel_type_list *l =
-		SparseArrayLookup(selector_list, (uint32_t)(uintptr_t)untyped->name);
+	struct sel_type_list *l = selLookup(untyped->index);
 	// Skip the head, which just contains the name, not the types.
 	l = l->next;
 
@@ -532,8 +559,7 @@ unsigned sel_copyTypedSelectors_np(const char *selName, SEL *const sels, unsigne
 	SEL untyped = selector_lookup(selName, 0);
 	if (untyped == NULL) { return 0; }
 
-	struct sel_type_list *l =
-		SparseArrayLookup(selector_list, (uint32_t)(uintptr_t)untyped->name);
+	struct sel_type_list *l = selLookup(untyped->index);
 	// Skip the head, which just contains the name, not the types.
 	l = l->next;
 
@@ -599,8 +625,7 @@ SEL sel_get_typed_uid (const char *name, const char *types)
 	SEL sel = selector_lookup(name, types);
 	if (NULL == sel) { return sel_registerTypedName_np(name, types); }
 
-	struct sel_type_list *l =
-		SparseArrayLookup(selector_list, (uint32_t)(uintptr_t)sel->name);
+	struct sel_type_list *l = selLookup(sel->index);
 	// Skip the head, which just contains the name, not the types.
 	l = l->next;
 	if (NULL != l)
@@ -616,8 +641,7 @@ SEL sel_get_any_typed_uid (const char *name)
 	SEL sel = selector_lookup(name, 0);
 	if (NULL == sel) { return sel_registerName(name); }
 
-	struct sel_type_list *l =
-		SparseArrayLookup(selector_list, (uint32_t)(uintptr_t)sel->name);
+	struct sel_type_list *l = selLookup(sel->index);
 	// Skip the head, which just contains the name, not the types.
 	l = l->next;
 	if (NULL != l)

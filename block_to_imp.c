@@ -35,136 +35,195 @@ void __clear_cache(void* start, void* end);
 
 #define PAGE_SIZE 4096
 
-static void *executeBuffer;
-static void *writeBuffer;
-static ptrdiff_t offset;
-static mutex_t trampoline_lock;
-#ifndef SHM_ANON
-static char *tmpPattern;
-static void initTmpFile(void)
+struct block_header
 {
-	char *tmp = getenv("TMPDIR");
-	if (NULL == tmp)
-	{
-		tmp = "/tmp/";
-	}
-	if (0 > asprintf(&tmpPattern, "%s/objc_trampolinesXXXXXXXXXXX", tmp))
-	{
-		abort();
-	}
-}
-static int getAnonMemFd(void)
-{
-	const char *pattern = strdup(tmpPattern);
-	int fd = mkstemp(pattern);
-	unlink(pattern);
-	free(pattern);
-	return fd;
-}
-#else
-static void initTmpFile(void) {}
-static int getAnonMemFd(void)
-{
-	return shm_open(SHM_ANON, O_CREAT | O_RDWR, 0);
-}
+	void *block;
+	void(*fnptr)(void);
+	/**
+	 * On 64-bit platforms, we have 16 bytes for instructions, which ought to
+	 * be enough without padding.  On MIPS, we need 
+	 * Note: If we add too much padding, then we waste space but have no other
+	 * ill effects.  If we get this too small, then the assert in
+	 * `init_trampolines` will fire on library load.
+	 */
+#if defined(__i386__) || (defined(__mips__) && !defined(__mips_n64))
+	uint64_t padding[3];
+#elif defined(__mips__)
+	uint64_t padding[2];
+#elif defined(__arm__)
+	uint64_t padding;
 #endif
+};
+
+#define HEADERS_PER_PAGE (PAGE_SIZE/sizeof(struct block_header))
+
+/**
+ * Structure containing a two pages of block trampolines.  Each trampoline
+ * loads its block and target method address from the corresponding
+ * block_header (one page before the start of the block structure).
+ */
+struct trampoline_buffers
+{
+	struct block_header  headers[HEADERS_PER_PAGE];
+	char                 rx_buffer[PAGE_SIZE];
+};
+_Static_assert(__builtin_offsetof(struct trampoline_buffers, rx_buffer) == PAGE_SIZE,
+	"Incorrect offset for read-execute buffer");
+_Static_assert(sizeof(struct trampoline_buffers) == 2*PAGE_SIZE,
+	"Incorrect size for trampoline buffers");
+
+struct trampoline_set
+{
+	struct trampoline_buffers *buffers;
+	struct trampoline_set     *next;
+	int first_free;
+};
+
+static mutex_t trampoline_lock;
 
 struct wx_buffer
 {
 	void *w;
 	void *x;
 };
+extern char __objc_block_trampoline;
+extern char __objc_block_trampoline_end;
+extern char __objc_block_trampoline_sret;
+extern char __objc_block_trampoline_end_sret;
 
 PRIVATE void init_trampolines(void)
 {
+	assert(&__objc_block_trampoline_end - &__objc_block_trampoline <= sizeof(struct block_header));
+	assert(&__objc_block_trampoline_end_sret - &__objc_block_trampoline_sret <= sizeof(struct block_header));
 	INIT_LOCK(trampoline_lock);
-	initTmpFile();
 }
 
-static struct wx_buffer alloc_buffer(size_t size)
+static id invalid(id self, SEL _cmd)
 {
-	LOCK_FOR_SCOPE(&trampoline_lock);
-	if ((0 == offset) || (offset + size >= PAGE_SIZE))
-	{
-		int fd = getAnonMemFd();
-		ftruncate(fd, PAGE_SIZE);
-		void *w = mmap(NULL, PAGE_SIZE, PROT_WRITE, MAP_SHARED, fd, 0);
-		executeBuffer = mmap(NULL, PAGE_SIZE, PROT_READ|PROT_EXEC, MAP_SHARED, fd, 0);
-		*((void**)w) = writeBuffer;
-		writeBuffer = w;
-		offset = sizeof(void*);
-	}
-	struct wx_buffer b = { writeBuffer + offset, executeBuffer + offset };
-	offset += size;
-	return b;
+	fprintf(stderr, "Invalid block method called for [%s %s]\n",
+			class_getName(object_getClass(self)), sel_getName(_cmd));
+	return nil;
 }
 
-extern void __objc_block_trampoline;
-extern void __objc_block_trampoline_end;
-extern void __objc_block_trampoline_sret;
-extern void __objc_block_trampoline_end_sret;
+static struct trampoline_set *alloc_trampolines(char *start, char *end)
+{
+	struct trampoline_set *metadata = calloc(1, sizeof(struct trampoline_set));
+	metadata->buffers = valloc(sizeof(struct trampoline_buffers));
+	for (int i=0 ; i<HEADERS_PER_PAGE ; i++)
+	{
+		metadata->buffers->headers[i].fnptr = (void(*)(void))invalid;
+		metadata->buffers->headers[i].block = &metadata->buffers->headers[i+1].block;
+		char *block = metadata->buffers->rx_buffer + (i * sizeof(struct block_header));
+		memcpy(block, start, end-start);
+	}
+	metadata->buffers->headers[HEADERS_PER_PAGE-1].block = NULL;
+	mprotect(metadata->buffers->rx_buffer, PAGE_SIZE, PROT_READ | PROT_EXEC);
+	clear_cache(metadata->buffers->rx_buffer, &metadata->buffers->rx_buffer[PAGE_SIZE]);
+	return metadata;
+}
+
+static struct trampoline_set *sret_trampolines;
+static struct trampoline_set *trampolines;
 
 IMP imp_implementationWithBlock(void *block)
 {
 	struct Block_layout *b = block;
 	void *start;
 	void *end;
+	LOCK_FOR_SCOPE(&trampoline_lock);
+	struct trampoline_set **setptr;
 
 	if ((b->flags & BLOCK_USE_SRET) == BLOCK_USE_SRET)
 	{
+		setptr = &sret_trampolines;
 		start = &__objc_block_trampoline_sret;
 		end = &__objc_block_trampoline_end_sret;
 	}
 	else
 	{
+		setptr = &trampolines;
 		start = &__objc_block_trampoline;
 		end = &__objc_block_trampoline_end;
 	}
-
 	size_t trampolineSize = end - start;
 	// If we don't have a trampoline intrinsic for this architecture, return a
 	// null IMP.
 	if (0 >= trampolineSize) { return 0; }
-
-	struct wx_buffer buf = alloc_buffer(trampolineSize + 2*sizeof(void*));
-	void **out = buf.w;
-	out[0] = (void*)b->invoke;
-	out[1] = Block_copy(b);
-	memcpy(&out[2], start, trampolineSize);
-	out = buf.x;
-	char *newIMP = (char*)&out[2];
-	clear_cache(newIMP, newIMP+trampolineSize);
-	return (IMP)newIMP;
+	block = Block_copy(block);
+	// Allocate some trampolines if this is the first time that we need to do this.
+	if (*setptr == NULL)
+	{
+		*setptr = alloc_trampolines(start, end);
+	}
+	for (struct trampoline_set *set=*setptr ; set!=NULL ; set=set->next)
+	{
+		if (set->first_free != -1)
+		{
+			int i = set->first_free;
+			struct block_header *h = &set->buffers->headers[i];
+			struct block_header *next = h->block;
+			set->first_free = next ? (next - set->buffers->headers) : -1;
+			assert(set->first_free < HEADERS_PER_PAGE);
+			assert(set->first_free >= -1);
+			h->fnptr = (void(*)(void))b->invoke;
+			h->block = b;
+			return (IMP)&set->buffers->rx_buffer[i*sizeof(struct block_header)];
+		}
+	}
+	UNREACHABLE("Failed to allocate block");
 }
 
-static void* isBlockIMP(void *anIMP)
+static int indexForIMP(IMP anIMP, struct trampoline_set **setptr)
 {
-	LOCK(&trampoline_lock);
-	void *e = executeBuffer;
-	void *w = writeBuffer;
-	UNLOCK(&trampoline_lock);
-	while (e)
+	for (struct trampoline_set *set=*setptr ; set!=NULL ; set=set->next)
 	{
-		if ((anIMP > e) && (anIMP < e + PAGE_SIZE))
+		if (((char*)anIMP >= set->buffers->rx_buffer) &&
+		    ((char*)anIMP < &set->buffers->rx_buffer[PAGE_SIZE]))
 		{
-			return ((char*)w) + ((char*)anIMP - (char*)e);
+			*setptr = set;
+			ptrdiff_t offset = (char*)anIMP - set->buffers->rx_buffer;
+			return offset / sizeof(struct block_header);
 		}
-		e = *(void**)e;
-		w = *(void**)w;
 	}
-	return 0;
+	return -1;
 }
 
 void *imp_getBlock(IMP anImp)
 {
-	if (0 == isBlockIMP((void*)anImp)) { return 0; }
-	return *(((void**)anImp) - 1);
+	LOCK_FOR_SCOPE(&trampoline_lock);
+	struct trampoline_set *set = trampolines;
+	int idx = indexForIMP(anImp, &set);
+	if (idx == -1)
+	{
+		set = sret_trampolines;
+		indexForIMP(anImp, &set);
+	}
+	if (idx == -1)
+	{
+		return NULL;
+	}
+	return set->buffers->headers[idx].block;
 }
+
 BOOL imp_removeBlock(IMP anImp)
 {
-	void *w = isBlockIMP((void*)anImp);
-	if (0 == w) { return NO; }
-	Block_release(((void**)anImp) - 1);
+	LOCK_FOR_SCOPE(&trampoline_lock);
+	struct trampoline_set *set = trampolines;
+	int idx = indexForIMP(anImp, &set);
+	if (idx == -1)
+	{
+		set = sret_trampolines;
+		indexForIMP(anImp, &set);
+	}
+	if (idx == -1)
+	{
+		return NO;
+	}
+	struct block_header *h = &set->buffers->headers[idx];
+	Block_release(h->block);
+	h->fnptr = (void(*)(void))invalid;
+	h->block = set->first_free == -1 ? NULL : &set->buffers->headers[set->first_free];
+	set->first_free = h - set->buffers->headers;
 	return YES;
 }
 

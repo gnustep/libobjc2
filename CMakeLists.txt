@@ -126,7 +126,7 @@ else ()
 	add_definitions(-DNO_LEGACY)
 endif ()
 
-find_package(LLVM QUIET)
+#find_package(LLVM QUIET)
 set(DEFAULT_ENABLE_LLVM ${LLVM_FOUND})
 if (DEFAULT_ENABLE_LLVM)
 	exec_program(llvm-config

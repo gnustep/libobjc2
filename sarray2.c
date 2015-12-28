@@ -6,17 +6,12 @@
 #include "sarray2.h"
 #include "visibility.h"
 
-static void *EmptyArrayData[256];
-static SparseArray EmptyArray = { 0xff, 0, 0, (void**)&EmptyArrayData};
-static void *EmptyArrayData8[256] = { [0 ... 255] = &EmptyArray };
-static SparseArray EmptyArray8 = { 0xff00, 8, 0, (void**)&EmptyArrayData8};
-static void *EmptyArrayData16[256] = { [0 ... 255] = &EmptyArray8 };
-static SparseArray EmptyArray16 = { 0xff0000, 16, 0, (void**)&EmptyArrayData16};
-static void *EmptyArrayData24[256] = { [0 ... 255] = &EmptyArray16 };
-static SparseArray EmptyArray24 = { 0xff0000, 24, 0, (void**)&EmptyArrayData24};
+const static SparseArray EmptyArray = { 0, 0, .data[0 ... 255] = 0 };
+const static SparseArray EmptyArray8 = { 8, 0, .data[0 ... 255] = (void*)&EmptyArray};
+const static SparseArray EmptyArray16 = { 16, 0, .data[0 ... 255] = (void*)&EmptyArray8};
+const static SparseArray EmptyArray24 = { 24, 0, .data[0 ... 255] = (void*)&EmptyArray16};
 
-#define MAX_INDEX(sarray) (sarray->mask >> sarray->shift)
-#define DATA_SIZE(sarray) ((sarray->mask >> sarray->shift) + 1)
+#define MAX_INDEX(sarray) (0xff)
 
 // Tweak this value to trade speed for memory usage.  Bigger values use more
 // memory, but give faster lookups.  
@@ -29,19 +24,18 @@ void *EmptyChildForShift(uint32_t shift)
 	{
 		default: UNREACHABLE("Broken sparse array");
 		case 8:
-			return &EmptyArray;
+			return (void*)&EmptyArray;
 		case 16:
-			return &EmptyArray8;
+			return (void*)&EmptyArray8;
 		case 24:
-			return &EmptyArray16;
+			return (void*)&EmptyArray16;
 		case 32:
-			return &EmptyArray24;
+			return (void*)&EmptyArray24;
 	}
 }
 
 static void init_pointers(SparseArray * sarray)
 {
-	sarray->data = calloc(DATA_SIZE(sarray), sizeof(void*));
 	if(sarray->shift != 0)
 	{
 		void *data = EmptyChildForShift(sarray->shift);
@@ -57,7 +51,6 @@ PRIVATE SparseArray * SparseArrayNewWithDepth(uint32_t depth)
 	SparseArray * sarray = calloc(1, sizeof(SparseArray));
 	sarray->refCount = 1;
 	sarray->shift = depth-base_shift;
-	sarray->mask = base_mask << sarray->shift;
 	init_pointers(sarray);
 	return sarray;
 }
@@ -77,24 +70,17 @@ PRIVATE SparseArray *SparseArrayExpandingArray(SparseArray *sarray, uint32_t new
 	assert(sarray->refCount == 1);
 	SparseArray *new = calloc(1, sizeof(SparseArray));
 	new->refCount = 1;
-	new->shift = sarray->shift;
-	new->mask = sarray->mask;
-	void **newData = malloc(DATA_SIZE(sarray) * sizeof(void*));
-	void *data = EmptyChildForShift(new->shift + 8);
+	new->shift = sarray->shift + 8;
+	new->data[0] = sarray;
+	void *data = EmptyChildForShift(new->shift);
 	for(unsigned i=1 ; i<=MAX_INDEX(sarray) ; i++)
 	{
-		newData[i] = data;
+		new->data[i] = data;
 	}
-	new->data = sarray->data;
-	newData[0] = new;
-	sarray->data = newData;
 	// Now, any lookup in sarray for any value less than its capacity will have
 	// all non-zero values shifted away, resulting in 0.  All lookups will
 	// therefore go to the new sarray.
-	sarray->shift += base_shift;
-	// Finally, set the mask to the correct value.  Now all lookups should work.
-	sarray->mask <<= base_shift;
-	return sarray;
+	return new;
 }
 
 static void *SparseArrayFind(SparseArray * sarray, uint32_t * index)
@@ -117,7 +103,7 @@ static void *SparseArrayFind(SparseArray * sarray, uint32_t * index)
 	{
 		// If the shift is not 0, then we need to recursively look at child
 		// nodes.
-		uint32_t zeromask = ~(sarray->mask >> base_shift);
+		uint32_t zeromask = ~((0xff << sarray->shift) >> base_shift);
 		while (j<max)
 		{
 			//Look in child nodes
@@ -178,7 +164,6 @@ PRIVATE void SparseArrayInsert(SparseArray * sarray, uint32_t index, void *value
 			{
 				newsarray->shift = sarray->shift - base_shift;
 			}
-			newsarray->mask = sarray->mask >> base_shift;
 			init_pointers(newsarray);
 			sarray->data[i] = newsarray;
 			child = newsarray;
@@ -194,25 +179,28 @@ PRIVATE void SparseArrayInsert(SparseArray * sarray, uint32_t index, void *value
 	}
 	else
 	{
-		sarray->data[index & sarray->mask] = value;
+		sarray->data[MASK_INDEX(index)] = value;
 	}
 }
 
 PRIVATE SparseArray *SparseArrayCopy(SparseArray * sarray)
 {
-	SparseArray *copy = calloc(1, sizeof(SparseArray));
+	SparseArray *copy = calloc(sizeof(SparseArray), 1);
+	memcpy(copy, sarray, sizeof(SparseArray));
 	copy->refCount = 1;
-	copy->shift = sarray->shift;
-	copy->mask = sarray->mask;
-	copy->data = malloc(sizeof(void*) * DATA_SIZE(sarray));
-	memcpy(copy->data, sarray->data, sizeof(void*) * DATA_SIZE(sarray));
 	// If the sarray has children, increase their refcounts and link them
 	if (sarray->shift > 0)
 	{
 		for (unsigned int i = 0 ; i<=MAX_INDEX(sarray); i++)
 		{
 			SparseArray *child = copy->data[i];
-			__sync_fetch_and_add(&child->refCount, 1);
+			if (!(child == &EmptyArray ||
+			    child == &EmptyArray8 ||
+			    child == &EmptyArray16 ||
+			    child == &EmptyArray24))
+			{
+				__sync_fetch_and_add(&child->refCount, 1);
+			}
 			// Non-lazy copy.  Uncomment if debugging 
 			// copy->data[i] = SparseArrayCopy(copy->data[i]);
 		}
@@ -223,9 +211,10 @@ PRIVATE SparseArray *SparseArrayCopy(SparseArray * sarray)
 PRIVATE void SparseArrayDestroy(SparseArray * sarray)
 {
 	// Don't really delete this sarray if its ref count is > 0
-	if (sarray == &EmptyArray || 
-	    sarray == &EmptyArray8 || 
-	    sarray == &EmptyArray16 || 
+	if (sarray == &EmptyArray ||
+	    sarray == &EmptyArray8 ||
+	    sarray == &EmptyArray16 ||
+	    sarray == &EmptyArray24 ||
 		(__sync_sub_and_fetch(&sarray->refCount, 1) > 0))
  	{
 		return;
@@ -233,13 +222,11 @@ PRIVATE void SparseArrayDestroy(SparseArray * sarray)
 
 	if(sarray->shift > 0)
 	{
-		uint32_t max = (sarray->mask >> sarray->shift) + 1;
-		for(uint32_t i=0 ; i<max ; i++)
+		for(uint32_t i=0 ; i<data_size ; i++)
 		{
 			SparseArrayDestroy((SparseArray*)sarray->data[i]);
 		}
 	}
-	free(sarray->data);
 	free(sarray);
 }
 

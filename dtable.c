@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <errno.h>
 #include "objc/runtime.h"
 #include "objc/hooks.h"
 #include "sarray2.h"
@@ -12,7 +13,16 @@
 #include "slot_pool.h"
 #include "dtable.h"
 #include "visibility.h"
-#include "errno.h"
+#include "asmconstants.h"
+
+_Static_assert(__builtin_offsetof(struct objc_class, dtable) == DTABLE_OFFSET,
+		"Incorrect dtable offset for assembly");
+_Static_assert(__builtin_offsetof(SparseArray, shift) == SHIFT_OFFSET,
+		"Incorrect shift offset for assembly");
+_Static_assert(__builtin_offsetof(SparseArray, data) == DATA_OFFSET,
+		"Incorrect data offset for assembly");
+_Static_assert(__builtin_offsetof(struct objc_slot, method) == SLOT_OFFSET,
+		"Incorrect slot offset for assembly");
 
 PRIVATE dtable_t uninstalled_dtable;
 #if defined(WITH_TRACING) && defined (__x86_64)
@@ -79,6 +89,50 @@ static void checkARCAccessors(Class cls)
 		return;
 	}
 	objc_set_class_flag(cls, objc_class_flag_fast_arc);
+}
+
+PRIVATE void checkARCAccessorsSlow(Class cls)
+{
+	if (cls->dtable != uninstalled_dtable)
+	{
+		return;
+	}
+	static SEL retain, release, autorelease, isARC;
+	if (NULL == retain)
+	{
+		retain = sel_registerName("retain");
+		release = sel_registerName("release");
+		autorelease = sel_registerName("autorelease");
+		isARC = sel_registerName("_ARCCompliantRetainRelease");
+	}
+	if (cls->super_class != Nil)
+	{
+		checkARCAccessorsSlow(cls->super_class);
+	}
+	BOOL superIsFast = objc_test_class_flag(cls, objc_class_flag_fast_arc);
+	BOOL selfImplementsRetainRelease = NO;
+	for (struct objc_method_list *l=cls->methods ; l != NULL ; l= l->next)
+	{
+		for (int i=0 ; i<l->count ; i++)
+		{
+			SEL s = l->methods[i].selector;
+			if (sel_isEqual(s, retain) ||
+			    sel_isEqual(s, release) ||
+			    sel_isEqual(s, autorelease))
+			{
+				selfImplementsRetainRelease = YES;
+			}
+			else if (sel_isEqual(s, isARC))
+			{
+				objc_set_class_flag(cls, objc_class_flag_fast_arc);
+				return;
+			}
+		}
+	}
+	if (superIsFast && ! selfImplementsRetainRelease)
+	{
+		objc_set_class_flag(cls, objc_class_flag_fast_arc);
+	}
 }
 
 static void collectMethodsForMethodListToSparseArray(
@@ -644,23 +698,36 @@ PRIVATE void objc_resize_dtables(uint32_t newSize)
 
 	dtable_depth += 8;
 
-	uint32_t oldMask = uninstalled_dtable->mask;
+	uint32_t oldShift = uninstalled_dtable->shift;
+	dtable_t old_uninstalled_dtable = uninstalled_dtable;
 
-	SparseArrayExpandingArray(uninstalled_dtable, dtable_depth);
+	uninstalled_dtable = SparseArrayExpandingArray(uninstalled_dtable, dtable_depth);
 #if defined(WITH_TRACING) && defined (__x86_64)
 	tracing_dtable = SparseArrayExpandingArray(tracing_dtable, dtable_depth);
 #endif
+	{
+		LOCK_FOR_SCOPE(&initialize_lock);
+		for (InitializingDtable *buffer = temporary_dtables ; NULL != buffer ; buffer = buffer->next)
+		{
+			buffer->dtable = SparseArrayExpandingArray(buffer->dtable, dtable_depth);
+		}
+	}
 	// Resize all existing dtables
 	void *e = NULL;
 	struct objc_class *next;
 	while ((next = class_table_next(&e)))
 	{
-		if (next->dtable != (void*)uninstalled_dtable && 
-			NULL != next->dtable &&
-			((SparseArray*)next->dtable)->mask == oldMask)
+		if (next->dtable == old_uninstalled_dtable)
 		{
-			SparseArrayExpandingArray((void*)next->dtable, dtable_depth);
-			SparseArrayExpandingArray((void*)next->isa->dtable, dtable_depth);
+			next->dtable = uninstalled_dtable;
+			next->isa->dtable = uninstalled_dtable;
+			continue;
+		}
+		if (NULL != next->dtable &&
+		    ((SparseArray*)next->dtable)->shift == oldShift)
+		{
+			next->dtable = SparseArrayExpandingArray((void*)next->dtable, dtable_depth);
+			next->isa->dtable = SparseArrayExpandingArray((void*)next->isa->dtable, dtable_depth);
 		}
 	}
 }

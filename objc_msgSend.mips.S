@@ -3,20 +3,10 @@
 #ifdef _ABI64
 #define LP             ld
 #define SP             sd
-#define DTABLE_OFFSET  64
-#define SMALLOBJ_MASK  7
-#define SHIFT_OFFSET   4
-#define DATA_OFFSET    16
-#define SLOT_OFFSET    32
 #else
 #warning N32 is untested, O32 is unsupported.
 #define LP             lw
 #define SP             sw
-#define DTABLE_OFFSET  32
-#define SMALLOBJ_MASK  1
-#define SHIFT_OFFSET   4
-#define DATA_OFFSET    12
-#define SLOT_OFFSET    16
 #endif
 
 .macro dump_and_crash reg
@@ -51,62 +41,62 @@ lw     $zero, ($zero)
 	daddiu $t8, $t8, %lo(%neg(%gp_rel(0b)))
 
 
-	andi   $t4, \receiver, SMALLOBJ_MASK    # Check if the receiver is a small object
-	bne    $t4, $0, 6f                      # Get the small object class
+	andi   $t0, \receiver, SMALLOBJ_MASK    # Check if the receiver is a small object
+	bne    $t0, $0, 6f                      # Get the small object class
 	nop
 
-	LP     $t5, (\sel)
+	LP     $t1, (\sel)
 
 	                                        # By this point, we have a non-nil
 	                                        # receiver that is a real pointer
-	LP     $t4, (\receiver)                 # Load the class
+	LP     $t0, (\receiver)                 # Load the class
 
-1:                                          # class loaded, stored in $t4
-	LP     $t4, DTABLE_OFFSET($t4)          # Load the dtable from the class
-	lw     $t6, SHIFT_OFFSET($t4)           # Load the shift (dtable size)
-                                            # $t4 = dtable, $t5 = sel index
-	LP     $t7, DATA_OFFSET($t4)            # Load the address of the start of the array
+1:                                          # class loaded, stored in $t0
+	LP     $t0, DTABLE_OFFSET($t0)          # Load the dtable from the class
+	lw     $t2, SHIFT_OFFSET($t0)           # Load the shift (dtable size)
+	                                        # $t0 = dtable, $t1 = sel index
+	daddi  $t3, $t0, DATA_OFFSET            # Compute the address of the start of the array
 
 
-	beq    $0, $t6, 3f                      # If this is a small dtable, jump to the small dtable handlers
-	daddi  $v0, $t6, -8
+	beq    $0, $t2, 3f                      # If this is a small dtable, jump to the small dtable handlers
+	daddi  $v0, $t2, -8
 
 	beq    $0, $v0, 2f
-	lui    $t6, 0x00ff                      # The mask for a big dtable won't fit in an and immediate
-	and    $t6, $t6, $t5                    # mask the selector
+	lui    $t2, 0x00ff                      # The mask for a big dtable won't fit in an and immediate
+	and    $t2, $t2, $t1                    # mask the selector
 #ifdef _ABI64         
-	dsrl   $t6, $t6, 13                     # Right shift 16, but then left shift by pointer size
+	dsrl   $t2, $t2, 13                     # Right shift 16, but then left shift by pointer size
 #else
-	srl    $t6, $t6, 14
+	srl    $t2, $t2, 14
 #endif
-	dadd   $t6, $t6, $t7
-	LP     $t7, ($t6)
-	LP     $t7, DATA_OFFSET($t7)
+	dadd   $t2, $t2, $t3
+	LP     $t3, ($t2)
+	daddi  $t3, $t3, DATA_OFFSET            # Compute the address of the start of the array
 2:                                          # dtable16:
-	andi   $t6, $t5, 0xff00                 # mask the selector
+	andi   $t2, $t1, 0xff00                 # mask the selector
 #ifdef _ABI64        
-	dsrl   $t6, $t6, 5                      # Right shift 8, but then left shift by pointer size
+	dsrl   $t2, $t2, 5                      # Right shift 8, but then left shift by pointer size
 #else
-	srl    $t6, $t6, 6
+	srl    $t2, $t2, 6
 #endif
-	dadd   $t6, $t6, $t7
-	LP     $t7, ($t6)
-	LP     $t7, DATA_OFFSET($t7)
+	dadd   $t2, $t2, $t3
+	LP     $t3, ($t2)
+	daddi  $t3, $t3, DATA_OFFSET            # Compute the address of the start of the array
 3:                                          # dtable8:
-	andi   $t6, $t5, 0xff                   # mask the selector
+	andi   $t2, $t1, 0xff                   # mask the selector
 #ifdef _ABI64         
-	dsll   $t6, $t6, 3                      # Left shift by pointer size
+	dsll   $t2, $t2, 3                      # Left shift by pointer size
 #else
-	sll    $t6, $t6, 2
+	sll    $t2, $t2, 2
 #endif
-	dadd   $t6, $t6, $t7
-	LP     $t7, ($t6)
+	dadd   $t2, $t2, $t3
+	LP     $t3, ($t2)
 
 	
-	beq    $0, $t7, 5f                      # Nil slot - invoke some kind of forwarding mechanism
+	beq    $0, $t3, 5f                      # Nil slot - invoke some kind of forwarding mechanism
 	nop
 
-	LP     $25, SLOT_OFFSET($t7)
+	LP     $25, SLOT_OFFSET($t3)
 	jr     $25
 	nop
 4:                                          # returnNil:
@@ -163,7 +153,8 @@ lw     $zero, ($zero)
 	daddiu $a1, $a2, 0                      # replace self with _cmd in $a1
 .endif
 
-	.cfi_adjust_cfa_offset -SAVE_SIZE
+	.cfi_def_cfa_offset SAVE_SIZE
+	.cfi_offset 31, (64 - SAVE_SIZE)
 	jalr   $25                              # Call the slow lookup function
 	nop
 
@@ -192,14 +183,14 @@ lw     $zero, ($zero)
 	daddiu $sp, $sp, SAVE_SIZE                 
 6:                                          # smallObject:
 #if _ABI64
-	dsll   $t4, $t4, 3                      # Convert tag to pointer offset
-	LP     $t6, %got_disp(CDECL(SmallObjectClasses))($t8) # Load small object classes array address
-	daddu  $t4, $t4, $t6                    # Add the base address to the offset
+	dsll   $t0, $t0, 3                      # Convert tag to pointer offset
+	LP     $t2, %got_disp(CDECL(SmallObjectClasses))($t8) # Load small object classes array address
+	daddu  $t0, $t0, $t2                    # Add the base address to the offset
 	b      1b                               # Return to the normal path
-	LP     $t4, ($t4)                       # Load the class (in delay slot)
+	LP     $t0, ($t0)                       # Load the class (in delay slot)
 #else
 	b      1b
-	LP     $t4, %got_disp(CDECL(SmallIntClass))($t8)
+	LP     $t0, %got_disp(CDECL(SmallIntClass))($t8)
 #endif
 	.cfi_endproc
 .endm

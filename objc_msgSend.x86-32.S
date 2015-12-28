@@ -1,8 +1,3 @@
-#define DTABLE_OFFSET  32
-#define SMALLOBJ_MASK  1
-#define SHIFT_OFFSET   4
-#define DATA_OFFSET    12
-#define SLOT_OFFSET    16
 .macro MSGSEND receiver, sel, fpret
 	.cfi_startproc                        
 	movl  \receiver(%esp), %eax
@@ -24,30 +19,20 @@
 	                                      # %edx: selector index fragment
 
 	mov   SHIFT_OFFSET(%eax), %edx        # Load the shift (dtable size)
-	mov   DATA_OFFSET(%eax), %eax         # load the address of the start of the array
 	cmpl  $8, %edx                        # If this is a small dtable, jump to the small dtable handlers
 	je    2f 
 	cmpl  $0, %edx 
 	je    3f 
 
 	mov   %ecx, %edx
-	and   $0xff0000, %edx
-	shrl  $14, %edx                       # Right shift 16, but then left shift by 2 (* sizeof(void*))
-	add   %edx, %eax
-	mov   (%eax), %eax
-	mov   DATA_OFFSET(%eax), %eax
+	shrl  $16, %edx
+	movl  DATA_OFFSET(%eax, %edx, 4), %eax
 2:                                        # dtable16:
-	mov   %ecx, %edx
-	and   $0xff00, %edx
-	shrl  $6, %edx
-	add   %edx, %eax
-	mov   (%eax), %eax
-	mov   DATA_OFFSET(%eax), %eax
+	movzbl %ch, %edx
+	movl  DATA_OFFSET(%eax, %edx, 4), %eax
 3:                                        # dtable8:
-	and   $0xff, %ecx
-	shll  $2, %ecx
-	add   %ecx, %eax
-	mov   (%eax), %eax
+	movzbl %cl, %edx
+	movl  DATA_OFFSET(%eax, %edx, 4), %eax
 
 	test  %eax, %eax
 	jz    5f                             # Nil slot - invoke some kind of forwarding mechanism

@@ -13,6 +13,17 @@
 #include <stdlib.h>
 #include "visibility.h"
 
+
+/**
+ * The size of the data array.  The sparse array is a tree with this many
+ * children at each node depth.
+ */
+static const uint32_t data_size = 256;
+/**
+ * The mask used to access the elements in the data array in a sparse array
+ * node.
+ */
+static const uint32_t data_mask = data_size - 1;
 /**
  * Sparse arrays, used to implement dispatch tables.  Current implementation is
  * quite RAM-intensive and could be optimised.  Maps 32-bit integers to pointers.
@@ -25,11 +36,6 @@
  */
 typedef struct 
 {
-	/**
-	 * Mask value applied to the index when generating an index in this
-	 * sub-array.
-	 */
-	uint32_t mask;
 	/**
 	 * Number of bits that the masked value should be right shifted by to get
 	 * the index in the subarray.  If this value is greater than zero, then the
@@ -46,14 +52,14 @@ typedef struct
 	/**
 	 * The data stored in this sparse array node.
 	 */
-	void ** data;
+	void *data[data_size];
 } SparseArray;
 
 /**
  * Turn an index in the array into an index in the current depth.
  */
 #define MASK_INDEX(index) \
-	((index & sarray->mask) >> sarray->shift)
+	((index >> sarray->shift) & 0xff)
 
 #define SARRAY_EMPTY ((void*)0)
 /**
@@ -64,7 +70,7 @@ typedef struct
 static inline void* SparseArrayLookup(SparseArray * sarray, uint32_t index)
 {
 	// This unrolled version of the commented-out segment below only works with
-	// sarrays that use one-byte leaves.  It's really ugly, but seems to be faster.
+	// sarrays that use one-byte leafs.  It's really ugly, but seems to be faster.
 	// With this version, we get the same performance as the old GNU code, but
 	// with about half the memory usage.
 	uint32_t i = index;

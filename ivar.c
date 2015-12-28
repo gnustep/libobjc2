@@ -1,6 +1,8 @@
 #include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
 #include "objc/runtime.h"
+#include "objc/objc-arc.h"
 #include "class.h"
 #include "ivar.h"
 #include "visibility.h"
@@ -142,27 +144,105 @@ PRIVATE void objc_compute_ivar_offsets(Class class)
 	}
 }
 
+typedef enum {
+	ownership_invalid,
+	ownership_strong,
+	ownership_weak,
+	ownership_unsafe
+} ownership;
+
+ownership ownershipForIvar(Class cls, Ivar ivar)
+{
+	struct objc_ivar_list *list = cls->ivars;
+	if ((ivar < list->ivar_list) || (ivar >= &list->ivar_list[list->count]))
+	{
+		// Try the superclass
+		if (cls->super_class)
+		{
+			return ownershipForIvar(cls->super_class, ivar);
+		}
+		return ownership_invalid;
+	}
+	if (!objc_test_class_flag(cls, objc_class_flag_new_abi))
+	{
+		return ownership_unsafe;
+	}
+	if (cls->abi_version < 1)
+	{
+		return ownership_unsafe;
+	}
+	if (objc_bitfield_test(cls->strong_pointers, (ivar - list->ivar_list)))
+	{
+		return ownership_strong;
+	}
+	if (objc_bitfield_test(cls->weak_pointers, (ivar - list->ivar_list)))
+	{
+		return ownership_weak;
+	}
+	return ownership_unsafe;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // Public API functions
 ////////////////////////////////////////////////////////////////////////////////
 
 void object_setIvar(id object, Ivar ivar, id value)
 {
-	char *addr = (char*)object;
-	addr += ivar_getOffset(ivar);
-	*(id*)addr = value;
+	ownershipForIvar(object_getClass(object), ivar);
+	id *addr = (id*)((char*)object + ivar_getOffset(ivar));
+	switch (ownershipForIvar(object_getClass(object), ivar))
+	{
+		case ownership_strong:
+			objc_storeStrong(addr, value);
+			break;
+		case ownership_weak:
+			objc_storeWeak(addr, value);
+			break;
+		case ownership_unsafe:
+			*addr = value;
+			break;
+		case ownership_invalid:
+#ifndef NDEBUG
+			fprintf(stderr, "Ivar does not belong to this class!\n");
+#endif
+			break;
+	}
 }
 
 Ivar object_setInstanceVariable(id obj, const char *name, void *value)
 {
 	Ivar ivar = class_getInstanceVariable(object_getClass(obj), name);
-	object_setIvar(obj, ivar, value);
+	if (ivar_getTypeEncoding(ivar)[0] == '@')
+	{
+		object_setIvar(obj, ivar, *(id*)value);
+	}
+	else
+	{
+		size_t size = objc_sizeof_type(ivar_getTypeEncoding(ivar));
+		memcpy((char*)obj + ivar_getOffset(ivar), value, size);
+	}
 	return ivar;
 }
 
 id object_getIvar(id object, Ivar ivar)
 {
-	return *(id*)(((char*)object) + ivar_getOffset(ivar));
+	ownershipForIvar(object_getClass(object), ivar);
+	id *addr = (id*)((char*)object + ivar_getOffset(ivar));
+	switch (ownershipForIvar(object_getClass(object), ivar))
+	{
+		case ownership_strong:
+			return objc_retainAutoreleaseReturnValue(*addr);
+		case ownership_weak:
+			return objc_loadWeak(addr);
+			break;
+		case ownership_unsafe:
+			return *addr;
+		case ownership_invalid:
+#ifndef NDEBUG
+			fprintf(stderr, "Ivar does not belong to this class!\n");
+#endif
+		return nil;
+	}
 }
 
 Ivar object_getInstanceVariable(id obj, const char *name, void **outValue)
@@ -170,7 +250,7 @@ Ivar object_getInstanceVariable(id obj, const char *name, void **outValue)
 	Ivar ivar = class_getInstanceVariable(object_getClass(obj), name);
 	if (NULL != outValue)
 	{
-		*outValue = object_getIvar(obj, ivar);
+		*outValue = (((char*)obj) + ivar_getOffset(ivar));
 	}
 	return ivar;
 }

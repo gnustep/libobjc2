@@ -21,6 +21,7 @@ __attribute__((objc_root_class))
 +(struct big)sret;
 @end
 
+
 int main(void)
 {
 	__block int b = 0;
@@ -32,12 +33,16 @@ int main(void)
 	char *type = block_copyIMPTypeEncoding_np(blk);
 	assert(NULL != type);
 	class_addMethod((objc_getMetaClass("Foo")), @selector(count:), imp, type);
+	Class cls = objc_getClass("Foo");
+	assert(2 == ((int(*)(id,SEL,int))imp)(cls, @selector(count:), 2));
 	free(type);
-	assert(2 == [Foo count: 2]);
 	assert(4 == [Foo count: 2]);
 	assert(6 == [Foo count: 2]);
 	assert(imp_getBlock(imp) == (blk));
-	imp_removeBlock(blk);
+	IMP imp2 = imp_implementationWithBlock(blk);
+	assert(imp != imp2);
+	imp_removeBlock(imp);
+	assert(imp_getBlock(imp) != (blk));
 
 	blk = ^(id self) {
 		struct big b = {1, 2, 3, 4, 5};

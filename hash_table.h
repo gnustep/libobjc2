@@ -288,7 +288,7 @@ static int PREFIX(_insert)(PREFIX(_table) *table,
 		return 1;
 	}
 	/* If this cell is full, try the next one. */
-	for (unsigned int i=0 ; i<32 ; i++)
+	for (unsigned int i=1 ; i<33 ; i++)
 	{
 		PREFIX(_table_cell) second = 
 			PREFIX(_table_lookup)(table, hash+i);
@@ -374,7 +374,7 @@ static void PREFIX(_table_move_second)(PREFIX(_table) *table,
 	// Look at each offset defined by the jump table to find the displaced location.
 	int hop = __builtin_ffs(jump);
 	PREFIX(_table_cell) hopCell = 
-		PREFIX(_table_lookup)(table, MAP_TABLE_HASH_VALUE(emptyCell->value) + hop);
+		PREFIX(_table_lookup)(table, (emptyCell - table->table) + hop);
 	emptyCell->value = hopCell->value;
 	emptyCell->secondMaps &= ~(1 << (hop-1));
 	if (0 == hopCell->secondMaps)

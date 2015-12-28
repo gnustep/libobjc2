@@ -45,6 +45,17 @@ struct objc_protocol2 *protocol_for_name(const char *name)
 
 static id ObjC2ProtocolClass = 0;
 
+static id incompleteProtocolClass(void)
+{
+	static id IncompleteProtocolClass = 0;
+	if (IncompleteProtocolClass == nil)
+	{
+		IncompleteProtocolClass = objc_getClass("__IncompleteProtocol");
+	}
+	return IncompleteProtocolClass;
+}
+
+
 static int isEmptyProtocol(struct objc_protocol2 *aProto)
 {
 	int isEmpty =
@@ -497,7 +508,7 @@ Protocol*__unsafe_unretained* objc_copyProtocolList(unsigned int *outCount)
 Protocol *objc_allocateProtocol(const char *name)
 {
 	if (objc_getProtocol(name) != NULL) { return NULL; }
-	Protocol *p = calloc(1, sizeof(Protocol2));
+	Protocol *p = (Protocol*)class_createInstance((Class)incompleteProtocolClass(), 0);
 	p->name = strdup(name);
 	return p;
 }
@@ -506,7 +517,7 @@ void objc_registerProtocol(Protocol *proto)
 	if (NULL == proto) { return; }
 	LOCK_RUNTIME_FOR_SCOPE();
 	if (objc_getProtocol(proto->name) != NULL) { return; }
-	if (nil != proto->isa) { return; }
+	if (incompleteProtocolClass() != proto->isa) { return; }
 	proto->isa = ObjC2ProtocolClass;
 	protocol_table_insert((struct objc_protocol2*)proto);
 }
@@ -517,7 +528,7 @@ void protocol_addMethodDescription(Protocol *aProtocol,
                                    BOOL isInstanceMethod)
 {
 	if ((NULL == aProtocol) || (NULL == name) || (NULL == types)) { return; }
-	if (nil != aProtocol->isa) { return; }
+	if (incompleteProtocolClass() != aProtocol->isa) { return; }
 	Protocol2 *proto = (Protocol2*)aProtocol;
 	struct objc_method_description_list **listPtr;
 	if (isInstanceMethod)
@@ -561,6 +572,7 @@ void protocol_addMethodDescription(Protocol *aProtocol,
 void protocol_addProtocol(Protocol *aProtocol, Protocol *addition)
 {
 	if ((NULL == aProtocol) || (NULL == addition)) { return; }
+	if (incompleteProtocolClass() != aProtocol->isa) { return; }
 	Protocol2 *proto = (Protocol2*)aProtocol;
 	if (NULL == proto->protocol_list)
 	{
@@ -584,7 +596,7 @@ void protocol_addProperty(Protocol *aProtocol,
                           BOOL isInstanceProperty)
 {
 	if ((NULL == aProtocol) || (NULL == name)) { return; }
-	if (nil != aProtocol->isa) { return; }
+	if (incompleteProtocolClass() != aProtocol->isa) { return; }
 	if (!isInstanceProperty) { return; }
 	Protocol2 *proto = (Protocol2*)aProtocol;
 	struct objc_property_list **listPtr;

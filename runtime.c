@@ -348,6 +348,7 @@ id class_createInstance(Class cls, size_t extraBytes)
 	if (Nil == cls)	{ return nil; }
 	id obj = gc->allocate_class(cls, extraBytes);
 	obj->isa = cls;
+	checkARCAccessorsSlow(cls);
 	call_cxx_construct(obj);
 	return obj;
 }

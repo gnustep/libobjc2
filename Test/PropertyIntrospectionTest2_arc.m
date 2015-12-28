@@ -7,7 +7,7 @@
 #pragma GCC diagnostic ignored "-Wobjc-property-no-attribute"
 
 enum FooManChu { FOO, MAN, CHU };
-struct YorkshireTeaStruct { int pot; char lady; };
+struct YorkshireTeaStruct { int pot; signed char lady; };
 typedef struct YorkshireTeaStruct YorkshireTeaStructType;
 union MoneyUnion { float alone; double down; };
 
@@ -22,7 +22,7 @@ __attribute__((objc_root_class))
 {
 @public
 	Class isa;
-	char charDefault;
+	signed char charDefault;
 	double doubleDefault;
 	enum FooManChu enumDefault;
 	float floatDefault;
@@ -43,18 +43,18 @@ __attribute__((objc_root_class))
 	int intReadonlyGetter;
 	int intReadwrite;
 	int intAssign;
-	id idDefault;
+	__unsafe_unretained id idDefault;
 	id idRetain;
 	id idCopy;
-	id idWeak;
+	__weak id idWeak;
 	id idStrong;
 	int intNonatomic;
 	id idReadonlyCopyNonatomic;
 	id idReadonlyRetainNonatomic;
-	id idReadonlyWeakNonatomic;
+	__weak id idReadonlyWeakNonatomic;
 	id _idOther;
 }
-@property char charDefault;
+@property signed char charDefault;
 @property double doubleDefault;
 @property enum FooManChu enumDefault;
 @property float floatDefault;
@@ -74,7 +74,7 @@ __attribute__((objc_root_class))
 @property(getter=isIntReadOnlyGetter, readonly) int intReadonlyGetter;
 @property(readwrite) int intReadwrite;
 @property(assign) int intAssign;
-@property id idDefault;
+@property(unsafe_unretained) id idDefault;
 @property(retain) id idRetain;
 @property(copy) id idCopy;
 @property(weak) id idWeak;
@@ -129,10 +129,11 @@ __attribute__((objc_root_class))
 @synthesize idOther = _idOther;
 @dynamic idDynamic;
 @dynamic idDynamicGetterSetter;
+- (void)_ARCCompliantRetainRelease {}
 @end
 
 @protocol ProtocolTest
-@property char charDefault;
+@property signed char charDefault;
 @property double doubleDefault;
 @property enum FooManChu enumDefault;
 @property float floatDefault;
@@ -152,7 +153,7 @@ __attribute__((objc_root_class))
 @property(getter=isIntReadOnlyGetter, readonly) int intReadonlyGetter;
 @property(readwrite) int intReadwrite;
 @property(assign) int intAssign;
-@property id idDefault;
+@property(unsafe_unretained) id idDefault;
 @property(retain) id idRetain;
 @property(copy) id idCopy;
 @property(weak) id idWeak;
@@ -172,7 +173,7 @@ __attribute__((objc_root_class))
 @interface PropertyProtocolTest <ProtocolTest>
 {
 	Class isa;
-	char charDefault;
+	signed char charDefault;
 	double doubleDefault;
 	enum FooManChu enumDefault;
 	float floatDefault;
@@ -193,15 +194,15 @@ __attribute__((objc_root_class))
 	int intReadonlyGetter;
 	int intReadwrite;
 	int intAssign;
-	id idDefault;
+	__unsafe_unretained id idDefault;
 	id idRetain;
 	id idCopy;
-	id idWeak;
+	__weak id idWeak;
 	id idStrong;
 	int intNonatomic;
 	id idReadonlyCopyNonatomic;
 	id idReadonlyRetainNonatomic;
-	id idReadonlyWeakNonatomic;
+	__weak id idReadonlyWeakNonatomic;
 	id _idOther;
 }
 @end
@@ -239,6 +240,7 @@ __attribute__((objc_root_class))
 @synthesize idOther = _idOther;
 @dynamic idDynamic;
 @dynamic idDynamicGetterSetter;
+- (void)_ARCCompliantRetainRelease {}
 @end
 
 #define ATTR(n, v)  (objc_property_attribute_t){(n), (v)}
@@ -473,17 +475,17 @@ static int intDefault2Getter(id self, SEL _cmd) {
 
 static void intDefault2Setter(id self, SEL _cmd, int value) {
     Ivar ivar = class_getInstanceVariable(objc_getClass("PropertyTest"), "intDefault");
-    object_setIvar(self, ivar, (id)(intptr_t)value);
+    object_setIvar(self, ivar, (__bridge id)(void*)(intptr_t)value);
 }
 
-static struct YorkshireTeaStruct* structDefault2Getter(id self, SEL _cmd) {
-    Ivar ivar = class_getInstanceVariable(objc_getClass("PropertyTest"), "structDefault");
-    return (struct YorkshireTeaStruct*)object_getIvar(self, ivar);
+static struct YorkshireTeaStruct structDefault2Getter(id self, SEL _cmd) {
+    struct YorkshireTeaStruct *s;
+    object_getInstanceVariable(self, "structDefault", (void**)&s);
+    return *s;
 }
 
-void structDefault2Setter(id self, SEL _cmd, struct YorkshireTeaStruct* value) {
-    Ivar ivar = class_getInstanceVariable(objc_getClass("PropertyTest"), "structDefault");
-    object_setIvar(self, ivar, (id)value);
+void structDefault2Setter(id self, SEL _cmd, struct YorkshireTeaStruct value) {
+    object_setInstanceVariable(self, "structDefault", &value);
 }
 
 int main(void)
@@ -666,6 +668,7 @@ int main(void)
                                                                                                        ATTR("V", "structDefault")));
     
     PropertyTest* t = class_createInstance(testClass, 0);
+    assert(t != nil);
     object_setClass(t, testClass);
     t.intDefault = 2;
     assert(t.intDefault == 2);

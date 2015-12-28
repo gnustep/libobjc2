@@ -525,10 +525,27 @@ void* block_load_weak(void *block);
 id objc_storeWeak(id *addr, id obj)
 {
 	id old = *addr;
-	intptr_t *refCount = ((intptr_t*)obj) - 1;
-	if (obj && *refCount < 0)
+
+	BOOL isGlobalObject = (obj == nil) || isSmallObject(obj);
+	Class cls = Nil;
+	if (!isGlobalObject)
 	{
-		obj = nil;
+		cls = classForObject(obj);
+		// TODO: We probably also want to do the same for constant strings and
+		// classes.
+		if (cls == &_NSConcreteGlobalBlock)
+		{
+			isGlobalObject = YES;
+		}
+	}
+	if (cls && objc_test_class_flag(cls, objc_class_flag_fast_arc))
+	{
+		intptr_t *refCount = ((intptr_t*)obj) - 1;
+		if (obj && *refCount < 0)
+		{
+			obj = nil;
+			cls = Nil;
+		}
 	}
 	LOCK_FOR_SCOPE(&weakRefLock);
 	if (nil != old)
@@ -553,13 +570,10 @@ id objc_storeWeak(id *addr, id obj)
 		*addr = obj;
 		return nil;
 	}
-	Class cls = classForObject(obj);
-	if (&_NSConcreteGlobalBlock == cls)
+	if (isGlobalObject)
 	{
-		// If this is a global block, it's never deallocated, so secretly make
+		// If this is a global object, it's never deallocated, so secretly make
 		// this a strong reference
-		// TODO: We probably also want to do the same for constant strings and
-		// classes.
 		*addr = obj;
 		return obj;
 	}
@@ -650,6 +664,11 @@ id objc_loadWeakRetained(id* addr)
 	LOCK_FOR_SCOPE(&weakRefLock);
 	id obj = *addr;
 	if (nil == obj) { return nil; }
+	// Small objects don't need reference count modification
+	if (isSmallObject(obj))
+	{
+		return obj;
+	}
 	Class cls = classForObject(obj);
 	if (&_NSConcreteMallocBlock == cls)
 	{

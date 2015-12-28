@@ -1,8 +1,3 @@
-#define DTABLE_OFFSET  64
-#define SMALLOBJ_MASK  7
-#define SHIFT_OFFSET   4
-#define DATA_OFFSET    16
-#define SLOT_OFFSET    32
 
 .macro MSGSEND receiver, sel
 	.cfi_startproc                        # Start emitting unwind data.  We
@@ -18,41 +13,28 @@
 	jnz   6f                              # Get the small object class
 
 	mov   (\receiver), %r10               # Load the dtable from the class
-1:                                        # classLoaded
-	mov   DTABLE_OFFSET(%r10), %r10       # Load the dtable from the class
-	
-	push  %r12
-	push  %r13
-
-	mov   (\sel), %r11                    # Load the selector index
-	mov   SHIFT_OFFSET(%r10), %r13        # Load the shift (dtable size)
-	mov   DATA_OFFSET(%r10), %r12         # load the address of the start of the array
-	cmpl  $8, %r13d                       # If this is a small dtable, jump to the small dtable handlers
+1:	                                      # classLoaded
+	mov   DTABLE_OFFSET(%r10), %r10       # Load the dtable from the class into r10
+	mov   %rax, -8(%rsp)                  # %rax contains information for variadic calls
+	mov   %rbx, -16(%rsp)                 # On the fast path, spill into the red zone
+	mov   (\sel), %eax                    # Load the selector index into %eax
+	mov   SHIFT_OFFSET(%r10), %r11d       # Load the shift (dtable size) into r11
+	cmpl  $8, %r11d                       # If this is a small dtable, jump to the small dtable handlers
 	je    2f 
-	cmpl  $0, %r13d
+	cmpl  $0, %r11d
 	je    3f 
 
-	mov   %r11, %r13
-	and   $0xff0000, %r13
-	shrl  $13, %r13d                      # Right shift 16, but then left shift by 3 *sizeof(void*)
-	add   %r13, %r12
-	mov   (%r12), %r12
-	mov   DATA_OFFSET(%r12), %r12
+	movl  %eax, %r11d
+	shrl  $16, %r11d
+	movq  DATA_OFFSET(%r10, %r11, 8), %r10
 2:                                        # dtable16:
-	mov   %r11, %r13
-	and   $0xff00, %r13
-	shrl  $5, %r13d
-	add   %r13, %r12
-	mov   (%r12), %r12
-	mov   DATA_OFFSET(%r12), %r12
+	movzbl %ah, %ebx
+	movq  DATA_OFFSET(%r10, %rbx, 8), %r10
 3:                                       # dtable8:
-	mov   %r11, %r13
-	and   $0xff, %r13
-	shll  $3, %r13d
-	add   %r13, %r12
-	mov   (%r12), %r10
-	pop   %r13
-	pop   %r12
+	movzbl %al, %ebx
+	mov   -8(%rsp), %rax
+	movq  DATA_OFFSET(%r10, %rbx, 8), %r10
+	mov   -16(%rsp), %rbx
 	test  %r10, %r10
 	jz    5f                             # Nil slot - invoke some kind of forwarding mechanism
 	mov   SLOT_OFFSET(%r10), %r10
@@ -259,10 +241,8 @@
 	jmp   7b
 6:                                        # smallObject:
 	and   \receiver, %r10                 # Find the small int type
-	shll  $3, %r10d
 	lea   CDECL(SmallObjectClasses)(%rip), %r11
-	add   %r11, %r10
-	mov   (%r10), %r10
+	mov   (%r11, %r10, 8), %r10
 	jmp   1b 
 	.cfi_endproc
 .endm
