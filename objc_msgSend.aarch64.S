@@ -12,9 +12,9 @@
 	ldr    w10, [\sel]                     // selector->index -> x10
 	ldr    w11, [x9, #SHIFT_OFFSET]        // dtable->shift -> x11
 	
-	tst    x11, #8                         // If this is a small dtable, jump to the
+	cmp    x11, #8                         // If this is a small dtable, jump to the
 	                                       // small dtable handlers
-	b.ne    2f
+	b.eq    2f
 	cbz    x11, 3f
 
 	ubfx   x11, x10, #16, #8               // Put byte 3 of the sel id in x12
