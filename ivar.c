@@ -15,6 +15,15 @@ static struct objc_ivar_list *upgradeIvarList(Class cls, struct objc_ivar_list_l
 PRIVATE void objc_compute_ivar_offsets(Class class)
 {
 	struct objc_ivar_list_legacy *legacy = NULL;
+	if (class->ivars == NULL)
+	{
+		Class super_class = class_getSuperclass(class);
+		if (super_class != Nil)
+		{
+			class->instance_size = super_class->instance_size;
+		}
+		return;
+	}
 	// If this is an old ABI class, then replace the ivar list with the new
 	// version
 	if (objc_get_class_version(class) < 3)
@@ -81,7 +90,10 @@ PRIVATE void objc_compute_ivar_offsets(Class class)
 				}
 				// If we have a legacy ivar list, update the offset in it too -
 				// code from older compilers may access this directly!
-				legacy->ivar_list[i].offset = ivar->offset;
+				if (legacy != NULL)
+				{
+					legacy->ivar_list[i].offset = ivar->offset;
+				}
 			}
 		}
 	}
