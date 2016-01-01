@@ -22,6 +22,11 @@ PRIVATE void objc_compute_ivar_offsets(Class class)
 		legacy = (struct objc_ivar_list_legacy *)class->ivars;
 		class->ivars = upgradeIvarList(class, legacy);
 	}
+	if (class->ivars->size != sizeof(struct objc_ivar))
+	{
+		fprintf(stderr, "Downgrading ivar struct not yet implemented");
+		abort();
+	}
 	int i = 0;
 	/* If this class was compiled with support for late-bound ivars, the
 	* instance_size field will contain 0 - {the size of the instance variables
@@ -159,6 +164,7 @@ static struct objc_ivar_list *upgradeIvarList(Class cls, struct objc_ivar_list_l
 	}
 	struct objc_ivar_list *n = calloc(1, sizeof(struct objc_ivar_list) +
 			l->count*sizeof(struct objc_ivar));
+	n->size = sizeof(struct objc_ivar);
 	n->count = l->count;
 	for (int i=0 ; i<l->count ; i++)
 	{

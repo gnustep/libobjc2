@@ -129,6 +129,7 @@ BOOL class_addIvar(Class cls, const char *name, size_t size, uint8_t alignment,
 	if (NULL == ivarlist)
 	{
 		cls->ivars = malloc(sizeof(struct objc_ivar_list) + sizeof(struct objc_ivar));
+		cls->ivars->size = sizeof(struct objc_ivar);
 		cls->ivars->count = 1;
 	}
 	else

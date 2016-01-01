@@ -27,7 +27,7 @@ struct objc_ivar
 	/**
 	 * Flags for this instance variable.
 	 */
-	int         flags;
+	long        flags;
 };
 
 /**
@@ -107,6 +107,12 @@ struct objc_ivar_list
 	 * The number of instance variables in this list.
 	 */
 	int              count;
+	/**
+	 * The size of a `struct objc_ivar`.  This allows the runtime to load
+	 * versions of this that come from a newer compiler, if we ever need to do
+	 * so.
+	 */
+	size_t           size;
 	/**
 	 * An array of instance variable metadata structures.  Note that this array
 	 * has count elements.
