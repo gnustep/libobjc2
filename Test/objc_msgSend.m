@@ -164,8 +164,8 @@ IMP forward(id o, SEL s)
 	return (IMP)fwdMany;
 }
 
-static struct objc_slot slot;
-struct objc_slot *forward_slot(id o, SEL s)
+static struct objc_slot_v1 slot;
+struct objc_slot_v1 *forward_slot(id o, SEL s)
 {
 	slot.method = (IMP)fwd;
 	return &slot;
