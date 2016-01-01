@@ -205,12 +205,8 @@ void object_setIvar(id object, Ivar ivar, id value)
 			objc_storeWeak(addr, value);
 			break;
 		case ownership_unsafe:
-			*addr = value;
-			break;
 		case ownership_invalid:
-#ifndef NDEBUG
-			fprintf(stderr, "Ivar does not belong to this class!\n");
-#endif
+			*addr = value;
 			break;
 	}
 }
@@ -241,11 +237,8 @@ id object_getIvar(id object, Ivar ivar)
 			return objc_loadWeak(addr);
 			break;
 		case ownership_unsafe:
-			return *addr;
 		case ownership_invalid:
-#ifndef NDEBUG
-			fprintf(stderr, "Ivar does not belong to this class!\n");
-#endif
+			return *addr;
 		return nil;
 	}
 }
