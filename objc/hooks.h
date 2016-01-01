@@ -68,7 +68,7 @@ extern struct objc_slot* (*_objc_selector_type_mismatch2)(Class cls,
  * Legacy hook for when selector types do not match.  This is only called
  * `_objc_selector_type_mismatch2` is not installed.
  */
-OBJC_HOOK struct objc_slot_v1 *(*_objc_selector_type_mismatch)(Class cl
+OBJC_HOOK struct objc_slot_v1 *(*_objc_selector_type_mismatch)(Class cls,
        SEL selector, struct objc_slot_v1 *result);
 
 /**
