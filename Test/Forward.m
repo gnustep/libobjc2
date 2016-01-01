@@ -45,13 +45,11 @@ static id proxy_lookup(id receiver, SEL selector)
 	return nil;
 }
 
-static struct objc_slot_v1* forward(id receiver, SEL selector)
+static IMP forward(id receiver, SEL selector)
 {
-	__thread static struct objc_slot_v1 forwardingSlot;
 	if (class_respondsToSelector(object_getClass(receiver), @selector(forward:)))
 	{
-		forwardingSlot.method = class_getMethodImplementation(object_getClass(receiver), @selector(forward:));
-		return &forwardingSlot;
+		return class_getMethodImplementation(object_getClass(receiver), @selector(forward:));
 	}
 	assert(0);
 }
@@ -59,7 +57,7 @@ static struct objc_slot_v1* forward(id receiver, SEL selector)
 int main(void)
 {
 	objc_proxy_lookup = proxy_lookup;
-	__objc_msg_forward3 = forward;
+	__objc_msg_forward2 = forward;
 	target = [ForwardingTarget new];
 	id proxy = [Forward new];
 	[proxy foo: 42];
