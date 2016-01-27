@@ -101,11 +101,11 @@
 	pop    {r0-r4, lr}                    // Load clobbered registers
 	mov    \receiver, r5
 	pop    {r4-r6}                        // Restore the saved callee-save registers
-	mov    pc, ip
+	bx     ip
 4:                                        // Nil receiver
 	mov    r0, 0
 	mov    r1, 0
-	mov    pc, lr
+	bx     lr
 .fnend
 .endm
 
