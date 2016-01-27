@@ -73,19 +73,10 @@
 	add    r6, r4, r6, lsl #2             // r6 = dtable address + dtable data offset
 	ldr    ip, [r6, #DATA_OFFSET]         // Load, adding in the data offset
 
-	teq    ip, #0                         // If the slot is nil
-	beq    5f                             // Go to the slow path and do the forwarding stuff
+	cmp    ip, #0                         // If the slot is nil
+	ldrne  ip, [ip, #SLOT_OFFSET]         // Load the method from the slot
+	bxne   ip
 
-	ldr   ip, [ip, #SLOT_OFFSET]          // Load the method from the slot
-
-3: 
-	pop    {r4-r6}                        // Restore the saved callee-save registers
-	mov    pc, ip
-
-4:                                        // Nil receiver
-	mov    r0, 0
-	mov    r1, 0
-	mov    pc, lr
 5:                                        // Slow lookup
 	push   {r0-r4, lr}                    // Save anything that will be clobbered by the call
 	.save  {r0-r4, lr}
@@ -109,8 +100,13 @@
 #endif
 	pop    {r0-r4, lr}                    // Load clobbered registers
 	mov    \receiver, r5
-	b      3b
-	.fnend
+	pop    {r4-r6}                        // Restore the saved callee-save registers
+	mov    pc, ip
+4:                                        // Nil receiver
+	mov    r0, 0
+	mov    r1, 0
+	mov    pc, lr
+.fnend
 .endm
 
 .globl CDECL(objc_msgSend_fpret)
