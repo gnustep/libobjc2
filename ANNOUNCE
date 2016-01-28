@@ -18,6 +18,12 @@ Highlights of this release include:
 
 - Numerous improvements to the interaction between runtime functions and ARC.
 
+- Support for Thumb-2 interworking on ARM.  Note that the library must be
+  compiled for ARMv7 or ARMv6T2 for this code to be enabled.  Once it has been,
+  other Objective-C binaries linked with the library can be compiled as ARM or
+  Thumb-2 code.  This will also generate Thumb-2 message send functions,
+  improving instruction cache usage.
+
 You may obtain the code for this release from git and use the 1.x branch:
 
 https://github.com/gnustep/libobjc2.git
