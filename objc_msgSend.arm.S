@@ -105,6 +105,9 @@
 4:                                        // Nil receiver
 	mov    r0, 0
 	mov    r1, 0
+#ifndef __SOFTFP__
+	vmov.i64 d0, #0                       // Return 0 as a float / double
+#endif
 	bx     lr
 .fnend
 .endm
