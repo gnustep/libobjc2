@@ -75,6 +75,7 @@
 
 	cmp    ip, #0                         // If the slot is nil
 	ldrne  ip, [ip, #SLOT_OFFSET]         // Load the method from the slot
+	popne  {r4-r6}                        // Restore the saved callee-save registers
 	bxne   ip
 
 5:                                        // Slow lookup
