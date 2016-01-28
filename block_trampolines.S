@@ -116,17 +116,32 @@ CDECL(__objc_block_trampoline_sret):
 	trampoline x1, x2
 CDECL(__objc_block_trampoline_end_sret):
 #elif __arm__
-CDECL(__objc_block_trampoline):
+#if 0 && ((__ARM_ARCH >= 7) || defined (__ARM_ARCH_6T2__))
+// If we're on a target that supports Thumb 2, then we need slightly more
+// instructions to support Thumb/ARM code for the IMP and so we need to make
+// the trampolines thumb to be able to fit them in 16 bytes (they fit exactly
+// when assembled as Thumb-2).
+.thumb
+.macro trampoline arg0, arg1
+	sub r12, pc, #4095
+	mov \arg0, \arg1            // Move self over _cmd
+	ldr \arg0, [r12, #-5]       // Load the block pointer over self
+	ldr r12, [r12, #-1]         // Jump to the block function
+	bx  r12
+.endm
+#else
+.macro trampoline arg0, arg1
 	sub r12, pc, #4096
-	mov r1, r0                 // Move self over _cmd
-	ldr r0, [r12, #-8]         // Load the block pointer over self
-	ldr pc, [r12, #-4]         // Jump to the block function
+	mov \arg0, \arg1            // Move self over _cmd
+	ldr \arg0, [r12, #-8]       // Load the block pointer over self
+	ldr pc, [r12, #-4]          // Jump to the block function
+.endm
+#endif // ((__ARM_ARCH >= 7) || defined (__ARM_ARCH_6T2__))
+CDECL(__objc_block_trampoline):
+	trampoline r0, r1
 CDECL(__objc_block_trampoline_end):
 CDECL(__objc_block_trampoline_sret):
-	sub r12, pc, #4096
-	mov r2, r1                 // Move self over _cmd
-	ldr r1, [r12, #-8]         // Load the block pointer over self
-	ldr pc, [r12, #-4]         // Jump to the block function
+	trampoline r1, r2
 CDECL(__objc_block_trampoline_end_sret):
 #else
 #warning imp_implementationWithBlock() not implemented for your architecture

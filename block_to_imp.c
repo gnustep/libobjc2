@@ -109,6 +109,15 @@ static struct trampoline_set *alloc_trampolines(char *start, char *end)
 {
 	struct trampoline_set *metadata = calloc(1, sizeof(struct trampoline_set));
 	metadata->buffers = valloc(sizeof(struct trampoline_buffers));
+#if ((__ARM_ARCH >= 7) || defined (__ARM_ARCH_6T2__))
+	// If the trampoline is Thumb-2 code, then the linker will set this symbol
+	// to something that you can jump to with a b[l]x instruction, not to the
+	// actual start address.  This code is safe on all supported architectures
+	// (as we don't have anything with 1-byte alignment requirements), but it
+	// is a couple of nops everywhere else, so don't bother with it.
+	start = (void*)((uintptr_t)start & ~1);
+	end = (void*)((uintptr_t)end & ~1);
+#endif
 	for (int i=0 ; i<HEADERS_PER_PAGE ; i++)
 	{
 		metadata->buffers->headers[i].fnptr = (void(*)(void))invalid;
@@ -167,7 +176,13 @@ IMP imp_implementationWithBlock(void *block)
 			assert(set->first_free >= -1);
 			h->fnptr = (void(*)(void))b->invoke;
 			h->block = b;
-			return (IMP)&set->buffers->rx_buffer[i*sizeof(struct block_header)];
+			uintptr_t addr = (uintptr_t)&set->buffers->rx_buffer[i*sizeof(struct block_header)];
+#if ((__ARM_ARCH >= 7) || defined (__ARM_ARCH_6T2__))
+			// If the trampoline is Thumb-2 code, then we must set the low bit
+			// to 1 so that b[l]x instructions put the CPU in the correct mode.
+			addr |= 1;
+#endif
+			return (IMP)addr;
 		}
 	}
 	UNREACHABLE("Failed to allocate block");
