@@ -1,6 +1,13 @@
 .syntax unified
 .fpu neon
 #if ((__ARM_ARCH >= 7) || defined (__ARM_ARCH_6T2__))
+// If we're using a CPU that supports Thumb-2, use it.  This makes the
+// objc_msgSend function 130 bytes instead of 176.  The fast path drops from 108
+// bytes to 82, meaning that it will fit in 3 32-byte i-cache lines, rather
+// than 4.  For comparison, the i386 version is 119 for objc_msgSend and
+// another 117 for objc_msgSend_fpret (the two are the same on ARM), with 70
+// bytes for the fast path..
+.thumb
 .macro byte1 dst, src
 	uxtb   \dst, \src
 .endm
@@ -45,9 +52,9 @@
 	tst    \receiver, SMALLOBJ_MASK        // Sets Z if this is not a small int
 
 
+	itte   ne
 	ldrne  r4, LSmallIntClass              // Small Int class -> r4 if this is a small int
 	ldrne  r4, [r4]
-
 	ldreq  r4, [\receiver]                 // Load class to r4 if not a small int
 
 	ldr    r4, [r4, #DTABLE_OFFSET]        // Dtable -> r4
@@ -74,6 +81,7 @@
 	ldr    ip, [r6, #DATA_OFFSET]         // Load, adding in the data offset
 
 	cmp    ip, #0                         // If the slot is nil
+	ittt   ne
 	ldrne  ip, [ip, #SLOT_OFFSET]         // Load the method from the slot
 	popne  {r4-r6}                        // Restore the saved callee-save registers
 	bxne   ip
