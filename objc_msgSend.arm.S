@@ -115,7 +115,11 @@
 	mov    r0, 0
 	mov    r1, 0
 #ifndef __SOFTFP__
+#	ifdef __ARM_NEON__
 	vmov.i64 d0, #0                       // Return 0 as a float / double
+#	else
+	fmdrr d0, r0, r1
+#	endif
 #endif
 	bx     lr
 .fnend
