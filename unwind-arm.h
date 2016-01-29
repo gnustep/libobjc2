@@ -78,6 +78,7 @@ struct _Unwind_Exception
 /* Unwinding functions */
 _Unwind_Reason_Code _Unwind_RaiseException(struct _Unwind_Exception *ucbp);
 void _Unwind_Resume(struct _Unwind_Exception *ucbp);
+_Unwind_Reason_Code _Unwind_Resume_or_Rethrow(struct _Unwind_Exception *);
 void _Unwind_Complete(struct _Unwind_Exception *ucbp);
 void _Unwind_DeleteException(struct _Unwind_Exception *ucbp);
 void *_Unwind_GetLanguageSpecificData(struct _Unwind_Context*);
