@@ -168,7 +168,7 @@ IMP imp_implementationWithBlock(void *block)
 			h->fnptr = (void(*)(void))b->invoke;
 			h->block = b;
 			uintptr_t addr = (uintptr_t)&set->buffers->rx_buffer[i*sizeof(struct block_header)];
-#if ((__ARM_ARCH >= 7) || defined (__ARM_ARCH_6T2__))
+#if (__ARM_ARCH_ISA_THUMB == 2)
 			// If the trampoline is Thumb-2 code, then we must set the low bit
 			// to 1 so that b[l]x instructions put the CPU in the correct mode.
 			addr |= 1;

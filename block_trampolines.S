@@ -105,7 +105,7 @@
 // AArch32 (ARM) trampoline
 ////////////////////////////////////////////////////////////////////////////////
 
-#	if ((__ARM_ARCH >= 7) || defined (__ARM_ARCH_6T2__))
+#	if (__ARM_ARCH_ISA_THUMB == 2)
 // If we're on a target that supports Thumb 2, then we need slightly more
 // instructions to support Thumb/ARM code for the IMP and so we need to make
 // the trampolines thumb to be able to fit them in 16 bytes (they fit exactly
@@ -125,7 +125,7 @@
 	ldr \arg0, [r12, #-8]       // Load the block pointer over self
 	ldr pc, [r12, #-4]          // Jump to the block function
 .endm
-#	endif // ((__ARM_ARCH >= 7) || defined (__ARM_ARCH_6T2__))
+#	endif // (__ARM_ARCH_ISA_THUMB == 2)
 #define ARG0 r0
 #define ARG1 r1
 #define SARG0 r1
