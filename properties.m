@@ -502,7 +502,14 @@ const char *property_getAttributes(objc_property_t property)
 objc_property_attribute_t *property_copyAttributeList(objc_property_t property,
                                                       unsigned int *outCount)
 {
-	if (NULL == property) { return NULL; }
+	if (NULL == property)
+	{
+		if (NULL != outCount)
+		{
+			*outCount = 0;
+		}
+		return NULL;
+	}
 	objc_property_attribute_t attrs[12];
 	int count = 0;
 
