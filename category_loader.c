@@ -4,7 +4,7 @@
 #include "loader.h"
 #include "dtable.h"
 
-#define BUFFER_TYPE struct objc_category
+#define BUFFER_TYPE struct objc_category *
 #include "buffer.h"
 
 void objc_send_load_message(Class class);

@@ -5,7 +5,7 @@
 #include "lock.h"
 #include <stdlib.h>
 
-#define BUFFER_TYPE struct objc_protocol_list
+#define BUFFER_TYPE struct objc_protocol_list *
 #include "buffer.h"
 
 // Get the functions for string hashing

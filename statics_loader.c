@@ -5,7 +5,7 @@
 #include "constant_string.h"
 #include "visibility.h"
 
-#define BUFFER_TYPE struct objc_static_instance_list
+#define BUFFER_TYPE struct objc_static_instance_list *
 #include "buffer.h"
 
 static BOOL try_init_statics(struct objc_static_instance_list *statics)
