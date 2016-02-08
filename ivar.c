@@ -154,7 +154,8 @@ typedef enum {
 ownership ownershipForIvar(Class cls, Ivar ivar)
 {
 	struct objc_ivar_list *list = cls->ivars;
-	if ((ivar < list->ivar_list) || (ivar >= &list->ivar_list[list->count]))
+	if ((list == NULL) || (ivar < list->ivar_list)
+          || (ivar >= &list->ivar_list[list->count]))
 	{
 		// Try the superclass
 		if (cls->super_class)
