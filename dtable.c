@@ -189,7 +189,7 @@ PRIVATE void init_dispatch_tables ()
 Class class_getSuperclass(Class);
 
 
-static dtable_t create_dtable_for_class(Class class, dtable_t root_dtable)
+PRIVATE dtable_t create_dtable_for_class(Class class, dtable_t root_dtable)
 {
 	// Don't create a dtable for a class that already has one
 	if (classHasDtable(class)) { return dtable_for_class(class); }
@@ -639,7 +639,7 @@ PRIVATE void add_method_list_to_class(Class cls,
 	checkARCAccessors(cls);
 }
 
-static dtable_t create_dtable_for_class(Class class, dtable_t root_dtable)
+PRIVATE dtable_t create_dtable_for_class(Class class, dtable_t root_dtable)
 {
 	// Don't create a dtable for a class that already has one
 	if (classHasDtable(class)) { return dtable_for_class(class); }

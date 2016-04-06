@@ -22,6 +22,8 @@
 struct objc_slot *objc_get_slot(Class cls, SEL selector);
 #define CHECK_ARG(arg) if (0 == arg) { return 0; }
 
+static inline void safe_remove_from_subclass_list(Class cls);
+
 /**
  * Calls C++ destructors in the correct order.
  */
@@ -519,8 +521,44 @@ Class class_setSuperclass(Class cls, Class newSuper)
 	CHECK_ARG(cls);
 	CHECK_ARG(newSuper);
 	if (Nil == cls) { return Nil; }
+
+	LOCK_RUNTIME_FOR_SCOPE();
+
+	safe_remove_from_subclass_list(cls);
+
 	Class oldSuper = cls->super_class;
 	cls->super_class = newSuper;
+
+	// The super class's subclass list is used in certain method resolution scenarios.
+	cls->sibling_class = cls->super_class->subclass_list;
+	cls->super_class->subclass_list = cls;
+
+	if (!class_isMetaClass(cls))
+	{
+		// Update the metaclass's superclass.
+		class_setSuperclass(cls->isa, newSuper->isa);
+	}
+	else
+	{
+		// newSuper is presumably a metaclass. Its isa will therefore be the appropriate root metaclass.
+		cls->isa = newSuper->isa;
+	}
+
+	// Make sure the superclass is initialized if we're initialized.
+	if (objc_test_class_flag(cls, objc_class_flag_initialized))
+	{
+		objc_send_initialize(newSuper);
+		// Update the class's dtable to reflect its new superclass's dtable.
+		if (cls->dtable != uninstalled_dtable)
+		{
+			// we can't use objc_update_dtable_for_class here, as it doesn't take into account
+			// superclasses. It only walks downward.
+			free_dtable(cls->dtable);
+			cls->dtable = uninstalled_dtable;
+			cls->dtable = create_dtable_for_class(cls, uninstalled_dtable);
+		}
+	}
+
 	return oldSuper;
 }
 
