@@ -220,7 +220,7 @@ static inline void initAutorelease(void)
 {
 	if (Nil == AutoreleasePool)
 	{
-		AutoreleasePool = objc_getRequiredClass("NSAutoreleasePool");
+		AutoreleasePool = objc_getClass("NSAutoreleasePool");
 		if (Nil == AutoreleasePool)
 		{
 			useARCAutoreleasePool = YES;
