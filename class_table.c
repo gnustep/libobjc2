@@ -258,10 +258,10 @@ PRIVATE BOOL objc_resolve_class(Class cls)
 PRIVATE void objc_resolve_class_links(void)
 {
 	LOCK_RUNTIME_FOR_SCOPE();
-	Class class = unresolved_class_list;
 	BOOL resolvedClass;
 	do
 	{
+		Class class = unresolved_class_list;
 		resolvedClass = NO;
 		while ((Nil != class))
 		{
