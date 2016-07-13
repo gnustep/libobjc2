@@ -1,6 +1,8 @@
 GNUstep Objective-C Runtime
 ===========================
 
+[![Build Status](https://travis-ci.org/gnustep/libobjc2.svg?branch=master)](https://travis-ci.org/gnustep/libobjc2)
+
 The GNUstep Objective-C runtime is designed as a drop-in replacement for the
 GCC runtime.  It supports both a legacy and a modern ABI, allowing code
 compiled with old versions of GCC to be supported without requiring
