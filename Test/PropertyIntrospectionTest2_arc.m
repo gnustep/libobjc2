@@ -6,6 +6,20 @@
 
 #pragma GCC diagnostic ignored "-Wobjc-property-no-attribute"
 
+// Clang < 3 doesn't exist usefully, so we can skip tests for it.  Clang 3.5
+// adds proper metadata for weak properties, earlier ones don't, so don't fail
+// the tests because of known compiler bugs.
+#ifndef __clang_minor__
+#define WEAK_ATTR ATTR("W", ""),
+#define WEAK_STR "W,"
+#elif (__clang_major__ < 4) && (__clang_minor__ < 5)
+#define WEAK_ATTR
+#define WEAK_STR
+#else
+#define WEAK_ATTR ATTR("W", ""),
+#define WEAK_STR "W,"
+#endif
+
 enum FooManChu { FOO, MAN, CHU };
 struct YorkshireTeaStruct { int pot; signed char lady; };
 typedef struct YorkshireTeaStruct YorkshireTeaStructType;
@@ -384,41 +398,41 @@ static void testAddPropertyForClass(Class testClass)
 															  ATTR("R", ""),
 															  ATTR("&", ""),
 															  ATTR("C", ""),
-															  ATTR("W", ""),
+															  WEAK_ATTR
 															  ATTR("D", ""),
 															  ATTR("V", "backingIvar"))));
 	testPropertyForProperty(class_getProperty(testClass, "addProperty4"),
-							"addProperty4", "T@,R,&,C,W,D,VbackingIvar", ATTRS(ATTR("T", "@"),
+							"addProperty4", "T@,R,&,C," WEAK_STR "D,VbackingIvar", ATTRS(ATTR("T", "@"),
 																			   ATTR("R", ""),
 																			   ATTR("&", ""),
 																			   ATTR("C", ""),
-																			   ATTR("W", ""),
+																			   WEAK_ATTR
 																			   ATTR("D", ""),
 																			   ATTR("V", "backingIvar")));
 
     assert(class_addProperty(testClass, "addProperty5", ATTRS(ATTR("T", "@"),
 															  ATTR("D", ""),
-															  ATTR("W", ""),
+															  WEAK_ATTR
 															  ATTR("C", ""),
 															  ATTR("&", ""),
 															  ATTR("R", ""),
 															  ATTR("V", "backingIvar"))));
 	// The only concession to MacOS X is that we reorder the attributes string
 	if (!testPropertyForProperty_alt(class_getProperty(testClass, "addProperty5"),
-							"addProperty5", "T@,D,W,C,&,R,VbackingIvar", ATTRS(ATTR("T", "@"),
+							"addProperty5", "T@,D," WEAK_STR "C,&,R,VbackingIvar", ATTRS(ATTR("T", "@"),
 																			   ATTR("D", ""),
-																			   ATTR("W", ""),
+																			   WEAK_ATTR
 																			   ATTR("C", ""),
 																			   ATTR("&", ""),
 																			   ATTR("R", ""),
 																			   ATTR("V", "backingIvar")), NO))
 	{
 		testPropertyForProperty(class_getProperty(testClass, "addProperty5"),
-								"addProperty5", "T@,R,&,C,W,D,VbackingIvar", ATTRS(ATTR("T", "@"),
+								"addProperty5", "T@,R,&,C," WEAK_STR "D,VbackingIvar", ATTRS(ATTR("T", "@"),
 																				   ATTR("R", ""),
 																				   ATTR("&", ""),
 																				   ATTR("C", ""),
-																				   ATTR("W", ""),
+																				   WEAK_ATTR
 																				   ATTR("D", ""),
 																				   ATTR("V", "backingIvar")));
 	}
@@ -558,14 +572,14 @@ int main(void)
 	 * The weak attribute was not present for earlier versions of clang, so we test
 	 * for all variants that the compiler may produce.
 	 */
-	if (!testProperty_alt("idReadonlyWeakNonatomic", "T@,R,W,N,VidReadonlyWeakNonatomic", ATTRS(ATTR("T", "@"),
+	if (!testProperty_alt("idReadonlyWeakNonatomic", "T@,R," WEAK_STR "N,VidReadonlyWeakNonatomic", ATTRS(ATTR("T", "@"),
                                                                                      ATTR("R", ""),
                                                                                      ATTR("N", ""),
                                                                                      ATTR("V", "idReadonlyWeakNonatomic")), NO))
 	  {
-	    testProperty("idReadonlyWeakNonatomic", "T@,R,W,N,VidReadonlyWeakNonatomic", ATTRS(ATTR("T", "@"),
+	    testProperty("idReadonlyWeakNonatomic", "T@,R," WEAK_STR "N,VidReadonlyWeakNonatomic", ATTRS(ATTR("T", "@"),
                                                                                      ATTR("R", ""),
-                                                                                     ATTR("W", ""),
+                                                                                     WEAK_ATTR
                                                                                      ATTR("N", ""),
                                                                                      ATTR("V", "idReadonlyWeakNonatomic")));
 	  }
@@ -633,9 +647,9 @@ int main(void)
 	/*
 	 * Again, different clang versions emit slightly different property declarations.
 	 */
-	if (!testPropertyForProtocol_alt(testProto, "idReadonlyWeakNonatomic", "T@,R,W,N", ATTRS(ATTR("T", "@"),
+	if (!testPropertyForProtocol_alt(testProto, "idReadonlyWeakNonatomic", "T@,R," WEAK_STR "N", ATTRS(ATTR("T", "@"),
 																				  ATTR("R", ""),
-																				  ATTR("W", ""),
+																				  WEAK_ATTR
 																				  ATTR("N", "")), NO))
 	{
 
