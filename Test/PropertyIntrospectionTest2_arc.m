@@ -404,25 +404,24 @@ static void testAddPropertyForClass(Class testClass)
 															  ATTR("R", ""),
 															  ATTR("V", "backingIvar"))));
 	// The only concession to MacOS X is that we reorder the attributes string
-#if __APPLE__
-	testPropertyForProperty(class_getProperty(testClass, "addProperty5"),
+	if (!testPropertyForProperty_alt(class_getProperty(testClass, "addProperty5"),
 							"addProperty5", "T@,D,W,C,&,R,VbackingIvar", ATTRS(ATTR("T", "@"),
-																			   ATTR("R", ""),
-																			   ATTR("&", ""),
-																			   ATTR("C", ""),
-																			   ATTR("W", ""),
 																			   ATTR("D", ""),
-																			   ATTR("V", "backingIvar")));
-#else
-	testPropertyForProperty(class_getProperty(testClass, "addProperty5"),
-							"addProperty5", "T@,R,&,C,W,D,VbackingIvar", ATTRS(ATTR("T", "@"),
-																			   ATTR("R", ""),
-																			   ATTR("&", ""),
-																			   ATTR("C", ""),
 																			   ATTR("W", ""),
-																			   ATTR("D", ""),
-																			   ATTR("V", "backingIvar")));
-#endif
+																			   ATTR("C", ""),
+																			   ATTR("&", ""),
+																			   ATTR("R", ""),
+																			   ATTR("V", "backingIvar")), NO))
+	{
+		testPropertyForProperty(class_getProperty(testClass, "addProperty5"),
+								"addProperty5", "T@,R,&,C,W,D,VbackingIvar", ATTRS(ATTR("T", "@"),
+																				   ATTR("R", ""),
+																				   ATTR("&", ""),
+																				   ATTR("C", ""),
+																				   ATTR("W", ""),
+																				   ATTR("D", ""),
+																				   ATTR("V", "backingIvar")));
+	}
 
     assert(class_addProperty(testClass, "replaceProperty", ATTRS(ATTR("T", "@"))));
 	testPropertyForProperty(class_getProperty(testClass, "replaceProperty"),
@@ -546,11 +545,13 @@ int main(void)
                                                              ATTR("N", ""),
                                                              ATTR("V", "intNonatomic")));
 	testProperty("idReadonlyCopyNonatomic", "T@,R,C,N,VidReadonlyCopyNonatomic", ATTRS(ATTR("T", "@"),
+                                                                                     ATTR("C", ""),
                                                                                      ATTR("R", ""),
                                                                                      ATTR("N", ""),
                                                                                      ATTR("V", "idReadonlyCopyNonatomic")));
 	testProperty("idReadonlyRetainNonatomic", "T@,R,&,N,VidReadonlyRetainNonatomic", ATTRS(ATTR("T", "@"),
                                                                                          ATTR("R", ""),
+                                                                                         ATTR("&", ""),
                                                                                          ATTR("N", ""),
                                                                                          ATTR("V", "idReadonlyRetainNonatomic")));
 	/**
@@ -562,8 +563,9 @@ int main(void)
                                                                                      ATTR("N", ""),
                                                                                      ATTR("V", "idReadonlyWeakNonatomic")), NO))
 	  {
-	    testProperty("idReadonlyWeakNonatomic", "T@,R,N,VidReadonlyWeakNonatomic", ATTRS(ATTR("T", "@"),
+	    testProperty("idReadonlyWeakNonatomic", "T@,R,W,N,VidReadonlyWeakNonatomic", ATTRS(ATTR("T", "@"),
                                                                                      ATTR("R", ""),
+                                                                                     ATTR("W", ""),
                                                                                      ATTR("N", ""),
                                                                                      ATTR("V", "idReadonlyWeakNonatomic")));
 	  }
@@ -622,15 +624,18 @@ int main(void)
 																	 ATTR("N", "")));
 	testPropertyForProtocol(testProto, "idReadonlyCopyNonatomic", "T@,R,C,N", ATTRS(ATTR("T", "@"),
 																				  ATTR("R", ""),
+																				  ATTR("C", ""),
 																				  ATTR("N", "")));
 	testPropertyForProtocol(testProto, "idReadonlyRetainNonatomic", "T@,R,&,N", ATTRS(ATTR("T", "@"),
 																					ATTR("R", ""),
+																					ATTR("&", ""),
 																					ATTR("N", "")));
 	/*
 	 * Again, different clang versions emit slightly different property declarations.
 	 */
 	if (!testPropertyForProtocol_alt(testProto, "idReadonlyWeakNonatomic", "T@,R,W,N", ATTRS(ATTR("T", "@"),
 																				  ATTR("R", ""),
+																				  ATTR("W", ""),
 																				  ATTR("N", "")), NO))
 	{
 
