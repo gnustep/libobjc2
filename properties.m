@@ -1,6 +1,7 @@
 #include "objc/runtime.h"
 #include "objc/objc-arc.h"
 #include <stdio.h>
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -513,64 +514,62 @@ objc_property_attribute_t *property_copyAttributeList(objc_property_t property,
 		attrs[count].value = types;
 		count++;
 	}
-	if (checkAttribute(property->attributes, OBJC_PR_readonly))
+	// If the compiler provides a type encoding string, then it's more
+	// informative than the bitfields and should be treated as canonical.  If
+	// the compiler didn't provide a type encoding string, then this will
+	// create a best-effort one.
+	const char *attributes = property_getAttributes(property);
+	for (int i=strlen(types)+1 ; attributes[i] != 0 ; i++)
 	{
-		attrs[count].name = "R";
+		assert(count<12);
+		if (attributes[i] == ',')
+		{
+			// Comma is never the last character in the string, so this should
+			// never push us past the end.
+			i++;
+		}
 		attrs[count].value = "";
+		switch (attributes[i])
+		{
+			case 'R':
+				attrs[count].name = "R";
+				break;
+			case 'C':
+				attrs[count].name = "C";
+				break;
+			case '&':
+				attrs[count].name = "&";
+				break;
+			case 'D':
+				attrs[count].name = "D";
+				break;
+			case 'W':
+				attrs[count].name = "W";
+				break;
+			case 'N':
+				attrs[count].name = "N";
+				break;
+			case 'G':
+				attrs[count].name = "G";
+				attrs[count].value = property->getter_name;
+				i += strlen(attrs[count].value);
+				break;
+			case 'S':
+				attrs[count].name = "S";
+				attrs[count].value = property->setter_name;
+				i += strlen(attrs[count].value);
+				break;
+			case 'V':
+				attrs[count].name = "V";
+				attrs[count].value = attributes+i+1;
+				i += strlen(attributes+i)-1;
+				break;
+			default:
+				i++;
+				continue;
+		}
 		count++;
 	}
-	if (checkAttribute(property->attributes, OBJC_PR_copy))
-	{
-		attrs[count].name = "C";
-		attrs[count].value = "";
-		count++;
-	}
-	if (checkAttribute(property->attributes, OBJC_PR_retain) ||
-	    checkAttribute(property->attributes2, OBJC_PR_strong))
-	{
-		attrs[count].name = "&";
-		attrs[count].value = "";
-		count++;
-	}
-	if (checkAttribute(property->attributes2, OBJC_PR_dynamic) &&
-	    !checkAttribute(property->attributes2, OBJC_PR_synthesized))
-	{
-		attrs[count].name = "D";
-		attrs[count].value = "";
-		count++;
-	}
-	if (checkAttribute(property->attributes2, OBJC_PR_weak))
-	{
-		attrs[count].name = "W";
-		attrs[count].value = "";
-		count++;
-	}
-	if ((property->attributes & OBJC_PR_nonatomic) == OBJC_PR_nonatomic)
-	{
-		attrs[count].name = "N";
-		attrs[count].value = "";
-		count++;
-	}
-	if ((property->attributes & OBJC_PR_getter) == OBJC_PR_getter)
-	{
-		attrs[count].name = "G";
-		attrs[count].value = property->getter_name;
-		count++;
-	}
-	if ((property->attributes & OBJC_PR_setter) == OBJC_PR_setter)
-	{
-		attrs[count].name = "S";
-		attrs[count].value = property->setter_name;
-		count++;
-	}
-	const char *name = property_getIVar(property);
-	if (name != NULL)
-	{
-		attrs[count].name = "V";
-		attrs[count].value = name;
-		count++;
-	}
-
 	objc_property_attribute_t *propAttrs = calloc(sizeof(objc_property_attribute_t), count);
 	memcpy(propAttrs, attrs, count * sizeof(objc_property_attribute_t));
 	if (NULL != outCount)
@@ -695,6 +694,7 @@ char *property_copyAttributeValue(objc_property_t property,
                                   const char *attributeName)
 {
 	if ((NULL == property) || (NULL == attributeName)) { return NULL; }
+	const char *attributes = property_getAttributes(property);
 	switch (attributeName[0])
 	{
 		case 'T':
@@ -703,9 +703,13 @@ char *property_copyAttributeValue(objc_property_t property,
 			return (NULL == types) ? NULL : strdup(types);
 		}
 		case 'D':
+		case 'R':
+		case 'W':
+		case 'C':
+		case '&':
+		case 'N':
 		{
-			return checkAttribute(property->attributes2, OBJC_PR_dynamic) &&
-			       !checkAttribute(property->attributes2, OBJC_PR_synthesized) ? strdup("") : 0;
+			return strchr(attributes, attributeName[0]) ? strdup("") : 0;
 		}
 		case 'V':
 		{
@@ -718,27 +722,6 @@ char *property_copyAttributeValue(objc_property_t property,
 		case 'G':
 		{
 			return strdup(property->getter_name);
-		}
-		case 'R':
-		{
-			return checkAttribute(property->attributes, OBJC_PR_readonly) ? strdup("") : 0;
-		}
-		case 'W':
-		{
-			return checkAttribute(property->attributes2, OBJC_PR_weak) ? strdup("") : 0;
-		}
-		case 'C':
-		{
-			return checkAttribute(property->attributes, OBJC_PR_copy) ? strdup("") : 0;
-		}
-		case '&':
-		{
-			return checkAttribute(property->attributes, OBJC_PR_retain) ||
-			       checkAttribute(property->attributes2, OBJC_PR_strong) ? strdup("") : 0;
-		}
-		case 'N':
-		{
-			return checkAttribute(property->attributes, OBJC_PR_nonatomic) ? strdup("") : 0;
 		}
 	}
 	return 0;
