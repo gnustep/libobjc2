@@ -36,7 +36,24 @@ typedef double __attribute__((vector_size(32))) v4d;
 }
 @end
 
+typedef int v4si __attribute__ ((vector_size (16)));
+@interface Foo : Test
+{
+			v4si var;
+}
+- (void)check;
+@end
+@implementation Foo
+- (void)check
+{
+	size_t addr = (size_t)&var;
+	fprintf(stderr, "self: %p Addr: %p\n", self, &var);
+	assert(addr % 16 == 0);
+}
+@end
+
 int main(void)
 {
 	[[Vector alloc] permute];
+	[[Foo new] check];
 }

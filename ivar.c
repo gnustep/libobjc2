@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -56,30 +57,24 @@ PRIVATE void objc_compute_ivar_offsets(Class class)
 				long ivar_size = (i+1 == class->ivars->count)
 					? (class_size - ivar->offset)
 					: ivar->offset - class->ivars->ivar_list[i+1].offset;
-#if 0
 				// We only need to do the realignment for things that are
 				// bigger than a pointer, and we don't need to do it in GC mode
 				// where we don't add any extra padding.
 				if (!isGCEnabled && (ivar_size > sizeof(void*)))
 				{
-					long fudge = (ivar_start +ivar->offset + sizeof(void*)) % 16;
+					long offset = ivar_start + ivar->offset + sizeof(intptr_t);
+					// For now, assume that nothing needs to be more than 16-byte aligned.
+					// This is not correct for AVX vectors, but we probably
+					// can't do anything about that for now (as malloc is only
+					// giving us 16-byte aligned memory)
+					long fudge = 16 - (offset % 16);
 					if (fudge != 0)
 					{
-						// If this is the first ivar in the class, then
-						// we can eat some of the padding that the compiler
-						// added...
-						if ((i == 0) && (ivar->offset > 0) && ((ivar_start + sizeof(void*) %16) == 0))
-						{
-							ivar->offset = 0;
-						}
-						else
-						{
-							ivar_start += fudge;
-							class->instance_size += fudge;
-						}
+						ivar->offset += fudge;
+						class->instance_size += fudge;
+						assert((ivar_start + ivar->offset + sizeof(intptr_t)) % 16 == 0);
 					}
 				}
-#endif
 				ivar->offset += ivar_start;
 				/* If we're using the new ABI then we also set up the faster ivar
 				* offset variables.
