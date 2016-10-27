@@ -21,7 +21,7 @@
 #ifdef __clang__
 static const uint32_t data_size = 256;
 #else
-#define data_size 256
+#define data_size (uint32_t)256
 #endif
 /**
  * The mask used to access the elements in the data array in a sparse array
