@@ -1,11 +1,26 @@
 os:
-    - linux
-    - osx
+  - linux
+  - osx
 language: cpp
 compiler: clang
+matrix:
+  include:
+    - os: linux
+      compiler: gcc
+      addons:
+        apt:
+          packages:
+            - gobjc
+before_script: >
+  if [ "$CC" = "gcc" ];
+  then
+    export ENABLE_TESTS=false
+  else
+    export ENABLE_TESTS=true
+  fi
 script:
-        - mkdir build
-        - cd build
-        - cmake -DCMAKE_BUILD_TYPE=Debug ..
-        - cmake --build .
-        - ctest
+  - mkdir build
+  - cd build
+  - cmake -DCMAKE_BUILD_TYPE=Debug -DTESTS=$ENABLE_TESTS ..
+  - cmake --build .
+  - ctest
