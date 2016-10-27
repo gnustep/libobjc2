@@ -18,12 +18,21 @@
  * The size of the data array.  The sparse array is a tree with this many
  * children at each node depth.
  */
+#ifdef __clang__
 static const uint32_t data_size = 256;
+#else
+#define data_size 256
+#endif
 /**
  * The mask used to access the elements in the data array in a sparse array
  * node.
  */
+#ifdef __clang__
 static const uint32_t data_mask = data_size - 1;
+#else
+#define data_mask (data_size - 1)
+#endif
+
 /**
  * Sparse arrays, used to implement dispatch tables.  Current implementation is
  * quite RAM-intensive and could be optimised.  Maps 32-bit integers to pointers.
