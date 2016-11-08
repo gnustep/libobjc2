@@ -78,6 +78,10 @@ int main(void)
 	Ivar v_isa = class_getInstanceVariable([StringLikeTest class], "isa");
 	Ivar v_c_string = class_getInstanceVariable([StringLikeTest class], "c_string");
 	Ivar v_len = class_getInstanceVariable([StringLikeTest class], "len");
-	assert(ivar_getOffset(v_isa) < ivar_getOffset(v_c_string));
-	assert(ivar_getOffset(v_c_string) < ivar_getOffset(v_len));
+	ptrdiff_t o_isa = ivar_getOffset(v_isa);
+	ptrdiff_t o_c_string = ivar_getOffset(v_c_string);
+	assert(o_isa == 0);
+	assert(o_c_string == sizeof(Class));
+	assert(o_isa < o_c_string);
+	assert(o_c_string < ivar_getOffset(v_len));
 }
