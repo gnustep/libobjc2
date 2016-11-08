@@ -52,8 +52,32 @@ typedef int v4si __attribute__ ((vector_size (16)));
 }
 @end
 
+#if __has_attribute(objc_root_class)
+__attribute__((objc_root_class))
+#endif
+@interface StringLikeTest
+{
+  Class isa;
+  char* c_string;
+  int len;
+}
+@end
+
+@implementation StringLikeTest
++ (Class)class
+{
+  return self;
+}
+@end
+
 int main(void)
 {
 	[[Vector alloc] permute];
 	[[Foo new] check];
+
+	Ivar v_isa = class_getInstanceVariable([StringLikeTest class], "isa");
+	Ivar v_c_string = class_getInstanceVariable([StringLikeTest class], "c_string");
+	Ivar v_len = class_getInstanceVariable([StringLikeTest class], "len");
+	assert(ivar_getOffset(v_isa) < ivar_getOffset(v_c_string));
+	assert(ivar_getOffset(v_c_string) < ivar_getOffset(v_len));
 }
