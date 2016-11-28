@@ -69,12 +69,9 @@ PRIVATE void objc_compute_ivar_offsets(Class class)
 					// can't do anything about that for now (as malloc is only
 					// giving us 16-byte aligned memory)
 					long fudge = 16 - (offset % 16);
-					if (fudge != 0)
-					{
-						ivar->offset += fudge;
-						class->instance_size += fudge;
-						assert((ivar_start + ivar->offset + sizeof(intptr_t)) % 16 == 0);
-					}
+					ivar->offset += fudge;
+					class->instance_size += fudge;
+					assert((ivar_start + ivar->offset + sizeof(intptr_t)) % 16 == 0);
 				}
 				ivar->offset += ivar_start;
 				/* If we're using the new ABI then we also set up the faster ivar
