@@ -56,7 +56,8 @@ PRIVATE void objc_compute_ivar_offsets(Class class)
 				// then we will need to ensure that we are properly aligned again.
 				long ivar_size = (i+1 == class->ivars->count)
 					? (class_size - ivar->offset)
-					: ivar->offset - class->ivars->ivar_list[i+1].offset;
+					: class->ivars->ivar_list[i+1].offset - ivar->offset ;
+				assert(ivar_size > 0);
 				// We only need to do the realignment for things that are
 				// bigger than a pointer, and we don't need to do it in GC mode
 				// where we don't add any extra padding.
