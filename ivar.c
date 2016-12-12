@@ -47,6 +47,7 @@ PRIVATE void objc_compute_ivar_offsets(Class class)
 		*/
 		if (class->ivars)
 		{
+			long cumulative_fudge = 0;
 			for (i = 0 ; i < class->ivars->count ; i++)
 			{
 				struct objc_ivar *ivar = &class->ivars->ivar_list[i];
@@ -58,6 +59,7 @@ PRIVATE void objc_compute_ivar_offsets(Class class)
 					? (class_size - ivar->offset)
 					: class->ivars->ivar_list[i+1].offset - ivar->offset ;
 				assert(ivar_size > 0);
+				ivar->offset += cumulative_fudge;
 				// We only need to do the realignment for things that are
 				// bigger than a pointer, and we don't need to do it in GC mode
 				// where we don't add any extra padding.
@@ -71,6 +73,7 @@ PRIVATE void objc_compute_ivar_offsets(Class class)
 					long fudge = 16 - (offset % 16);
 					ivar->offset += fudge;
 					class->instance_size += fudge;
+					cumulative_fudge += fudge;
 					assert((ivar_start + ivar->offset + sizeof(intptr_t)) % 16 == 0);
 				}
 				ivar->offset += ivar_start;
