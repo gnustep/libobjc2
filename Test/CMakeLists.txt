@@ -59,8 +59,8 @@ endfunction(addtest_flags)
 
 foreach(TEST_SOURCE ${TESTS})
 	get_filename_component(TEST ${TEST_SOURCE} NAME_WE)
-	addtest_flags(${TEST} "-O0" ${TEST_SOURCE})
-	addtest_flags("${TEST}_optimised" "-O3" ${TEST_SOURCE})
+	addtest_flags(${TEST} "-O0 -UNDEBUG" ${TEST_SOURCE})
+	addtest_flags("${TEST}_optimised" "-O3 -UNDEBUG" ${TEST_SOURCE})
 endforeach()
 
 # Tests that are more than a single file.
