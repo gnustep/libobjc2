@@ -5,7 +5,7 @@
 
 # List of single-file tests.
 set(TESTS
-	#alignTest.m
+	alignTest.m
 	AllocatePair.m
 	AssociatedObject.m
 	AssociatedObject2.m
@@ -26,6 +26,7 @@ set(TESTS
 	WeakBlock_arc.m
 	WeakReferences_arc.m
 	ivar_arc.m
+	IVarOverlap.m
 	objc_msgSend.m
 	msgInterpose.m
 	NilException.m
@@ -58,10 +59,10 @@ endfunction(addtest_flags)
 
 foreach(TEST_SOURCE ${TESTS})
 	get_filename_component(TEST ${TEST_SOURCE} NAME_WE)
-	addtest_flags(${TEST} "-O0 -fobjc-runtime=gnustep-2.0" ${TEST_SOURCE})
-	addtest_flags("${TEST}_optimised" "-O3 -fobjc-runtime=gnustep-2.0" ${TEST_SOURCE})
-	addtest_flags("${TEST}_legacy" "-O0 -fobjc-runtime=gnustep-1.7" ${TEST_SOURCE})
-	addtest_flags("${TEST}_legacy_optimised" "-O3 -fobjc-runtime=gnustep-1.7" ${TEST_SOURCE})
+	addtest_flags(${TEST} "-O0 -fobjc-runtime=gnustep-2.0 -UNDEBUG" ${TEST_SOURCE})
+	addtest_flags("${TEST}_optimised" "-O3 -fobjc-runtime=gnustep-2.0 -UNDEBUG" ${TEST_SOURCE})
+	addtest_flags("${TEST}_legacy" "-O0 -fobjc-runtime=gnustep-1.7 -UNDEBUG" ${TEST_SOURCE})
+	addtest_flags("${TEST}_legacy_optimised" "-O3 -fobjc-runtime=gnustep-1.7 -UNDEBUG" ${TEST_SOURCE})
 endforeach()
 
 # Tests that are more than a single file.

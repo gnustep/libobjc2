@@ -1,6 +1,8 @@
 GNUstep Objective-C Runtime
 ===========================
 
+[![Build Status](https://travis-ci.org/gnustep/libobjc2.svg?branch=master)](https://travis-ci.org/gnustep/libobjc2)
+
 The GNUstep Objective-C runtime is designed as a drop-in replacement for the
 GCC runtime.  It supports both a legacy and a modern ABI, allowing code
 compiled with old versions of GCC to be supported without requiring
@@ -465,3 +467,4 @@ be used directly.  If it does not exist, ARC will implement its own
 `-_ARCCompatibleAutoreleasePool` then it must call `objc_autoreleasePoolPush()`
 and `objc_autoreleasePoolPop()` to manage autoreleased object storage and call
 `objc_autorelease()` in its `-addObject:` method.
+
