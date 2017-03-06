@@ -58,7 +58,6 @@ PRIVATE void objc_compute_ivar_offsets(Class class)
 				long ivar_size = (i+1 == class->ivars->count)
 					? (class_size - ivar->offset)
 					: class->ivars->ivar_list[i+1].offset - ivar->offset ;
-				assert(ivar_size > 0);
 				ivar->offset += cumulative_fudge;
 				// We only need to do the realignment for things that are
 				// bigger than a pointer, and we don't need to do it in GC mode
