@@ -1,6 +1,5 @@
 #import <stdio.h>
 #import "../objc/runtime.h"
-#import "../objc/Object.h"
 #include "Test.h"
 
 #import <sys/types.h>
