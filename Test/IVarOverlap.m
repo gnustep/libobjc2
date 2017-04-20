@@ -1,5 +1,4 @@
 #import <stdio.h>
-#import "../objc/objc.h"
 #import "../objc/runtime.h"
 #import "../objc/Object.h"
 #include "Test.h"
