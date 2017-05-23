@@ -32,6 +32,7 @@ set(TESTS
 	NilException.m
 	MethodArguments.m
 	zeroSizedIVar.m
+	exchange.m
 )
 
 # Function for adding a test.  This takes the name of the test and the list of
