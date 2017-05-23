@@ -104,6 +104,12 @@ static void objc_updateDtableForClassContainingMethod(Method m)
 			objc_update_dtable_for_class(nextClass);
 			return;
 		}
+		Class meta = object_getClass((id)nextClass);
+		if (class_getInstanceMethodNonrecursive(meta, sel) == m)
+		{
+			objc_update_dtable_for_class(meta);
+			return;
+		}
 	}
 }
 
