@@ -1,8 +1,12 @@
 cmake_minimum_required(VERSION 2.8)
 
-
 project(libobjc)
 enable_language(ASM)
+
+macro(install_symlink filepath sympath)
+	install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ${filepath} ${sympath})")
+	install(CODE "message(\"-- Symlinking: ${sympath} -> ${filepath}\")")
+endmacro(install_symlink)
 
 set(CMAKE_C_FLAGS_DEBUG "-g -O0 -fno-inline ${CMAKE_C_FLAGS_DEBUG}")
 set(CMAKE_C_FLAGS_RELEASE "-O3 ${CMAKE_C_FLAGS_RELEASE}")
@@ -310,7 +314,8 @@ install(TARGETS ${INSTALL_TARGETS}
 install(FILES ${libobjc_HDRS}
 	DESTINATION "${HEADER_INSTALL_PATH}/${INCLUDE_DIRECTORY}")
 
-
+install_symlink(${HEADER_INSTALL_PATH}/${INCLUDE_DIRECTORY}/blocks_runtime.h ${HEADER_INSTALL_PATH}/Block.h)
+install_symlink(${HEADER_INSTALL_PATH}/${INCLUDE_DIRECTORY}/blocks_private.h ${HEADER_INSTALL_PATH}/Block_private.h)
 
 set(CPACK_GENERATOR TGZ CACHE STRING
 	"Installer types to generate.  Sensible options include TGZ, RPM and DEB")
