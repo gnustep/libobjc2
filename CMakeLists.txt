@@ -61,6 +61,7 @@ set(libobjc_HDRS
 	objc/objc-api.h
 	objc/objc-arc.h
 	objc/objc-auto.h
+	objc/objc-runtime.h
 	objc/objc.h
 	objc/runtime-deprecated.h
 	objc/runtime.h
