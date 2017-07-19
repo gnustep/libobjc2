@@ -151,11 +151,11 @@ void object_setIvar(id object, Ivar ivar, id value)
 	char *addr = (char*)object;
 	unsigned offset;
 	
-	if (ivar && (offset = ivar_getOffset(ivar)))
-		{
+	if (ivar != NULL && (offset = ivar_getOffset(ivar)))
+	{
 		addr += offset;
 		*(id*)addr = value;
-		}
+	}
 }
 
 Ivar object_setInstanceVariable(id obj, const char *name, void *value)
