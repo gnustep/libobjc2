@@ -202,7 +202,8 @@ static struct objc_ivar_list *upgradeIvarList(Class cls, struct objc_ivar_list_l
 		n->ivar_list[i].name = l->ivar_list[i].name;
 		n->ivar_list[i].type = l->ivar_list[i].type;
 		n->ivar_list[i].offset = l->ivar_list[i].offset;
-		n->ivar_list[i].align = objc_alignof_type(n->ivar_list[i].type);
+		const char *type = l->ivar_list[i].type;
+		n->ivar_list[i].align = ((type == NULL) || type[0] == 0) ? __alignof__(void*) : objc_alignof_type(type);
 		ivarSetOwnership(&n->ivar_list[i], ownershipForIvar(cls, i));
 	}
 	return n;
