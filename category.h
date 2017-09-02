@@ -32,4 +32,10 @@ struct objc_category
 	 * The list of protocols adopted by this category.
 	 */
 	struct objc_protocol_list *protocols;
+	/**
+	 * The list of properties added by this category
+	 *
+	 * Only present in V2 ABI!
+	 */
+	struct objc_property_list *properties;
 };
