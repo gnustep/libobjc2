@@ -59,15 +59,17 @@ function(addtest_flags TEST_NAME FLAGS TEST_SOURCE)
 	target_link_libraries(${TEST_NAME} objc)
 endfunction(addtest_flags)
 
+function(addtest_variants TEST TEST_SOURCE)
+	addtest_flags(${TEST} "-O0 -fobjc-runtime=gnustep-2.0 -UNDEBUG" "${TEST_SOURCE}")
+	addtest_flags("${TEST}_optimised" "-O3 -fobjc-runtime=gnustep-2.0 -UNDEBUG" "${TEST_SOURCE}")
+	addtest_flags("${TEST}_legacy" "-O0 -fobjc-runtime=gnustep-1.7 -UNDEBUG" "${TEST_SOURCE}")
+	addtest_flags("${TEST}_legacy_optimised" "-O3 -fobjc-runtime=gnustep-1.7 -UNDEBUG" "${TEST_SOURCE}")
+endfunction(addtest_variants)
+
 foreach(TEST_SOURCE ${TESTS})
 	get_filename_component(TEST ${TEST_SOURCE} NAME_WE)
-	addtest_flags(${TEST} "-O0 -fobjc-runtime=gnustep-2.0 -UNDEBUG" ${TEST_SOURCE})
-	addtest_flags("${TEST}_optimised" "-O3 -fobjc-runtime=gnustep-2.0 -UNDEBUG" ${TEST_SOURCE})
-	addtest_flags("${TEST}_legacy" "-O0 -fobjc-runtime=gnustep-1.7 -UNDEBUG" ${TEST_SOURCE})
-	addtest_flags("${TEST}_legacy_optimised" "-O3 -fobjc-runtime=gnustep-1.7 -UNDEBUG" ${TEST_SOURCE})
+	addtest_variants(${TEST} ${TEST_SOURCE})
 endforeach()
 
 # Tests that are more than a single file.
-addtest_flags(CXXExceptions "-O0" "CXXException.m;CXXException.cc")
-addtest_flags(CXXExceptions_optimised "-O3" "CXXException.m;CXXException.cc")
-
+addtest_variants("CXXExceptions" "CXXException.m;CXXException.cc")
