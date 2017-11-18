@@ -42,9 +42,9 @@ static void *_HeapBlockByRef = (void*)1;
 /**
  * Returns the Objective-C type encoding for the block.
  */
-const char *block_getType_np(void *b)
+const char *block_getType_np(const void *b)
 {
-	struct Block_layout *block = b;
+	const struct Block_layout *block = b;
 	if ((NULL == block) || !(block->flags & BLOCK_HAS_SIGNATURE))
 	{
 		return NULL;
