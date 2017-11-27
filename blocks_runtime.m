@@ -60,8 +60,10 @@ static int increment24(int *ref)
 {
 	int old = *ref;
 	int val = old & BLOCK_REFCOUNT_MASK;
-	// FIXME: We should gracefully handle refcount overflow, but for now we
-	// just give up
+	if (val == BLOCK_REFCOUNT_MASK)
+	{
+		return val;
+	}
 	assert(val < BLOCK_REFCOUNT_MASK);
 	if (!__sync_bool_compare_and_swap(ref, old, old+1))
 	{
@@ -74,8 +76,10 @@ static int decrement24(int *ref)
 {
 	int old = *ref;
 	int val = old & BLOCK_REFCOUNT_MASK;
-	// FIXME: We should gracefully handle refcount overflow, but for now we
-	// just give up
+	if (val == BLOCK_REFCOUNT_MASK)
+	{
+		return val;
+	}
 	assert(val > 0);
 	if (!__sync_bool_compare_and_swap(ref, old, old-1))
 	{
