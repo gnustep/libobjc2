@@ -247,7 +247,7 @@ static void deallocHiddenClass(id obj, SEL _cmd)
 	DESTROY_LOCK(&list->lock);
 	cleanupReferenceList(list);
 	freeReferenceList(list->next);
-	fprintf(stderr, "Deallocating dtable %p\n", hiddenClass->dtable);
+	//fprintf(stderr, "Deallocating dtable %p\n", hiddenClass->dtable);
 	free_dtable(hiddenClass->dtable);
 	// We shouldn't have any subclasses left at this point
 	assert(hiddenClass->subclass_list == 0);
