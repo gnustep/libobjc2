@@ -94,9 +94,11 @@ void objc_release(id obj);
  * weak pointers will return 0.  This function should be called in -release,
  * before calling [self dealloc].
  *
+ * This will return `YES` if the weak references were deleted, `NO` otherwise.
+ *
  * Nonstandard extension.
  */
-void objc_delete_weak_refs(id obj);
+BOOL objc_delete_weak_refs(id obj);
 /**
  * Returns the total number of objects in the ARC-managed autorelease pool.
  */
