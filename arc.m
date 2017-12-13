@@ -175,6 +175,13 @@ static const long weak_mask = ((size_t)1)<<((sizeof(size_t)*8)-1);
  */
 static const long refcount_mask = ~weak_mask;
 
+size_t object_getRetainCount_np(id obj)
+{
+	uintptr_t *refCount = ((uintptr_t*)obj) - 1;
+	uintptr_t refCountVal = __sync_fetch_and_add(refCount, 0);
+	return (((size_t)refCountVal) & refcount_mask) + 1;
+}
+
 id objc_retain_fast_np(id obj)
 {
 	uintptr_t *refCount = ((uintptr_t*)obj) - 1;

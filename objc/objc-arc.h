@@ -112,6 +112,10 @@ void objc_release_fast_np(id obj) OBJC_NONPORTABLE;
  */
 BOOL objc_release_fast_no_destroy_np(id obj) OBJC_NONPORTABLE;
 /**
+ * Returns the retain count of an object.
+ */
+size_t object_getRetainCount_np(id obj) OBJC_NONPORTABLE;
+/**
  * Releases an object.  Equivalent to [obj release].
  */
 void objc_release(id obj);
