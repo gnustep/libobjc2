@@ -33,6 +33,12 @@ id objc_loadWeakRetained(id* obj);
  */
 id objc_retain(id obj);
 /**
+ * Retains the argument, assuming that the argument is a normal object and has
+ * its reference count managed by the runtime.
+ * This is intended to implement `-retain` in ARC-compatible root classes.
+ */
+id objc_retain_fast_np(id obj) OBJC_NONPORTABLE;
+/**
  * Retains and autoreleases an object.  Equivalent to [[obj retain] autorelease].
  */
 id objc_retainAutorelease(id obj);
@@ -85,6 +91,26 @@ void objc_destroyWeak(id* addr);
  * Equivalent to objc_copyWeak(), but may also set src to nil.
  */
 void objc_moveWeak(id *dest, id *src);
+/**
+ * Releases the argument, assuming that the argument is a normal object and has
+ * its reference count managed by the runtime.  If the retain count reaches
+ * zero then all weak references will be zeroed and the object will be
+ * destroyed.
+ *
+ * This is intended to implement `-release` in ARC-compatible root
+ * classes.
+ */
+void objc_release_fast_np(id obj) OBJC_NONPORTABLE;
+/**
+ * Releases the argument, assuming that the argument is a normal object and has
+ * its reference count managed by the runtime.  If the retain count reaches
+ * zero then all weak references will be zeroed but the object will *NOT* be
+ * destroyed.
+ *
+ * This is intended to implement `NSDecrementExtraRefCountWasZero` for use with
+ * ARC-compatible classes.
+ */
+BOOL objc_release_fast_no_destroy_np(id obj) OBJC_NONPORTABLE;
 /**
  * Releases an object.  Equivalent to [obj release].
  */

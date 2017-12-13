@@ -175,6 +175,45 @@ static const long weak_mask = ((size_t)1)<<((sizeof(size_t)*8)-1);
  */
 static const long refcount_mask = ~weak_mask;
 
+id objc_retain_fast_np(id obj)
+{
+	uintptr_t *refCount = ((uintptr_t*)obj) - 1;
+	uintptr_t refCountVal = __sync_fetch_and_add(refCount, 0);
+	uintptr_t newVal = refCountVal;
+	do {
+		refCountVal = newVal;
+		long realCount = refCountVal & refcount_mask;
+		// If this object's reference count is already less than 0, then
+		// this is a spurious retain.  This can happen when one thread is
+		// attempting to acquire a strong reference from a weak reference
+		// and the other thread is attempting to destroy it.  The
+		// deallocating thread will decrement the reference count with no
+		// locks held and will then acquire the weak ref table lock and
+		// attempt to zero the weak references.  The caller of this will be
+		// `objc_loadWeakRetained`, which will also hold the lock.  If the
+		// serialisation is such that the locked retain happens after the
+		// decrement, then we return nil here so that the weak-to-strong
+		// transition doesn't happen and the object is actually destroyed.
+		// If the serialisation happens the other way, then the locked
+		// check of the reference count will happen after we've referenced
+		// this and we don't zero the references or deallocate.
+		if (realCount < 0)
+		{
+			return nil;
+		}
+		// If the reference count is saturated, don't increment it.
+		if (realCount == refcount_mask)
+		{
+			return obj;
+		}
+		realCount++;
+		realCount |= refCountVal & weak_mask;
+		uintptr_t updated = (uintptr_t)realCount;
+		newVal = __sync_val_compare_and_swap(refCount, refCountVal, updated);
+	} while (newVal != refCountVal);
+	return obj;
+}
+
 static inline id retain(id obj)
 {
 	if (isSmallObject(obj)) { return obj; }
@@ -186,43 +225,55 @@ static inline id retain(id obj)
 	}
 	if (objc_test_class_flag(cls, objc_class_flag_fast_arc))
 	{
-		uintptr_t *refCount = ((uintptr_t*)obj) - 1;
-		uintptr_t refCountVal = __sync_fetch_and_add(refCount, 0);
-		uintptr_t newVal = refCountVal;
-		do {
-			refCountVal = newVal;
-			long realCount = refCountVal & refcount_mask;
-			// If this object's reference count is already less than 0, then
-			// this is a spurious retain.  This can happen when one thread is
-			// attempting to acquire a strong reference from a weak reference
-			// and the other thread is attempting to destroy it.  The
-			// deallocating thread will decrement the reference count with no
-			// locks held and will then acquire the weak ref table lock and
-			// attempt to zero the weak references.  The caller of this will be
-			// `objc_loadWeakRetained`, which will also hold the lock.  If the
-			// serialisation is such that the locked retain happens after the
-			// decrement, then we return nil here so that the weak-to-strong
-			// transition doesn't happen and the object is actually destroyed.
-			// If the serialisation happens the other way, then the locked
-			// check of the reference count will happen after we've referenced
-			// this and we don't zero the references or deallocate.
-			if (realCount < 0)
-			{
-				return nil;
-			}
-			// If the reference count is saturated, don't increment it.
-			if (realCount == refcount_mask)
-			{
-				return obj;
-			}
-			realCount++;
-			realCount |= refCountVal & weak_mask;
-			uintptr_t updated = (uintptr_t)realCount;
-			newVal = __sync_val_compare_and_swap(refCount, refCountVal, updated);
-		} while (newVal != refCountVal);
-		return obj;
+		return objc_retain_fast_np(obj);
 	}
 	return [obj retain];
+}
+
+BOOL objc_release_fast_no_destroy_np(id obj)
+{
+	uintptr_t *refCount = ((uintptr_t*)obj) - 1;
+	uintptr_t refCountVal = __sync_fetch_and_add(refCount, 0);
+	uintptr_t newVal = refCountVal;
+	bool isWeak;
+	bool shouldFree;
+	do {
+		refCountVal = newVal;
+		size_t realCount = refCountVal & refcount_mask;
+		// If the reference count is saturated, don't decrement it.
+		if (realCount == refcount_mask)
+		{
+			return NO;
+		}
+		realCount--;
+		isWeak = (refCountVal & weak_mask) == weak_mask;
+		shouldFree = realCount == -1;
+		realCount |= refCountVal & weak_mask;
+		uintptr_t updated = (uintptr_t)realCount;
+		newVal = __sync_val_compare_and_swap(refCount, refCountVal, updated);
+	} while (newVal != refCountVal);
+	// We allow refcounts to run into the negative, but should only
+	// deallocate once.
+	if (shouldFree)
+	{
+		if (isWeak)
+		{
+			if (!objc_delete_weak_refs(obj))
+			{
+				return NO;
+			}
+		}
+		return YES;
+	}
+	return NO;
+}
+
+void objc_release_fast_np(id obj)
+{
+	if (objc_release_fast_no_destroy_np(obj))
+	{
+		[obj dealloc];
+	}
 }
 
 static inline void release(id obj)
@@ -241,39 +292,7 @@ static inline void release(id obj)
 	}
 	if (objc_test_class_flag(cls, objc_class_flag_fast_arc))
 	{
-		uintptr_t *refCount = ((uintptr_t*)obj) - 1;
-		uintptr_t refCountVal = __sync_fetch_and_add(refCount, 0);
-		uintptr_t newVal = refCountVal;
-		bool isWeak;
-		bool shouldFree;
-		do {
-			refCountVal = newVal;
-			size_t realCount = refCountVal & refcount_mask;
-			// If the reference count is saturated, don't decrement it.
-			if (realCount == refcount_mask)
-			{
-				return;
-			}
-			realCount--;
-			isWeak = (refCountVal & weak_mask) == weak_mask;
-			shouldFree = realCount == -1;
-			realCount |= refCountVal & weak_mask;
-			uintptr_t updated = (uintptr_t)realCount;
-			newVal = __sync_val_compare_and_swap(refCount, refCountVal, updated);
-		} while (newVal != refCountVal);
-		// We allow refcounts to run into the negative, but should only
-		// deallocate once.
-		if (shouldFree)
-		{
-			if (isWeak)
-			{
-				if (!objc_delete_weak_refs(obj))
-				{
-					return;
-				}
-			}
-			[obj dealloc];
-		}
+		objc_release_fast_np(obj);
 		return;
 	}
 	[obj release];
@@ -374,7 +393,6 @@ unsigned long objc_arc_autorelease_count_for_object_np(id obj)
 	}
 	return count;
 }
-
 
 void *objc_autoreleasePoolPush(void)
 {
