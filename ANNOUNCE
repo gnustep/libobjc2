@@ -24,6 +24,24 @@ Highlights of this release include:
   Thumb-2 code.  This will also generate Thumb-2 message send functions,
   improving instruction cache usage.
 
+- Significant improvements to ARC, including
+
+  * The runtime no longer acquires a global lock on every object deallocation (a
+    global lock is still used for objects that have weak references).
+
+  * Weak references use a scheme closer to C++ `std::weak_pointer` and are
+    lazily zeroed on access.  This reduces the space overheads for weak
+    references.
+
+  * Some additional helper functions are added for use in `NSObject` and other
+    root classes,  which simplifies the layering between the runtime and the
+    Foundation (or equivalent) implementation.
+
+- Improvements to how the runtime handles layout of ivars with strong alignment
+  requirements, which should fix issues relating to using vector types in
+  Objective-C objects.
+
+
 You may obtain the code for this release from git and use the 1.x branch:
 
 https://github.com/gnustep/libobjc2.git
