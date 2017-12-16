@@ -1,6 +1,6 @@
-#ifdef __MINGW32__
+#if defined(__MINGW32__) && !defined(__MINGW64__)
 #include <windows.h>
-inline unsigned sleep(unsigned seconds)
+static unsigned sleep(unsigned seconds)
 {
 	Sleep(seconds*1000);
 	return 0;
