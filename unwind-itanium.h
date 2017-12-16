@@ -34,7 +34,7 @@ extern "C" {
 #endif
 
 /* definitions below do not handle LLP64, so use compiler definitions */
-#ifdef __MINGW32__
+#ifdef __MINGW64__
 #include <unwind.h>
 #else
 
@@ -152,7 +152,7 @@ extern void *_Unwind_FindEnclosingFunction (void *);
 
 #endif /* _GNU_SOURCE */
     
-#endif /* __MINGW32__ */
+#endif /* __MINGW64__ */
 
 #define DECLARE_PERSONALITY_FUNCTION(name) \
 _Unwind_Reason_Code name(int version,\
