@@ -33,6 +33,11 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
 extern "C" {
 #endif
 
+/* definitions below do not handle LLP64, so use compiler definitions */
+#ifdef __MINGW64__
+#include <unwind.h>
+#else
+
 /* Minimal interface as per C++ ABI draft standard:
 
 	http://www.codesourcery.com/cxx-abi/abi-eh.html */
@@ -146,6 +151,8 @@ extern void *_Unwind_FindEnclosingFunction (void *);
     http://www.linuxbase.org/spec/refspecs/LSB_1.3.0/gLSB/gLSB/libgcc-s.html */
 
 #endif /* _GNU_SOURCE */
+    
+#endif /* __MINGW64__ */
 
 #define DECLARE_PERSONALITY_FUNCTION(name) \
 _Unwind_Reason_Code name(int version,\
