@@ -35,8 +35,8 @@ void __clear_cache(void* start, void* end);
 
 #define PAGE_SIZE 4096
 
-/* MINGW32 does not include implementation of valloc() or a prototype for mprotect */
-#ifdef __MINGW32__
+/* MINGW64 does not include implementation of valloc() or a prototype for mprotect */
+#ifdef __MINGW64__
 int mprotect(void *addr, size_t len, int prot);
 
 inline void *valloc(size_t size)
