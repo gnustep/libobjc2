@@ -27,7 +27,9 @@ Highlights of this release include:
 - Significant improvements to ARC, including
 
   * The runtime no longer acquires a global lock on every object deallocation (a
-    global lock is still used for objects that have weak references).
+    global lock is still used for objects that have weak references). *NOTE:*
+    This is incompatible with other code directly inspecting the reference
+    count and will break with older versions of GNUstep Base!
 
   * Weak references use a scheme closer to C++ `std::weak_pointer` and are
     lazily zeroed on access.  This reduces the space overheads for weak
