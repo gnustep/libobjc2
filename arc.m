@@ -629,13 +629,15 @@ static BOOL loadWeakPointer(id *addr, id *obj, WeakRef **ref)
 }
 
 __attribute__((always_inline))
-static inline void weakRefRelease(WeakRef *ref)
+static inline BOOL weakRefRelease(WeakRef *ref)
 {
 	ref->weak_count--;
 	if (ref->weak_count == 0)
 	{
 		free(ref);
+		return YES;
 	}
+	return NO;
 }
 
 void* block_load_weak(void *block);
@@ -787,7 +789,11 @@ id objc_loadWeakRetained(id* addr)
 	// will acquire the lock before attempting to deallocate)
 	if (obj == nil)
 	{
-		weakRefRelease(ref);
+		// If we've destroyed this weak ref, then make sure that we also deallocate the object.
+		if (weakRefRelease(ref))
+		{
+			*addr = nil;
+		}
 		return nil;
 	}
 	Class cls = classForObject(obj);
