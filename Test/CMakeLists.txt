@@ -68,4 +68,4 @@ endforeach()
 # Tests that are more than a single file.
 addtest_flags(CXXExceptions "-O0" "CXXException.m;CXXException.cc")
 addtest_flags(CXXExceptions_optimised "-O3" "CXXException.m;CXXException.cc")
-
+addtest_flags(MinRep "-O0" "minRep1.mm;minRep2.mm;minRep.mm;minRepM.m;ModTest.m;MyException.m")
