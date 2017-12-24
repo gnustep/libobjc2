@@ -1,9 +1,8 @@
 #import "Test.h"
 
-#import "minRepM.h"
-#import "minRep2.h"
-
 #import "stdio.h"
+
+void poke_objcxx(void);
 
 void rethrow(id x)
 {

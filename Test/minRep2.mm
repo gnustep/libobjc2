@@ -1,10 +1,10 @@
 #import "Test.h"
-
-#import "minRep2.h"
-
 #import "stdio.h"
 
-void poke_objcxx(void)
+extern "C" void rethrow(id);
+
+
+extern "C" void poke_objcxx(void)
 {
     @try {
       printf("Raising MyException\n");
