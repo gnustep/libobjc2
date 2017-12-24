@@ -1,4 +1,4 @@
-#include "ModTest.h"
+#include "Test.h"
 
 @interface MyException : Test {
 @private

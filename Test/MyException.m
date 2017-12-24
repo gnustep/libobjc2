@@ -1,21 +1,20 @@
 #import "MyException.h"
+#include <stdlib.h>
 
 @implementation MyException
 
 - (MyException *)initWithName:(char *)name
                        reason:(char *)reason
 {
-  if ((self = [super init]) != nil) {
-    _name = name;
-    _reason = reason;
-  }
+  _name = name;
+  _reason = reason;
   return self;
 }
 
 + (void) raise: (char *)name
 	format: (char *)reason
 {
-  MyException *e = [[[MyException alloc] initWithName:name 
+  MyException *e = [[[MyException new] initWithName:name 
 					       reason:reason] autorelease];
   [e raise];
 }
@@ -28,6 +27,7 @@
   if (_reason) {
     free(_reason);
   }
+  [super dealloc];
 }
 
 - (void) raise {

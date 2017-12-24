@@ -1,4 +1,4 @@
-#import "ModTest.h"
+#import "Test.h"
 
 #import "minRepM.h"
 
