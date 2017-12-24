@@ -1,26 +1,24 @@
 #import "Test.h"
 
 #import "minRepM.h"
-#import "minRep1.h"
-
-#import "MyException.h"
+#import "minRep2.h"
 
 #import "stdio.h"
 
-@implementation MinRepM
+void rethrow(id x)
+{
+	@throw x;
+}
 
-- (void)poke {
-  _mr1 = [MinRep1 new];
+int main(void)
+{
   @try {
     printf("Poking from minRepM\n");
-    if (_mr1) {
-      [_mr1 poke];
-    }
+    poke_objcxx();
     printf("Poked from minRepM\n");
-  } @catch (MyException *localException) {
-    printf("In NS_HANDLER block, %s %s\n", 
-	   [localException name], [localException reason]);
+  } @catch (Test *localException) {
+    printf("In NS_HANDLER block, %p\n", localException);
+	   
   }
 }
 
-@end

@@ -1,24 +1,22 @@
 #import "Test.h"
 
 #import "minRep2.h"
-#import "MyException.h"
 
 #import "stdio.h"
 
-@implementation MinRep2
-
-- (void)poke {
+void poke_objcxx(void)
+{
     @try {
       printf("Raising MyException\n");
-      MyException *e = [MyException new];
+      Test *e = [Test new];
       @throw e;
-    } @catch (MyException *localException) {
+    } @catch (Test *localException) {
       printf("Caught - re-raising\n");
       [localException retain];
-      [[localException autorelease] raise];
+      localException = [localException autorelease];;
+      rethrow(localException);
     } @catch(...) {
-      printf("Caught in general block\n");
+      printf("Caught in catchall\n");
     }
 }
 
-@end

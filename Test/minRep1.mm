@@ -8,10 +8,8 @@
 
 - (void)poke
 {
-  MinRep2 *mr2 = [MinRep2 new];
   printf("Poking from minRep1\n");
-  [mr2 poke];
-  [mr2 release];
+  poke_objcxx();
 }
 
 @end
