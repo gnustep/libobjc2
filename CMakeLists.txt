@@ -73,7 +73,7 @@ set(libobjc_HDRS
 	objc/slot.h
 )
 
-set(libobjcxx_CXX_SRCS objcxx_eh.cc)
+set(libobjc_CXX_SRCS objcxx_eh.cc)
 
 # For release builds, we disable spamming the terminal with warnings about
 # selector type mismatches
@@ -187,31 +187,16 @@ if (ENABLE_OBJCXX)
 			test_cxx_runtime
 			CMAKE_FLAGS "-DCXX_RUNTIME=${CXX_RUNTIME}")
 		message(STATUS "Is runtime useable? ${USERUNTIME}")
-		if (${FORCE_LIBOBJCXX} OR NOT ${USERUNTIME})
-			message(STATUS "Forcing build of stand-alone libobjcxx")
-			add_library(objcxx SHARED ${libobjcxx_CXX_SRCS})
-			set_target_properties(objcxx PROPERTIES
-				LINKER_LANGUAGE C
-				SOVERSION ${libobjc_VERSION}
-				)
-			target_link_libraries(objcxx ${CXX_RUNTIME})
-			set(CXX_RUNTIME "")
-			list(APPEND INSTALL_TARGETS objcxx)
+		if (NOT ${USERUNTIME})
+			message(STATUS "libobjc will depend on C++ standard library")
 		else ()
-			set(libobjc_CXX_SRCS ${libobjcxx_CXX_SRCS})
 			# We don't want to link the STL implementation (e.g. libstdc++) if
 			# we have a separate C++ runtime.
 			set(CMAKE_CXX_IMPLICIT_LINK_LIBRARIES "")
+			target_link_libraries(objc ${CXX_RUNTIME})
 		endif ()
 	else ()
-		message(STATUS "No C++ runtime library found")
-		add_library(objcxx SHARED ${libobjcxx_CXX_SRCS})
-		set_target_properties(objcxx PROPERTIES
-			LINKER_LANGUAGE C
-			SOVERSION ${libobjc_VERSION}
-			)
-		set(CXX_RUNTIME "")
-		list(APPEND INSTALL_TARGETS objcxx)
+		message(STATUS "libobjc will depend on C++ standard library")
 	endif ()
 endif (ENABLE_OBJCXX)
 
@@ -248,8 +233,7 @@ endif ()
 
 
 
-# Explicitly link the C++ runtime and libgc if we are compiling with gc support.
-target_link_libraries(objc ${CXX_RUNTIME})
+# Explicitly link libgc if we are compiling with gc support.
 if (LIBGC)
 	target_link_libraries(objc ${LIBGC})
 endif ()
