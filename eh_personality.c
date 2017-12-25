@@ -330,7 +330,7 @@ static inline _Unwind_Reason_Code internal_objc_personality(int version,
 	// The object to return
 	void *object = NULL;
 
-#ifdef NO_OBJCXX
+#ifndef NO_OBJCXX
 	if (exceptionClass == cxx_exception_class)
 	{
 		int objcxx;
@@ -421,7 +421,7 @@ static inline _Unwind_Reason_Code internal_objc_personality(int version,
 		// If this is not a cleanup, ignore it and keep unwinding.
 		//if (check_action_record(context, foreignException, &lsda,
 				//action.action_record, thrown_class, &selector) != handler_cleanup)
-		if (handler != handler_cleanup)
+		if ((handler != handler_cleanup) && !objcxxException)
 		{
 			DEBUG_LOG("Ignoring handler! %d\n",handler);
 			return continueUnwinding(exceptionObject, context);
