@@ -17,7 +17,6 @@ int main(void)
     printf("Poked from minRepM\n");
   } @catch (Test *localException) {
     printf("In NS_HANDLER block, %p\n", localException);
-	   
   }
 }
 

@@ -15,8 +15,6 @@ extern "C" void poke_objcxx(void)
       [localException retain];
       localException = [localException autorelease];;
       rethrow(localException);
-    } @catch(...) {
-      printf("Caught in catchall\n");
     }
 }
 
