@@ -165,17 +165,16 @@ set_source_files_properties(
 
 function(test_cxx CXX_RUNTIME_NAME IS_STDLIB)
 	set(CXX_RUNTIME_NAME "${CMAKE_SHARED_LIBRARY_PREFIX}${CXX_RUNTIME_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX}")
-	message(STATUS "Testing ${CXX_RUNTIME_NAME} as the C++ runtime library")
-	find_library(CXX_RUNTIME NAMES ${CXX_RUNTIME_NAME})
-	if (CXX_RUNTIME)
-		message(STATUS "Testing ${CXX_RUNTIME} as the C++ runtime library")
+	find_library(CXX_RUNTIME_LIB NAMES ${CXX_RUNTIME_NAME})
+	if (CXX_RUNTIME_LIB)
+		message(STATUS "Testing ${CXX_RUNTIME_LIB} as the C++ runtime library")
 		try_compile(USERUNTIME 
 			"${CMAKE_BINARY_DIR}/CMake"
 			"${CMAKE_SOURCE_DIR}/CMake"
 			test_cxx_runtime
-			CMAKE_FLAGS "-DCXX_RUNTIME=${CXX_RUNTIME} -DTEST_LINKER_LANGUAGE=C")
-		if (${USERUNTIME})
-			set(CXX_RUNTIME ${CXX_RUNTIME} PARENT_SCOPE)
+			CMAKE_FLAGS "-DCXX_RUNTIME=${CXX_RUNTIME_LIB}")
+		if (USERUNTIME)
+			set(CXX_RUNTIME ${CXX_RUNTIME_LIB} PARENT_SCOPE)
 		endif()
 	endif()
 endfunction()
