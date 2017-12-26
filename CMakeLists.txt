@@ -231,7 +231,7 @@ if (ENABLE_OBJCXX)
 		target_link_libraries(objc ${CXX_RUNTIME})
 	endif()
 	set(libobjc_CXX_SRCS ${libobjcxx_CXX_SRCS})
-	target_sources(objc ${libobjcxx_CXX_SRCS})
+	target_sources(objc PRIVATE ${libobjcxx_CXX_SRCS})
 endif()
 
 
