@@ -166,7 +166,7 @@ set_source_files_properties(
 function(test_cxx CXX_RUNTIME_NAME IS_STDLIB)
 	set(CXX_RUNTIME_NAME "${CMAKE_SHARED_LIBRARY_PREFIX}${CXX_RUNTIME_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX}")
 	message(STATUS "Testing ${CXX_RUNTIME_NAME} as the C++ runtime library")
-	find_library(CXX_RUNTIME NAMES libsupc++.so)
+	find_library(CXX_RUNTIME NAMES ${CXX_RUNTIME_NAME})
 	if (CXX_RUNTIME)
 		message(STATUS "Testing ${CXX_RUNTIME} as the C++ runtime library")
 		try_compile(USERUNTIME 
