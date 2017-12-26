@@ -70,5 +70,7 @@ endforeach()
 # Tests that are more than a single file.
 addtest_flags(CXXExceptions "-O0" "CXXException.m;CXXException.cc;Test.m")
 addtest_flags(CXXExceptions_optimised "-O3" "CXXException.m;CXXException.cc;Test.m")
+if (ENABLE_OBJCXX)
 addtest_flags(ObjCXXEHInterop "-O0" "ObjCXXEHInterop.mm;ObjCXXEHInterop.m;Test.m")
 addtest_flags(ObjCXXEHInterop_optimised "-O3" "ObjCXXEHInterop.mm;ObjCXXEHInterop.m;Test.m")
+endif()

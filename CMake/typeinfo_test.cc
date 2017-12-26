@@ -57,5 +57,6 @@ bool type_info2::__is_pointer_p() const { return true; }
 
 int main()
 {
-	return 0;
+	type_info2 s;
+	return s.__is_pointer_p();
 }

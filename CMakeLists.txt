@@ -73,7 +73,7 @@ set(libobjc_HDRS
 	objc/slot.h
 )
 
-set(libobjc_CXX_SRCS objcxx_eh.cc)
+set(libobjcxx_CXX_SRCS objcxx_eh.cc)
 
 # For release builds, we disable spamming the terminal with warnings about
 # selector type mismatches
@@ -162,18 +162,43 @@ set_source_files_properties(
 # C++ Runtime interaction
 #
 
+
+function(test_cxx CXX_RUNTIME_NAME IS_STDLIB)
+	set(CXX_RUNTIME_NAME "${CMAKE_SHARED_LIBRARY_PREFIX}${CXX_RUNTIME_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX}")
+	message(STATUS "Testing ${CXX_RUNTIME_NAME} as the C++ runtime library")
+	find_library(CXX_RUNTIME NAMES libsupc++.so)
+	if (CXX_RUNTIME)
+		message(STATUS "Testing ${CXX_RUNTIME} as the C++ runtime library")
+		try_compile(USERUNTIME 
+			"${CMAKE_BINARY_DIR}/CMake"
+			"${CMAKE_SOURCE_DIR}/CMake"
+			test_cxx_runtime
+			CMAKE_FLAGS "-DCXX_RUNTIME=${CXX_RUNTIME} -DTEST_LINKER_LANGUAGE=C")
+		if (${USERUNTIME})
+			set(CXX_RUNTIME ${CXX_RUNTIME} PARENT_SCOPE)
+		endif()
+	endif()
+endfunction()
+
 set(ENABLE_OBJCXX true CACHE BOOL
 	"Enable support for Objective-C++")
-set(FORCE_LIBOBJCXX false CACHE BOOL
-	"Force building a separate Objective-C++ runtime library")
+
+set(CXXRT_IS_STDLIB false)
+
+add_library(objc SHARED ${libobjc_C_SRCS} ${libobjc_ASM_SRCS} ${libobjc_OBJC_SRCS})
+
 if (ENABLE_OBJCXX)
+	message(STATUS "Testing C++ interop")
 	# Try to find libcxxrt.so.  We can link to this to provide the C++ ABI
 	# layer, if it exists.
-	find_library(CXX_RUNTIME NAMES libcxxrt.so)
+	test_cxx(cxxrt false)
 	# If it doesn't, then look for GNU libsupc++.so instead (either works,
 	# they're ABI compatible).
 	if (NOT CXX_RUNTIME)
-		find_library(CXX_RUNTIME NAMES libsupc++.so)
+		test_cxx(supc++ false)
+	endif (NOT CXX_RUNTIME)
+	if (NOT CXX_RUNTIME)
+		test_cxx(c++abi false)
 	endif (NOT CXX_RUNTIME)
 
 	# If we have a C++ ABI library, then we can produce a single libobjc that
@@ -181,25 +206,33 @@ if (ENABLE_OBJCXX)
 	# a separate libobjcxx.
 	if (CXX_RUNTIME)
 		message(STATUS "Using ${CXX_RUNTIME} as the C++ runtime library")
-		try_compile( USERUNTIME 
+	else()
+		message(STATUS "Testing C++ standard library")
+		try_compile(USERUNTIME 
 			"${CMAKE_BINARY_DIR}/CMake"
 			"${CMAKE_SOURCE_DIR}/CMake"
-			test_cxx_runtime
-			CMAKE_FLAGS "-DCXX_RUNTIME=${CXX_RUNTIME}")
-		message(STATUS "Is runtime useable? ${USERUNTIME}")
-		if (NOT ${USERUNTIME})
+			test_cxx_runtime)
+		if (${USERUNTIME})
 			message(STATUS "libobjc will depend on C++ standard library")
-		else ()
-			# We don't want to link the STL implementation (e.g. libstdc++) if
-			# we have a separate C++ runtime.
-			set(CMAKE_CXX_IMPLICIT_LINK_LIBRARIES "")
-			target_link_libraries(objc ${CXX_RUNTIME})
-		endif ()
-	else ()
-		message(STATUS "libobjc will depend on C++ standard library")
+			set(CXXRT_IS_STDLIB true)
+		else()
+			message(STATUS "No useable C++ runtime found")
+			set(ENABLE_OBJCXX false)
+		endif()
 	endif ()
 endif (ENABLE_OBJCXX)
 
+
+if (ENABLE_OBJCXX)
+	if (NOT CXXRT_IS_STDLIB)
+		# We don't want to link the STL implementation (e.g. libstdc++) if
+		# we have a separate C++ runtime.
+		set(CMAKE_CXX_IMPLICIT_LINK_LIBRARIES "")
+		target_link_libraries(objc ${CXX_RUNTIME})
+	endif()
+	set(libobjc_CXX_SRCS ${libobjcxx_CXX_SRCS})
+	target_sources(objc ${libobjcxx_CXX_SRCS})
+endif()
 
 
 # Currently, we actually need pthreads, but we should use the platform's native
@@ -210,7 +243,6 @@ set(objc_LINK_FLAGS "${objc_LINK_FLAGS} ${CMAKE_THREAD_LIBS_INIT}")
 
 
 
-add_library(objc SHARED ${libobjc_C_SRCS} ${libobjc_ASM_SRCS} ${libobjc_OBJC_SRCS} ${libobjc_CXX_SRCS})
 
 set_target_properties(objc PROPERTIES
 	LINKER_LANGUAGE C
