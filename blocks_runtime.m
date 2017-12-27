@@ -42,9 +42,9 @@ static void *_HeapBlockByRef = (void*)1;
 /**
  * Returns the Objective-C type encoding for the block.
  */
-const char *block_getType_np(void *b)
+const char *block_getType_np(const void *b)
 {
-	struct Block_layout *block = b;
+	const struct Block_layout *block = b;
 	if ((NULL == block) || !(block->flags & BLOCK_HAS_SIGNATURE))
 	{
 		return NULL;
@@ -60,8 +60,10 @@ static int increment24(int *ref)
 {
 	int old = *ref;
 	int val = old & BLOCK_REFCOUNT_MASK;
-	// FIXME: We should gracefully handle refcount overflow, but for now we
-	// just give up
+	if (val == BLOCK_REFCOUNT_MASK)
+	{
+		return val;
+	}
 	assert(val < BLOCK_REFCOUNT_MASK);
 	if (!__sync_bool_compare_and_swap(ref, old, old+1))
 	{
@@ -74,8 +76,10 @@ static int decrement24(int *ref)
 {
 	int old = *ref;
 	int val = old & BLOCK_REFCOUNT_MASK;
-	// FIXME: We should gracefully handle refcount overflow, but for now we
-	// just give up
+	if (val == BLOCK_REFCOUNT_MASK)
+	{
+		return val;
+	}
 	assert(val > 0);
 	if (!__sync_bool_compare_and_swap(ref, old, old-1))
 	{
@@ -231,10 +235,10 @@ void _Block_object_dispose(const void *object, const int flags)
 
 
 // Copy a block to the heap if it's still on the stack or increments its retain count.
-void *_Block_copy(void *src)
+void *_Block_copy(const void *src)
 {
 	if (NULL == src) { return NULL; }
-	struct Block_layout *self = src;
+	struct Block_layout *self = (struct Block_layout*)src;
 	struct Block_layout *ret = self;
 
 	extern void _NSConcreteStackBlock;
@@ -265,10 +269,10 @@ void *_Block_copy(void *src)
 }
 
 // Release a block and frees the memory when the retain count hits zero.
-void _Block_release(void *src)
+void _Block_release(const void *src)
 {
 	if (NULL == src) { return; }
-	struct Block_layout *self = src;
+	struct Block_layout *self = (struct Block_layout*)src;
 
 	extern void _NSConcreteStackBlock;
 	extern void _NSConcreteMallocBlock;

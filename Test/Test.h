@@ -23,6 +23,11 @@ __attribute__((objc_root_class))
 #endif
 @end
 
+@interface NSAutoreleasePool : Test
+@end
+
+#ifdef SINGLE_FILE_TEST
+
 #if !__has_feature(objc_arc)
 @implementation Test
 + (Class)class { return self; }
@@ -48,10 +53,7 @@ __attribute__((objc_root_class))
 }
 - (void)_ARCCompliantRetainRelease {}
 @end
-#endif
 
-@interface NSAutoreleasePool : Test
-@end
 @implementation NSAutoreleasePool
 - (void)_ARCCompatibleAutoreleasePool {}
 + (void)addObject:(id)anObject
@@ -59,3 +61,6 @@ __attribute__((objc_root_class))
 	objc_autorelease(anObject);
 }
 @end
+#endif
+
+#endif

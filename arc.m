@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdbool.h>
 #include <assert.h>
 #import "stdio.h"
 #import "objc/runtime.h"
@@ -163,6 +164,63 @@ extern BOOL FastARCAutorelease;
 
 static BOOL useARCAutoreleasePool;
 
+/**
+ * We use the top bit of the reference count to indicate whether an object has
+ * ever had a weak reference taken.  This lets us avoid acquiring the weak
+ * table lock for most objects on deallocation.
+ */
+static const long weak_mask = ((size_t)1)<<((sizeof(size_t)*8)-1);
+/**
+ * All of the bits other than the top bit are the real reference count.
+ */
+static const long refcount_mask = ~weak_mask;
+
+size_t object_getRetainCount_np(id obj)
+{
+	uintptr_t *refCount = ((uintptr_t*)obj) - 1;
+	uintptr_t refCountVal = __sync_fetch_and_add(refCount, 0);
+	return (((size_t)refCountVal) & refcount_mask) + 1;
+}
+
+id objc_retain_fast_np(id obj)
+{
+	uintptr_t *refCount = ((uintptr_t*)obj) - 1;
+	uintptr_t refCountVal = __sync_fetch_and_add(refCount, 0);
+	uintptr_t newVal = refCountVal;
+	do {
+		refCountVal = newVal;
+		long realCount = refCountVal & refcount_mask;
+		// If this object's reference count is already less than 0, then
+		// this is a spurious retain.  This can happen when one thread is
+		// attempting to acquire a strong reference from a weak reference
+		// and the other thread is attempting to destroy it.  The
+		// deallocating thread will decrement the reference count with no
+		// locks held and will then acquire the weak ref table lock and
+		// attempt to zero the weak references.  The caller of this will be
+		// `objc_loadWeakRetained`, which will also hold the lock.  If the
+		// serialisation is such that the locked retain happens after the
+		// decrement, then we return nil here so that the weak-to-strong
+		// transition doesn't happen and the object is actually destroyed.
+		// If the serialisation happens the other way, then the locked
+		// check of the reference count will happen after we've referenced
+		// this and we don't zero the references or deallocate.
+		if (realCount < 0)
+		{
+			return nil;
+		}
+		// If the reference count is saturated, don't increment it.
+		if (realCount == refcount_mask)
+		{
+			return obj;
+		}
+		realCount++;
+		realCount |= refCountVal & weak_mask;
+		uintptr_t updated = (uintptr_t)realCount;
+		newVal = __sync_val_compare_and_swap(refCount, refCountVal, updated);
+	} while (newVal != refCountVal);
+	return obj;
+}
+
 static inline id retain(id obj)
 {
 	if (isSmallObject(obj)) { return obj; }
@@ -174,17 +232,55 @@ static inline id retain(id obj)
 	}
 	if (objc_test_class_flag(cls, objc_class_flag_fast_arc))
 	{
-		intptr_t *refCount = ((intptr_t*)obj) - 1;
-		// Note: this should be an atomic read, so that a sufficiently clever
-		// compiler doesn't notice that there's no happens-before relationship
-		// here.
-		if (*refCount >= 0)
-		{
-			__sync_add_and_fetch(refCount, 1);
-		}
-		return obj;
+		return objc_retain_fast_np(obj);
 	}
 	return [obj retain];
+}
+
+BOOL objc_release_fast_no_destroy_np(id obj)
+{
+	uintptr_t *refCount = ((uintptr_t*)obj) - 1;
+	uintptr_t refCountVal = __sync_fetch_and_add(refCount, 0);
+	uintptr_t newVal = refCountVal;
+	bool isWeak;
+	bool shouldFree;
+	do {
+		refCountVal = newVal;
+		size_t realCount = refCountVal & refcount_mask;
+		// If the reference count is saturated, don't decrement it.
+		if (realCount == refcount_mask)
+		{
+			return NO;
+		}
+		realCount--;
+		isWeak = (refCountVal & weak_mask) == weak_mask;
+		shouldFree = realCount == -1;
+		realCount |= refCountVal & weak_mask;
+		uintptr_t updated = (uintptr_t)realCount;
+		newVal = __sync_val_compare_and_swap(refCount, refCountVal, updated);
+	} while (newVal != refCountVal);
+	// We allow refcounts to run into the negative, but should only
+	// deallocate once.
+	if (shouldFree)
+	{
+		if (isWeak)
+		{
+			if (!objc_delete_weak_refs(obj))
+			{
+				return NO;
+			}
+		}
+		return YES;
+	}
+	return NO;
+}
+
+void objc_release_fast_np(id obj)
+{
+	if (objc_release_fast_no_destroy_np(obj))
+	{
+		[obj dealloc];
+	}
 }
 
 static inline void release(id obj)
@@ -203,14 +299,7 @@ static inline void release(id obj)
 	}
 	if (objc_test_class_flag(cls, objc_class_flag_fast_arc))
 	{
-		intptr_t *refCount = ((intptr_t*)obj) - 1;
-		// We allow refcounts to run into the negative, but should only
-		// deallocate once.
-		if (__sync_sub_and_fetch(refCount, 1) == -1)
-		{
-			objc_delete_weak_refs(obj);
-			[obj dealloc];
-		}
+		objc_release_fast_np(obj);
 		return;
 	}
 	[obj release];
@@ -311,7 +400,6 @@ unsigned long objc_arc_autorelease_count_for_object_np(id obj)
 	}
 	return count;
 }
-
 
 void *objc_autoreleasePoolPush(void)
 {
@@ -467,17 +555,19 @@ id objc_storeStrong(id *addr, id value)
 // Weak references
 ////////////////////////////////////////////////////////////////////////////////
 
+static int weakref_class;
+
 typedef struct objc_weak_ref
 {
+	void *isa;
 	id obj;
-	id *ref[4];
-	struct objc_weak_ref *next;
+	size_t weak_count;
 } WeakRef;
 
 
-static int weak_ref_compare(const id obj, const WeakRef weak_ref)
+static int weak_ref_compare(const id obj, const WeakRef *weak_ref)
 {
-	return obj == weak_ref.obj;
+	return obj == weak_ref->obj;
 }
 
 static uint32_t ptr_hash(const void *ptr)
@@ -486,23 +576,14 @@ static uint32_t ptr_hash(const void *ptr)
 	// always be 0, which is not so useful for a hash value
 	return ((uintptr_t)ptr >> 4) | ((uintptr_t)ptr << ((sizeof(id) * 8) - 4));
 }
-static int weak_ref_hash(const WeakRef weak_ref)
+static int weak_ref_hash(const WeakRef *weak_ref)
 {
-	return ptr_hash(weak_ref.obj);
+	return ptr_hash(weak_ref->obj);
 }
-static int weak_ref_is_null(const WeakRef weak_ref)
-{
-	return weak_ref.obj == NULL;
-}
-const static WeakRef NullWeakRef;
 #define MAP_TABLE_NAME weak_ref
 #define MAP_TABLE_COMPARE_FUNCTION weak_ref_compare
 #define MAP_TABLE_HASH_KEY ptr_hash
 #define MAP_TABLE_HASH_VALUE weak_ref_hash
-#define MAP_TABLE_VALUE_TYPE struct objc_weak_ref
-#define MAP_TABLE_VALUE_NULL weak_ref_is_null
-#define MAP_TABLE_VALUE_PLACEHOLDER NullWeakRef
-#define MAP_TABLE_ACCESS_BY_REFERENCE 1
 #define MAP_TABLE_SINGLE_THREAD 1
 #define MAP_TABLE_NO_LOCK 1
 
@@ -520,12 +601,58 @@ PRIVATE void init_arc(void)
 #endif
 }
 
+/**
+  * Load from a weak pointer and return whether this really was a weak
+  * reference or a strong (not deallocatable) object in a weak pointer.  The
+  * object will be stored in `obj` and the weak reference in `ref`, if one
+  * exists.
+  */
+__attribute__((always_inline))
+static BOOL loadWeakPointer(id *addr, id *obj, WeakRef **ref)
+{
+	id oldObj = *addr;
+	if (oldObj == nil)
+	{
+		*ref = NULL;
+		*obj = nil;
+		return NO;
+	}
+	if (classForObject(oldObj) == (Class)&weakref_class)
+	{
+		*ref = (WeakRef*)oldObj;
+		*obj = (*ref)->obj;
+		return YES;
+	}
+	*ref = NULL;
+	*obj = oldObj;
+	return NO;
+}
+
+__attribute__((always_inline))
+static inline BOOL weakRefRelease(WeakRef *ref)
+{
+	ref->weak_count--;
+	if (ref->weak_count == 0)
+	{
+		free(ref);
+		return YES;
+	}
+	return NO;
+}
+
 void* block_load_weak(void *block);
 
 id objc_storeWeak(id *addr, id obj)
 {
-	id old = *addr;
-
+	LOCK_FOR_SCOPE(&weakRefLock);
+	WeakRef *oldRef;
+	id old;
+	loadWeakPointer(addr, &old, &oldRef);
+	// If the old and new values are the same, then we don't need to do anything.
+	if (old == obj)
+	{
+		return obj;
+	}
 	BOOL isGlobalObject = (obj == nil) || isSmallObject(obj);
 	Class cls = Nil;
 	if (!isGlobalObject)
@@ -538,33 +665,51 @@ id objc_storeWeak(id *addr, id obj)
 			isGlobalObject = YES;
 		}
 	}
-	if (cls && objc_test_class_flag(cls, objc_class_flag_fast_arc))
+	if (obj && cls && objc_test_class_flag(cls, objc_class_flag_fast_arc))
 	{
-		intptr_t *refCount = ((intptr_t*)obj) - 1;
-		if (obj && *refCount < 0)
+		uintptr_t *refCount = ((uintptr_t*)obj) - 1;
+		if (obj)
 		{
-			obj = nil;
-			cls = Nil;
-		}
-	}
-	LOCK_FOR_SCOPE(&weakRefLock);
-	if (nil != old)
-	{
-		WeakRef *oldRef = weak_ref_table_get(weakRefs, old);
-		while (NULL != oldRef)
-		{
-			for (int i=0 ; i<4 ; i++)
-			{
-				if (oldRef->ref[i] == addr)
+			uintptr_t refCountVal = __sync_fetch_and_add(refCount, 0);
+			uintptr_t newVal = refCountVal;
+			do {
+				refCountVal = newVal;
+				long realCount = refCountVal & refcount_mask;
+				// If this object has already been deallocated (or is in the
+				// process of being deallocated) then don't bother storing it.
+				if (realCount < 0)
 				{
-					oldRef->ref[i] = 0;
-					oldRef = 0;
+					obj = nil;
+					cls = Nil;
 					break;
 				}
-			}
-			oldRef = (oldRef == NULL) ? NULL : oldRef->next;
+				// The weak ref flag is monotonic (it is set, never cleared) so
+				// don't bother trying to re-set it.
+				if ((refCountVal & weak_mask) == weak_mask)
+				{
+					break;
+				}
+				// Set the flag in the reference count to indicate that a weak
+				// reference has been taken.
+				//
+				// We currently hold the weak ref lock, so another thread
+				// racing to deallocate this object will have to wait to do so
+				// if we manage to do the reference count update first.  This
+				// shouldn't be possible, because `obj` should be a strong
+				// reference and so it shouldn't be possible to deallocate it
+				// while we're assigning it.
+				uintptr_t updated = ((uintptr_t)realCount | weak_mask);
+				newVal = __sync_val_compare_and_swap(refCount, refCountVal, updated);
+			} while (newVal != refCountVal);
 		}
 	}
+	// If we old ref exists, decrement its reference count.  This may also
+	// delete the weak reference control block.
+	if (oldRef != NULL)
+	{
+		weakRefRelease(oldRef);
+	}
+	// If we're storing nil, then just write a null pointer.
 	if (nil == obj)
 	{
 		*addr = obj;
@@ -573,115 +718,90 @@ id objc_storeWeak(id *addr, id obj)
 	if (isGlobalObject)
 	{
 		// If this is a global object, it's never deallocated, so secretly make
-		// this a strong reference
+		// this a strong reference.
 		*addr = obj;
 		return obj;
-	}
-	if (&_NSConcreteMallocBlock == cls)
-	{
-		obj = block_load_weak(obj);
-	}
-	else if (objc_test_class_flag(cls, objc_class_flag_fast_arc))
-	{
-		if ((*(((intptr_t*)obj) - 1)) < 0)
-		{
-			return nil;
-		}
-	}
-	else
-	{
-		obj = _objc_weak_load(obj);
 	}
 	if (nil != obj)
 	{
 		WeakRef *ref = weak_ref_table_get(weakRefs, obj);
-		while (NULL != ref)
+		if (ref == NULL)
 		{
-			for (int i=0 ; i<4 ; i++)
-			{
-				if (0 == ref->ref[i])
-				{
-					ref->ref[i] = addr;
-					*addr = obj;
-					return obj;
-				}
-			}
-			if (ref->next == NULL)
-			{
-				break;
-			}
-			ref = ref->next;
-		}
-		if (NULL != ref)
-		{
-			ref->next = calloc(sizeof(WeakRef), 1);
-			ref->next->ref[0] = addr;
+			ref = calloc(1, sizeof(WeakRef));
+			ref->isa = (Class)&weakref_class;
+			ref->obj = obj;
+			ref->weak_count = 1;
+			weak_ref_insert(weakRefs, ref);
 		}
 		else
 		{
-			WeakRef newRef = {0};
-			newRef.obj = obj;
-			newRef.ref[0] = addr;
-			weak_ref_insert(weakRefs, newRef);
+			ref->weak_count++;
 		}
+		*addr = (id)ref;
 	}
-	*addr = obj;
 	return obj;
 }
 
-static void zeroRefs(WeakRef *ref, BOOL shouldFree)
-{
-	if (NULL != ref->next)
-	{
-		zeroRefs(ref->next, YES);
-	}
-	for (int i=0 ; i<4 ; i++)
-	{
-		if (0 != ref->ref[i])
-		{
-			*ref->ref[i] = 0;
-		}
-	}
-	if (shouldFree)
-	{
-		free(ref);
-	}
-}
-
-void objc_delete_weak_refs(id obj)
+BOOL objc_delete_weak_refs(id obj)
 {
 	LOCK_FOR_SCOPE(&weakRefLock);
+	if (objc_test_class_flag(classForObject(obj), objc_class_flag_fast_arc))
+	{
+		// If another thread has done a load of a weak reference, then it will
+		// have incremented the reference count with the lock held.  It may
+		// have done so in between this thread's decrementing the reference
+		// count and its acquiring the lock.  In this case, report failure.
+		uintptr_t *refCount = ((uintptr_t*)obj) - 1;
+		if ((long)((__sync_fetch_and_add(refCount, 0) & refcount_mask)) < 0)
+		{
+			return NO;
+		}
+	}
 	WeakRef *oldRef = weak_ref_table_get(weakRefs, obj);
 	if (0 != oldRef)
 	{
-		zeroRefs(oldRef, NO);
+		// Zero the object pointer.  This prevents any other weak
+		// accesses from loading from this.
+		oldRef->obj = nil;
+		// The address of obj is likely to be reused, so remove it from
+		// the table so that we don't accidentally alias weak
+		// references
 		weak_ref_remove(weakRefs, obj);
+		// If the weak reference count is zero, then we should have
+		// already removed this.
+		assert(oldRef->weak_count > 0);
 	}
+	return YES;
 }
 
 id objc_loadWeakRetained(id* addr)
 {
 	LOCK_FOR_SCOPE(&weakRefLock);
-	id obj = *addr;
-	if (nil == obj) { return nil; }
-	// Small objects don't need reference count modification
-	if (isSmallObject(obj))
+	id obj;
+	WeakRef *ref;
+	// If this is really a strong reference (nil, or an non-deallocatable
+	// object), just return it.
+	if (!loadWeakPointer(addr, &obj, &ref))
 	{
 		return obj;
+	}
+	// The object cannot be deallocated while we hold the lock (release
+	// will acquire the lock before attempting to deallocate)
+	if (obj == nil)
+	{
+		// If we've destroyed this weak ref, then make sure that we also deallocate the object.
+		if (weakRefRelease(ref))
+		{
+			*addr = nil;
+		}
+		return nil;
 	}
 	Class cls = classForObject(obj);
 	if (&_NSConcreteMallocBlock == cls)
 	{
 		obj = block_load_weak(obj);
 	}
-	else if (objc_test_class_flag(cls, objc_class_flag_fast_arc))
-	{
-		if ((*(((intptr_t*)obj) - 1)) < 0)
-		{
-			return nil;
-		}
-	}
-	else
+	else if (!objc_test_class_flag(cls, objc_class_flag_fast_arc))
 	{
 		obj = _objc_weak_load(obj);
 	}
@@ -695,7 +815,24 @@ id objc_loadWeak(id* object)
 
 void objc_copyWeak(id *dest, id *src)
 {
-	objc_release(objc_initWeak(dest, objc_loadWeakRetained(src)));
+	// Don't retain or release.  While the weak ref lock is held, we know that
+	// the object can't be deallocated, so we just move the value and update
+	// the weak reference table entry to indicate the new address.
+	LOCK_FOR_SCOPE(&weakRefLock);
+	id obj;
+	WeakRef *srcRef;
+	WeakRef *dstRef;
+	loadWeakPointer(dest, &obj, &dstRef);
+	loadWeakPointer(src, &obj, &srcRef);
+	*dest = *src;
+	if (srcRef)
+	{
+		srcRef->weak_count++;
+	}
+	if (dstRef)
+	{
+		weakRefRelease(dstRef);
+	}
 }
 
 void objc_moveWeak(id *dest, id *src)
@@ -704,19 +841,15 @@ void objc_moveWeak(id *dest, id *src)
 	// the object can't be deallocated, so we just move the value and update
 	// the weak reference table entry to indicate the new address.
 	LOCK_FOR_SCOPE(&weakRefLock);
+	id obj;
+	WeakRef *oldRef;
+	// If the destination is a weak ref, free it.
+	loadWeakPointer(dest, &obj, &oldRef);
 	*dest = *src;
 	*src = nil;
-	WeakRef *oldRef = weak_ref_table_get(weakRefs, *dest);
-	while (NULL != oldRef)
+	if (oldRef != NULL)
 	{
-		for (int i=0 ; i<4 ; i++)
-		{
-			if (oldRef->ref[i] == src)
-			{
-				oldRef->ref[i] = dest;
-				return;
-			}
-		}
+		weakRefRelease(oldRef);
 	}
 }
 

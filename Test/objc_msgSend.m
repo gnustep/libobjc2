@@ -1,3 +1,5 @@
+// Needed with glibc to expose vasprintf
+#define _GNU_SOURCE
 #include <time.h>
 #include <stdio.h>
 #include <assert.h>

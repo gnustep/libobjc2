@@ -64,6 +64,10 @@ function(addtest_variants TEST TEST_SOURCE)
 	addtest_flags("${TEST}_optimised" "-O3 -fobjc-runtime=gnustep-2.0 -UNDEBUG" "${TEST_SOURCE}")
 	addtest_flags("${TEST}_legacy" "-O0 -fobjc-runtime=gnustep-1.7 -UNDEBUG" "${TEST_SOURCE}")
 	addtest_flags("${TEST}_legacy_optimised" "-O3 -fobjc-runtime=gnustep-1.7 -UNDEBUG" "${TEST_SOURCE}")
+	target_compile_definitions("${TEST}_legacy" PRIVATE SINGLE_FILE_TEST=1)
+	target_compile_definitions("${TEST}_legacy_optimised" PRIVATE SINGLE_FILE_TEST=1)
+	target_compile_definitions(${TEST} PRIVATE SINGLE_FILE_TEST=1)
+	target_compile_definitions("${TEST}_optimised" PRIVATE SINGLE_FILE_TEST=1)
 endfunction(addtest_variants)
 
 foreach(TEST_SOURCE ${TESTS})
@@ -73,3 +77,6 @@ endforeach()
 
 # Tests that are more than a single file.
 addtest_variants("CXXExceptions" "CXXException.m;CXXException.cc")
+if (ENABLE_OBJCXX)
+addtest_variants(ObjCXXEHInterop "ObjCXXEHInterop.mm;ObjCXXEHInterop.m;Test.m")
+endif()

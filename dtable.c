@@ -54,6 +54,13 @@ static BOOL ownsMethod(Class cls, SEL sel)
 	return NO;
 }
 
+
+#ifdef DEBUG_ARC_COMPAT
+#define ARC_DEBUG_LOG(...) fprintf(stderr, __VA_LIST__)
+#else
+#define ARC_DEBUG_LOG(...) do {} while(0)
+#endif
+
 /**
  * Checks whether the class implements memory management methods, and whether
  * they are safe to use with ARC.
@@ -71,18 +78,21 @@ static void checkARCAccessors(Class cls)
 	struct objc_slot *slot = objc_get_slot2(cls, retain);
 	if ((NULL != slot) && !ownsMethod(slot->owner, isARC))
 	{
+		ARC_DEBUG_LOG("%s does not support ARC correctly (implements retain)\n", cls->name);
 		objc_clear_class_flag(cls, objc_class_flag_fast_arc);
 		return;
 	}
 	slot = objc_get_slot2(cls, release);
 	if ((NULL != slot) && !ownsMethod(slot->owner, isARC))
 	{
+		ARC_DEBUG_LOG("%s does not support ARC correctly (implements release)\n", cls->name);
 		objc_clear_class_flag(cls, objc_class_flag_fast_arc);
 		return;
 	}
 	slot = objc_get_slot2(cls, autorelease);
 	if ((NULL != slot) && !ownsMethod(slot->owner, isARC))
 	{
+		ARC_DEBUG_LOG("%s does not support ARC correctly (implements autorelease)\n", cls->name);
 		objc_clear_class_flag(cls, objc_class_flag_fast_arc);
 		return;
 	}

@@ -33,6 +33,12 @@ id objc_loadWeakRetained(id* obj);
  */
 id objc_retain(id obj);
 /**
+ * Retains the argument, assuming that the argument is a normal object and has
+ * its reference count managed by the runtime.
+ * This is intended to implement `-retain` in ARC-compatible root classes.
+ */
+id objc_retain_fast_np(id obj) OBJC_NONPORTABLE;
+/**
  * Retains and autoreleases an object.  Equivalent to [[obj retain] autorelease].
  */
 id objc_retainAutorelease(id obj);
@@ -86,6 +92,30 @@ void objc_destroyWeak(id* addr);
  */
 void objc_moveWeak(id *dest, id *src);
 /**
+ * Releases the argument, assuming that the argument is a normal object and has
+ * its reference count managed by the runtime.  If the retain count reaches
+ * zero then all weak references will be zeroed and the object will be
+ * destroyed.
+ *
+ * This is intended to implement `-release` in ARC-compatible root
+ * classes.
+ */
+void objc_release_fast_np(id obj) OBJC_NONPORTABLE;
+/**
+ * Releases the argument, assuming that the argument is a normal object and has
+ * its reference count managed by the runtime.  If the retain count reaches
+ * zero then all weak references will be zeroed but the object will *NOT* be
+ * destroyed.
+ *
+ * This is intended to implement `NSDecrementExtraRefCountWasZero` for use with
+ * ARC-compatible classes.
+ */
+BOOL objc_release_fast_no_destroy_np(id obj) OBJC_NONPORTABLE;
+/**
+ * Returns the retain count of an object.
+ */
+size_t object_getRetainCount_np(id obj) OBJC_NONPORTABLE;
+/**
  * Releases an object.  Equivalent to [obj release].
  */
 void objc_release(id obj);
@@ -94,9 +124,11 @@ void objc_release(id obj);
  * weak pointers will return 0.  This function should be called in -release,
  * before calling [self dealloc].
  *
+ * This will return `YES` if the weak references were deleted, `NO` otherwise.
+ *
  * Nonstandard extension.
  */
-void objc_delete_weak_refs(id obj);
+BOOL objc_delete_weak_refs(id obj);
 /**
  * Returns the total number of objects in the ARC-managed autorelease pool.
  */
