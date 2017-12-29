@@ -220,7 +220,6 @@ void testProtocols()
 void testMultiTypedSelector()
 {
   test(sel_isEqual(@selector(manyTypes),sel_getUid("manyTypes")));
-  test(@selector(manyTypes) == sel_getUid("manyTypes"));
 
   Method intMethod = class_getInstanceMethod([Foo class], @selector(manyTypes));
   Method idMethod = class_getInstanceMethod([Bar class], @selector(manyTypes));
