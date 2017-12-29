@@ -4,7 +4,37 @@
 #undef NDEBUG
 #endif
 #include <assert.h>
-#ifndef SINGLE_FILE_TEST
-#define SINGLE_FILE_TEST 1
-#endif
 #include "Test.h"
+
+@implementation Test
++ (Class)class { return self; }
++ (id)new
+{
+	return class_createInstance(self, 0);
+}
+- (void)dealloc
+{
+	object_dispose(self);
+}
+- (id)autorelease
+{
+	return objc_autorelease(self);
+}
+- (id)retain
+{
+	return objc_retain(self);
+}
+- (void)release
+{
+	objc_release(self);
+}
+- (void)_ARCCompliantRetainRelease {}
+@end
+
+@implementation NSAutoreleasePool
+- (void)_ARCCompatibleAutoreleasePool {}
++ (void)addObject:(id)anObject
+{
+	objc_autorelease(anObject);
+}
+@end

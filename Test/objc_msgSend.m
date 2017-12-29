@@ -26,8 +26,8 @@ Class TestCls;
 __attribute__((objc_root_class))
 #endif
 #endif
-@interface Test { id isa; } @end
-@interface Test (Dynamic)
+@interface MsgTest { id isa; } @end
+@interface MsgTest (Dynamic)
 + (void)manyArgs: (int)a0
          : (int) a1
          : (int) a2
@@ -51,7 +51,7 @@ __attribute__((objc_root_class))
          : (float) f9
          : (float) f10;
 @end
-@implementation Test 
+@implementation MsgTest 
 - foo
 {
 	assert((id)1 == self);
@@ -125,7 +125,7 @@ void fwdMany(id self,
              float f10)
 {
 	forwardcalls++;
-	assert(self == objc_getClass("Test"));
+	assert(self == objc_getClass("MsgTest"));
 	if (sel_isEqual(_cmd, sel_registerName("manyArgs:::::::::::::::::::::")))
 	assert(a0 == 0);
 	assert(a1 == 1);
@@ -158,7 +158,7 @@ void fwd(void)
 
 IMP forward(id o, SEL s)
 {
-	assert(o == objc_getClass("Test"));
+	assert(o == objc_getClass("MsgTest"));
 	if (sel_isEqual(s, sel_registerName("missing")))
 	{
 		return (IMP)fwd;
@@ -178,7 +178,7 @@ int main(void)
 {
 	__objc_msg_forward2 = forward;
 	__objc_msg_forward3 = forward_slot;
-	TestCls = objc_getClass("Test");
+	TestCls = objc_getClass("MsgTest");
 	int exceptionThrown = 0;
 	@try {
 		objc_msgSend(TestCls, @selector(foo));
@@ -193,11 +193,11 @@ int main(void)
 	objc_msgSend(TestCls, @selector(missing));
 	assert(forwardcalls == 1);
 	assert(0 == objc_msgSend(0, @selector(nothing)));
-	id a = objc_msgSend(objc_getClass("Test"), @selector(foo));
+	id a = objc_msgSend(objc_getClass("MsgTest"), @selector(foo));
 	assert((id)0x42 == a);
 	a = objc_msgSend(TestCls, @selector(foo));
 	assert((id)0x42 == a);
-	assert(objc_registerSmallObjectClass_np(objc_getClass("Test"), 1));
+	assert(objc_registerSmallObjectClass_np(objc_getClass("MsgTest"), 1));
 	a = objc_msgSend((id)01, @selector(foo));
 	assert((id)0x42 == a);
 	s ret = ((s(*)(id, SEL))objc_msgSend_stret)(TestCls, @selector(sret));
@@ -208,7 +208,7 @@ int main(void)
 	assert(ret.e == 5);
 	if (sizeof(id) == 8)
 	{
-		assert(objc_registerSmallObjectClass_np(objc_getClass("Test"), 3));
+		assert(objc_registerSmallObjectClass_np(objc_getClass("MsgTest"), 3));
 		ret = ((s(*)(id, SEL))objc_msgSend_stret)((id)3, @selector(sret));
 		assert(ret.a == 1);
 		assert(ret.b == 2);
