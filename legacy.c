@@ -38,8 +38,15 @@ static struct objc_ivar_list *upgradeIvarList(struct legacy_gnustep_objc_class *
 	n->count = l->count;
 	for (int i=0 ; i<l->count ; i++)
 	{
+		int nextOffset = (i+1 < l->count) ? l->ivar_list[i+1].offset : cls->instance_size;
+		if (nextOffset < 0)
+		{
+			nextOffset = -nextOffset;
+		}
+		const char *type = l->ivar_list[i].type;
+		int size = nextOffset - l->ivar_list[i].offset;
 		n->ivar_list[i].name = l->ivar_list[i].name;
-		n->ivar_list[i].type = l->ivar_list[i].type;
+		n->ivar_list[i].type = type;
 		if (objc_test_class_flag_legacy(cls, objc_class_flag_new_abi))
 		{
 			n->ivar_list[i].offset = cls->ivar_offsets[i];
@@ -48,8 +55,11 @@ static struct objc_ivar_list *upgradeIvarList(struct legacy_gnustep_objc_class *
 		{
 			n->ivar_list[i].offset = &l->ivar_list[i].offset;
 		}
-		const char *type = l->ivar_list[i].type;
 		n->ivar_list[i].align = ((type == NULL) || type[0] == 0) ? __alignof__(void*) : objc_alignof_type(type);
+		if (type[0] == '\0')
+		{
+			n->ivar_list[i].align = size;
+		}
 		ivarSetOwnership(&n->ivar_list[i], ownershipForIvar(cls, i));
 	}
 	return n;

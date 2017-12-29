@@ -5,9 +5,9 @@
 #include "objc/runtime.h"
 #include "objc/objc-arc.h"
 #include "class.h"
-#include "ivar.h"
 #include "visibility.h"
 #include "gc_ops.h"
+#include "legacy.h"
 
 ptrdiff_t objc_alignof_type(const char *);
 ptrdiff_t objc_sizeof_type(const char *);
@@ -78,18 +78,14 @@ PRIVATE void objc_compute_ivar_offsets(Class class)
 				// We only need to do the realignment for things that are
 				// bigger than a pointer, and we don't need to do it in GC mode
 				// where we don't add any extra padding.
-				if (!isGCEnabled && (ivar_size > sizeof(void*)))
+				if (!isGCEnabled && (ivar->align > __alignof__(void*)))
 				{
 					long offset = ivar_start + *ivar->offset + sizeof(intptr_t);
-					// For now, assume that nothing needs to be more than 16-byte aligned.
-					// This is not correct for AVX vectors, but we probably
-					// can't do anything about that for now (as malloc is only
-					// giving us 16-byte aligned memory)
-					long fudge = 16 - (offset % 16);
+					long fudge = ivar->align - (offset % ivar->align);
 					*ivar->offset += fudge;
 					class->instance_size += fudge;
 					cumulative_fudge += fudge;
-					assert((ivar_start + *ivar->offset + sizeof(intptr_t)) % 16 == 0);
+					assert((ivar_start + *ivar->offset + sizeof(intptr_t)) % ivar->align == 0);
 				}
 				*ivar->offset += ivar_start;
 			}
