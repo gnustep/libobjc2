@@ -628,10 +628,11 @@ id objc_begin_catch(struct _Unwind_Exception *exceptionObject)
 		Class thrown_class =
 			_objc_class_for_boxing_foreign_exception(exceptionObject->exception_class);
 		SEL box_sel = sel_registerName("exceptionWithForeignException:");
-		IMP boxfunction = objc_msg_lookup((id)thrown_class, box_sel);
+		id(*boxfunction)(Class,SEL,struct _Unwind_Exception*) = 
+			(id(*)(Class,SEL,struct _Unwind_Exception*))objc_msg_lookup((id)thrown_class, box_sel);
 		if (boxfunction != 0)
 		{
-			id boxed = boxfunction((id)thrown_class, box_sel, exceptionObject);
+			id boxed = boxfunction(thrown_class, box_sel, exceptionObject);
 			td->caughtExceptions = (struct objc_exception*)boxed;
 			td->current_exception_type = BOXED_FOREIGN;
 			return boxed;
