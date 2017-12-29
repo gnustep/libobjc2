@@ -162,9 +162,11 @@ BOOL class_addIvar(Class cls, const char *name, size_t size, uint8_t alignment,
 		offset <<= alignment;
 	}
 
-	ivar->offset = offset;
+	// FIXME: This is stupid, but it will work for testing.
+	ivar->offset = malloc(sizeof(int));
+	*ivar->offset = offset;
 	// Increase the instance size to make space for this.
-	cls->instance_size = ivar->offset + size;
+	cls->instance_size = *ivar->offset + size;
 	return YES;
 }
 
@@ -353,6 +355,7 @@ id class_createInstance(Class cls, size_t extraBytes)
 	}
 
 	if (Nil == cls)	{ return nil; }
+	assert(cls->instance_size >= sizeof(Class));
 	id obj = gc->allocate_class(cls, extraBytes);
 	obj->isa = cls;
 	checkARCAccessorsSlow(cls);
@@ -542,7 +545,7 @@ const char * ivar_getName(Ivar ivar)
 ptrdiff_t ivar_getOffset(Ivar ivar)
 {
 	CHECK_ARG(ivar);
-	return ivar->offset;
+	return *ivar->offset;
 }
 
 const char * ivar_getTypeEncoding(Ivar ivar)
@@ -752,14 +755,7 @@ void *object_getIndexedIvars(id obj)
 	if ((0 == size) && class_isMetaClass(classForObject(obj)))
 	{
 		Class cls = (Class)obj;
-		if (objc_test_class_flag(cls, objc_class_flag_new_abi))
-		{
-			size = sizeof(struct objc_class);
-		}
-		else
-		{
-			size = sizeof(struct legacy_abi_objc_class);
-		}
+		size = sizeof(struct objc_class);
 	}
 	return ((char*)obj) + size;
 }

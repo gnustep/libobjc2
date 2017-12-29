@@ -12,7 +12,6 @@
 #include <stdlib.h>
 #include <assert.h>
 
-void objc_register_selectors_from_class(Class class);
 void objc_init_protocols(struct objc_protocol_list *protos);
 void objc_compute_ivar_offsets(Class class);
 
@@ -243,6 +242,12 @@ PRIVATE BOOL objc_resolve_class(Class cls)
 
 	// Fix up the ivar offsets
 	objc_compute_ivar_offsets(cls);
+	struct legacy_gnustep_objc_class *oldCls = objc_legacy_class_for_class(cls);
+	if (oldCls)
+	{
+		oldCls->super_class = cls->super_class;
+		oldCls->isa->super_class = cls->isa->super_class;
+	}
 	// Send the +load message, if required
 	if (!objc_test_class_flag(cls, objc_class_flag_user_created))
 	{
@@ -361,10 +366,6 @@ static void reload_class(struct objc_class *class, struct objc_class *old)
 	// this class will now return this class.
 	class_table_internal_table_set(class_table, (void*)class->name, class);
 
-	// Register all of the selectors used by this class and its metaclass
-	objc_register_selectors_from_class(class);
-	objc_register_selectors_from_class(class->isa);
-
 	// Set the uninstalled dtable.  The compiler could do this as well.
 	class->dtable = uninstalled_dtable;
 	class->isa->dtable = uninstalled_dtable;
@@ -414,10 +415,6 @@ PRIVATE void objc_load_class(struct objc_class *class)
 
 	// Insert the class into the class table
 	class_table_insert(class);
-
-	// Register all of the selectors used by this class and its metaclass
-	objc_register_selectors_from_class(class);
-	objc_register_selectors_from_class(class->isa);
 
 	// Set the uninstalled dtable.  The compiler could do this as well.
 	class->dtable = uninstalled_dtable;

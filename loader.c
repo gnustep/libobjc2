@@ -6,6 +6,7 @@
 #include "lock.h"
 #include "loader.h"
 #include "visibility.h"
+#include "legacy.h"
 #ifdef ENABLE_GC
 #include <gc/gc.h>
 #endif
@@ -97,8 +98,8 @@ struct objc_init
 	SEL sel_end;
 	Class *cls_begin;
 	Class *cls_end;
-	char **cls_ref_begin;
-	char **cls_ref_end;
+	Class *cls_ref_begin;
+	Class *cls_ref_end;
 	struct objc_category *cat_begin;
 	struct objc_category *cat_end;
 	struct objc_protocol2 *proto_begin;
@@ -153,16 +154,14 @@ void __objc_load(struct objc_init *init)
 		}
 		objc_load_class(*cls);
 	}
-	for (char **cls = init->cls_ref_begin ; cls < init->cls_ref_end ; cls++)
+#if 0
+	// We currently don't do anything with these pointers.  They exist to
+	// provide a level of indirection that will permit us to completely change
+	// the `objc_class` struct without breaking the ABI (again)
+	for (Class *cls = init->cls_ref_begin ; cls < init->cls_ref_end ; cls++)
 	{
-		id *out = (id*)cls;
-		if (*out == nil)
-		{
-			continue;
-		}
-		*out = objc_getClass(*cls);
-		assert(*out);
 	}
+#endif
 	for (struct objc_category *cat = init->cat_begin ; cat < init->cat_end ;
 	     cat++)
 	{
@@ -216,13 +215,13 @@ void __objc_exec_class(struct objc_module_abi_8 *module)
 	// Load the classes from this module
 	for (unsigned short i=0 ; i<symbols->class_count ; i++)
 	{
-		objc_load_class(symbols->definitions[defs++]);
+		objc_load_class(objc_upgrade_class(symbols->definitions[defs++]));
 	}
 	unsigned int category_start = defs;
 	// Load the categories from this module
 	for (unsigned short i=0 ; i<symbols->category_count; i++)
 	{
-		objc_try_load_category(symbols->definitions[defs++]);
+		objc_try_load_category(objc_upgrade_category(symbols->definitions[defs++]));
 	}
 	// Load the static instances
 	struct objc_static_instance_list **statics = (void*)symbols->definitions[defs];

@@ -1,6 +1,7 @@
 #ifndef __OBJC_CLASS_H_INCLUDED
 #define __OBJC_CLASS_H_INCLUDED
 #include "visibility.h"
+#include <stdint.h>
 
 /**
  * Overflow bitfield.  Used for bitfields that are more than 63 bits.
@@ -125,6 +126,101 @@ struct objc_class
 	* indicates that the new ivar structure is used.
 	*/
 	long                       abi_version;
+	/**
+	* List of declared properties on this class (NULL if none).
+	*/
+	struct objc_property_list *properties;
+};
+
+struct legacy_gnustep_objc_class
+{
+	/**
+	 * Pointer to the metaclass for this class.  The metaclass defines the
+	 * methods use when a message is sent to the class, rather than an
+	 * instance.
+	 */
+	struct objc_class         *isa;
+	/**
+	 * Pointer to the superclass.  The compiler will set this to the name of
+	 * the superclass, the runtime will initialize it to point to the real
+	 * class.
+	 */
+	struct objc_class         *super_class;
+	/**
+	 * The name of this class.  Set to the same value for both the class and
+	 * its associated metaclass.
+	 */
+	const char                *name;
+	/**
+	 * The version of this class.  This is not used by the language, but may be
+	 * set explicitly at class load time.
+	 */
+	long                       version;
+	/**
+	 * A bitfield containing various flags.  See the objc_class_flags
+	 * enumerated type for possible values.  
+	 */
+	unsigned long              info;
+	/**
+	 * The size of this class.  For classes using the non-fragile ABI, the
+	 * compiler will set this to a negative value The absolute value will be
+	 * the size of the instance variables defined on just this class.  When
+	 * using the fragile ABI, the instance size is the size of instances of
+	 * this class, including any instance variables defined on superclasses.
+	 *
+	 * In both cases, this will be set to the size of an instance of the class
+	 * after the class is registered with the runtime.
+	 */
+	long                       instance_size;
+	/**
+	 * Metadata describing the instance variables in this class.
+	 */
+	struct objc_ivar_list_legacy *ivars;
+	/**
+	 * Metadata for for defining the mappings from selectors to IMPs.  Linked
+	 * list of method list structures, one per class and one per category.
+	 */
+	struct objc_method_list   *methods;
+	/**
+	 * The dispatch table for this class.  Intialized and maintained by the
+	 * runtime.
+	 */
+	void                      *dtable;
+	/**
+	 * A pointer to the first subclass for this class.  Filled in by the
+	 * runtime.
+	 */
+	struct objc_class         *subclass_list;
+	/**
+	 * A pointer to the next sibling class to this.  You may find all
+	 * subclasses of a given class by following the subclass_list pointer and
+	 * then subsequently following the sibling_class pointers in the
+	 * subclasses.
+	 */
+	struct objc_class         *sibling_class;
+
+	/**
+	 * Metadata describing the protocols adopted by this class.  Not used by
+	 * the runtime.
+	 */
+	struct objc_protocol_list *protocols;
+	/**
+	 * Linked list of extra data attached to this class.
+	 */
+	struct reference_list     *extra_data;
+	/**
+	* New ABI.  The following fields are only available with classes compiled to
+	* support the new ABI.  You may test whether any given class supports this
+	* ABI by using the CLS_ISNEW_ABI() macro.
+	*/
+
+	/**
+	* The version of the ABI used for this class.  Zero indicates the ABI first
+	* implemented by clang 1.0.  One indicates the presence of bitmaps
+	* indicating the offsets of strong, weak, and unretained ivars.  Two
+	* indicates that the new ivar structure is used.
+	*/
+	long                       abi_version;
 
 	/** 
 	* Array of pointers to variables where the runtime will store the ivar
@@ -170,12 +266,12 @@ struct objc_class
 };
 
 /**
- * Structure representing the old ABI class structure.  This is only ever
+ * Structure representing the GCC ABI class structure.  This is only ever
  * required so that we can take its size - struct objc_class begins with the
  * same fields, and you can test the new abi flag to tell whether it is safe to
  * access the subsequent fields.
  */
-struct legacy_abi_objc_class
+struct legacy_gcc_objc_class
 {
 	struct objc_class         *isa;
 	struct objc_class         *super_class;
@@ -183,7 +279,7 @@ struct legacy_abi_objc_class
 	long                       version;
 	unsigned long              info;
 	long                       instance_size;
-	struct objc_ivar_list     *ivars;
+	struct objc_ivar_list_legacy     *ivars;
 	struct objc_method_list   *methods;
 	void                      *dtable;
 	struct objc_class         *subclass_list;
@@ -266,6 +362,12 @@ static inline BOOL objc_test_class_flag(struct objc_class *aClass,
 {
 	return (aClass->info & (unsigned long)flag) == (unsigned long)flag;
 }
+
+static inline BOOL objc_test_class_flag_legacy(struct legacy_gnustep_objc_class *aClass,
+                                               enum objc_class_flags flag)
+{
+	return (aClass->info & (unsigned long)flag) == (unsigned long)flag;
+}
 /**
  * Checks the version of a class.  Return values are:
  * 0. Legacy GCC ABI compatible class.
@@ -276,6 +378,15 @@ static inline BOOL objc_test_class_flag(struct objc_class *aClass,
 static inline int objc_get_class_version(struct objc_class *aClass)
 {
 	if (!objc_test_class_flag(aClass, objc_class_flag_new_abi))
+	{
+		return 0;
+	}
+	return aClass->abi_version + 1;
+}
+
+static inline int objc_get_class_version_legacy(struct legacy_gnustep_objc_class *aClass)
+{
+	if (!objc_test_class_flag_legacy(aClass, objc_class_flag_new_abi))
 	{
 		return 0;
 	}

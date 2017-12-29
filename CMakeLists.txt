@@ -42,6 +42,7 @@ set(libobjc_C_SRCS
 	hooks.c
 	ivar.c
 	legacy_malloc.c
+	legacy.c
 	loader.c
 	mutation.m
 	protocol.c

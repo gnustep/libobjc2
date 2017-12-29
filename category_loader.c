@@ -3,6 +3,7 @@
 #include "visibility.h"
 #include "loader.h"
 #include "dtable.h"
+#include "properties.h"
 
 #define BUFFER_TYPE struct objc_category *
 #include "buffer.h"
@@ -38,6 +39,16 @@ static void load_category(struct objc_category *cat, struct objc_class *class)
 		objc_init_protocols(cat->protocols);
 		cat->protocols->next = class->protocols;
 		class->protocols = cat->protocols;
+	}
+	if (cat->properties)
+	{
+		cat->properties->next = class->properties;
+		class->properties = cat->properties;
+	}
+	if (cat->class_properties)
+	{
+		cat->class_properties->next = class->isa->properties;
+		class->isa->properties = cat->class_properties;
 	}
 }
 

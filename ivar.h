@@ -19,15 +19,15 @@ struct objc_ivar
 	 * the ivars declared by this class.  It is then set by the runtime to the
 	 * offset from the object pointer.
 	 */
-	int         offset;
+	int         *offset;
 	/**
 	 * Alignment of this ivar.
 	 */
-	int         align;
+	int32_t          align;
 	/**
 	 * Flags for this instance variable.
 	 */
-	long        flags;
+	int32_t          flags;
 };
 
 /**
