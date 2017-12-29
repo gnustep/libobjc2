@@ -101,58 +101,6 @@ PRIVATE void objc_compute_ivar_offsets(Class class)
 			}
 		}
 	}
-	//else
-	if (0)
-	{
-		if (NULL == class->ivars) { return; }
-
-		Class super = class_getSuperclass(class);
-		int start = *class->ivars->ivar_list[0].offset;
-		/* Quick and dirty test.  If the first ivar comes straight after the last
-		* class, then it's fine. */
-		if (Nil == super || start == super->instance_size) {return; }
-
-		/* Find the last superclass with at least one ivar. */
-		while (NULL == super->ivars) 
-		{
-			super = class_getSuperclass(super);
-		}
-		struct objc_ivar *ivar =
-			&super->ivars->ivar_list[super->ivars->count-1];
-
-		// Find the end of the last ivar - instance_size contains some padding
-		// for alignment.
-		int real_end = *ivar->offset + objc_sizeof_type(ivar->type);
-		// Keep going if the new class starts at the end of the superclass
-		if (start == real_end)
-		{
-			return;
-		}
-		// The classes don't line up, but don't panic; check that the
-		// difference is not just padding for alignment
-		int align = objc_alignof_type(class->ivars->ivar_list[0].type);
-		if (start > real_end && (start - align) < real_end)
-		{
-			return;
-		}
-
-		/* Panic if this class has an instance variable that overlaps the
-		* superclass. */
-		fprintf(stderr, 
-			"Error: Instance variables in %s overlap superclass %s.  ",
-			class->name, super->name);
-		fprintf(stderr, 
-			"Offset of first instance variable, %s, is %d.  ",
-			class->ivars->ivar_list[0].name, start);
-		fprintf(stderr, 
-			"Last instance variable in superclass, %s, ends at offset %d.  ",
-			ivar->name, *ivar->offset +
-			(int)objc_sizeof_type(ivar->type));
-		fprintf(stderr, "This probably means that you are subclassing a"
-			"class from a library, which has changed in a binary-incompatible"
-			"way.\n");
-		abort();
-	}
 }
 
 
