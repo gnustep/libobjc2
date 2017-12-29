@@ -258,14 +258,24 @@ PRIVATE BOOL objc_resolve_class(Class cls)
 PRIVATE void objc_resolve_class_links(void)
 {
 	LOCK_RUNTIME_FOR_SCOPE();
-	Class class = unresolved_class_list;
 	BOOL resolvedClass;
 	do
 	{
+		Class class = unresolved_class_list;
 		resolvedClass = NO;
 		while ((Nil != class))
 		{
 			Class next = class->unresolved_class_next;
+			// If the class has been resolved, then this means that the last
+			// call to objc_resolve_class resolved it as part of resolving
+			// superclasses and removed it from the list.  We now don't have a
+			// pointer into the linked list, so abort and try again from the
+			// start.
+			if (objc_test_class_flag(class, objc_class_flag_resolved))
+			{
+				assert(resolvedClass);
+				break;
+			}
 			objc_resolve_class(class);
 			if (resolvedClass ||
 				objc_test_class_flag(class, objc_class_flag_resolved))
