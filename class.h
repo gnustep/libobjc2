@@ -37,6 +37,7 @@ static inline BOOL objc_bitfield_test(uintptr_t bitfield, uint64_t field)
 }
 
 
+// begin: objc_class
 struct objc_class
 {
 	/**
@@ -131,6 +132,7 @@ struct objc_class
 	*/
 	struct objc_property_list *properties;
 };
+// end: objc_class
 
 struct legacy_gnustep_objc_class
 {

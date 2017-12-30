@@ -20,6 +20,7 @@ struct sel_type_list
 /**
  * Structure used to store selectors in the list.
  */
+// begin: objc_selector
 struct objc_selector
 {
 	union
@@ -40,6 +41,8 @@ struct objc_selector
 	 */
 	const char * types;
 };
+// end: objc_selector
+
 
 /**
  * Returns the untyped variant of a selector.

@@ -91,6 +91,7 @@ static void init_runtime(void)
 	}
 }
 
+// begin: objc_init
 struct objc_init
 {
 	uint64_t version;
@@ -105,6 +106,7 @@ struct objc_init
 	struct objc_protocol2 *proto_begin;
 	struct objc_protocol2 *proto_end;
 };
+// end: objc_init
 #include <dlfcn.h>
 
 void registerProtocol(Protocol *proto);
