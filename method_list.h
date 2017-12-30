@@ -37,6 +37,30 @@ struct objc_method_list
 	 */
 	int                       count;
 	/**
+	 * Sze of `struct objc_method`.  This allows runtimes downgrading newer
+	 * versions of this structure.
+	 */
+	size_t                    size;
+	/**
+	 * An array of methods.  Note that the actual size of this is count.
+	 */
+	struct objc_method        methods[];
+};
+
+/**
+ * Legacy version of the method list.
+ */
+struct objc_method_list_legacy
+{
+	/**
+	 * The next group of methods in the list.
+	 */
+	struct objc_method_list_legacy *next;
+	/**
+	 * The number of methods in this list.
+	 */
+	int                       count;
+	/**
 	 * An array of methods.  Note that the actual size of this is count.
 	 */
 	struct objc_method        methods[];

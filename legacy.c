@@ -65,6 +65,23 @@ static struct objc_ivar_list *upgradeIvarList(struct legacy_gnustep_objc_class *
 	return n;
 }
 
+static struct objc_method_list *upgradeMethodList(struct objc_method_list_legacy *old)
+{
+	if (old == NULL)
+	{
+		return NULL;
+	}
+	struct objc_method_list *l = calloc(sizeof(struct objc_method_list) + old->count * sizeof(struct objc_method), 1);
+	l->count = old->count;
+	if (old->next)
+	{
+		l->next = upgradeMethodList(old->next);
+	}
+	l->size = sizeof(struct objc_method);
+	memcpy(&l->methods, &old->methods, old->count * sizeof(struct objc_method));
+	return l;
+}
+
 static int legacy_key;
 
 PRIVATE struct legacy_gnustep_objc_class* objc_legacy_class_for_class(Class cls)
@@ -82,7 +99,7 @@ PRIVATE Class objc_upgrade_class(struct legacy_gnustep_objc_class *oldClass)
 	cls->info = oldClass->info;
 	cls->instance_size = oldClass->instance_size;
 	cls->ivars = upgradeIvarList(oldClass);
-	cls->methods = oldClass->methods;
+	cls->methods = upgradeMethodList(oldClass->methods);
 	cls->protocols = oldClass->protocols;
 	cls->abi_version = oldClass->abi_version;
 	cls->properties = oldClass->properties;
@@ -99,5 +116,7 @@ PRIVATE struct objc_category *objc_upgrade_category(struct objc_category_legacy 
 {
 	struct objc_category *cat = calloc(1, sizeof(struct objc_category));
 	memcpy(cat, old, sizeof(struct objc_category_legacy));
+	cat->instance_methods = upgradeMethodList(old->instance_methods);
+	cat->class_methods = upgradeMethodList(old->class_methods);
 	return cat;
 }

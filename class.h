@@ -180,7 +180,7 @@ struct legacy_gnustep_objc_class
 	 * Metadata for for defining the mappings from selectors to IMPs.  Linked
 	 * list of method list structures, one per class and one per category.
 	 */
-	struct objc_method_list   *methods;
+	struct objc_method_list_legacy   *methods;
 	/**
 	 * The dispatch table for this class.  Intialized and maintained by the
 	 * runtime.
