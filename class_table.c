@@ -6,8 +6,8 @@
 #include "method_list.h"
 #include "selector.h"
 #include "lock.h"
-#include "ivar.h"
 #include "dtable.h"
+#include "legacy.h"
 #include "visibility.h"
 #include <stdlib.h>
 #include <assert.h>
