@@ -166,12 +166,17 @@ static void setReference(struct reference_list *list,
 		lock = lock_for_pointer(r);
 		lock_spinlock(lock);
 	}
-	r->policy = policy;
-	id old = r->object;
-	r->object = obj;
-	if (OBJC_ASSOCIATION_ASSIGN != r->policy)
+	@try
 	{
-		objc_release(old);
+		if (OBJC_ASSOCIATION_ASSIGN != r->policy)
+		{
+			objc_release(r->object);
+		}
+	}
+	@finally
+	{
+		r->policy = policy;
+		r->object = obj;
 	}
 	if (needLock)
 	{
