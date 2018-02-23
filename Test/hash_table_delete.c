@@ -2,18 +2,18 @@
 #include <stdint.h>
 
 struct test_struct {
-	uint32_t key;
+	uintptr_t key;
 };
 
 struct test_struct null_placeholder = {0};
 
-static int test_compare(uint32_t value, const struct test_struct test) {
-	return value == test.key;
+static int test_compare(const void *key, const struct test_struct test) {
+	return (uintptr_t)key == test.key;
 }
 
 // force hash collisions
 static uint32_t test_key_hash(const void *ptr) {
-	return ((uint32_t)ptr)>>2;
+	return ((uint32_t)(uintptr_t)ptr)>>2;
 }
 
 static uint32_t test_value_hash(const struct test_struct test) {
@@ -51,10 +51,10 @@ int main(int argc, char *argv[])
 	test_insert(testTable, two);
 	test_insert(testTable, three);
 
-	test_remove(testTable, 2);
-	test_remove(testTable, 1);
+	test_remove(testTable, (void*)2);
+	test_remove(testTable, (void*)1);
 
-	struct test_struct *pthree = test_table_get(testTable, 3);
+	struct test_struct *pthree = test_table_get(testTable, (void*)3);
 	if (!pthree) {
 		fprintf(stderr, "failed to find value (key=3) inserted into hash table\n");
 		return 1;
