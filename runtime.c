@@ -23,6 +23,8 @@ struct objc_slot *objc_get_slot(Class cls, SEL selector);
 #define CHECK_ARG(arg) if (0 == arg) { return 0; }
 
 static inline void safe_remove_from_subclass_list(Class cls);
+PRIVATE void objc_resolve_class(Class);
+void objc_send_initialize(id object);
 
 /**
  * Calls C++ destructors in the correct order.
@@ -522,9 +524,12 @@ Class class_setSuperclass(Class cls, Class newSuper)
 	CHECK_ARG(newSuper);
 	if (Nil == cls) { return Nil; }
 
-	LOCK_RUNTIME_FOR_SCOPE();
+	LOCK_RUNTIME();
+
+	if (cls->super_class == newSuper) { return newSuper; }
 
 	safe_remove_from_subclass_list(cls);
+	objc_resolve_class(newSuper);
 
 	Class oldSuper = cls->super_class;
 	cls->super_class = newSuper;
@@ -533,31 +538,42 @@ Class class_setSuperclass(Class cls, Class newSuper)
 	cls->sibling_class = cls->super_class->subclass_list;
 	cls->super_class->subclass_list = cls;
 
-	if (!class_isMetaClass(cls))
-	{
-		// Update the metaclass's superclass.
-		class_setSuperclass(cls->isa, newSuper->isa);
-	}
-	else
+	if (UNLIKELY(class_isMetaClass(cls)))
 	{
 		// newSuper is presumably a metaclass. Its isa will therefore be the appropriate root metaclass.
 		cls->isa = newSuper->isa;
 	}
-
-	// Make sure the superclass is initialized if we're initialized.
-	if (objc_test_class_flag(cls, objc_class_flag_initialized))
+	else
 	{
-		objc_send_initialize(newSuper);
-		// Update the class's dtable to reflect its new superclass's dtable.
-		if (cls->dtable != uninstalled_dtable)
-		{
-			// we can't use objc_update_dtable_for_class here, as it doesn't take into account
-			// superclasses. It only walks downward.
-			free_dtable(cls->dtable);
-			cls->dtable = uninstalled_dtable;
-			cls->dtable = create_dtable_for_class(cls, uninstalled_dtable);
-		}
+		Class meta = cls->isa, newSuperMeta = newSuper->isa;
+		// Update the metaclass's superclass.
+		safe_remove_from_subclass_list(meta);
+		objc_resolve_class(newSuperMeta);
+
+		meta->super_class = newSuperMeta;
+		meta->isa = newSuperMeta->isa;
+
+		// The super class's subclass list is used in certain method resolution scenarios.
+		meta->sibling_class = newSuperMeta->subclass_list;
+		newSuperMeta->subclass_list = meta;
 	}
+
+	LOCK(&initialize_lock);
+	if (!objc_test_class_flag(cls, objc_class_flag_initialized))
+	{
+		// Uninitialized classes don't have dtables to update
+		// and don't need their superclasses initialized.
+		UNLOCK(&initialize_lock);
+		UNLOCK_RUNTIME();
+		return oldSuper;
+	}
+
+	UNLOCK(&initialize_lock);
+	UNLOCK_RUNTIME();
+
+	objc_send_initialize(newSuper); // also initializes the metaclass
+	objc_update_dtable_for_new_superclass(cls->isa, newSuper->isa);
+	objc_update_dtable_for_new_superclass(cls, newSuper);
 
 	return oldSuper;
 }
@@ -827,8 +843,6 @@ const char *object_getClassName(id obj)
 	CHECK_ARG(obj);
 	return class_getName(object_getClass(obj));
 }
-
-PRIVATE void objc_resolve_class(Class);
 
 void objc_registerClassPair(Class cls)
 {

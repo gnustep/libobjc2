@@ -360,6 +360,11 @@ PRIVATE void objc_update_dtable_for_class(Class cls)
 	update_dtable(dtable);
 
 }
+PRIVATE void objc_update_dtable_for_new_superclass(Class cls, Class newSuper)
+{
+	// This is not required. objc_dtable_lookup looks directly at the class's
+	// superclass for each lookup, and the cache only stores local slots.
+}
 PRIVATE void add_method_list_to_class(Class cls,
                                       struct objc_method_list *list)
 {
@@ -620,6 +625,69 @@ PRIVATE void objc_update_dtable_for_class(Class cls)
 	mergeMethodsFromSuperclass(cls, cls, methods);
 	SparseArrayDestroy(methods);
 	checkARCAccessors(cls);
+}
+
+static void rebaseDtableRecursive(Class cls, Class owner, Class newSuper)
+{
+	dtable_t parentDtable = dtable_for_class(newSuper);
+	dtable_t dtable = dtable_for_class(cls);
+	uint32_t idx = 0;
+	struct objc_slot *slot;
+	while ((slot = SparseArrayNext(parentDtable, &idx)))
+	{
+		struct objc_slot *existingSlot = SparseArrayLookup(dtable, idx);
+		if (NULL != existingSlot)
+		{
+			if (slot->method == existingSlot->method
+				|| slot->owner == existingSlot->owner
+				|| classIsOrInherits(existingSlot->owner, owner))
+			{
+				// IMPs should not be changing right now; disregard anything
+				// that's already owned by the new parent.
+				// Slots from base or lower are safe from replacement.
+				continue;
+			}
+			// version doesn't need to be updated since we're replacing slots inherited
+			// directly from the old parent; this does not invalidate them.
+		}
+		// propagate changes downward
+		SparseArrayInsert(dtable, idx, slot);
+	}
+
+	idx = 0;
+	while ((slot = SparseArrayNext(dtable, &idx)))
+	{
+		void *exist = SparseArrayLookup(parentDtable, idx);
+		// Everything that exists in the parent dtable was merged above,
+		// and everything implemented at base or below is safe.
+		if (exist || classIsOrInherits(slot->owner, owner)) { continue; }
+
+		SparseArrayInsert(dtable, idx, 0);
+	}
+
+	// merge can make a class ARC-compatible.
+	checkARCAccessors(cls);
+
+	for (struct objc_class *subclass=cls->subclass_list ;
+		Nil != subclass ; subclass = subclass->sibling_class)
+	{
+		// Don't bother updating dtables for subclasses that haven't been
+		// initialized yet
+		if (!classHasDtable(subclass)) { continue; }
+		rebaseDtableRecursive(subclass, owner, newSuper);
+	}
+
+}
+
+PRIVATE void objc_update_dtable_for_new_superclass(Class cls, Class newSuper)
+{
+	// Only update real dtables
+	if (!classHasDtable(cls)) { return; }
+
+	LOCK_RUNTIME_FOR_SCOPE();
+	rebaseDtableRecursive(cls, cls, newSuper);
+
+	return;
 }
 
 PRIVATE void add_method_list_to_class(Class cls,

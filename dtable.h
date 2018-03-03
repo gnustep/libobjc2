@@ -116,6 +116,11 @@ static inline int classHasDtable(struct objc_class *cls)
  */
 void objc_update_dtable_for_class(Class);
 /**
+ * Updates the dtable for a class and its subclasses.  Must be called after
+ * changing and initializing a class's superclass.
+ */
+void objc_update_dtable_for_new_superclass(Class, Class);
+/**
  * Adds a single method list to a class.  This is used when loading categories,
  * and is faster than completely rebuilding the dtable.
  */
