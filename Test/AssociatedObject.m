@@ -1,4 +1,6 @@
 #include "Test.h"
+#include <stdio.h>
+#include <inttypes.h>
 
 static BOOL deallocCalled = NO;
 static const char* objc_setAssociatedObjectKey = "objc_setAssociatedObjectKey";
@@ -36,4 +38,24 @@ int main(void)
 	[holder release];
 
 	assert(deallocCalled);
+
+	object = [Associated new];
+	holder = [Test new];
+	for (uintptr_t i = 1; i <= 20; ++i)
+	{
+		objc_setAssociatedObject(holder, (void*)i, object, OBJC_ASSOCIATION_RETAIN);
+	}
+	int lost = 0;
+	for (uintptr_t i = 1; i <= 20; ++i)
+	{
+		if (object != objc_getAssociatedObject(holder, (void*)i))
+		{
+			fprintf(stderr, "lost object %" PRIuPTR "\n", i);
+			++lost;
+		}
+	}
+	[holder release];
+	[object release];
+	assert(0 == lost);
+	return 0;
 }
