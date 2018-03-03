@@ -571,7 +571,7 @@ Class class_setSuperclass(Class cls, Class newSuper)
 	UNLOCK(&initialize_lock);
 	UNLOCK_RUNTIME();
 
-	objc_send_initialize(newSuper); // also initializes the metaclass
+	objc_send_initialize((id)newSuper); // also initializes the metaclass
 	objc_update_dtable_for_new_superclass(cls->isa, newSuper->isa);
 	objc_update_dtable_for_new_superclass(cls, newSuper);
 
