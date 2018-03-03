@@ -1,5 +1,5 @@
-#ifdef __MINGW32__
-#include <windows.h>
+#ifdef _WIN32
+#include "safewindows.h"
 static unsigned sleep(unsigned seconds)
 {
 	Sleep(seconds*1000);

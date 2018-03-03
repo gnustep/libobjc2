@@ -12,9 +12,44 @@
 #import "objc/objc-arc.h"
 #import "objc/blocks_runtime.h"
 
-#ifndef NO_PTHREADS
-#include <pthread.h>
-pthread_key_t ARCThreadKey;
+#if defined(_WIN32)
+// We're using the Fiber-Local Storage APIs on Windows
+// because the TLS APIs won't pass app certification.
+// Additionally, the FLS API surface is 1:1 mapped to
+// the TLS API surface when fibers are not in use.
+#	include "safewindows.h"
+#	define arc_tls_store FlsSetValue
+#	define arc_tls_load FlsGetValue
+#	define TLS_CALLBACK(name) void WINAPI name
+
+typedef DWORD arc_tls_key_t;
+typedef void WINAPI(*arc_cleanup_function_t)(void*);
+static inline arc_tls_key_t arc_tls_key_create(arc_cleanup_function_t cleanupFunction)
+{
+	return FlsAlloc(cleanupFunction);
+}
+
+#else // if defined(_WIN32)
+
+#	ifndef NO_PTHREADS
+#		include <pthread.h>
+#		define arc_tls_store pthread_setspecific
+#		define arc_tls_load pthread_getspecific
+#		define TLS_CALLBACK(name) void name
+
+typedef pthread_key_t arc_tls_key_t;
+typedef void (*arc_cleanup_function_t)(void*);
+static inline arc_tls_key_t arc_tls_key_create(arc_cleanup_function_t cleanupFunction)
+{
+	pthread_key_t key;
+	pthread_key_create(&key, cleanupFunction);
+	return key;
+}
+#	endif
+#endif
+
+#ifdef arc_tls_store
+arc_tls_key_t ARCThreadKey;
 #endif
 
 extern void _NSConcreteMallocBlock;
@@ -60,14 +95,14 @@ struct arc_tls
 
 static inline struct arc_tls* getARCThreadData(void)
 {
-#ifdef NO_PTHREADS
+#ifndef arc_tls_store
 	return NULL;
-#else
-	struct arc_tls *tls = pthread_getspecific(ARCThreadKey);
+#else // !defined arc_tls_store
+	struct arc_tls *tls = arc_tls_load(ARCThreadKey);
 	if (NULL == tls)
 	{
 		tls = calloc(sizeof(struct arc_tls), 1);
-		pthread_setspecific(ARCThreadKey, tls);
+		arc_tls_store(ARCThreadKey, tls);
 	}
 	return tls;
 #endif
@@ -133,7 +168,8 @@ static void emptyPool(struct arc_tls *tls, id *stop)
 	//fprintf(stderr, "New insert: %p.  Stop: %p\n", tls->pool->insert, stop);
 }
 
-static void cleanupPools(struct arc_tls* tls)
+#ifdef arc_tls_store
+static TLS_CALLBACK(cleanupPools)(struct arc_tls* tls)
 {
 	if (tls->returnRetained)
 	{
@@ -151,6 +187,7 @@ static void cleanupPools(struct arc_tls* tls)
 	}
 	free(tls);
 }
+#endif
 
 
 static Class AutoreleasePool;
@@ -596,8 +633,8 @@ PRIVATE void init_arc(void)
 {
 	weak_ref_initialize(&weakRefs, 128);
 	INIT_LOCK(weakRefLock);
-#ifndef NO_PTHREADS
-	pthread_key_create(&ARCThreadKey, (void(*)(void*))cleanupPools);
+#ifdef arc_tls_store
+	ARCThreadKey = arc_tls_key_create((arc_cleanup_function_t)cleanupPools);
 #endif
 }
 
