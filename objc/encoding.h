@@ -5,6 +5,10 @@
 #ifndef __LIBOBJC_ENCODING_H_INCLUDED__
 #define __LIBOBJC_ENCODING_H_INCLUDED__
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 const char *objc_skip_type_qualifiers (const char *type);
 
 const char *objc_skip_typespec(const char *type);
@@ -70,5 +74,9 @@ void objc_layout_structure_get_info (struct objc_struct_layout *layout,
 #define _F_BYREF       0x08
 #define _F_ONEWAY      0x10
 #define _F_GCINVISIBLE 0x20
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // __LIBOBJC_ENCODING_H_INCLUDED__

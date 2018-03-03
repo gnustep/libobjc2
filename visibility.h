@@ -17,7 +17,7 @@
 #	define ASSERT(x) assert(x)
 #else
 #	define UNREACHABLE(x) __builtin_unreachable()
-#	define ASSERT(x) do { if (x) __builtin_unreachable(); } while(0)
+#	define ASSERT(x) do { if (!(x)) __builtin_unreachable(); } while(0)
 #endif
 
 #define LIKELY(x) __builtin_expect(x, 1)

@@ -33,6 +33,7 @@ set(TESTS
 	MethodArguments.m
 	zeroSizedIVar.m
 	exchange.m
+	hash_table_delete.c
 	setSuperclass.m
 )
 

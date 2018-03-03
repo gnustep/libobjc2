@@ -392,6 +392,22 @@ static void PREFIX(_remove)(PREFIX(_table) *table, void *key)
 	MAP_LOCK();
 	PREFIX(_table_cell) cell = PREFIX(_table_get_cell)(table, key);
 	if (NULL == cell) { return; }
+
+	uint32_t hash = MAP_TABLE_HASH_KEY(key);
+	PREFIX(_table_cell) baseCell = PREFIX(_table_lookup)(table, hash);
+	if (baseCell && baseCell <= cell && cell - baseCell <= 32)
+	{
+		uint32_t jump = 1 << (cell - baseCell - 1);
+		if ((baseCell->secondMaps & jump))
+		{
+			// If we are removing a cell stored adjacent to its base due to hash
+			// collision, we have to clear the base cell's neighbor bit.
+			// Otherwise, a later remove can move the new placeholder value to the head
+			// which will cause further chained lookups to fail.
+			baseCell->secondMaps &= ~jump;
+		}
+	}
+
 	// If the cell contains a value, set it to the placeholder and shuffle up
 	// everything
 	if (0 == cell->secondMaps)

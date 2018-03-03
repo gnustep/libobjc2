@@ -4,6 +4,11 @@
 
 #ifndef __OBJC_ARC_INCLUDED__
 #define __OBJC_ARC_INCLUDED__
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * Autoreleases the argument.  Equivalent to [obj autorelease].
  */
@@ -138,5 +143,10 @@ unsigned long objc_arc_autorelease_count_np(void);
  * this thread.
  */
 unsigned long objc_arc_autorelease_count_for_object_np(id);
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif // __OBJC_ARC_INCLUDED__
 
