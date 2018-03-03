@@ -33,6 +33,7 @@ set(TESTS
 	MethodArguments.m
 	zeroSizedIVar.m
 	exchange.m
+	setSuperclass.m
 )
 
 # Function for adding a test.  This takes the name of the test and the list of
