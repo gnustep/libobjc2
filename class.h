@@ -303,4 +303,15 @@ static inline Class classForObject(id obj)
 	return obj->isa;
 }
 
+static inline BOOL classIsOrInherits(Class cls, Class base)
+{
+	for (Class c = cls ;
+		Nil != c ;
+		c = c->super_class)
+	{
+		if (c == base) { return YES; }
+	}
+	return NO;
+}
+
 #endif //__OBJC_CLASS_H_INCLUDED

@@ -34,6 +34,7 @@ set(TESTS
 	zeroSizedIVar.m
 	exchange.m
 	hash_table_delete.c
+	setSuperclass.m
 )
 
 # Function for adding a test.  This takes the name of the test and the list of
