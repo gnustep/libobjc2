@@ -105,6 +105,8 @@ struct objc_init
 	struct objc_category *cat_end;
 	struct objc_protocol2 *proto_begin;
 	struct objc_protocol2 *proto_end;
+	struct objc_protocol2 **proto_ref_begin;
+	struct objc_protocol2 **proto_ref_end;
 };
 // end: objc_init
 #include <dlfcn.h>
