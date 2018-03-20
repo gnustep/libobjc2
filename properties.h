@@ -134,7 +134,7 @@ struct objc_property
 };
 
 /**
- * List of property inrospection data.
+ * List of property introspection data.
  */
 struct objc_property_list
 {
