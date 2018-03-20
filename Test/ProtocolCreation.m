@@ -7,6 +7,7 @@
 
 int main(void)
 {
+	Protocol *force_reference = @protocol(Test2);
 	Protocol *p = objc_allocateProtocol("Test");
 	protocol_addMethodDescription(p, @selector(someMethod), "@:", YES, NO);
 	assert(objc_getProtocol("Test2"));
