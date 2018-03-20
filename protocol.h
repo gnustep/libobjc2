@@ -112,9 +112,10 @@ struct objc_protocol_list
 	 */
 	size_t                     count;
 	/**
-	 * An array of protocols.  Actually contains count elements, not 1.
+	 * An array of protocols.  Contains `count` elements.
 	 *
-	 * The instances in this array may be any version of protocols.
+	 * On load, this contains direct references to other protocols and should
+	 * be updated to point to the canonical (possibly upgraded) version.
 	 */
 	Protocol2                 *list[];
 };
