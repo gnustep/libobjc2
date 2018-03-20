@@ -136,7 +136,7 @@ struct objc_property
 /**
  * List of property introspection data.
  */
-struct objc_property_list
+struct objc_property_list_legacy
 {
 	/**
 	 * Number of properties in this array.
@@ -146,6 +146,31 @@ struct objc_property_list
 	 * The next property in a linked list.
 	 */
 	struct objc_property_list *next; 
+	/**
+	 * List of properties.
+	 */
+	struct objc_property properties[];
+};
+
+/**
+ * List of property introspection data.
+ */
+struct objc_property_list
+{
+	/**
+	 * Number of properties in this array.
+	 */
+	int count;
+	/**
+	 * Size of `struct objc_property`.  This allows the runtime to
+	 * transparently support newer ABIs with more fields in the property
+	 * metadata.
+	 */
+	int size;
+	/*
+	 * The next property in a linked list.
+	 */
+	struct objc_property_list *next;
 	/**
 	 * List of properties.
 	 */

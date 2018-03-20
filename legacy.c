@@ -5,6 +5,7 @@
 #include "objc/runtime.h"
 #include "objc/encoding.h"
 #include "ivar.h"
+#include "properties.h"
 #include "class.h"
 #include "loader.h"
 
@@ -82,6 +83,20 @@ static struct objc_method_list *upgradeMethodList(struct objc_method_list_legacy
 	return l;
 }
 
+static struct objc_property_list *upgradePropertyList(struct objc_property_list_legacy *l)
+{
+	if (l == NULL)
+	{
+		return NULL;
+	}
+	size_t data_size = l->count * sizeof(struct objc_property);
+	struct objc_property_list *n = calloc(1, sizeof(struct objc_property_list) + data_size);
+	n->count = l->count;
+	n->size = sizeof(struct objc_property);
+	memcpy(n->properties, l->properties, data_size);
+	return n;
+}
+
 static int legacy_key;
 
 PRIVATE struct legacy_gnustep_objc_class* objc_legacy_class_for_class(Class cls)
@@ -102,7 +117,7 @@ PRIVATE Class objc_upgrade_class(struct legacy_gnustep_objc_class *oldClass)
 	cls->methods = upgradeMethodList(oldClass->methods);
 	cls->protocols = oldClass->protocols;
 	cls->abi_version = oldClass->abi_version;
-	cls->properties = oldClass->properties;
+	cls->properties = upgradePropertyList(oldClass->properties);
 	objc_register_selectors_from_class(cls);
 	if (!objc_test_class_flag(cls, objc_class_flag_meta))
 	{
