@@ -104,6 +104,7 @@ endforeach()
 
 # Tests that are more than a single file.
 addtest_variants("CXXExceptions" "CXXException.m;CXXException.cc" true)
+addtest_variants("ForwardDeclareProtocolAccess" "ForwardDeclareProtocolAccess.m;ForwardDeclareProtocol.m" true)
 if (ENABLE_OBJCXX)
 addtest_variants(ObjCXXEHInterop "ObjCXXEHInterop.mm;ObjCXXEHInterop.m" true)
 endif()
