@@ -149,6 +149,31 @@ inline static size_t max(size_t v, size_t v2)
 	return v>v2 ? v : v2;
 }
 
+static const char *skip_object_extended_qualifiers(const char *type)
+{
+	if (*(type+1) == '?')
+	{
+		type++;
+		if (*(type+1) == '<')
+		{
+			type += 2;
+			while (*type != '>')
+			{
+				type++;
+			}
+		}
+	}
+	else if (type[1] == '"')
+	{
+		type += 2;
+		while (*type != '"')
+		{
+			type++;
+		}
+	}
+	return type;
+}
+
 static const char *sizeof_union_field(const char *type, size_t *size);
 
 static const char *sizeof_type(const char *type, size_t *size)
@@ -172,11 +197,7 @@ static const char *sizeof_type(const char *type, size_t *size)
 		{
 			round_up(size, (alignof(id) * 8));
 			*size += (sizeof(id) * 8);
-			if (*(type+1) == '?')
-			{
-				type++;
-			}
-			return type + 1;
+			return skip_object_extended_qualifiers(type) + 1;
 		}
 		case '?':
 		case 'v': return type+1;
@@ -272,11 +293,7 @@ static const char *alignof_type(const char *type, size_t *align)
 		case '@':
 		{
 			*align = max((alignof(id) * 8), *align);\
-			if (*(type+1) == '?')
-			{
-				type++;
-			}
-			return type + 1;
+			return skip_object_extended_qualifiers(type) + 1;
 		}
 		case '?':
 		case 'v': return type+1;
