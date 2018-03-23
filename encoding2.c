@@ -386,7 +386,7 @@ void method_getReturnType(Method method, char *dst, size_t dst_len)
 {
 	if (NULL == method) { return; }
 	//TODO: Coped and pasted code.  Factor it out.
-	const char *types = method->types;
+	const char *types = method_getTypeEncoding(method);
 	size_t length = lengthOfTypeEncoding(types);
 	if (length < dst_len)
 	{
@@ -402,7 +402,7 @@ void method_getReturnType(Method method, char *dst, size_t dst_len)
 const char *method_getTypeEncoding(Method method)
 {
 	if (NULL == method) { return NULL; }
-	return method->types;
+	return sel_getType_np(method->selector);
 }
 
 
@@ -412,7 +412,7 @@ void method_getArgumentType(Method method,
                             size_t dst_len)
 {
 	if (NULL == method) { return; }
-	const char *types = findParameterStart(method->types, index);
+	const char *types = findParameterStart(method_getTypeEncoding(method), index);
 	if (NULL == types)
 	{
 		strncpy(dst, "", dst_len);
@@ -433,7 +433,7 @@ void method_getArgumentType(Method method,
 unsigned method_getNumberOfArguments(Method method)
 {
 	if (NULL == method) { return 0; }
-	const char *types = method->types;
+	const char *types = method_getTypeEncoding(method);
 	unsigned int count = 0;
 	while('\0' != *types)
 	{
@@ -452,7 +452,7 @@ unsigned method_get_number_of_arguments(struct objc_method *method)
 char* method_copyArgumentType(Method method, unsigned int index)
 {
 	if (NULL == method) { return NULL; }
-	const char *types = findParameterStart(method->types, index);
+	const char *types = findParameterStart(method_getTypeEncoding(method), index);
 	if (NULL == types)
 	{
 		return NULL;
@@ -463,7 +463,7 @@ char* method_copyArgumentType(Method method, unsigned int index)
 char* method_copyReturnType(Method method)
 {
 	if (NULL == method) { return NULL; }
-	return copyTypeEncoding(method->types);
+	return copyTypeEncoding(method_getTypeEncoding(method));
 }
 
 unsigned objc_get_type_qualifiers (const char *type)
