@@ -376,6 +376,7 @@ PRIVATE SEL objc_register_selector(SEL aSel)
 		aSel->name = registered->name;
 		return registered;
 	}
+	assert(!(aSel->types && (strstr(aSel->types, "@\"") != NULL)));
 	LOCK(&selector_table_lock);
 	register_selector_locked(aSel);
 	UNLOCK(&selector_table_lock);
@@ -401,6 +402,7 @@ static SEL objc_register_selector_copy(SEL aSel, BOOL copyArgs)
 	{
 		return copy;
 	}
+	assert(!(aSel->types && (strstr(aSel->types, "@\"") != NULL)));
 	// Create a copy of this selector.
 	copy = selector_pool_alloc();
 	copy->name = aSel->name;
