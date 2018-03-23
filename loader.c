@@ -169,7 +169,7 @@ void __objc_load(struct objc_init *init)
 	for (struct objc_category *cat = init->cat_begin ; cat < init->cat_end ;
 	     cat++)
 	{
-		if (cat == NULL)
+		if ((cat == NULL) || (cat->class_name == NULL))
 		{
 			continue;
 		}
