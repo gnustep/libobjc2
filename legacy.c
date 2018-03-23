@@ -108,7 +108,7 @@ PRIVATE Class objc_upgrade_class(struct legacy_gnustep_objc_class *oldClass)
 {
 	Class cls = calloc(sizeof(struct objc_class), 1);
 	cls->isa = oldClass->isa;
-	cls->super_class = (struct objc_class*)oldClass->super_class;
+	// super_class is left nil and we upgrade it later.
 	cls->name = oldClass->name;
 	cls->version = oldClass->version;
 	cls->info = oldClass->info;

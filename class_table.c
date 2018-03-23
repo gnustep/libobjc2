@@ -155,14 +155,31 @@ PRIVATE BOOL objc_resolve_class(Class cls)
 	// We can only resolve the class if its superclass is resolved.
 	if (cls->super_class)
 	{
-		Class super = (Class)objc_getClass((char*)cls->super_class);
-		if (Nil == super) { return NO; }
+		Class super = cls->super_class;
 
 		if (!objc_test_class_flag(super, objc_class_flag_resolved))
 		{
 			if (!objc_resolve_class(super))
 			{
 				return NO;
+			}
+		}
+	}
+	else
+	{
+		struct legacy_gnustep_objc_class *ocls = objc_legacy_class_for_class(cls);
+		if (ocls != NULL)
+		{
+			const char *super_name = (const char*)ocls->super_class;
+			if (super_name)
+			{
+				Class super = (Class)objc_getClass(super_name);
+				if (super == Nil)
+				{
+					return NO;
+				}
+				cls->super_class = super;
+				return objc_resolve_class(cls);
 			}
 		}
 	}
@@ -203,14 +220,13 @@ PRIVATE BOOL objc_resolve_class(Class cls)
 	else
 	{
 		// Resolve the superclass if it isn't already resolved
-		Class super = (Class)objc_getClass((char*)cls->super_class);
+		Class super = cls->super_class;
 		if (!objc_test_class_flag(super, objc_class_flag_resolved))
 		{
 			objc_resolve_class(super);
 		}
 		superMeta = super->isa;
 		// Set the superclass pointer for the class and the superclass
-		cls->super_class = super;
 		do
 		{
 			metaMeta = super->isa;
@@ -402,13 +418,6 @@ PRIVATE void objc_load_class(struct objc_class *class)
 		return;
 	}
 
-	// The compiler initialises the super class pointer to the name of the
-	// superclass, not the superclass pointer.
-	// Note: With the new ABI, the class pointer is public.  We could,
-	// therefore, directly reference the superclass from the compiler and make
-	// the linker resolve it.  This should be done in the GCC-incompatible ABI.
-	const char *superclassName = (char*)class->super_class;
-
 	// Work around a bug in some versions of GCC that don't initialize the
 	// class structure correctly.
 	class->subclass_list = NULL;
@@ -422,7 +431,7 @@ PRIVATE void objc_load_class(struct objc_class *class)
 
 	// If this is a root class, make the class into the metaclass's superclass.
 	// This means that all instance methods will be available to the class.
-	if (NULL == superclassName)
+	if (NULL == class->super_class)
 	{
 		class->isa->super_class = class;
 	}

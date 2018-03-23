@@ -199,7 +199,7 @@ BOOL class_addMethod(Class cls, SEL name, IMP imp, const char *types)
 	methods->methods[0].types = strdup(types);
 	methods->methods[0].imp = imp;
 
-	if (objc_test_class_flag(cls, objc_class_flag_resolved))
+	if (classHasDtable(cls))
 	{
 		add_method_list_to_class(cls, methods);
 	}
@@ -712,7 +712,7 @@ Class objc_allocateClassPair(Class superclass, const char *name, size_t extraByt
 		// in objc_resolve_class().
 		// If the superclass is not yet resolved, then we need to look it up
 		// via the class table.
-		metaClass->isa = (Class)superclass->isa->isa->name;
+		metaClass->isa = superclass->isa;
 		metaClass->super_class = superclass->isa;
 	}
 	metaClass->name = strdup(name);
@@ -723,9 +723,7 @@ Class objc_allocateClassPair(Class superclass, const char *name, size_t extraByt
 
 	// Set up the new class
 	newClass->isa = metaClass;
-	// Set the superclass pointer to the name.  The runtime will fix this when
-	// the class links are resolved.
-	newClass->super_class = (Nil == superclass) ? Nil : (Class)(superclass->name);
+	newClass->super_class = superclass;
 
 	newClass->name = strdup(name);
 	newClass->info = objc_class_flag_class | objc_class_flag_user_created |

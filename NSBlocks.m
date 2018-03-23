@@ -1,5 +1,6 @@
 #import "objc/runtime.h"
 #import "class.h"
+#import "loader.h"
 #import "lock.h"
 #import "objc/blocks_runtime.h"
 #import "dtable.h"
@@ -27,13 +28,13 @@ static void createNSBlockSubclass(Class superclass, Class newClass,
 
 	// Set up the new class
 	newClass->isa = metaClass;
-	newClass->super_class = (Class)superclass->name;
+	newClass->super_class = superclass;
 	newClass->name = name;
 	newClass->info = objc_class_flag_class;
 	newClass->dtable = uninstalled_dtable;
 
 	LOCK_RUNTIME_FOR_SCOPE();
-	class_table_insert(newClass);
+	objc_load_class(newClass);
 
 }
 
