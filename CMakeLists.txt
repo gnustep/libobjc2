@@ -94,11 +94,6 @@ set(ENABLE_TRACING FALSE CACHE BOOL
 if (ENABLE_TRACING)
 	add_definitions(-DWITH_TRACING=1)
 endif (ENABLE_TRACING)
-set(LOW_MEMORY FALSE CACHE BOOL
-	"Enable low-memory profile *HIGHLY EXPERIMENTAL*")
-if (LOW_MEMORY)
-	add_definitions(-D__OBJC_LOW_MEMORY__)
-endif ()
 
 set(BOEHM_GC FALSE CACHE BOOL
 	"Enable garbage collection support (not recommended)")
