@@ -423,7 +423,8 @@ struct objc_slot_v1 *objc_get_slot(Class cls, SEL selector)
 		return NULL;
 	}
 	uncacheable_slot_v1.owner = result->owner;
-	uncacheable_slot_v1.types = result->method_metadata->types;
+	// Don't leak extended type encodings!
+	uncacheable_slot_v1.types = sel_getType_np(result->method_metadata->selector);
 	uncacheable_slot_v1.selector = selector;
 	uncacheable_slot_v1.method = result->method;
 	return &uncacheable_slot_v1;
