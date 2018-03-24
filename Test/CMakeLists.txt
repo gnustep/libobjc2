@@ -12,6 +12,7 @@ set(TESTS
 	BlockImpTest.m
 	BlockTest_arc.m
 	BoxedForeignException.m
+	Category.m
 	ExceptionTest.m
 	ForeignException.m
 	Forward.m
