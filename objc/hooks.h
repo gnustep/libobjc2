@@ -62,7 +62,7 @@ OBJC_HOOK Class (*_objc_class_for_boxing_foreign_exception)(int64_t exceptionCla
  * receiver.  This should return the slot to use instead, although it may throw
  * an exception or perform some other action.
  */
-extern struct objc_slot* (*_objc_selector_type_mismatch2)(Class cls, 
+extern IMP (*_objc_selector_type_mismatch2)(Class cls, 
        SEL selector, struct objc_slot *result);
 /**
  * Legacy hook for when selector types do not match.  This is only called

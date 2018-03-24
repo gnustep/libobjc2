@@ -362,10 +362,10 @@ Method class_getInstanceMethod(Class aClass, SEL aSelector)
 	if (classHasInstalledDtable(aClass))
 	{
 		// Do a dtable lookup to find out which class the method comes from.
-		struct objc_slot *slot = objc_get_slot2(aClass, aSelector);
+		struct objc_slot *slot = objc_get_slot2(aClass, aSelector, NULL);
 		if (NULL == slot)
 		{
-			slot = objc_get_slot2(aClass, sel_registerName(sel_getName(aSelector)));
+			slot = objc_get_slot2(aClass, sel_registerName(sel_getName(aSelector)), NULL);
 			if (NULL == slot)
 			{
 				return NULL;

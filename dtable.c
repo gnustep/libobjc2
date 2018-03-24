@@ -49,7 +49,7 @@ static uint32_t dtable_depth = 8;
  */
 static Class ownerForMethod(Class cls, SEL sel)
 {
-	struct objc_slot *slot = objc_get_slot2(cls, sel);
+	struct objc_slot *slot = objc_get_slot2(cls, sel, NULL);
 	if (slot == NULL)
 	{
 		return Nil;
@@ -58,7 +58,7 @@ static Class ownerForMethod(Class cls, SEL sel)
 	{
 		return cls;
 	}
-	if (objc_get_slot2(cls->super_class, sel) == slot)
+	if (objc_get_slot2(cls->super_class, sel, NULL) == slot)
 	{
 		return ownerForMethod(cls->super_class, sel);
 	}

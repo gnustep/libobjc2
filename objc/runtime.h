@@ -848,10 +848,27 @@ extern struct objc_slot_v1 *objc_get_slot(Class, SEL)
 	OBJC_NONPORTABLE OBJC_DEPRECATED;
 
 /**
- * Look up a slot, without invoking any forwarding mechanisms.
+ * Look up a slot, without invoking any forwarding mechanisms.  The third
+ * parameter is used to return a pointer to the current value of the version
+ * counter.  If this value is equal to `objc_method_cache_version` then the
+ * slot is safe to reuse without performing another lookup.
  */
-extern struct objc_slot *objc_get_slot2(Class, SEL)
+extern struct objc_slot *objc_get_slot2(Class, SEL, uint64_t*)
 	OBJC_NONPORTABLE;
+
+/**
+ * Look up a slot, invoking any required forwarding mechanisms.  The third
+ * parameter is used to return a pointer to the current value of the version
+ * counter.  If this value is equal to `objc_method_cache_version` then the
+ * slot is safe to reuse without performing another lookup.
+ */
+extern struct objc_slot *objc_slot_lookup_version(id *receiver, SEL selector, uint64_t*)
+	OBJC_NONPORTABLE;
+
+/**
+ * Look up a slot, invoking any required forwarding mechanisms.
+ */
+extern IMP objc_msg_lookup2(id *receiver, SEL selector) OBJC_NONPORTABLE;
 
 /**
  * Registers a class for small objects.  Small objects are stored inside a
