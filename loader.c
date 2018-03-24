@@ -91,6 +91,21 @@ static void init_runtime(void)
 	}
 }
 
+/**
+ * Structure for a class alias.
+ */
+struct objc_alias
+{
+	/**
+	 * The name by which this class is referenced.
+	 */
+	const char *alias_name;
+	/**
+	 * A pointer to the indirection variable for this class.
+	 */
+	Class *alias;
+};
+
 // begin: objc_init
 struct objc_init
 {
@@ -107,6 +122,8 @@ struct objc_init
 	struct objc_protocol2 *proto_end;
 	struct objc_protocol2 **proto_ref_begin;
 	struct objc_protocol2 **proto_ref_end;
+	struct objc_alias *alias_begin;
+	struct objc_alias *alias_end;
 };
 // end: objc_init
 #include <dlfcn.h>
@@ -187,6 +204,15 @@ void __objc_load(struct objc_init *init)
 		    objc_test_class_flag(class, objc_class_flag_resolved))
 		{
 			objc_send_load_message(class);
+		}
+	}
+	// Register aliases
+	for (struct objc_alias *alias = init->alias_begin ; alias < init->alias_end ;
+	     alias++)
+	{
+		if (alias->alias_name)
+		{
+			class_registerAlias_np(*alias->alias, alias->alias_name);
 		}
 	}
 	init->version = 0xffffffffffffffffULL;

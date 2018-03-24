@@ -5,6 +5,7 @@
 
 # List of single-file tests.
 set(TESTS
+	alias.m
 	alignTest.m
 	AllocatePair.m
 	AssociatedObject.m
