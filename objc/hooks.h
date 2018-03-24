@@ -69,13 +69,15 @@ extern IMP (*_objc_selector_type_mismatch2)(Class cls,
  * `_objc_selector_type_mismatch2` is not installed.
  */
 OBJC_HOOK struct objc_slot_v1 *(*_objc_selector_type_mismatch)(Class cls,
-       SEL selector, struct objc_slot_v1 *result);
+       SEL selector, struct objc_slot_v1 *result) OBJC_DEPRECATED;
 
 /**
  * Returns the object if it is not currently in the process of being
  * deallocated.  Returns nil otherwise
  *
- * This hook must be set for weak references to work with automatic reference counting.
+ * This hook must be set for weak references to work with automatic reference
+ * counting for classes that don't provide ARC-compliant retain and release
+ * methods..
  */
 OBJC_HOOK id (*_objc_weak_load)(id object);
 
