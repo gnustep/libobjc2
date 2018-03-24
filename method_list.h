@@ -4,6 +4,25 @@
 struct objc_method
 {
 	/**
+	 * A pointer to the function implementing this method.
+	 */
+	IMP         imp;
+	/**
+	 * Selector used to send messages to this method.  The type encoding of
+	 * this method should match the types field.
+	 */
+	SEL         selector;
+	/**
+	 * The type encoding for this selector.  Used only for introspection, and
+	 * only required because of the stupid selector handling in the old GNU
+	 * runtime.  In future, this field may be reused for something else.
+	 */
+	const char *types;
+};
+
+struct objc_method_legacy
+{
+	/**
 	 * Selector used to send messages to this method.  The type encoding of
 	 * this method should match the types field.
 	 */
@@ -63,5 +82,5 @@ struct objc_method_list_legacy
 	/**
 	 * An array of methods.  Note that the actual size of this is count.
 	 */
-	struct objc_method        methods[];
+	struct objc_method_legacy methods[];
 };

@@ -19,10 +19,10 @@ static struct objc_slot_v1 nil_slot_D_v1 = { Nil, Nil, 0, 1, (IMP)nil_method_D }
 static struct objc_slot_v1 nil_slot_d_v1 = { Nil, Nil, 0, 1, (IMP)nil_method_d };
 static struct objc_slot_v1 nil_slot_f_v1 = { Nil, Nil, 0, 1, (IMP)nil_method_f };
 
-static struct objc_slot nil_slot = { (IMP)nil_method, 1, NULL, Nil };
-static struct objc_slot nil_slot_D = { (IMP)nil_method_D, 1, NULL, Nil };
-static struct objc_slot nil_slot_d = { (IMP)nil_method_d, 1, NULL, Nil };
-static struct objc_slot nil_slot_f = { (IMP)nil_method_f, 1, NULL, Nil };
+static struct objc_method nil_slot = { (IMP)nil_method, NULL, NULL  };
+static struct objc_method nil_slot_D = { (IMP)nil_method_D, NULL, NULL };
+static struct objc_method nil_slot_d = { (IMP)nil_method_d, NULL, NULL };
+static struct objc_method nil_slot_f = { (IMP)nil_method_f, NULL, NULL };
 
 struct objc_slot* objc_slot_lookup(id *receiver, SEL selector);
 
@@ -39,7 +39,7 @@ static IMP forward2(id self, SEL _cmd)
 }
 IMP (*__objc_msg_forward2)(id, SEL) = forward2;
 
-__thread struct objc_slot uncacheable_slot = { (IMP)nil_method, 0, NULL, Nil };
+__thread struct objc_method uncacheable_slot = { (IMP)nil_method, NULL, NULL };
 __thread struct objc_slot_v1 uncacheable_slot_v1 = { Nil, Nil, 0, 0, (IMP)nil_method };
 
 #ifndef NO_SELECTOR_MISMATCH_WARNINGS
@@ -47,11 +47,12 @@ static struct objc_slot* objc_selector_type_mismatch(Class cls, SEL
 		selector, struct objc_slot *result)
 {
 	fprintf(stderr, "Calling [%s %c%s] with incorrect signature.  "
-			"Method has %s, selector has %s\n",
+			"Method has %s (%s), selector has %s\n",
 			cls->name,
 			class_isMetaClass(cls) ? '+' : '-',
 			sel_getName(selector),
-			result->method_metadata->types,
+			sel_getType_np(((struct objc_method*)result)->selector),
+			((struct objc_method*)result)->types,
 			sel_getType_np(selector));
 	return result;
 }
@@ -75,8 +76,7 @@ static struct objc_slot *call_mismatch_hook(Class cls, SEL sel, struct objc_slot
 	     (_objc_selector_type_mismatch2 == objc_selector_type_mismatch)))
 	{
 		struct objc_slot_v1 fwdslot;
-		fwdslot.owner = slot->owner;
-		fwdslot.types = slot->method_metadata->types;
+		fwdslot.types = ((struct objc_method*)slot)->types;
 		fwdslot.selector = sel;
 		fwdslot.method = slot->method;
 		struct objc_slot_v1 *slot_v1 = _objc_selector_type_mismatch(cls, sel, &uncacheable_slot_v1);
@@ -84,9 +84,8 @@ static struct objc_slot *call_mismatch_hook(Class cls, SEL sel, struct objc_slot
 		{
 			return slot;
 		}
-		uncacheable_slot.owner = slot_v1->owner;
-		uncacheable_slot.method = slot_v1->method;
-		return &uncacheable_slot;
+		uncacheable_slot.imp = slot_v1->method;
+		return (struct objc_slot*)&uncacheable_slot;
 	}
 	return _objc_selector_type_mismatch2(cls, sel, slot);
 }
@@ -139,8 +138,8 @@ retry:;
 			}
 			if (0 == result)
 			{
-				uncacheable_slot.method = __objc_msg_forward2(*receiver, selector);
-				result = &uncacheable_slot;
+				uncacheable_slot.imp = __objc_msg_forward2(*receiver, selector);
+				result = (struct objc_slot*)&uncacheable_slot;
 			}
 		}
 	}
@@ -191,8 +190,8 @@ struct objc_slot_v1 *objc_msg_lookup_sender(id *receiver, SEL selector, id sende
 	}
 
 	struct objc_slot *slot = objc_msg_lookup_internal(receiver, selector);
-	uncacheable_slot_v1.owner = slot->owner;
-	uncacheable_slot_v1.types = slot->method_metadata->types;
+	uncacheable_slot_v1.owner = Nil;
+	uncacheable_slot_v1.types = sel_getType_np(((struct objc_method*)slot)->selector);
 	uncacheable_slot_v1.selector = selector;
 	uncacheable_slot_v1.method = slot->method;
 	return &uncacheable_slot_v1;
@@ -217,12 +216,12 @@ struct objc_slot* objc_slot_lookup(id *receiver, SEL selector)
 			}
 			switch (selector->types[0])
 			{
-				case 'D': return &nil_slot_D;
-				case 'd': return &nil_slot_d;
-				case 'f': return &nil_slot_f;
+				case 'D': return (struct objc_slot*)&nil_slot_D;
+				case 'd': return (struct objc_slot*)&nil_slot_d;
+				case 'f': return (struct objc_slot*)&nil_slot_f;
 			}
 		}
-		return &nil_slot;
+		return (struct objc_slot*)&nil_slot;
 	}
 
 	return objc_msg_lookup_internal(receiver, selector);
@@ -254,11 +253,11 @@ struct objc_slot *objc_slot_lookup_super2(struct objc_super *super, SEL selector
 				objc_send_initialize((id)class);
 				return objc_slot_lookup_super2(super, selector);
 			}
-			return &nil_slot;
+			return (struct objc_slot*)&nil_slot;
 		}
 		return result;
 	}
-	return &nil_slot;
+	return (struct objc_slot*)&nil_slot;
 }
 
 struct objc_slot_v1 *objc_slot_lookup_super(struct objc_super *super, SEL selector)
@@ -289,8 +288,8 @@ struct objc_slot_v1 *objc_slot_lookup_super(struct objc_super *super, SEL select
 			}
 			return &nil_slot_v1;
 		}
-		uncacheable_slot_v1.owner = result->owner;
-		uncacheable_slot_v1.types = result->method_metadata->types;
+		uncacheable_slot_v1.owner = Nil;
+		uncacheable_slot_v1.types = sel_getType_np(((struct objc_method*)result)->selector);
 		uncacheable_slot_v1.selector = selector;
 		uncacheable_slot_v1.method = result->method;
 		return &uncacheable_slot_v1;
@@ -422,9 +421,9 @@ struct objc_slot_v1 *objc_get_slot(Class cls, SEL selector)
 	{
 		return NULL;
 	}
-	uncacheable_slot_v1.owner = result->owner;
+	uncacheable_slot_v1.owner = Nil;
 	// Don't leak extended type encodings!
-	uncacheable_slot_v1.types = sel_getType_np(result->method_metadata->selector);
+	uncacheable_slot_v1.types = sel_getType_np(((struct objc_method*)result)->selector);
 	uncacheable_slot_v1.selector = selector;
 	uncacheable_slot_v1.method = result->method;
 	return &uncacheable_slot_v1;

@@ -79,7 +79,12 @@ static struct objc_method_list *upgradeMethodList(struct objc_method_list_legacy
 		l->next = upgradeMethodList(old->next);
 	}
 	l->size = sizeof(struct objc_method);
-	memcpy(&l->methods, &old->methods, old->count * sizeof(struct objc_method));
+	for (int i=0 ; i<old->count ; i++)
+	{
+		l->methods[i].imp = old->methods[i].imp;
+		l->methods[i].selector = old->methods[i].selector;
+		l->methods[i].types = old->methods[i].types;
+	}
 	return l;
 }
 

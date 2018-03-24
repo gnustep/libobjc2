@@ -10,7 +10,6 @@
 #include "class.h"
 #include "lock.h"
 #include "method_list.h"
-#include "slot_pool.h"
 #include "dtable.h"
 #include "visibility.h"
 #include "asmconstants.h"
@@ -21,7 +20,11 @@ _Static_assert(__builtin_offsetof(SparseArray, shift) == SHIFT_OFFSET,
 		"Incorrect shift offset for assembly");
 _Static_assert(__builtin_offsetof(SparseArray, data) == DATA_OFFSET,
 		"Incorrect data offset for assembly");
+// Slots are now a public interface to part of the method structure, so make
+// sure that it's safe to use method and slot structures interchangeably.
 _Static_assert(__builtin_offsetof(struct objc_slot, method) == SLOT_OFFSET,
+		"Incorrect slot offset for assembly");
+_Static_assert(__builtin_offsetof(struct objc_method, imp) == SLOT_OFFSET,
 		"Incorrect slot offset for assembly");
 
 PRIVATE dtable_t uninstalled_dtable;
@@ -41,17 +44,34 @@ PRIVATE mutex_t initialize_lock;
 static uint32_t dtable_depth = 8;
 
 /**
+ * Starting at `cls`, finds the class that provides the implementation of the
+ * method identified by `sel`.
+ */
+static Class ownerForMethod(Class cls, SEL sel)
+{
+	struct objc_slot *slot = objc_get_slot2(cls, sel);
+	if (slot == NULL)
+	{
+		return Nil;
+	}
+	if (cls->super_class == NULL)
+	{
+		return cls;
+	}
+	if (objc_get_slot2(cls->super_class, sel) == slot)
+	{
+		return ownerForMethod(cls->super_class, sel);
+	}
+	return cls;
+}
+
+/**
  * Returns YES if the class implements a method for the specified selector, NO
  * otherwise.
  */
 static BOOL ownsMethod(Class cls, SEL sel)
 {
-	struct objc_slot *slot = objc_get_slot2(cls, sel);
-	if ((NULL != slot) && (slot->owner == cls))
-	{
-		return YES;
-	}
-	return NO;
+	return ownerForMethod(cls, sel) == cls;
 }
 
 
@@ -75,28 +95,37 @@ static void checkARCAccessors(Class cls)
 		autorelease = sel_registerName("autorelease");
 		isARC = sel_registerName("_ARCCompliantRetainRelease");
 	}
-	struct objc_slot *slot = objc_get_slot2(cls, retain);
-	if ((NULL != slot) && !ownsMethod(slot->owner, isARC))
+	Class owner = ownerForMethod(cls, retain);
+	if ((NULL != owner) && !ownsMethod(owner, isARC))
 	{
 		ARC_DEBUG_LOG("%s does not support ARC correctly (implements retain)\n", cls->name);
 		objc_clear_class_flag(cls, objc_class_flag_fast_arc);
 		return;
 	}
-	slot = objc_get_slot2(cls, release);
-	if ((NULL != slot) && !ownsMethod(slot->owner, isARC))
+	owner = ownerForMethod(cls, retain);
+	if ((NULL != owner) && !ownsMethod(owner, isARC))
 	{
 		ARC_DEBUG_LOG("%s does not support ARC correctly (implements release)\n", cls->name);
 		objc_clear_class_flag(cls, objc_class_flag_fast_arc);
 		return;
 	}
-	slot = objc_get_slot2(cls, autorelease);
-	if ((NULL != slot) && !ownsMethod(slot->owner, isARC))
+	owner = ownerForMethod(cls, retain);
+	if ((NULL != owner) && !ownsMethod(owner, isARC))
 	{
 		ARC_DEBUG_LOG("%s does not support ARC correctly (implements autorelease)\n", cls->name);
 		objc_clear_class_flag(cls, objc_class_flag_fast_arc);
 		return;
 	}
 	objc_set_class_flag(cls, objc_class_flag_fast_arc);
+}
+
+static BOOL selEqualUnTyped(SEL expected, SEL untyped)
+{
+	return (expected->index == untyped->index)
+#ifdef TYPE_DEPENDENT_DISPATCH
+		|| (get_untyped_idx(expected) == untyped->index)
+#endif
+		;
 }
 
 PRIVATE void checkARCAccessorsSlow(Class cls)
@@ -113,31 +142,32 @@ PRIVATE void checkARCAccessorsSlow(Class cls)
 		autorelease = sel_registerName("autorelease");
 		isARC = sel_registerName("_ARCCompliantRetainRelease");
 	}
+	BOOL superIsFast = YES;
 	if (cls->super_class != Nil)
 	{
 		checkARCAccessorsSlow(cls->super_class);
+		superIsFast = objc_test_class_flag(cls->super_class, objc_class_flag_fast_arc);
 	}
-	BOOL superIsFast = objc_test_class_flag(cls, objc_class_flag_fast_arc);
 	BOOL selfImplementsRetainRelease = NO;
 	for (struct objc_method_list *l=cls->methods ; l != NULL ; l= l->next)
 	{
 		for (int i=0 ; i<l->count ; i++)
 		{
 			SEL s = l->methods[i].selector;
-			if (sel_isEqual(s, retain) ||
-			    sel_isEqual(s, release) ||
-			    sel_isEqual(s, autorelease))
+			if (selEqualUnTyped(s, retain) ||
+			    selEqualUnTyped(s, release) ||
+			    selEqualUnTyped(s, autorelease))
 			{
 				selfImplementsRetainRelease = YES;
 			}
-			else if (sel_isEqual(s, isARC))
+			else if (selEqualUnTyped(s, isARC))
 			{
 				objc_set_class_flag(cls, objc_class_flag_fast_arc);
 				return;
 			}
 		}
 	}
-	if (superIsFast && ! selfImplementsRetainRelease)
+	if (superIsFast && !selfImplementsRetainRelease)
 	{
 		objc_set_class_flag(cls, objc_class_flag_fast_arc);
 	}
@@ -242,63 +272,87 @@ int objc_registerTracingHook(SEL aSel, objc_tracing_hook aHook)
 #endif
 }
 
+/**
+ * Installs a new method in the dtable for `class`.  If `replaceMethod` is
+ * `YES` then this will replace any dtable entry where the original is
+ * `method_to_replace`.  This is used when a superclass method is replaced, to
+ * replace all subclass dtable entries that are inherited, but not ones that
+ * are overridden.
+ */
 static BOOL installMethodInDtable(Class class,
-                                  Class owner,
                                   SparseArray *dtable,
                                   struct objc_method *method,
+                                  struct objc_method *method_to_replace,
                                   BOOL replaceExisting)
 {
 	ASSERT(uninstalled_dtable != dtable);
 	uint32_t sel_id = method->selector->index;
-	struct objc_slot *slot = SparseArrayLookup(dtable, sel_id);
-	if (NULL != slot)
+	struct objc_method *oldMethod = SparseArrayLookup(dtable, sel_id);
+	// If we're being asked to replace an existing method, don't if it's the
+	// wrong one.
+	if ((replaceExisting) && (method_to_replace != oldMethod))
 	{
-		// If this method is the one already installed, pretend to install it again.
-		if (slot->method == method->imp) { return NO; }
-
-		// If the existing slot is for this class, we can just replace the
-		// implementation.  We don't need to bump the version; this operation
-		// updates cached slots, it doesn't invalidate them.  
-		if (slot->owner == owner)
-		{
-			// Don't replace methods if we're not meant to (if they're from
-			// later in a method list, for example)
-			if (!replaceExisting) { return NO; }
-			slot->method = method->imp;
-			return YES;
-		}
-
-		// Check whether the owner of this method is a subclass of the one that
-		// owns this method.  If it is, then we don't want to install this
-		// method irrespective of other cases, because it has been overridden.
-		for (Class installedFor = slot->owner ;
-				Nil != installedFor ;
-				installedFor = installedFor->super_class)
-		{
-			if (installedFor == owner)
-			{
-				return NO;
-			}
-		}
+		return NO;
 	}
-	struct objc_slot *oldSlot = slot;
-	slot = new_slot_for_method_in_class((void*)method, owner);
-	SparseArrayInsert(dtable, sel_id, slot);
+	// If we're not being asked to replace existing methods and there is an
+	// existing one, don't replace it.
+	if (!replaceExisting && (oldMethod != NULL))
+	{
+		return NO;
+	}
+	// If this method is the one already installed, pretend to install it again.
+	if (NULL != oldMethod && (oldMethod->imp == method->imp))
+	{
+		return NO;
+	}
+	SparseArrayInsert(dtable, sel_id, method);
 	// In TDD mode, we also register the first typed method that we
 	// encounter as the untyped version.
 #ifdef TYPE_DEPENDENT_DISPATCH
-	SparseArrayInsert(dtable, get_untyped_idx(method->selector), slot);
+	uint32_t untyped_idx = get_untyped_idx(method->selector);
+	SparseArrayInsert(dtable, untyped_idx, method);
 #endif
-	// Invalidate the old slot, if there is one.
-	if (NULL != oldSlot)
+
+	static SEL cxx_construct, cxx_destruct;
+	if (NULL == cxx_construct)
 	{
-		oldSlot->version++;
+		cxx_construct = sel_registerName(".cxx_construct");
+		cxx_destruct = sel_registerName(".cxx_destruct");
+	}
+	if (selEqualUnTyped(method->selector, cxx_construct))
+	{
+		class->cxx_construct = method->imp;
+	}
+	else if (selEqualUnTyped(method->selector, cxx_destruct))
+	{
+		class->cxx_destruct = method->imp;
+	}
+
+	for (struct objc_class *subclass=class->subclass_list ; 
+		Nil != subclass ; subclass = subclass->sibling_class)
+	{
+		// Don't bother updating dtables for subclasses that haven't been
+		// initialized yet
+		if (!classHasDtable(subclass)) { continue; }
+
+		// Recursively install this method in all subclasses
+		installMethodInDtable(subclass,
+		                      dtable_for_class(subclass),
+		                      method,
+		                      oldMethod,
+		                      YES);
+	}
+
+	// Invalidate the old slot, if there is one.
+	if (NULL != oldMethod)
+	{
+		objc_method_cache_version++;
 	}
 	return YES;
 }
 
 static void installMethodsInClass(Class cls,
-                                  Class owner,
+                                  SparseArray *methods_to_replace,
                                   SparseArray *methods,
                                   BOOL replaceExisting)
 {
@@ -309,32 +363,14 @@ static void installMethodsInClass(Class cls,
 	struct objc_method *m;
 	while ((m = SparseArrayNext(methods, &idx)))
 	{
-		if (!installMethodInDtable(cls, owner, dtable, m, replaceExisting))
+		struct objc_method *method_to_replace = methods_to_replace
+			?  SparseArrayLookup(methods_to_replace, m->selector->index)
+			: NULL;
+		if (!installMethodInDtable(cls, dtable, m, method_to_replace, replaceExisting))
 		{
 			// Remove this method from the list, if it wasn't actually installed
 			SparseArrayInsert(methods, idx, 0);
 		}
-	}
-}
-
-static void mergeMethodsFromSuperclass(Class super, Class cls, SparseArray *methods)
-{
-	for (struct objc_class *subclass=cls->subclass_list ; 
-		Nil != subclass ; subclass = subclass->sibling_class)
-	{
-		// Don't bother updating dtables for subclasses that haven't been
-		// initialized yet
-		if (!classHasDtable(subclass)) { continue; }
-
-		// Create a new (copy-on-write) array to pass down to children
-		SparseArray *newMethods = SparseArrayCopy(methods);
-		// Install all of these methods except ones that are overridden in the
-		// subclass.  All of the methods that we are updating were added in a
-		// superclass, so we don't replace versions registered to the subclass.
-		installMethodsInClass(subclass, super, newMethods, YES);
-		// Recursively add the methods to the subclass's subclasses.
-		mergeMethodsFromSuperclass(super, subclass, newMethods);
-		SparseArrayDestroy(newMethods);
 	}
 }
 
@@ -349,9 +385,9 @@ PRIVATE void objc_update_dtable_for_class(Class cls)
 
 	SparseArray *methods = SparseArrayNewWithDepth(dtable_depth);
 	collectMethodsForMethodListToSparseArray((void*)cls->methods, methods, YES);
-	installMethodsInClass(cls, cls, methods, YES);
-	// Methods now contains only the new methods for this class.
-	mergeMethodsFromSuperclass(cls, cls, methods);
+	SparseArray *super_dtable = cls->super_class ? dtable_for_class(cls->super_class)
+	                                             : NULL;
+	installMethodsInClass(cls, super_dtable, methods, YES);
 	SparseArrayDestroy(methods);
 	checkARCAccessors(cls);
 }
@@ -365,10 +401,11 @@ PRIVATE void add_method_list_to_class(Class cls,
 	LOCK_RUNTIME_FOR_SCOPE();
 
 	SparseArray *methods = SparseArrayNewWithDepth(dtable_depth);
+	SparseArray *super_dtable = cls->super_class ? dtable_for_class(cls->super_class)
+	                                             : NULL;
 	collectMethodsForMethodListToSparseArray(list, methods, NO);
-	installMethodsInClass(cls, cls, methods, YES);
+	installMethodsInClass(cls, super_dtable, methods, YES);
 	// Methods now contains only the new methods for this class.
-	mergeMethodsFromSuperclass(cls, cls, methods);
 	SparseArrayDestroy(methods);
 	checkARCAccessors(cls);
 }
@@ -386,7 +423,7 @@ static dtable_t create_dtable_for_class(Class class, dtable_t root_dtable)
 
 	Class super = class_getSuperclass(class);
 	dtable_t dtable;
-
+	dtable_t super_dtable = NULL;
 
 	if (Nil == super)
 	{
@@ -394,7 +431,7 @@ static dtable_t create_dtable_for_class(Class class, dtable_t root_dtable)
 	}
 	else
 	{
-		dtable_t super_dtable = dtable_for_class(super);
+		super_dtable = dtable_for_class(super);
 		if (super_dtable == uninstalled_dtable)
 		{
 			if (super->isa == class)
@@ -412,15 +449,18 @@ static dtable_t create_dtable_for_class(Class class, dtable_t root_dtable)
 	// When constructing the initial dtable for a class, we iterate along the
 	// method list in forward-traversal order.  The first method that we
 	// encounter is always the one that we want to keep, so we instruct
-	// installMethodInDtable() not to replace methods that are already
-	// associated with this class.
+	// installMethodInDtable() to replace only methods that are inherited from
+	// the superclass.
 	struct objc_method_list *list = (void*)class->methods;
 
 	while (NULL != list)
 	{
 		for (unsigned i=0 ; i<list->count ; i++)
 		{
-			installMethodInDtable(class, class, dtable, &list->methods[i], NO);
+			struct objc_method *super_method = super_dtable
+				? SparseArrayLookup(super_dtable, list->methods[i].selector->index)
+				: NULL;
+			installMethodInDtable(class, dtable, &list->methods[i], super_method, YES);
 		}
 		list = list->next;
 	}
@@ -623,7 +663,7 @@ PRIVATE void objc_send_initialize(id object)
 		initializeSel = sel_registerName("initialize");
 	}
 
-	struct objc_slot *initializeSlot = skipMeta ? 0 :
+	struct objc_method *initializeSlot = skipMeta ? 0 :
 			objc_dtable_lookup(dtable, initializeSel->index);
 
 	// If there's no initialize method, then don't bother installing and
@@ -662,6 +702,6 @@ PRIVATE void objc_send_initialize(id object)
 	// Store the buffer in the temporary dtables list.  Note that it is safe to
 	// insert it into a global list, even though it's a temporary variable,
 	// because we will clean it up after this function.
-	initializeSlot->method((id)class, initializeSel);
+	initializeSlot->imp((id)class, initializeSel);
 }
 

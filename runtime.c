@@ -36,13 +36,11 @@ PRIVATE void call_cxx_destruct(id obj)
 
 	while (cls)
 	{
-		struct objc_slot *slot = objc_get_slot2(cls, cxx_destruct);
-		cls = Nil;
-		if (NULL != slot)
+		if (cls->cxx_destruct)
 		{
-			cls = slot->owner->super_class;
-			slot->method(obj, cxx_destruct);
+			cls->cxx_destruct(obj, cxx_destruct);
 		}
+		cls = cls->super_class;
 	}
 }
 
@@ -53,15 +51,14 @@ static void call_cxx_construct_for_class(Class cls, id obj)
 	{
 		cxx_construct = sel_registerName(".cxx_construct");
 	}
-	struct objc_slot *slot = objc_get_slot2(cls, cxx_construct);
-	if (NULL != slot)
+
+	if (cls->super_class)
 	{
-		cls = slot->owner->super_class;
-		if (Nil != cls)
-		{
-			call_cxx_construct_for_class(cls, obj);
-		}
-		slot->method(obj, cxx_construct);
+		call_cxx_construct_for_class(cls->super_class, obj);
+	}
+	if (cls->cxx_construct)
+	{
+		cls->cxx_construct(obj, cxx_construct);
 	}
 }
 
@@ -89,27 +86,6 @@ static Method class_getInstanceMethodNonrecursive(Class aClass, SEL aSelector)
 		}
 	}
 	return NULL;
-}
-
-static void objc_updateDtableForClassContainingMethod(Method m)
-{
-	Class nextClass = Nil;
-	void *state = NULL;
-	SEL sel = method_getName(m);
-	while (Nil != (nextClass = objc_next_class(&state)))
-	{
-		if (class_getInstanceMethodNonrecursive(nextClass, sel) == m)
-		{
-			objc_update_dtable_for_class(nextClass);
-			return;
-		}
-		Class meta = object_getClass((id)nextClass);
-		if (class_getInstanceMethodNonrecursive(meta, sel) == m)
-		{
-			objc_update_dtable_for_class(meta);
-			return;
-		}
-	}
 }
 
 BOOL class_addIvar(Class cls, const char *name, size_t size, uint8_t alignment,
@@ -395,9 +371,8 @@ Method class_getInstanceMethod(Class aClass, SEL aSelector)
 				return NULL;
 			}
 		}
-
-		// Then do the slow lookup to find the method.
-		return slot->method_metadata;
+		// Slots are the same as methods.
+		return (struct objc_method*)slot;
 	}
 	Method m = class_getInstanceMethodNonrecursive(aClass, aSelector);
 	if (NULL != m)
@@ -494,12 +469,6 @@ IMP class_replaceMethod(Class cls, SEL name, IMP imp, const char *types)
 	}
 	IMP old = (IMP)method->imp;
 	method->imp = imp;
-
-	if (objc_test_class_flag(cls, objc_class_flag_resolved))
-	{
-		objc_update_dtable_for_class(cls);
-	}
-
 	return old;
 }
 
@@ -561,8 +530,6 @@ void method_exchangeImplementations(Method m1, Method m2)
 	IMP tmp = (IMP)m1->imp;
 	m1->imp = m2->imp;
 	m2->imp = tmp;
-	objc_updateDtableForClassContainingMethod(m1);
-	objc_updateDtableForClassContainingMethod(m2);
 }
 
 IMP method_getImplementation(Method method)
@@ -583,7 +550,6 @@ IMP method_setImplementation(Method method, IMP imp)
 	if (NULL == method) { return (IMP)NULL; }
 	IMP old = (IMP)method->imp;
 	method->imp = imp;
-	objc_updateDtableForClassContainingMethod(method);
 	return old;
 }
 

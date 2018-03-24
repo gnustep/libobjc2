@@ -9,9 +9,7 @@ static inline struct objc_slot *new_slot_for_method_in_class(Method method,
                                                              Class class)
 {
 	struct objc_slot *slot = slot_pool_alloc();
-	slot->owner = class;
 	slot->method_metadata = method;
 	slot->method = method->imp;
-	slot->version = 1;
 	return slot;
 }
