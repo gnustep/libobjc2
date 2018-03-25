@@ -106,6 +106,8 @@ BOOL class_registerAlias_np(Class class, const char *alias)
 		return 0;
 	}
 
+	class = (Class)objc_getClass(class->name);
+
 	/*
 	 * If there already exists a matching alias, determine whether we the existing
 	 * alias is the correct one. Please note that objc_getClass() goes through the
