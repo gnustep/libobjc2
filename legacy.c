@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <stdlib.h>
+#include <assert.h>
 #include <string.h>
 
 #include "objc/runtime.h"
@@ -8,6 +9,8 @@
 #include "properties.h"
 #include "class.h"
 #include "loader.h"
+
+PRIVATE size_t lengthOfTypeEncoding(const char *types);
 
 static ivar_ownership ownershipForIvar(struct legacy_gnustep_objc_class *cls, int idx)
 {
@@ -88,7 +91,143 @@ static struct objc_method_list *upgradeMethodList(struct objc_method_list_legacy
 	return l;
 }
 
-static struct objc_property_list *upgradePropertyList(struct objc_property_list_legacy *l)
+static inline BOOL checkAttribute(char field, int attr)
+{
+	return (field & attr) == attr;
+}
+
+static void upgradeProperty(struct objc_property *n, struct objc_property_gsv1 *o)
+{
+	size_t typeSize = lengthOfTypeEncoding(o->getter_types);
+	char *typeEncoding = malloc(typeSize + 1);
+	memcpy(typeEncoding, o->getter_types, typeSize);
+	typeEncoding[typeSize] = 0;
+
+	n->type = typeEncoding;
+	if (o->getter_name)
+	{
+		n->getter = sel_registerTypedName_np(o->getter_name, o->getter_types);
+	}
+	if (o->setter_name)
+	{
+		n->setter = sel_registerTypedName_np(o->setter_name, o->setter_types);
+	}
+
+	if (o->name[0] == '\0')
+	{
+		n->name = o->name + o->name[1];
+		n->attributes = o->name + 2;
+		return;
+	}
+
+	n->name = o->name;
+
+	const char *name = o->name;
+	size_t nameSize = (NULL == name) ? 0 : strlen(name);
+	// Encoding is T{type},V{name}, so 4 bytes for the "T,V" that we always
+	// need.  We also need two bytes for the leading null and the length.
+	size_t encodingSize = typeSize + nameSize + 6;
+	char flags[20];
+	size_t i = 0;
+	// Flags that are a comma then a character
+	if (checkAttribute(o->attributes, OBJC_PR_readonly))
+	{
+		flags[i++] = ',';
+		flags[i++] = 'R';
+	}
+	if (checkAttribute(o->attributes, OBJC_PR_retain))
+	{
+		flags[i++] = ',';
+		flags[i++] = '&';
+	}
+	if (checkAttribute(o->attributes, OBJC_PR_copy))
+	{
+		flags[i++] = ',';
+		flags[i++] = 'C';
+	}
+	if (checkAttribute(o->attributes2, OBJC_PR_weak))
+	{
+		flags[i++] = ',';
+		flags[i++] = 'W';
+	}
+	if (checkAttribute(o->attributes2, OBJC_PR_dynamic))
+	{
+		flags[i++] = ',';
+		flags[i++] = 'D';
+	}
+	if ((o->attributes & OBJC_PR_nonatomic) == OBJC_PR_nonatomic)
+	{
+		flags[i++] = ',';
+		flags[i++] = 'N';
+	}
+	encodingSize += i;
+	flags[i] = '\0';
+	size_t setterLength = 0;
+	size_t getterLength = 0;
+	if ((o->attributes & OBJC_PR_getter) == OBJC_PR_getter)
+	{
+		getterLength = strlen(o->getter_name);
+		encodingSize += 2 + getterLength;
+	}
+	if ((o->attributes & OBJC_PR_setter) == OBJC_PR_setter)
+	{
+		setterLength = strlen(o->setter_name);
+		encodingSize += 2 + setterLength;
+	}
+	unsigned char *encoding = malloc(encodingSize);
+	// Set the leading 0 and the offset of the name
+	unsigned char *insert = encoding;
+	BOOL needsComma = NO;
+	*(insert++) = 0;
+	*(insert++) = 0;
+	// Set the type encoding
+	if (NULL != typeEncoding)
+	{
+		*(insert++) = 'T';
+		memcpy(insert, typeEncoding, typeSize);
+		insert += typeSize;
+		needsComma = YES;
+	}
+	// Set the flags
+	memcpy(insert, flags, i);
+	insert += i;
+	if ((o->attributes & OBJC_PR_getter) == OBJC_PR_getter)
+	{
+		if (needsComma)
+		{
+			*(insert++) = ',';
+		}
+		i++;
+		needsComma = YES;
+		*(insert++) = 'G';
+		memcpy(insert, o->getter_name, getterLength);
+		insert += getterLength;
+	}
+	if ((o->attributes & OBJC_PR_setter) == OBJC_PR_setter)
+	{
+		if (needsComma)
+		{
+			*(insert++) = ',';
+		}
+		i++;
+		needsComma = YES;
+		*(insert++) = 'S';
+		memcpy(insert, o->setter_name, setterLength);
+		insert += setterLength;
+	}
+	if (needsComma)
+	{
+		*(insert++) = ',';
+	}
+	*(insert++) = 'V';
+	memcpy(insert, name, nameSize);
+	insert += nameSize;
+	*(insert++) = '\0';
+
+	n->attributes = (const char*)encoding;
+}
+
+static struct objc_property_list *upgradePropertyList(struct objc_property_list_gsv1 *l)
 {
 	if (l == NULL)
 	{
@@ -98,7 +237,10 @@ static struct objc_property_list *upgradePropertyList(struct objc_property_list_
 	struct objc_property_list *n = calloc(1, sizeof(struct objc_property_list) + data_size);
 	n->count = l->count;
 	n->size = sizeof(struct objc_property);
-	memcpy(n->properties, l->properties, data_size);
+	for (int i=0 ; i<l->count ; i++)
+	{
+		upgradeProperty(&n->properties[i], &l->properties[i]);
+	}
 	return n;
 }
 
@@ -140,3 +282,44 @@ PRIVATE struct objc_category *objc_upgrade_category(struct objc_category_legacy 
 	cat->class_methods = upgradeMethodList(old->class_methods);
 	return cat;
 }
+
+PRIVATE struct objc_protocol *objc_upgrade_protocol_gcc(struct objc_protocol_gcc *p)
+{
+	// If the protocol has already been upgraded, the don't try to upgrade it twice.
+	if (p->isa == objc_getClass("ProtocolGCC"))
+	{
+		return objc_getProtocol(p->name);
+	}
+	p->isa = objc_getClass("ProtocolGCC");
+	Protocol *proto =
+		(Protocol*)class_createInstance((Class)objc_getClass("Protocol"),
+				sizeof(struct objc_protocol) - sizeof(id));
+	proto->name = p->name;
+	// Aliasing this means that when this returns these will all be updated.
+	proto->protocol_list = p->protocol_list;
+	proto->instance_methods = p->instance_methods;
+	proto->class_methods = p->class_methods;
+	assert(proto->isa);
+	return proto;
+}
+
+PRIVATE struct objc_protocol *objc_upgrade_protocol_gsv1(struct objc_protocol_gsv1 *p)
+{
+	// If the protocol has already been upgraded, the don't try to upgrade it twice.
+	if (p->isa == objc_getClass("Protocol"))
+	{
+		return (struct objc_protocol*)p;
+	}
+	if (p->properties)
+	{
+		p->properties = (struct objc_property_list_gsv1*)upgradePropertyList(p->properties);
+	}
+	if (p->optional_properties)
+	{
+		p->optional_properties = (struct objc_property_list_gsv1*)upgradePropertyList(p->optional_properties);
+	}
+	p->isa = objc_getClass("Protocol");
+	assert(p->isa);
+	return (struct objc_protocol*)p;
+}
+

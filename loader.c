@@ -118,10 +118,10 @@ struct objc_init
 	Class *cls_ref_end;
 	struct objc_category *cat_begin;
 	struct objc_category *cat_end;
-	struct objc_protocol2 *proto_begin;
-	struct objc_protocol2 *proto_end;
-	struct objc_protocol2 **proto_ref_begin;
-	struct objc_protocol2 **proto_ref_end;
+	struct objc_protocol *proto_begin;
+	struct objc_protocol *proto_end;
+	struct objc_protocol **proto_ref_begin;
+	struct objc_protocol **proto_ref_end;
 	struct objc_alias *alias_begin;
 	struct objc_alias *alias_end;
 };
@@ -158,7 +158,7 @@ void __objc_load(struct objc_init *init)
 		objc_register_selector(sel);
 	}
 	int i = 0;
-	for (struct objc_protocol2 *proto = init->proto_begin ; proto < init->proto_end ;
+	for (struct objc_protocol *proto = init->proto_begin ; proto < init->proto_end ;
 	     proto++)
 	{
 		if (proto->name == NULL)

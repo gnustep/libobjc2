@@ -189,11 +189,11 @@ BOOL class_addProtocol(Class cls, Protocol *protocol)
 	CHECK_ARG(protocol);
 	if (class_conformsToProtocol(cls, protocol)) { return NO; }
 	struct objc_protocol_list *protocols =
-		malloc(sizeof(struct objc_protocol_list) + sizeof(Protocol2*));
+		malloc(sizeof(struct objc_protocol_list) + sizeof(Protocol*));
 	if (protocols == NULL) { return NO; }
 	protocols->next = cls->protocols;
 	protocols->count = 1;
-	protocols->list[0] = (Protocol2*)protocol;
+	protocols->list[0] = protocol;
 	cls->protocols = protocols;
 
 	return YES;

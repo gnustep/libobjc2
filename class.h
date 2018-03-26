@@ -254,7 +254,7 @@ struct legacy_gnustep_objc_class
 	* List of declared properties on this class (NULL if none).  This contains
 	* the accessor methods for each property.
 	*/
-	struct objc_property_list_legacy *properties;
+	struct objc_property_list_gsv1   *properties;
 
 	/**
 	 * GC / ARC ABI: Fields below this point only exist if abi_version is >= 1.

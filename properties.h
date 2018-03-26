@@ -97,6 +97,33 @@ struct objc_property
 	 */
 	const char *name;
 	/**
+	 * The type encoding of the property.
+	 */
+	const char *attributes;
+	/**
+	 * The type encoding of the property.
+	 */
+	const char *type;
+	/**
+	 * The selector for the getter for this property.
+	 */
+	SEL getter;
+	/**
+	 * The selector for the setter for this property.
+	 */
+	SEL setter;
+};
+
+/**
+ * GNUstep v1 ABI version of `struct objc_property`
+ */
+struct objc_property_gsv1
+{
+	/**
+	 * Name of this property.
+	 */
+	const char *name;
+	/**
 	 * Attributes for this property.  Made by ORing together
 	 * PropertyAttributeKinds.
 	 */
@@ -136,7 +163,7 @@ struct objc_property
 /**
  * List of property introspection data.
  */
-struct objc_property_list_legacy
+struct objc_property_list_gsv1
 {
 	/**
 	 * Number of properties in this array.
@@ -149,7 +176,7 @@ struct objc_property_list_legacy
 	/**
 	 * List of properties.
 	 */
-	struct objc_property properties[];
+	struct objc_property_gsv1 properties[];
 };
 
 /**
@@ -183,7 +210,7 @@ struct objc_property_list
  */
 PRIVATE struct objc_property propertyFromAttrs(const objc_property_attribute_t *attributes,
                                                unsigned int attributeCount,
-                                               const char **iVarName);
+                                               const char *name);
 
 /**
  * Constructs and installs a property attribute string from the property

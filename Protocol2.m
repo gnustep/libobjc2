@@ -19,8 +19,7 @@
 + (Class)class { return self; }
 - (id)self { return self; }
 @end
-@implementation Protocol2 @end
-@interface __IncompleteProtocol : Protocol2 @end
+@interface __IncompleteProtocol : Protocol @end
 @implementation __IncompleteProtocol @end
 
 /**
@@ -34,3 +33,5 @@
 @implementation __ObjC_Protocol_Holder_Ugly_Hack @end
 
 @implementation Object @end
+
+@implementation ProtocolGCC @end

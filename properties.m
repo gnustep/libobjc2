@@ -15,11 +15,6 @@
 
 PRIVATE int spinlocks[spinlock_count];
 
-static inline BOOL checkAttribute(char field, int attr)
-{
-	return (field & attr) == attr;
-}
-
 /**
  * Public function for getting a property.  
  */
@@ -326,9 +321,7 @@ const char *property_getName(objc_property_t property)
 	return name;
 }
 
-PRIVATE size_t lengthOfTypeEncoding(const char *types);
-
-/**
+/*
  * The compiler stores the type encoding of the getter.  We replace this with
  * the type encoding of the property itself.  We use a 0 byte at the start to
  * indicate that the swap has taken place.
@@ -336,167 +329,13 @@ PRIVATE size_t lengthOfTypeEncoding(const char *types);
 static const char *property_getTypeEncoding(objc_property_t property)
 {
 	if (NULL == property) { return NULL; }
-	if (NULL == property->getter_types) { return NULL; }
-
-	const char *name = property->getter_types;
-	if (name[0] == 0)
-	{
-		return &name[1];
-	}
-	size_t typeSize = lengthOfTypeEncoding(name);
-	char *buffer = malloc(typeSize + 2);
-	buffer[0] = 0;
-	memcpy(buffer+1, name, typeSize);
-	buffer[typeSize+1] = 0;
-	if (!__sync_bool_compare_and_swap(&(property->getter_types), name, buffer))
-	{
-		free(buffer);
-	}
-	return &property->getter_types[1];
+	return property->type;
 }
-
-PRIVATE const char *constructPropertyAttributes(objc_property_t property,
-                                                const char *iVarName)
-{
-	const char *name = (char*)property->name;
-	const char *typeEncoding = property_getTypeEncoding(property);
-	size_t typeSize = (NULL == typeEncoding) ? 0 : strlen(typeEncoding);
-	size_t nameSize = (NULL == name) ? 0 : strlen(name);
-	size_t iVarNameSize = (NULL == iVarName) ? 0 : strlen(iVarName);
-	// Encoding is T{type},V{name}, so 4 bytes for the "T,V" that we always
-	// need.  We also need two bytes for the leading null and the length.
-	size_t encodingSize = typeSize + nameSize + 6;
-	char flags[20];
-	size_t i = 0;
-	// Flags that are a comma then a character
-	if (checkAttribute(property->attributes, OBJC_PR_readonly))
-	{
-		flags[i++] = ',';
-		flags[i++] = 'R';
-	}
-	if (checkAttribute(property->attributes, OBJC_PR_retain))
-	{
-		flags[i++] = ',';
-		flags[i++] = '&';
-	}
-	if (checkAttribute(property->attributes, OBJC_PR_copy))
-	{
-		flags[i++] = ',';
-		flags[i++] = 'C';
-	}
-	if (checkAttribute(property->attributes2, OBJC_PR_weak))
-	{
-		flags[i++] = ',';
-		flags[i++] = 'W';
-	}
-	if (checkAttribute(property->attributes2, OBJC_PR_dynamic))
-	{
-		flags[i++] = ',';
-		flags[i++] = 'D';
-	}
-	if ((property->attributes & OBJC_PR_nonatomic) == OBJC_PR_nonatomic)
-	{
-		flags[i++] = ',';
-		flags[i++] = 'N';
-	}
-	encodingSize += i;
-	flags[i] = '\0';
-	size_t setterLength = 0;
-	size_t getterLength = 0;
-	if ((property->attributes & OBJC_PR_getter) == OBJC_PR_getter)
-	{
-		getterLength = strlen(property->getter_name);
-		encodingSize += 2 + getterLength;
-	}
-	if ((property->attributes & OBJC_PR_setter) == OBJC_PR_setter)
-	{
-		setterLength = strlen(property->setter_name);
-		encodingSize += 2 + setterLength;
-	}
-	if (NULL != iVarName)
-	{
-		encodingSize += 2 + iVarNameSize;
-	}
-	unsigned char *encoding = malloc(encodingSize);
-	// Set the leading 0 and the offset of the name
-	unsigned char *insert = encoding;
-	BOOL needsComma = NO;
-	*(insert++) = 0;
-	*(insert++) = 0;
-	// Set the type encoding
-	if (NULL != typeEncoding)
-	{
-		*(insert++) = 'T';
-		memcpy(insert, typeEncoding, typeSize);
-		insert += typeSize;
-		needsComma = YES;
-	}
-	// Set the flags
-	memcpy(insert, flags, i);
-	insert += i;
-	if ((property->attributes & OBJC_PR_getter) == OBJC_PR_getter)
-	{
-		if (needsComma)
-		{
-			*(insert++) = ',';
-		}
-		i++;
-		needsComma = YES;
-		*(insert++) = 'G';
-		memcpy(insert, property->getter_name, getterLength);
-		insert += getterLength;
-	}
-	if ((property->attributes & OBJC_PR_setter) == OBJC_PR_setter)
-	{
-		if (needsComma)
-		{
-			*(insert++) = ',';
-		}
-		i++;
-		needsComma = YES;
-		*(insert++) = 'S';
-		memcpy(insert, property->setter_name, setterLength);
-		insert += setterLength;
-	}
-	// If the instance variable name is the same as the property name, then we
-	// use the same string for both, otherwise we write the ivar name in the
-	// attributes string and then a null and then the name.
-	if (NULL != iVarName)
-	{
-		if (needsComma)
-		{
-			*(insert++) = ',';
-		}
-		*(insert++) = 'V';
-		memcpy(insert, iVarName, iVarNameSize);
-		insert += iVarNameSize;
-	}
-	*(insert++) = '\0';
-	encoding[1] = (unsigned char)(uintptr_t)(insert - encoding);
-	memcpy(insert, name, nameSize);
-	insert += nameSize;
-	*insert = '\0';
-	// If another thread installed the encoding string while we were computing
-	// it, then discard the one that we created and return theirs.
-	if (!__sync_bool_compare_and_swap(&(property->name), name, (char*)encoding))
-	{
-		free(encoding);
-		return property->name + 2;
-	}
-	return (const char*)(encoding + 2);
-}
-
 
 const char *property_getAttributes(objc_property_t property)
 {
 	if (NULL == property) { return NULL; }
-
-	const char *name = (char*)property->name;
-	if (name[0] == 0)
-	{
-		return name + 2;
-	}
-	return constructPropertyAttributes(property, NULL);
+	return property->attributes;
 }
 
 
@@ -558,12 +397,12 @@ objc_property_attribute_t *property_copyAttributeList(objc_property_t property,
 				break;
 			case 'G':
 				attrs[count].name = "G";
-				attrs[count].value = property->getter_name;
+				attrs[count].value = sel_getName(property->getter);
 				i += strlen(attrs[count].value);
 				break;
 			case 'S':
 				attrs[count].name = "S";
-				attrs[count].value = property->setter_name;
+				attrs[count].value = sel_getName(property->setter);
 				i += strlen(attrs[count].value);
 				break;
 			case 'V':
@@ -586,74 +425,109 @@ objc_property_attribute_t *property_copyAttributeList(objc_property_t property,
 	return propAttrs;
 }
 
+static const objc_property_attribute_t *findAttribute(char attr,
+                                                      const objc_property_attribute_t *attributes,
+                                                      unsigned int attributeCount)
+{
+	// This linear scan is N^2 in the worst case, but that's still probably
+	// cheaper than sorting the array because N<12
+	for (int i=0 ; i<attributeCount ; i++)
+	{
+		if (attributes[i].name[0] == attr)
+		{
+			return &attributes[i];
+		}
+	}
+	return NULL;
+}
+static char *addAttrIfExists(char a,
+                             char *buffer,
+                             const objc_property_attribute_t *attributes,
+                             unsigned int attributeCount)
+{
+	const objc_property_attribute_t *attr = findAttribute(a, attributes, attributeCount);
+	if (attr)
+	{
+		*(buffer++) = attr->name[0];
+		if (attr->value)
+		{
+			size_t len = strlen(attr->value);
+			memcpy(buffer, attr->value, len);
+			buffer += len;
+		}
+		*(buffer++) = ',';
+	}
+	return buffer;
+}
+
+static const char *encodingFromAttrs(const objc_property_attribute_t *attributes,
+                                     unsigned int attributeCount)
+{
+	// Length of the attributes string (initially the number of keys and commas and trailing null)
+	size_t attributesSize = 2 * attributeCount;
+	for (int i=0 ; i<attributeCount ; i++)
+	{
+		if (attributes[i].value)
+		{
+			attributesSize += strlen(attributes[i].value);
+		}
+	}
+	if (attributesSize == 0)
+	{
+		return NULL;
+	}
+
+	char *buffer = malloc(attributesSize);
+
+	char *out = buffer;
+	out = addAttrIfExists('T', out, attributes, attributeCount);
+	out = addAttrIfExists('R', out, attributes, attributeCount);
+	out = addAttrIfExists('&', out, attributes, attributeCount);
+	out = addAttrIfExists('C', out, attributes, attributeCount);
+	out = addAttrIfExists('W', out, attributes, attributeCount);
+	out = addAttrIfExists('D', out, attributes, attributeCount);
+	out = addAttrIfExists('N', out, attributes, attributeCount);
+	out = addAttrIfExists('G', out, attributes, attributeCount);
+	out = addAttrIfExists('S', out, attributes, attributeCount);
+	out = addAttrIfExists('V', out, attributes, attributeCount);
+	assert(out != buffer);
+	out--;
+	*out = '\0';
+
+	return buffer;
+}
 PRIVATE struct objc_property propertyFromAttrs(const objc_property_attribute_t *attributes,
                                                unsigned int attributeCount,
-                                               const char **name)
+                                               const char *name)
 {
-	struct objc_property p = { 0 };
-	for (unsigned int i=0 ; i<attributeCount ; i++)
+	struct objc_property p;
+	p.name = strdup(name);
+	p.attributes = encodingFromAttrs(attributes, attributeCount);
+	p.type = NULL;
+	const objc_property_attribute_t *attr = findAttribute('T', attributes, attributeCount);
+	if (attr)
 	{
-		switch (attributes[i].name[0])
-		{
-			case 'T':
-			{
-				size_t typeSize = strlen(attributes[i].value);
-				char *buffer = malloc(typeSize + 2);
-				buffer[0] = 0;
-				memcpy(buffer+1, attributes[i].value, typeSize);
-				buffer[typeSize+1] = 0;
-				p.getter_types = buffer;
-				break;
-			}
-			case 'S':
-			{
-				p.setter_name = strdup(attributes[i].value);
-				break;
-			}
-			case 'G':
-			{
-				p.getter_name = strdup(attributes[i].value);
-				break;
-			}
-			case 'V':
-			{
-				*name = attributes[i].value;
-				break;
-			}
-			case 'C':
-			{
-				p.attributes |= OBJC_PR_copy;
-				break;
-			}
-			case 'R':
-			{
-				p.attributes |= OBJC_PR_readonly;
-				break;
-			}
-			case 'W':
-			{
-				p.attributes2 |= OBJC_PR_weak;
-				break;
-			}
-			case '&':
-			{
-				p.attributes |= OBJC_PR_retain;
-				break;
-			}
-			case 'N':
-			{
-				p.attributes |= OBJC_PR_nonatomic;
-				break;
-			}
-			case 'D':
-			{
-				p.attributes2 |= OBJC_PR_dynamic;
-				break;
-			}
-		}
+		p.type = strdup(attr->value);
+	}
+	p.getter = NULL;
+	attr = findAttribute('G', attributes, attributeCount);
+	if (attr)
+	{
+		// TODO: We should be able to construct the full type encoding if we
+		// also have a type, but for now use an untyped selector.
+		p.getter = sel_registerName(attr->value);
+	}
+	p.setter = NULL;
+	attr = findAttribute('S', attributes, attributeCount);
+	if (attr)
+	{
+		// TODO: We should be able to construct the full type encoding if we
+		// also have a type, but for now use an untyped selector.
+		p.setter = sel_registerName(attr->value);
 	}
 	return p;
 }
+
 
 BOOL class_addProperty(Class cls,
                        const char *name,
@@ -661,12 +535,8 @@ BOOL class_addProperty(Class cls,
                        unsigned int attributeCount)
 {
 	if ((Nil == cls) || (NULL == name) || (class_getProperty(cls, name) != 0)) { return NO; }
-	const char *iVarname = NULL;
-	struct objc_property p = propertyFromAttrs(attributes, attributeCount, &iVarname);
-	// If the iVar name is not the same as the name, then we need to construct
-	// the attributes string now, otherwise we can construct it lazily.
-	p.name = name;
-	constructPropertyAttributes(&p, iVarname);
+
+	struct objc_property p = propertyFromAttrs(attributes, attributeCount, name);
 
 	struct objc_property_list *l = calloc(1, sizeof(struct objc_property_list)
 			+ sizeof(struct objc_property));
@@ -691,11 +561,8 @@ void class_replaceProperty(Class cls,
 		class_addProperty(cls, name, attributes, attributeCount);
 		return;
 	}
-	const char *iVarname = 0;
-	struct objc_property p = propertyFromAttrs(attributes, attributeCount, &iVarname);
-	p.name = name;
+	struct objc_property p = propertyFromAttrs(attributes, attributeCount, name);
 	LOCK_RUNTIME_FOR_SCOPE();
-	constructPropertyAttributes(&p, iVarname);
 	memcpy(old, &p, sizeof(struct objc_property));
 }
 char *property_copyAttributeValue(objc_property_t property,
@@ -725,11 +592,11 @@ char *property_copyAttributeValue(objc_property_t property,
 		}
 		case 'S':
 		{
-			return strdup(property->setter_name);
+			return strdup(sel_getName(property->setter));
 		}
 		case 'G':
 		{
-			return strdup(property->getter_name);
+			return strdup(sel_getName(property->getter));
 		}
 	}
 	return 0;

@@ -1,3 +1,6 @@
+#ifndef PROTOCOL_H_INCLUDED
+#define PROTOCOL_H_INCLUDED
+
 #include "selector.h"
 #include <stdlib.h>
 
@@ -15,22 +18,39 @@ struct objc_method_description_list
 	struct objc_selector methods[];
 };
 
-
-#ifdef __OBJC__
-@interface Object { id isa; } @end
-/**
- * Definition of the Protocol type.  Protocols are objects, but are rarely used
- * as such.
- */
-@interface Protocol : Object
-{
-	@public
-#else
 struct objc_protocol
+{
+	/**
+	 * Redefinition of the superclass ivars in the C version.
+	 */
+	id                                   isa;
+	char                                *name;
+	struct objc_protocol_list           *protocol_list;
+	struct objc_method_description_list *instance_methods;
+	struct objc_method_description_list *class_methods; 
+	/**
+	 * Instance methods that are declared as optional for this protocol.
+	 */
+	struct objc_method_description_list *optional_instance_methods;
+	/**
+	 * Class methods that are declared as optional for this protocol.
+	 */
+	struct objc_method_description_list *optional_class_methods; 
+	/**
+	 * Properties that are required by this protocol.
+	 */
+	struct objc_property_list           *properties;
+	/**
+	 * Optional properties. 
+	 */
+	struct objc_property_list           *optional_properties;
+};
+
+
+struct objc_protocol_gcc
 {
 	/** Class pointer. */
 	id                                   isa;
-#endif 
 	/** 
 	 * The name of this protocol.  Two protocols are regarded as identical if
 	 * they have the same name. 
@@ -48,29 +68,18 @@ struct objc_protocol
 	 * List of class methods required by this protocol.
 	 */
 	struct objc_method_description_list *class_methods; 
-}
-#ifdef __OBJC__
-@end
-#else
-;
-#endif 
+};
 
-#ifdef __OBJC__
-@interface Protocol2 : Protocol
-{
-	@public
-#else
-typedef struct objc_protocol2
+struct objc_protocol_gsv1
 {
 	/**
-	 * Redefinition of the superclass ivars in the C version.
+	 * The first five ivars are shared with `objc_protocol_gcc`.
 	 */
 	id                                   isa;
 	char                                *name;
 	struct objc_protocol_list           *protocol_list;
 	struct objc_method_description_list *instance_methods;
 	struct objc_method_description_list *class_methods; 
-#endif 
 	/**
 	 * Instance methods that are declared as optional for this protocol.
 	 */
@@ -82,16 +91,38 @@ typedef struct objc_protocol2
 	/**
 	 * Properties that are required by this protocol.
 	 */
-	struct objc_property_list           *properties;
+	struct objc_property_list_gsv1      *properties;
 	/**
 	 * Optional properties. 
 	 */
-	struct objc_property_list           *optional_properties;
-}
+	struct objc_property_list_gsv1      *optional_properties;
+};
+
+// Note: If you introduce a new protocol type that is larger than the current
+// one then it's fine to auto-upgrade anything using the v2 ABI, because
+// protocol structures there are referenced only via the indirection layer or
+// via other runtime-managed structures.  
+//
+// Auto-upgrading GNUstep v1 ABI protocols relies on their being the same size
+// as v2, so the upgrade can happen in place.  If this isn't possible, then we
+// will need to add a new protocol class for v1 ABI struct and make sure that
+// anything accessing the missing fields checks for this class before doing so.
+_Static_assert(sizeof(struct objc_protocol_gsv1) == sizeof(struct objc_protocol),
+	"The V1 ABI protocol strcuture has a different size to the current AIB.  "
+	"The auto-upgrader will not be able to do in-place replacement.");
+
 #ifdef __OBJC__
+@interface Object { id isa; } @end
+/**
+ * Definition of the Protocol type.  Protocols are objects, but are rarely used
+ * as such.
+ */
+@interface Protocol : Object
 @end
-#else
-Protocol2;
+
+@interface ProtocolGCC : Protocol
+@end
+
 #endif
 
 /**
@@ -117,6 +148,7 @@ struct objc_protocol_list
 	 * On load, this contains direct references to other protocols and should
 	 * be updated to point to the canonical (possibly upgraded) version.
 	 */
-	Protocol2                 *list[];
+	struct objc_protocol      *list[];
 };
 
+#endif // PROTOCOL_H_INCLUDED
