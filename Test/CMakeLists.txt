@@ -20,6 +20,7 @@ set(TESTS
 	ManyManySelectors.m
 	NestedExceptions.m
 	PropertyAttributeTest.m
+	ProtocolExtendedProperties.m
 	PropertyIntrospectionTest.m
 	PropertyIntrospectionTest2_arc.m
 	ProtocolCreation.m
@@ -82,9 +83,9 @@ function(addtest_flags TEST_NAME FLAGS TEST_SOURCE)
 endfunction(addtest_flags)
 
 function(addtest_variants TEST TEST_SOURCE LEGACY)
-	addtest_flags(${TEST} "-O0 -fobjc-runtime=gnustep-2.0 -UNDEBUG" "${TEST_SOURCE}")
+	addtest_flags(${TEST} "-O0 -fobjc-runtime=gnustep-2.0 -UNDEBUG -DGS_RUNTIME_V2" "${TEST_SOURCE}")
 	target_sources(${TEST} PRIVATE $<TARGET_OBJECTS:test_runtime>)
-	addtest_flags("${TEST}_optimised" "-O3 -fobjc-runtime=gnustep-2.0 -UNDEBUG" "${TEST_SOURCE}")
+	addtest_flags("${TEST}_optimised" "-O3 -fobjc-runtime=gnustep-2.0 -UNDEBUG -DGS_RUNTIME_V2" "${TEST_SOURCE}")
 	target_sources("${TEST}_optimised" PRIVATE $<TARGET_OBJECTS:test_runtime>)
 	if (LEGACY)
 		addtest_flags("${TEST}_legacy" "-O0 -fobjc-runtime=gnustep-1.7 -UNDEBUG" "${TEST_SOURCE}")

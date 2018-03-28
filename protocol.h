@@ -4,9 +4,9 @@
 #include "selector.h"
 #include <stdlib.h>
 
-struct objc_method_description_list
+struct objc_protocol_method_description_list_gcc
 {
-	/** 
+	/**
 	 * Number of method descriptions in this list.
 	 */
 	int count;
@@ -18,6 +18,37 @@ struct objc_method_description_list
 	struct objc_selector methods[];
 };
 
+/**
+ * A description of a method in a protocol.
+ */
+struct objc_protocol_method_description
+{
+	/**
+	 * The selector for this method, includes traditional type encoding.
+	 */
+	SEL selector;
+	/**
+	 * The extended type encoding.
+	 */
+	const char *types;
+};
+
+struct objc_protocol_method_description_list
+{
+	/**
+	 * Number of method descriptions in this list.
+	 */
+	int count;
+	/**
+	 * Size of `struct objc_method_description`
+	 */
+	int size;
+	/**
+	 * Methods in this list.  `count` elements long.
+	 */
+	struct objc_protocol_method_description methods[];
+};
+
 struct objc_protocol
 {
 	/**
@@ -26,22 +57,22 @@ struct objc_protocol
 	id                                   isa;
 	char                                *name;
 	struct objc_protocol_list           *protocol_list;
-	struct objc_method_description_list *instance_methods;
-	struct objc_method_description_list *class_methods; 
+	struct objc_protocol_method_description_list *instance_methods;
+	struct objc_protocol_method_description_list *class_methods;
 	/**
 	 * Instance methods that are declared as optional for this protocol.
 	 */
-	struct objc_method_description_list *optional_instance_methods;
+	struct objc_protocol_method_description_list *optional_instance_methods;
 	/**
 	 * Class methods that are declared as optional for this protocol.
 	 */
-	struct objc_method_description_list *optional_class_methods; 
+	struct objc_protocol_method_description_list *optional_class_methods;
 	/**
 	 * Properties that are required by this protocol.
 	 */
 	struct objc_property_list           *properties;
 	/**
-	 * Optional properties. 
+	 * Optional properties.
 	 */
 	struct objc_property_list           *optional_properties;
 };
@@ -51,9 +82,9 @@ struct objc_protocol_gcc
 {
 	/** Class pointer. */
 	id                                   isa;
-	/** 
+	/**
 	 * The name of this protocol.  Two protocols are regarded as identical if
-	 * they have the same name. 
+	 * they have the same name.
 	 */
 	char                                *name;
 	/**
@@ -63,11 +94,11 @@ struct objc_protocol_gcc
 	/**
 	 * List of instance methods required by this protocol.
 	 */
-	struct objc_method_description_list *instance_methods;
+	struct objc_protocol_method_description_list_gcc *instance_methods;
 	/**
 	 * List of class methods required by this protocol.
 	 */
-	struct objc_method_description_list *class_methods; 
+	struct objc_protocol_method_description_list_gcc *class_methods;
 };
 
 struct objc_protocol_gsv1
@@ -78,22 +109,22 @@ struct objc_protocol_gsv1
 	id                                   isa;
 	char                                *name;
 	struct objc_protocol_list           *protocol_list;
-	struct objc_method_description_list *instance_methods;
-	struct objc_method_description_list *class_methods; 
+	struct objc_protocol_method_description_list_gcc *instance_methods;
+	struct objc_protocol_method_description_list_gcc *class_methods;
 	/**
 	 * Instance methods that are declared as optional for this protocol.
 	 */
-	struct objc_method_description_list *optional_instance_methods;
+	struct objc_protocol_method_description_list_gcc *optional_instance_methods;
 	/**
 	 * Class methods that are declared as optional for this protocol.
 	 */
-	struct objc_method_description_list *optional_class_methods; 
+	struct objc_protocol_method_description_list_gcc *optional_class_methods;
 	/**
 	 * Properties that are required by this protocol.
 	 */
 	struct objc_property_list_gsv1      *properties;
 	/**
-	 * Optional properties. 
+	 * Optional properties.
 	 */
 	struct objc_property_list_gsv1      *optional_properties;
 };
@@ -101,7 +132,7 @@ struct objc_protocol_gsv1
 // Note: If you introduce a new protocol type that is larger than the current
 // one then it's fine to auto-upgrade anything using the v2 ABI, because
 // protocol structures there are referenced only via the indirection layer or
-// via other runtime-managed structures.  
+// via other runtime-managed structures.
 //
 // Auto-upgrading GNUstep v1 ABI protocols relies on their being the same size
 // as v2, so the upgrade can happen in place.  If this isn't possible, then we

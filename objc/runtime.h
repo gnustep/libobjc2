@@ -741,6 +741,16 @@ struct objc_method_description protocol_getMethodDescription(Protocol *p,
 	SEL aSel, BOOL isRequiredMethod, BOOL isInstanceMethod);
 
 /**
+ * Returns the extended type encoding of the specified method.
+ * 
+ * Note: This function is used by JavaScriptCore but is not public in Apple's
+ * implementation and so its semantics may change in the future and this
+ * runtime may diverge from Apple's.
+ */
+const char *_protocol_getMethodTypeEncoding(Protocol *p, SEL aSel,
+	BOOL isRequiredMethod, BOOL isInstanceMethod);
+
+/**
  * Returns the name of the specified protocol.
  */
 const char* protocol_getName(Protocol *p);

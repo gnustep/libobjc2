@@ -316,12 +316,12 @@ BOOL class_conformsToProtocol(Class cls, Protocol *protocol)
 	return NO;
 }
 
-static struct objc_method_description_list *
+static struct objc_protocol_method_description_list *
 get_method_list(Protocol *p,
                 BOOL isRequiredMethod,
                 BOOL isInstanceMethod)
 {
-	struct objc_method_description_list *list;
+	struct objc_protocol_method_description_list *list;
 	if (isRequiredMethod)
 	{
 		if (isInstanceMethod)
@@ -353,7 +353,7 @@ struct objc_method_description *protocol_copyMethodDescriptionList(Protocol *p,
 	BOOL isRequiredMethod, BOOL isInstanceMethod, unsigned int *count)
 {
 	if ((NULL == p) || (NULL == count)){ return NULL; }
-	struct objc_method_description_list *list =
+	struct objc_protocol_method_description_list *list =
 		get_method_list(p, isRequiredMethod, isInstanceMethod);
 	*count = 0;
 	if (NULL == list || list->count == 0) { return NULL; }
@@ -363,9 +363,8 @@ struct objc_method_description *protocol_copyMethodDescriptionList(Protocol *p,
 		calloc(sizeof(struct objc_method_description), list->count);
 	for (int i=0 ; i < (list->count) ; i++)
 	{
-		out[i].name = sel_registerTypedName_np(list->methods[i].name,
-		                                       list->methods[i].types);
-		out[i].types = list->methods[i].types;
+		out[i].name = list->methods[i].selector;
+		out[i].types = sel_getType_np(list->methods[i].selector);
 	}
 	return out;
 }
@@ -461,6 +460,28 @@ objc_property_t protocol_getProperty(Protocol *p,
 	return NULL;
 }
 
+static struct objc_protocol_method_description *
+get_method_description(Protocol *p,
+                       SEL aSel,
+                       BOOL isRequiredMethod,
+                       BOOL isInstanceMethod)
+{
+	struct objc_protocol_method_description_list *list =
+		get_method_list(p, isRequiredMethod, isInstanceMethod);
+	if (NULL == list)
+	{
+		return NULL;
+	}
+	for (int i=0 ; i<list->count ; i++)
+	{
+		SEL s = list->methods[i].selector;
+		if (sel_isEqual(s, aSel))
+		{
+			return &list->methods[i];
+		}
+	}
+	return NULL;
+}
 
 struct objc_method_description
 protocol_getMethodDescription(Protocol *p,
@@ -469,24 +490,29 @@ protocol_getMethodDescription(Protocol *p,
                               BOOL isInstanceMethod)
 {
 	struct objc_method_description d = {0,0};
-	struct objc_method_description_list *list =
-		get_method_list(p, isRequiredMethod, isInstanceMethod);
-	if (NULL == list)
+	struct objc_protocol_method_description *m = 
+		get_method_description(p, aSel, isRequiredMethod, isInstanceMethod);
+	if (m != NULL)
 	{
-		return d;
-	}
-	// TODO: We could make this much more efficient if
-	for (int i=0 ; i<list->count ; i++)
-	{
-		SEL s = sel_registerTypedName_np(list->methods[i].name, 0);
-		if (sel_isEqual(s, aSel))
-		{
-			d.name = s;
-			d.types = list->methods[i].types;
-			break;
-		}
+		SEL s = m->selector;
+		d.name = s;
+		d.types = sel_getType_np(s);
 	}
 	return d;
+}
+
+const char *_protocol_getMethodTypeEncoding(Protocol *p,
+                                            SEL aSel,
+                                            BOOL isRequiredMethod,
+                                            BOOL isInstanceMethod)
+{
+	struct objc_protocol_method_description *m = 
+		get_method_description(p, aSel, isRequiredMethod, isInstanceMethod);
+	if (m != NULL)
+	{
+		return m->types;
+	}
+	return NULL;
 }
 
 
@@ -569,7 +595,7 @@ void protocol_addMethodDescription(Protocol *aProtocol,
 {
 	if ((NULL == aProtocol) || (NULL == name) || (NULL == types)) { return; }
 	if (incompleteProtocolClass() != aProtocol->isa) { return; }
-	struct objc_method_description_list **listPtr;
+	struct objc_protocol_method_description_list **listPtr;
 	if (isInstanceMethod)
 	{
 		if (isRequiredMethod)
@@ -594,19 +620,22 @@ void protocol_addMethodDescription(Protocol *aProtocol,
 	}
 	if (NULL == *listPtr)
 	{
-		*listPtr = calloc(1, sizeof(struct objc_method_description_list) + sizeof(struct objc_method_description));
+		// FIXME: Factor this out, we do the same thing in multiple places.
+		*listPtr = calloc(1, sizeof(struct objc_protocol_method_description_list) +
+				sizeof(struct objc_protocol_method_description));
 		(*listPtr)->count = 1;
+		(*listPtr)->size = sizeof(struct objc_protocol_method_description);
 	}
 	else
 	{
 		(*listPtr)->count++;
-		*listPtr = realloc(*listPtr, sizeof(struct objc_method_description_list) +
-				sizeof(struct objc_method_description) * (*listPtr)->count);
+		*listPtr = realloc(*listPtr, sizeof(struct objc_protocol_method_description_list) +
+				sizeof(struct objc_protocol_method_description) * (*listPtr)->count);
 	}
-	struct objc_method_description_list *list = *listPtr;
+	struct objc_protocol_method_description_list *list = *listPtr;
 	int index = list->count-1;
-	list->methods[index].name = sel_getName(name);
-	list->methods[index].types= types;
+	list->methods[index].selector = sel_registerTypedName_np(sel_getName(name), types);
+	list->methods[index].types = types;
 }
 void protocol_addProtocol(Protocol *aProtocol, Protocol *addition)
 {

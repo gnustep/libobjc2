@@ -8,14 +8,11 @@ struct objc_method
 	 */
 	IMP         imp;
 	/**
-	 * Selector used to send messages to this method.  The type encoding of
-	 * this method should match the types field.
+	 * Selector used to send messages to this method.
 	 */
 	SEL         selector;
 	/**
-	 * The type encoding for this selector.  Used only for introspection, and
-	 * only required because of the stupid selector handling in the old GNU
-	 * runtime.  In future, this field may be reused for something else.
+	 * The extended type encoding for this method.
 	 */
 	const char *types;
 };
