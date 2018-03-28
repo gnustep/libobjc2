@@ -28,6 +28,7 @@ set(TESTS
 	RuntimeTest.m
 	WeakBlock_arc.m
 	WeakReferences_arc.m
+	WeakImportClass.m
 	ivar_arc.m
 	IVarOverlap.m
 	objc_msgSend.m
