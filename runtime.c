@@ -138,11 +138,9 @@ BOOL class_addIvar(Class cls, const char *name, size_t size, uint8_t alignment,
 		offset <<= alignment;
 	}
 
-	// FIXME: This is stupid, but it will work for testing.
-	ivar->offset = malloc(sizeof(int));
-	*ivar->offset = offset;
+	ivar->offset = (int*)(uintptr_t)offset;
 	// Increase the instance size to make space for this.
-	cls->instance_size = *ivar->offset + size;
+	cls->instance_size = offset + size;
 	return YES;
 }
 
@@ -584,6 +582,13 @@ static void freeIvarLists(Class aClass)
 	struct objc_ivar_list *ivarlist = aClass->ivars;
 	if (NULL == ivarlist) { return; }
 
+	if (ivarlist->count > 0)
+	{
+		// For dynamically created classes, ivar offset variables are allocated
+		// as a contiguous range starting with the first one.
+		free(ivarlist->ivar_list[0].offset);
+	}
+
 	for (int i=0 ; i<ivarlist->count ; i++)
 	{
 		Ivar ivar = &ivarlist->ivar_list[i];
@@ -755,6 +760,15 @@ PRIVATE void objc_resolve_class(Class);
 
 void objc_registerClassPair(Class cls)
 {
+	if (cls->ivars != NULL)
+	{
+		int *ptrs = calloc(cls->ivars->count, sizeof(int));
+		for (int i=0 ; i<cls->ivars->count ; i++)
+		{
+			ptrs[i] = (int)(intptr_t)cls->ivars->ivar_list[i].offset;
+			cls->ivars->ivar_list[i].offset = &ptrs[i];
+		}
+	}
 	LOCK_RUNTIME_FOR_SCOPE();
 	class_table_insert(cls);
 	objc_resolve_class(cls);

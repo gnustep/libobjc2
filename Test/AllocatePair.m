@@ -21,8 +21,16 @@ int main()
 
 	b = objc_allocateClassPair(a, "B", 0);
 	class_addMethod(object_getClass(b), @selector(load), (IMP)load, "@:");
+
+	class_addIvar(b, "anIvar", 4, 2, "i");
 	objc_registerClassPair(b);
+
+	Ivar iv = class_getInstanceVariable(b, "anIvar");
+	size_t superSize = class_getInstanceSize([Test class]);
+	assert(ivar_getOffset(iv) == superSize);
+
 	class_getSuperclass(b);
+
 
 	c = objc_allocateClassPair(b, "C", 0);
 	objc_registerClassPair(c);
