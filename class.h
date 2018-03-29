@@ -125,16 +125,8 @@ struct objc_class
 	 */
 	struct reference_list     *extra_data;
 	/**
-	* New ABI.  The following fields are only available with classes compiled to
-	* support the new ABI.  You may test whether any given class supports this
-	* ABI by using the CLS_ISNEW_ABI() macro.
-	*/
-
-	/**
-	* The version of the ABI used for this class.  Zero indicates the ABI first
-	* implemented by clang 1.0.  One indicates the presence of bitmaps
-	* indicating the offsets of strong, weak, and unretained ivars.  Two
-	* indicates that the new ivar structure is used.
+	* The version of the ABI used for this class.  Currently always zero for v2
+	* ABI classes.
 	*/
 	long                       abi_version;
 	/**
