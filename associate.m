@@ -206,10 +206,8 @@ static Class allocateHiddenClass(Class superclass)
 	// class is which
 	// static int count;
 	//asprintf(&newClass->name, "%s%d", superclass->name, count++);
-	newClass->info = objc_class_flag_resolved | 
-		objc_class_flag_class | objc_class_flag_user_created |
-		objc_class_flag_new_abi | objc_class_flag_hidden_class |
-		objc_class_flag_assoc_class;
+	newClass->info = objc_class_flag_resolved | objc_class_flag_user_created |
+		objc_class_flag_hidden_class | objc_class_flag_assoc_class;
 	newClass->super_class = superclass;
 	newClass->dtable = uninstalled_dtable;
 	newClass->instance_size = superclass->instance_size;

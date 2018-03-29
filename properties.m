@@ -239,8 +239,7 @@ void objc_setPropertyStruct(void *dest,
 
 objc_property_t class_getProperty(Class cls, const char *name)
 {
-	// Old ABI classes don't have declared properties
-	if (Nil == cls || !objc_test_class_flag(cls, objc_class_flag_new_abi))
+	if (Nil == cls)
 	{
 		return NULL;
 	}
@@ -262,12 +261,17 @@ objc_property_t class_getProperty(Class cls, const char *name)
 
 objc_property_t* class_copyPropertyList(Class cls, unsigned int *outCount)
 {
-	if (Nil == cls || !objc_test_class_flag(cls, objc_class_flag_new_abi))
+	if (Nil == cls)
 	{
 		if (NULL != outCount) { *outCount = 0; }
 		return NULL;
 	}
 	struct objc_property_list *properties = cls->properties;
+	if (!properties)
+	{
+		if (NULL != outCount) { *outCount = 0; }
+		return NULL;
+	}
 	unsigned int count = 0;
 	for (struct objc_property_list *l=properties ; NULL!=l ; l=l->next)
 	{

@@ -12,9 +12,44 @@
 
 PRIVATE size_t lengthOfTypeEncoding(const char *types);
 
+enum objc_class_flags_gsv1
+{
+	/** This class structure represents a class. */
+	objc_class_flag_class_gsv1 = (1<<0),
+	/** This class structure represents a metaclass. */
+	objc_class_flag_meta_gsv1 = (1<<1),
+	/** 
+	 * The class uses the new, Objective-C 2, runtime ABI.  This ABI defines an
+	 * ABI version field inside the class, and so will be used for all
+	 * subsequent versions that retain some degree of compatibility.
+	 */
+	objc_class_flag_new_abi_gsv1 = (1<<4)
+};
+
+static inline BOOL objc_test_class_flag_gsv1(struct objc_class_gsv1 *aClass,
+                                               enum objc_class_flags_gsv1 flag)
+{
+	return (aClass->info & (unsigned long)flag) == (unsigned long)flag;
+}
+/**
+ * Checks the version of a class.  Return values are:
+ * 0. Legacy GCC ABI compatible class.
+ * 1. First release of GNUstep ABI.
+ * 2. Second release of the GNUstep ABI, adds strong / weak ivar bitmaps.
+ * 3. Third release of the GNUstep ABI.  Many cleanups.
+ */
+static inline int objc_get_class_version_gsv1(struct objc_class_gsv1 *aClass)
+{
+	if (!objc_test_class_flag_gsv1(aClass, objc_class_flag_new_abi_gsv1))
+	{
+		return 0;
+	}
+	return aClass->abi_version + 1;
+}
+
 static ivar_ownership ownershipForIvar(struct objc_class_gsv1 *cls, int idx)
 {
-	if (objc_get_class_version_legacy(cls) < 2)
+	if (objc_get_class_version_gsv1(cls) < 2)
 	{
 		return ownership_unsafe;
 	}
@@ -51,7 +86,7 @@ static struct objc_ivar_list *upgradeIvarList(struct objc_class_gsv1 *cls)
 		int size = nextOffset - l->ivar_list[i].offset;
 		n->ivar_list[i].name = l->ivar_list[i].name;
 		n->ivar_list[i].type = type;
-		if (objc_test_class_flag_legacy(cls, objc_class_flag_new_abi))
+		if (objc_test_class_flag_gsv1(cls, objc_class_flag_new_abi_gsv1))
 		{
 			n->ivar_list[i].offset = cls->ivar_offsets[i];
 		}
@@ -258,7 +293,7 @@ PRIVATE Class objc_upgrade_class(struct objc_class_gsv1 *oldClass)
 	// super_class is left nil and we upgrade it later.
 	cls->name = oldClass->name;
 	cls->version = oldClass->version;
-	cls->info = oldClass->info;
+	cls->info = objc_class_flag_meta;
 	cls->instance_size = oldClass->instance_size;
 	cls->ivars = upgradeIvarList(oldClass);
 	cls->methods = upgradeMethodList(oldClass->methods);
@@ -266,8 +301,9 @@ PRIVATE Class objc_upgrade_class(struct objc_class_gsv1 *oldClass)
 	cls->abi_version = oldClass->abi_version;
 	cls->properties = upgradePropertyList(oldClass->properties);
 	objc_register_selectors_from_class(cls);
-	if (!objc_test_class_flag(cls, objc_class_flag_meta))
+	if (!objc_test_class_flag_gsv1(oldClass, objc_class_flag_meta_gsv1))
 	{
+		cls->info = 0;
 		cls->isa = objc_upgrade_class((struct objc_class_gsv1*)cls->isa);
 		objc_setAssociatedObject((id)cls, &legacy_key, (id)oldClass, OBJC_ASSOCIATION_ASSIGN);
 	}

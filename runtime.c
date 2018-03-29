@@ -689,8 +689,7 @@ Class objc_allocateClassPair(Class superclass, const char *name, size_t extraByt
 		metaClass->super_class = superclass->isa;
 	}
 	metaClass->name = strdup(name);
-	metaClass->info = objc_class_flag_meta | objc_class_flag_user_created |
-		objc_class_flag_new_abi;
+	metaClass->info = objc_class_flag_meta | objc_class_flag_user_created;
 	metaClass->dtable = uninstalled_dtable;
 	metaClass->instance_size = sizeof(struct objc_class);
 
@@ -699,8 +698,7 @@ Class objc_allocateClassPair(Class superclass, const char *name, size_t extraByt
 	newClass->super_class = superclass;
 
 	newClass->name = strdup(name);
-	newClass->info = objc_class_flag_class | objc_class_flag_user_created |
-		objc_class_flag_new_abi;
+	newClass->info = objc_class_flag_user_created;
 	newClass->dtable = uninstalled_dtable;
 
 	newClass->abi_version = 2;

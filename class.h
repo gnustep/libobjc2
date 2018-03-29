@@ -307,10 +307,8 @@ struct objc_class_gcc
  */
 enum objc_class_flags
 {
-	/** This class structure represents a class. */
-	objc_class_flag_class = (1<<0),
 	/** This class structure represents a metaclass. */
-	objc_class_flag_meta = (1<<1),
+	objc_class_flag_meta = (1<<0),
 	/**
 	 * This class has been sent a +initalize message.  This message is sent
 	 * exactly once to every class that is sent a message by the runtime, just
@@ -324,12 +322,6 @@ enum objc_class_flags
 	 * if applicable.
 	 */
 	objc_class_flag_resolved = (1<<3),
-	/** 
-	 * The class uses the new, Objective-C 2, runtime ABI.  This ABI defines an
-	 * ABI version field inside the class, and so will be used for all
-	 * subsequent versions that retain some degree of compatibility.
-	 */
-	objc_class_flag_new_abi = (1<<4),
 	/**
 	 * This class was created at run time and may be freed.
 	 */
@@ -373,36 +365,6 @@ static inline BOOL objc_test_class_flag(struct objc_class *aClass,
                                         enum objc_class_flags flag)
 {
 	return (aClass->info & (unsigned long)flag) == (unsigned long)flag;
-}
-
-static inline BOOL objc_test_class_flag_legacy(struct objc_class_gsv1 *aClass,
-                                               enum objc_class_flags flag)
-{
-	return (aClass->info & (unsigned long)flag) == (unsigned long)flag;
-}
-/**
- * Checks the version of a class.  Return values are:
- * 0. Legacy GCC ABI compatible class.
- * 1. First release of GNUstep ABI.
- * 2. Second release of the GNUstep ABI, adds strong / weak ivar bitmaps.
- * 3. Third release of the GNUstep ABI.  Many cleanups.
- */
-static inline int objc_get_class_version(struct objc_class *aClass)
-{
-	if (!objc_test_class_flag(aClass, objc_class_flag_new_abi))
-	{
-		return 0;
-	}
-	return aClass->abi_version + 1;
-}
-
-static inline int objc_get_class_version_legacy(struct objc_class_gsv1 *aClass)
-{
-	if (!objc_test_class_flag_legacy(aClass, objc_class_flag_new_abi))
-	{
-		return 0;
-	}
-	return aClass->abi_version + 1;
 }
 
 /**

@@ -30,7 +30,6 @@ static void createNSBlockSubclass(Class superclass, Class newClass,
 	newClass->isa = metaClass;
 	newClass->super_class = superclass;
 	newClass->name = name;
-	newClass->info = objc_class_flag_class;
 	newClass->dtable = uninstalled_dtable;
 
 	LOCK_RUNTIME_FOR_SCOPE();
