@@ -167,7 +167,7 @@ PRIVATE BOOL objc_resolve_class(Class cls)
 	}
 	else
 	{
-		struct legacy_gnustep_objc_class *ocls = objc_legacy_class_for_class(cls);
+		struct objc_class_gsv1 *ocls = objc_legacy_class_for_class(cls);
 		if (ocls != NULL)
 		{
 			const char *super_name = (const char*)ocls->super_class;
@@ -258,7 +258,7 @@ PRIVATE BOOL objc_resolve_class(Class cls)
 
 	// Fix up the ivar offsets
 	objc_compute_ivar_offsets(cls);
-	struct legacy_gnustep_objc_class *oldCls = objc_legacy_class_for_class(cls);
+	struct objc_class_gsv1 *oldCls = objc_legacy_class_for_class(cls);
 	if (oldCls)
 	{
 		oldCls->super_class = cls->super_class;

@@ -12,7 +12,7 @@
 
 PRIVATE size_t lengthOfTypeEncoding(const char *types);
 
-static ivar_ownership ownershipForIvar(struct legacy_gnustep_objc_class *cls, int idx)
+static ivar_ownership ownershipForIvar(struct objc_class_gsv1 *cls, int idx)
 {
 	if (objc_get_class_version_legacy(cls) < 2)
 	{
@@ -29,9 +29,9 @@ static ivar_ownership ownershipForIvar(struct legacy_gnustep_objc_class *cls, in
 	return ownership_unsafe;
 }
 
-static struct objc_ivar_list *upgradeIvarList(struct legacy_gnustep_objc_class *cls)
+static struct objc_ivar_list *upgradeIvarList(struct objc_class_gsv1 *cls)
 {
-	struct objc_ivar_list_legacy *l = cls->ivars;
+	struct objc_ivar_list_gcc *l = cls->ivars;
 	if (l == NULL)
 	{
 		return NULL;
@@ -69,7 +69,7 @@ static struct objc_ivar_list *upgradeIvarList(struct legacy_gnustep_objc_class *
 	return n;
 }
 
-static struct objc_method_list *upgradeMethodList(struct objc_method_list_legacy *old)
+static struct objc_method_list *upgradeMethodList(struct objc_method_list_gcc *old)
 {
 	if (old == NULL)
 	{
@@ -246,12 +246,12 @@ static struct objc_property_list *upgradePropertyList(struct objc_property_list_
 
 static int legacy_key;
 
-PRIVATE struct legacy_gnustep_objc_class* objc_legacy_class_for_class(Class cls)
+PRIVATE struct objc_class_gsv1* objc_legacy_class_for_class(Class cls)
 {
-	return (struct legacy_gnustep_objc_class*)objc_getAssociatedObject((id)cls, &legacy_key);
+	return (struct objc_class_gsv1*)objc_getAssociatedObject((id)cls, &legacy_key);
 }
 
-PRIVATE Class objc_upgrade_class(struct legacy_gnustep_objc_class *oldClass)
+PRIVATE Class objc_upgrade_class(struct objc_class_gsv1 *oldClass)
 {
 	Class cls = calloc(sizeof(struct objc_class), 1);
 	cls->isa = oldClass->isa;
@@ -268,16 +268,16 @@ PRIVATE Class objc_upgrade_class(struct legacy_gnustep_objc_class *oldClass)
 	objc_register_selectors_from_class(cls);
 	if (!objc_test_class_flag(cls, objc_class_flag_meta))
 	{
-		cls->isa = objc_upgrade_class((struct legacy_gnustep_objc_class*)cls->isa);
+		cls->isa = objc_upgrade_class((struct objc_class_gsv1*)cls->isa);
 		objc_setAssociatedObject((id)cls, &legacy_key, (id)oldClass, OBJC_ASSOCIATION_ASSIGN);
 	}
 	return cls;
 }
 
-PRIVATE struct objc_category *objc_upgrade_category(struct objc_category_legacy *old)
+PRIVATE struct objc_category *objc_upgrade_category(struct objc_category_gcc *old)
 {
 	struct objc_category *cat = calloc(1, sizeof(struct objc_category));
-	memcpy(cat, old, sizeof(struct objc_category_legacy));
+	memcpy(cat, old, sizeof(struct objc_category_gcc));
 	cat->instance_methods = upgradeMethodList(old->instance_methods);
 	cat->class_methods = upgradeMethodList(old->class_methods);
 	return cat;

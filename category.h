@@ -37,7 +37,7 @@ struct objc_category
 	struct objc_property_list *class_properties;
 };
 
-struct objc_category_legacy
+struct objc_category_gcc
 {
 	/** 
 	 * The name of this category.
@@ -50,11 +50,11 @@ struct objc_category_legacy
 	/**
 	 * The list of instance methods to add to the class.
 	 */
-	struct objc_method_list_legacy   *instance_methods;
+	struct objc_method_list_gcc   *instance_methods;
 	/**
 	 * The list of class methods to add to the class.
 	 */
-	struct objc_method_list_legacy   *class_methods;
+	struct objc_method_list_gcc   *class_methods;
 	/**
 	 * The list of protocols adopted by this category.
 	 */

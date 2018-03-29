@@ -144,7 +144,7 @@ struct objc_class
 };
 // end: objc_class
 
-struct legacy_gnustep_objc_class
+struct objc_class_gsv1
 {
 	/**
 	 * Pointer to the metaclass for this class.  The metaclass defines the
@@ -187,12 +187,12 @@ struct legacy_gnustep_objc_class
 	/**
 	 * Metadata describing the instance variables in this class.
 	 */
-	struct objc_ivar_list_legacy *ivars;
+	struct objc_ivar_list_gcc *ivars;
 	/**
 	 * Metadata for for defining the mappings from selectors to IMPs.  Linked
 	 * list of method list structures, one per class and one per category.
 	 */
-	struct objc_method_list_legacy   *methods;
+	struct objc_method_list_gcc   *methods;
 	/**
 	 * The dispatch table for this class.  Intialized and maintained by the
 	 * runtime.
@@ -283,7 +283,7 @@ struct legacy_gnustep_objc_class
  * same fields, and you can test the new abi flag to tell whether it is safe to
  * access the subsequent fields.
  */
-struct legacy_gcc_objc_class
+struct objc_class_gcc
 {
 	struct objc_class         *isa;
 	struct objc_class         *super_class;
@@ -291,7 +291,7 @@ struct legacy_gcc_objc_class
 	long                       version;
 	unsigned long              info;
 	long                       instance_size;
-	struct objc_ivar_list_legacy     *ivars;
+	struct objc_ivar_list_gcc     *ivars;
 	struct objc_method_list   *methods;
 	void                      *dtable;
 	struct objc_class         *subclass_list;
@@ -375,7 +375,7 @@ static inline BOOL objc_test_class_flag(struct objc_class *aClass,
 	return (aClass->info & (unsigned long)flag) == (unsigned long)flag;
 }
 
-static inline BOOL objc_test_class_flag_legacy(struct legacy_gnustep_objc_class *aClass,
+static inline BOOL objc_test_class_flag_legacy(struct objc_class_gsv1 *aClass,
                                                enum objc_class_flags flag)
 {
 	return (aClass->info & (unsigned long)flag) == (unsigned long)flag;
@@ -396,7 +396,7 @@ static inline int objc_get_class_version(struct objc_class *aClass)
 	return aClass->abi_version + 1;
 }
 
-static inline int objc_get_class_version_legacy(struct legacy_gnustep_objc_class *aClass)
+static inline int objc_get_class_version_legacy(struct objc_class_gsv1 *aClass)
 {
 	if (!objc_test_class_flag_legacy(aClass, objc_class_flag_new_abi))
 	{

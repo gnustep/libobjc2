@@ -91,7 +91,7 @@ PRIVATE void objc_compute_ivar_offsets(Class class)
 			}
 			// If we have a legacy ivar list, update the offset in it too -
 			// code from older compilers may access this directly!
-			struct legacy_gnustep_objc_class* legacy = objc_legacy_class_for_class(class);
+			struct objc_class_gsv1* legacy = objc_legacy_class_for_class(class);
 			if (legacy)
 			{
 				for (i = 0 ; i < class->ivars->count ; i++)

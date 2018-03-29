@@ -17,7 +17,7 @@ struct objc_method
 	const char *types;
 };
 
-struct objc_method_legacy
+struct objc_method_gcc
 {
 	/**
 	 * Selector used to send messages to this method.  The type encoding of
@@ -66,12 +66,12 @@ struct objc_method_list
 /**
  * Legacy version of the method list.
  */
-struct objc_method_list_legacy
+struct objc_method_list_gcc
 {
 	/**
 	 * The next group of methods in the list.
 	 */
-	struct objc_method_list_legacy *next;
+	struct objc_method_list_gcc *next;
 	/**
 	 * The number of methods in this list.
 	 */
@@ -79,5 +79,5 @@ struct objc_method_list_legacy
 	/**
 	 * An array of methods.  Note that the actual size of this is count.
 	 */
-	struct objc_method_legacy methods[];
+	struct objc_method_gcc methods[];
 };
