@@ -1,3 +1,4 @@
+#include <assert.h>
 
 /**
  * Metadata structure for an instance variable.
@@ -119,6 +120,20 @@ struct objc_ivar_list
 	 */
 	struct objc_ivar ivar_list[];
 };
+
+/**
+ * Returns a pointer to the ivar inside the `objc_ivar_list` structure.  This
+ * structure is designed to allow the compiler to add other fields without
+ * breaking the ABI, so although the `ivar_list` field appears to be an array
+ * of `objc_ivar` structures, it may be an array of some future version of
+ * `objc_ivar` structs, which have fields appended that this version of the
+ * runtime does not know about.
+ */
+static struct objc_ivar *ivar_at_index(struct objc_ivar_list *l, int i)
+{
+	assert(l->size >= sizeof(struct objc_ivar));
+	return (struct objc_ivar*)(((char*)l->ivar_list) + (i * l->size));
+}
 
 /**
  * Legacy version of the ivar list

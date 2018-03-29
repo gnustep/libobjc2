@@ -1,4 +1,5 @@
 #include "visibility.h"
+#include <assert.h>
 
 enum PropertyAttributeKind 
 {
@@ -203,6 +204,20 @@ struct objc_property_list
 	 */
 	struct objc_property properties[];
 };
+
+/**
+ * Returns a pointer to the property inside the `objc_property` structure.
+ * This structure is designed to allow the compiler to add other fields without
+ * breaking the ABI, so although the `properties` field appears to be an array
+ * of `objc_property` structures, it may be an array of some future version of
+ * `objc_property` structs, which have fields appended that this version of the
+ * runtime does not know about.
+ */
+static struct objc_property *property_at_index(struct objc_property_list *l, int i)
+{
+	assert(l->size >= sizeof(struct objc_property));
+	return (struct objc_property*)(((char*)l->properties) + (i * l->size));
+}
 
 /**
  * Constructs a property description from a list of attributes, returning the

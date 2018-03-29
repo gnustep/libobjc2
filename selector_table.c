@@ -588,7 +588,7 @@ PRIVATE void objc_register_selectors_from_list(struct objc_method_list *l)
 {
 	for (int i=0 ; i<l->count ; i++)
 	{
-		Method m = &l->methods[i];
+		Method m = method_at_index(l, i);
 		struct objc_selector sel = { {(const char*)m->selector}, m->types };
 		m->selector = objc_register_selector_copy(&sel, NO);
 	}

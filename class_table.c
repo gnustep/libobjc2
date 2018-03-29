@@ -49,7 +49,7 @@ PRIVATE void objc_send_load_message(Class class)
 	{
 		for (int i=0 ; i<l->count ; i++)
 		{
-			Method m = &l->methods[i];
+			Method m = method_at_index(l, i);
 			if (sel_isEqual(m->selector, loadSel))
 			{
 				if (load_messages_table_get(load_table, m->imp) == 0)
@@ -345,8 +345,8 @@ static void reload_class(struct objc_class *class, struct objc_class *old)
 		// work with the view ivar now!
 		for (int i=0 ; equalLayouts && (i<old->ivars->count) ; i++)
 		{
-			struct objc_ivar *oldIvar = &old->ivars->ivar_list[i];
-			struct objc_ivar *newIvar = &class->ivars->ivar_list[i];
+			struct objc_ivar *oldIvar = ivar_at_index(old->ivars, i);
+			struct objc_ivar *newIvar = ivar_at_index(class->ivars, i);
 			equalLayouts &= strcmp(oldIvar->name, newIvar->name) == 0;
 			equalLayouts &= strcmp(oldIvar->type, newIvar->type) == 0;
 			equalLayouts &= (oldIvar->offset == newIvar->offset);

@@ -249,7 +249,7 @@ objc_property_t class_getProperty(Class cls, const char *name)
 	{
 		for (int i=0 ; i<properties->count ; i++)
 		{
-			objc_property_t p = &properties->properties[i];
+			objc_property_t p = property_at_index(properties, i);
 			if (strcmp(property_getName(p), name) == 0)
 			{
 				return p;
@@ -287,7 +287,7 @@ objc_property_t* class_copyPropertyList(Class cls, unsigned int *outCount)
 	{
 		for (int i=0 ; i<properties->count ; i++)
 		{
-			list[out++] = &l->properties[i];
+			list[out++] = property_at_index(l, i);
 		}
 	}
 	return list;

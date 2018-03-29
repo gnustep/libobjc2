@@ -363,8 +363,8 @@ struct objc_method_description *protocol_copyMethodDescriptionList(Protocol *p,
 		calloc(sizeof(struct objc_method_description), list->count);
 	for (int i=0 ; i < (list->count) ; i++)
 	{
-		out[i].name = list->methods[i].selector;
-		out[i].types = sel_getType_np(list->methods[i].selector);
+		out[i].name = protocol_method_at_index(list, i)->selector;
+		out[i].types = sel_getType_np(protocol_method_at_index(list, i)->selector);
 	}
 	return out;
 }
@@ -415,7 +415,7 @@ objc_property_t *protocol_copyPropertyList(Protocol *p,
 	{
 		for (int i=0 ; i<properties->count ; i++)
 		{
-			list[out++] = &properties->properties[i];
+			list[out++] = property_at_index(properties, i);
 		}
 	}
 	properties = p->optional_properties;
@@ -423,7 +423,7 @@ objc_property_t *protocol_copyPropertyList(Protocol *p,
 	{
 		for (int i=0 ; i<properties->count ; i++)
 		{
-			list[out++] = &properties->properties[i];
+			list[out++] = property_at_index(properties, i);
 		}
 	}
 	*outCount = count;
@@ -449,7 +449,7 @@ objc_property_t protocol_getProperty(Protocol *p,
 	{
 		for (int i=0 ; i<properties->count ; i++)
 		{
-			objc_property_t prop = &properties->properties[i];
+			objc_property_t prop = property_at_index(properties, i);
 			if (strcmp(property_getName(prop), name) == 0)
 			{
 				return prop;
@@ -474,10 +474,10 @@ get_method_description(Protocol *p,
 	}
 	for (int i=0 ; i<list->count ; i++)
 	{
-		SEL s = list->methods[i].selector;
+		SEL s = protocol_method_at_index(list, i)->selector;
 		if (sel_isEqual(s, aSel))
 		{
-			return &list->methods[i];
+			return protocol_method_at_index(list, i);
 		}
 	}
 	return NULL;
@@ -634,8 +634,8 @@ void protocol_addMethodDescription(Protocol *aProtocol,
 	}
 	struct objc_protocol_method_description_list *list = *listPtr;
 	int index = list->count-1;
-	list->methods[index].selector = sel_registerTypedName_np(sel_getName(name), types);
-	list->methods[index].types = types;
+	protocol_method_at_index(list, index)->selector = sel_registerTypedName_np(sel_getName(name), types);
+	protocol_method_at_index(list, index)->types = types;
 }
 void protocol_addProtocol(Protocol *aProtocol, Protocol *addition)
 {
@@ -677,6 +677,7 @@ void protocol_addProperty(Protocol *aProtocol,
 	if (NULL == *listPtr)
 	{
 		*listPtr = calloc(1, sizeof(struct objc_property_list) + sizeof(struct objc_property));
+		(*listPtr)->size = sizeof(struct objc_property);
 		(*listPtr)->count = 1;
 	}
 	else
@@ -689,6 +690,7 @@ void protocol_addProperty(Protocol *aProtocol,
 	int index = list->count-1;
 	const char *iVarName = NULL;
 	struct objc_property p = propertyFromAttrs(attributes, attributeCount, name);
+	assert(list->size == sizeof(p));
 	memcpy(&(list->properties[index]), &p, sizeof(p));
 }
 

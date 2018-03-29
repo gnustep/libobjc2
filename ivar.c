@@ -65,14 +65,14 @@ PRIVATE void objc_compute_ivar_offsets(Class class)
 			long cumulative_fudge = 0;
 			for (i = 0 ; i < class->ivars->count ; i++)
 			{
-				struct objc_ivar *ivar = &class->ivars->ivar_list[i];
+				struct objc_ivar *ivar = ivar_at_index(class->ivars, i);
 				// We are going to be allocating an extra word for the reference count
 				// in front of the object.  This doesn't matter for aligment most of
 				// the time, but if we have an instance variable that is a vector type
 				// then we will need to ensure that we are properly aligned again.
 				long ivar_size = (i+1 == class->ivars->count)
 					? (class_size - *ivar->offset)
-					: *class->ivars->ivar_list[i+1].offset - *ivar->offset ;
+					: *ivar_at_index(class->ivars, i+1)->offset - *ivar->offset ;
 				// FIXME: use alignment
 				*ivar->offset += cumulative_fudge;
 				// We only need to do the realignment for things that are
@@ -96,7 +96,7 @@ PRIVATE void objc_compute_ivar_offsets(Class class)
 			{
 				for (i = 0 ; i < class->ivars->count ; i++)
 				{
-					legacy->ivars->ivar_list[i].offset = *class->ivars->ivar_list[i].offset;
+					legacy->ivars->ivar_list[i].offset = *ivar_at_index(class->ivars, i)->offset;
 				}
 			}
 		}

@@ -3,6 +3,7 @@
 
 #include "selector.h"
 #include <stdlib.h>
+#include <assert.h>
 
 struct objc_protocol_method_description_list_gcc
 {
@@ -48,6 +49,21 @@ struct objc_protocol_method_description_list
 	 */
 	struct objc_protocol_method_description methods[];
 };
+
+/**
+ * Returns a pointer to the method inside the method description list
+ * structure.  This structure is designed to allow the compiler to add other
+ * fields without breaking the ABI, so although the `methods` field appears to
+ * be an array of `objc_protocol_method_description` structures, it may be an
+ * array of some future version of these structs, which have fields appended
+ * that this version of the runtime does not know about.
+ */
+static struct objc_protocol_method_description *
+protocol_method_at_index(struct objc_protocol_method_description_list *l, int i)
+{
+	assert(l->size >= sizeof(struct objc_protocol_method_description));
+	return (struct objc_protocol_method_description*)(((char*)l->methods) + (i * l->size));
+}
 
 struct objc_protocol
 {

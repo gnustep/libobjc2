@@ -344,9 +344,9 @@ static void collectIvarForClass(Class cls, GC_word *bitmap)
 {
 	for (unsigned i=0 ; (cls->ivars != 0) && (i<cls->ivars->count) ; i++)
 	{
-		struct objc_ivar *ivar = &cls->ivars->ivar_list[i];
+		struct objc_ivar *ivar = ivar_at_index(cls->ivars, i);
 		size_t start = ivar->offset;
-		size_t end = i+1 < cls->ivars->count ? cls->ivars->ivar_list[i+1].offset
+		size_t end = i+1 < cls->ivars->count ? ivar_at_index(cls->ivars, i+1)->offset
 		                                     : cls->instance_size;
 		switch (ivar->type[0])
 		{

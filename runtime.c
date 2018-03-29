@@ -78,7 +78,7 @@ static Method class_getInstanceMethodNonrecursive(Class aClass, SEL aSelector)
 	{
 		for (int i=0 ; i<methods->count ; i++)
 		{
-			Method method = &methods->methods[i];
+			Method method = method_at_index(methods, i);
 			if (sel_isEqual(method->selector, aSelector))
 			{
 				return method;
@@ -121,7 +121,7 @@ BOOL class_addIvar(Class cls, const char *name, size_t size, uint8_t alignment,
 		cls->ivars = realloc(ivarlist, sizeof(struct objc_ivar_list) +
 				(ivarlist->count) * sizeof(struct objc_ivar));
 	}
-	Ivar ivar = &cls->ivars->ivar_list[cls->ivars->count - 1];
+	Ivar ivar = ivar_at_index(cls->ivars, cls->ivars->count - 1);
 	ivar->name = strdup(name);
 	ivar->type = strdup(types);
 	ivar->align = alignment;
@@ -156,7 +156,7 @@ BOOL class_addMethod(Class cls, SEL name, IMP imp, const char *types)
 	{
 		for (int i=0 ; i<methods->count ; i++)
 		{
-			Method method = &methods->methods[i];
+			Method method = method_at_index(methods, i);
 			if (strcmp(sel_getName(method->selector), methodName) == 0)
 			{
 				return NO;
@@ -166,12 +166,14 @@ BOOL class_addMethod(Class cls, SEL name, IMP imp, const char *types)
 
 	methods = malloc(sizeof(struct objc_method_list) + sizeof(struct objc_method));
 	methods->next = cls->methods;
+	methods->size = sizeof(struct objc_method);
 	cls->methods = methods;
 
 	methods->count = 1;
-	methods->methods[0].selector = sel_registerTypedName_np(methodName, types);
-	methods->methods[0].types = strdup(types);
-	methods->methods[0].imp = imp;
+	struct objc_method *m0 = method_at_index(methods, 0);
+	m0->selector = sel_registerTypedName_np(methodName, types);
+	m0->types = strdup(types);
+	m0->imp = imp;
 
 	if (classHasDtable(cls))
 	{
@@ -227,7 +229,7 @@ Ivar * class_copyIvarList(Class cls, unsigned int *outCount)
 	count = 0;
 	for (index = 0; index < ivarlist->count; index++)
 	{
-		list[count++] = &ivarlist->ivar_list[index];
+		list[count++] = ivar_at_index(ivarlist, index);
 	}
 
 	return list;
@@ -264,7 +266,7 @@ Method * class_copyMethodList(Class cls, unsigned int *outCount)
 		unsigned int	index;
 		for (index = 0; index < methods->count; index++)
 		{
-			list[count++] = &methods->methods[index];
+			list[count++] = method_at_index(methods, index);
 		}
 	}
 
@@ -409,7 +411,7 @@ Ivar class_getInstanceVariable(Class cls, const char *name)
 			{
 				for (int i = 0; i < ivarlist->count; i++)
 				{
-					Ivar ivar = &ivarlist->ivar_list[i];
+					Ivar ivar = ivar_at_index(ivarlist, i);
 					if (strcmp(ivar->name, name) == 0)
 					{
 						return ivar;
@@ -569,7 +571,7 @@ static void freeMethodLists(Class aClass)
 	{
 		for (int i=0 ; i<methods->count ; i++)
 		{
-			free((void*)methods->methods[i].types);
+			free((void*)method_at_index(methods, i)->types);
 		}
 		struct objc_method_list *current = methods;
 	   	methods = methods->next;
@@ -586,12 +588,12 @@ static void freeIvarLists(Class aClass)
 	{
 		// For dynamically created classes, ivar offset variables are allocated
 		// as a contiguous range starting with the first one.
-		free(ivarlist->ivar_list[0].offset);
+		free(ivar_at_index(ivarlist, 0)->offset);
 	}
 
 	for (int i=0 ; i<ivarlist->count ; i++)
 	{
-		Ivar ivar = &ivarlist->ivar_list[i];
+		Ivar ivar = ivar_at_index(ivarlist, i);
 		free((void*)ivar->type);
 		free((void*)ivar->name);
 	}
@@ -765,8 +767,8 @@ void objc_registerClassPair(Class cls)
 		int *ptrs = calloc(cls->ivars->count, sizeof(int));
 		for (int i=0 ; i<cls->ivars->count ; i++)
 		{
-			ptrs[i] = (int)(intptr_t)cls->ivars->ivar_list[i].offset;
-			cls->ivars->ivar_list[i].offset = &ptrs[i];
+			ptrs[i] = (int)(intptr_t)ivar_at_index(cls->ivars, i)->offset;
+			ivar_at_index(cls->ivars, i)->offset = &ptrs[i];
 		}
 	}
 	LOCK_RUNTIME_FOR_SCOPE();

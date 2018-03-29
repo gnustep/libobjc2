@@ -1,3 +1,5 @@
+#include <assert.h>
+
 /**
  * Metadata structure describing a method.  
  */
@@ -62,6 +64,20 @@ struct objc_method_list
 	 */
 	struct objc_method        methods[];
 };
+
+/**
+ * Returns a pointer to the method inside the `objc_method` structure.  This
+ * structure is designed to allow the compiler to add other fields without
+ * breaking the ABI, so although the `methods` field appears to be an array
+ * of `objc_method` structures, it may be an array of some future version of
+ * `objc_method` structs, which have fields appended that this version of the
+ * runtime does not know about.
+ */
+static struct objc_method *method_at_index(struct objc_method_list *l, int i)
+{
+	assert(l->size >= sizeof(struct objc_method));
+	return (struct objc_method*)(((char*)l->methods) + (i * l->size));
+}
 
 /**
  * Legacy version of the method list.

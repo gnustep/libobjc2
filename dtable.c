@@ -153,7 +153,7 @@ PRIVATE void checkARCAccessorsSlow(Class cls)
 	{
 		for (int i=0 ; i<l->count ; i++)
 		{
-			SEL s = l->methods[i].selector;
+			SEL s = method_at_index(l, i)->selector;
 			if (selEqualUnTyped(s, retain) ||
 			    selEqualUnTyped(s, release) ||
 			    selEqualUnTyped(s, autorelease))
@@ -184,8 +184,8 @@ static void collectMethodsForMethodListToSparseArray(
 	}
 	for (unsigned i=0 ; i<list->count ; i++)
 	{
-		SparseArrayInsert(sarray, list->methods[i].selector->index,
-				(void*)&list->methods[i]);
+		SparseArrayInsert(sarray, method_at_index(list, i)->selector->index,
+				(void*)method_at_index(list, i));
 	}
 }
 
@@ -458,9 +458,9 @@ static dtable_t create_dtable_for_class(Class class, dtable_t root_dtable)
 		for (unsigned i=0 ; i<list->count ; i++)
 		{
 			struct objc_method *super_method = super_dtable
-				? SparseArrayLookup(super_dtable, list->methods[i].selector->index)
+				? SparseArrayLookup(super_dtable, method_at_index(list, i)->selector->index)
 				: NULL;
-			installMethodInDtable(class, dtable, &list->methods[i], super_method, YES);
+			installMethodInDtable(class, dtable, method_at_index(list, i), super_method, YES);
 		}
 		list = list->next;
 	}
