@@ -309,37 +309,51 @@ enum objc_class_flags
 {
 	/** This class structure represents a metaclass. */
 	objc_class_flag_meta = (1<<0),
+	/** Reserved for future ABI versions. */
+	objc_class_flag_reserved1 = (1<<1),
+	/** Reserved for future ABI versions. */
+	objc_class_flag_reserved2 = (1<<2),
+	/** Reserved for future ABI versions. */
+	objc_class_flag_reserved3 = (1<<3),
+	/** Reserved for future ABI versions. */
+	objc_class_flag_reserved4 = (1<<4),
+	/** Reserved for future ABI versions. */
+	objc_class_flag_reserved5 = (1<<5),
+	/** Reserved for future ABI versions. */
+	objc_class_flag_reserved6 = (1<<6),
+	/** Reserved for future ABI versions. */
+	objc_class_flag_reserved7 = (1<<7),
 	/**
 	 * This class has been sent a +initalize message.  This message is sent
 	 * exactly once to every class that is sent a message by the runtime, just
 	 * before the first other message is sent.
 	 */
-	objc_class_flag_initialized = (1<<2),
+	objc_class_flag_initialized = (1<<8),
 	/** 
 	 * The class has been initialized by the runtime.  Its super_class pointer
 	 * should now point to a class, rather than a C string containing the class
 	 * name, and its subclass and sibling class links will have been assigned,
 	 * if applicable.
 	 */
-	objc_class_flag_resolved = (1<<3),
+	objc_class_flag_resolved = (1<<9),
 	/**
 	 * This class was created at run time and may be freed.
 	 */
-	objc_class_flag_user_created = (1<<5),
+	objc_class_flag_user_created = (1<<10),
 	/** 
 	 * Instances of this class are provide ARC-safe retain / release /
 	 * autorelease implementations.
 	 */
-	objc_class_flag_fast_arc = (1<<6),
+	objc_class_flag_fast_arc = (1<<11),
 	/**
 	 * This class is a hidden class (should not be registered in the class
 	 * table nor returned from object_getClass()).
 	 */
-	objc_class_flag_hidden_class = (1<<7),
+	objc_class_flag_hidden_class = (1<<12),
 	/**
 	 * This class is a hidden class used to store associated values.
 	 */
-	objc_class_flag_assoc_class = (1<<8)
+	objc_class_flag_assoc_class = (1<<13)
 };
 
 /**
