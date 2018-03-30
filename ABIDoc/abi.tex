@@ -44,19 +44,35 @@
 \newcommand{\ccode}[1]{\lstinline[language={C}]{#1}}
 \newcommand{\objc}[1]{\lstinline[language={[Objective]C}]{#1}}
 
+\makeatletter
+\lstdefinestyle{nocomments}%
+{
+  language=[Objective]C,
+  morecomment  = [is]{/**}{*/},
+}
+\makeatother
+
+
 \newcommand{\inccode}[4]{
-	\lstinputlisting[language=C,
+{
+	\lstinputlisting[
+	style=nocomments,
 	  rangebeginprefix =//\ begin:\ ,
 	  rangeendprefix   =//\ end:\ ,
 	  includerangemarker=false,
 	  linerange=#3-#3,
-	  numbers     = left,
-	  label={lst:#2},
 	  float,
+	  label={lst:#2},
 	  caption={#4 {\small [From #1] }}
 	]{../#1}
 }
+}
 
+\lstnewenvironment{codesnippet}[1][]{
+  \lstset{backgroundcolor=\color{white},
+          numbers=none,
+		  language=[Objective]C,
+		  }}{}
 
 \title{GNUstep Objective-C ABI version 10}
 \author{David Chisnall}
@@ -99,11 +115,17 @@ The new ABI makes no attempt to support mixing old and new ABI code.
 The runtime will work with either, but not with both at the same time.
 It will upgrade the old structures to the new on load (consuming more memory and providing an incentive to recompile) and will then use only the new structures internally.
 
+The GNUstep runtime incorporates the safe method caching mechanism originally from the Étoilé runtime.
+Unfortunately, this added some significant memory overhead (each selector, class pair needed a separate version).
+In the new design, we move to a single 64-bit version counter (which, if incremented once per cycle on a 2GHz CPU, will still not overflow after a few millennia).
+This saves memory (around 5\% total memory usage in a microbenchmark that simply sends a \objc{+class} message to every class in the Foundation framework) at the cost of increasing the rate of cache invalidations.
+Because method replacement is relatively rare in Objective-C, this extra overhead is relatively rare.
+
 \section{Changed circumstances}
 
-When the original NeXT runtime was released, linkers were designed primarily to work with C.
+When the original GCC runtime was released, linkers were designed primarily to work with C.
 C guarantees that each symbol is defined in precisely one compilation unit.
-In contrast, C++ (10 years away from standardisation at the time the NeXT runtime was released) has a number of language features that rely on symbols appearing in multiple compilation units.
+In contrast, C++ (10 years away from standardisation at the time the GCC runtime was released) has a number of language features that rely on symbols appearing in multiple compilation units.
 The original 4Front C++ compiler worked by compiling without emitting any of these, parsing the linker errors, and then recompiling adding missing ones.
 
 More modern implementations of C++ emit these symbols in every compilation unit that references them and rely on the linker to discard duplicates.
@@ -127,7 +149,7 @@ This has two downsides:
 
 \section{The new entry point}
 
-The new runtime provides a \ccode{__objc_load} function for loading an entire library at a time.
+The new runtime provides an \ccode{__objc_load} function for loading an entire library at a time.
 This function takes a pointer to the structure shown in \Fref{lst:initobjc}.
 
 For the current ABI, the \ccode{version} field must always be zero.
@@ -150,6 +172,8 @@ As described in \fref{chap:selectors}, these are deduplicated by the linker, so 
 			\ccode{cls_ref_} & \ccode{__objc_class_refs}\\
 			\ccode{cat_} & \ccode{__objc_cats}\\
 			\ccode{proto_} & \ccode{__objc_protocols}\\
+			\ccode{proto_ref_} & \ccode{__objc_protocol_refs}\\
+			\ccode{alias} & \ccode{__objc_class_aliases}\\
 		\end{tabular}
 		\caption{\label{tab:sections}Section names for Objective-C components.}
 	\end{center}
@@ -160,6 +184,9 @@ These are all described in later chapters.
 
 The \ccode{__objc_class_refs} section contains variables that are used for accessing classes.
 These are described in \Fref{sec:classref} and provide loose coupling between the representation of the class and accesses to it.
+
+The \ccode{__objc_protocol_refs} section contains variables that point to protocols in the same way.
+This indirection layer makes it possible for future versions of the ABI to make incompatible changes to the protocol structure and for the runtime to upgrade old libraries on load.
 
 \section{Compiler responsibilities}
 
@@ -190,6 +217,7 @@ The compiler initialises the \ccode{name} field with the string representation o
 \inccode{selector.h}{selector}{objc_selector}{The selector structure.}
 
 \section{Symbol naming}
+\label{sec:symbolnaming}
 
 In this ABI, unlike the GCC ABI, we try to ensure that the linker removes as much duplicate data as possible.
 As such, each selector, selector name, and selector type encoding is emitted as a weak symbol with a well-known name name, with hidden visibility.
@@ -203,13 +231,80 @@ This deduplication is not required for correctness: the runtime ensures that sel
 
 \chapter{Classes}
 
+The class structure is shown in \Fref{lst:class}.
+Each class is emitted as an instance of this structure as a symbol called \ccode{_OBJC_CLASS_\{class name\}}.
+The \ccode{isa} pointer for the class is initialised to point to another class structure describing the metaclass, in which all class methods and properties are defined.
+
+The \ccode{super_class} field is initialised to the class structure for the superclass.
+If the runtime is upgrading the class structure to a newer version of the ABI then this pointer will be updated to the upgraded version of the class on load.
+
+The \ccode{name} field points to a null-terminated string containing the class name.
+The \ccode{version} field should be initialised to zero.
+
+The \ccode{info} field is used internally as a bitfield.
+The compiler is responsible for setting this to 0 for classes and 1 for metaclasses.
+The remaining low 8 bits are reserved for use by future versions of the ABI.
+All higher bits are reserved for the runtime to use for dynamic properties of classes.
+
+The \ccode{abi_version} field is used to differentiate different versions of the class ABI structure and is currently always zero.
+
+The \ccode{ivars}, \ccode{methods}, \ccode{properties} and \ccode{protocols} fields describe the class and are explained in the next sections.
+
 \inccode{class.h}{class}{objc_class}{The class structure.}
+
+\section{Class metadata}
+\label{sec:metadata}
+
+Most of the class metadata uses the pattern similar to the following:
+
+\begin{codesnippet}
+struct metadata_element;
+
+struct metadata_list
+{
+	int count;
+	int size;
+	struct metadata_element elements[];
+}
+\end{codesnippet}
+
+In this example, \ccode{metadata_list} describes an ordered collection of \ccode{metadata_element} elements.
+The \ccode{count} field indicates how many elements there are in the \ccode{elements} array.
+The array is appended to the structure, but \textit{is not guaranteed to be a C array of the element type}.
+To allow for future expansion, the \ccode{size} field in the list structure defines the size of one element in the array.
+Future versions of the ABI are able to increase the size of \ccode{metadata_element}, without breaking existing versions of the runtime.
+Existing versions of the runtime will simply ignore any missing fields.
+
+This pattern is used for instance variables, methods, and properties.
+
+\subsection{Instance variables}
+
+Instance variables are defined in list shown in \Fref{lst:ivarlist}, which follows the structure outlined in \Fref{sec:metadata}.
+The entries in the list are elements of the \ccode{struct objc_ivar} structure, described in \Fref{lst:ivar}.
+Future versions of the ABI may add additional fields, in which case they should increase the value of \ccode{size} in the list structure.
+
+\inccode{ivar.h}{ivarlist}{objc_ivar_list}{The instance variable list structure.}
+\inccode{ivar.h}{ivar}{objc_ivar}{The instance variable structure.}
+
+The \ccode{name} field points to a null-terminated string containing the name of the instance variable.
+The \ccode{type} field contains the extended type encoding of the instance variable.
+
+The \ccode{offset} field contains a pointer to the instance variable offset variable.
+This is of the form \ccode{__objc_ivar_offset_\{class name\}.\{ivar name\}.\{type encoding\}}.
+The type encoding is in the traditional format, with the mangling defined in \Fref{sec:symbolnaming} applied.
+This means that, for example, changing the type of an instance variable from \objc{NSString*} to \objc{NSConstantString*} will not cause a linker failure, but changing its type from \objc{int} to \objc{float} will.
+
+\subsection{Methods}
+
+\subsection{Protocols}
+
+\subsection{Properties}
 
 \section{Class references}
 \label{sec:classref}
 
 Each entry in the \ccode{__objc_class_refs} section is a symbol (in a COMDAT of the same name) called \ccode{_OBJC_CLASS_REF_\{class name\}}, which is initialised to point to a variable called \ccode{_OBJC_CLASS_\{class name\}}, which is the symbol for the class.
-This is the \textit{only} place where the \ccode{_OBJC_CLASS_\{class name\}} symbols may be referenced.
+This and the class structure are the \textit{only} place where the \ccode{_OBJC_CLASS_\{class name\}} symbols may be referenced.
 
 All other accesses to the class (i.e. from message sends to classes or to \objc{super}) must be via a load of the \ccode {_OBJC_CLASS_REF_\{class name\}} variable.
 

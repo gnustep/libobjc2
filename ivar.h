@@ -4,6 +4,7 @@
  * Metadata structure for an instance variable.
  *
  */
+// begin: objc_ivar
 struct objc_ivar
 {
 	/**
@@ -26,6 +27,7 @@ struct objc_ivar
 	 */
 	uint32_t    flags;
 };
+// end: objc_ivar
 
 /**
  * Instance variable ownership.
@@ -135,6 +137,7 @@ struct objc_ivar_gcc
  * instance variables, because that would require existing objects to be
  * reallocated, which is only possible with accurate GC (i.e. not in C).
  */
+// begin: objc_ivar_list
 struct objc_ivar_list
 {
 	/**
@@ -153,6 +156,7 @@ struct objc_ivar_list
 	 */
 	struct objc_ivar ivar_list[];
 };
+// end: objc_ivar_list
 
 /**
  * Returns a pointer to the ivar inside the `objc_ivar_list` structure.  This
