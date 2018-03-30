@@ -3,7 +3,7 @@
 #include "class.h"
 #include "protocol.h"
 #include "ivar.h"
-#include "method_list.h"
+#include "method.h"
 #include "lock.h"
 #include "dtable.h"
 #include "gc_ops.h"

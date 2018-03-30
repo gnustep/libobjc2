@@ -5,7 +5,7 @@
 
 #include "objc/runtime.h"
 #include "objc/encoding.h"
-#include "method_list.h"
+#include "method.h"
 #include "visibility.h"
 
 size_t objc_alignof_type (const char *type);

@@ -10,7 +10,7 @@
 #include <ctype.h>
 #include "lock.h"
 #include "objc/runtime.h"
-#include "method_list.h"
+#include "method.h"
 #include "class.h"
 #include "selector.h"
 #include "visibility.h"

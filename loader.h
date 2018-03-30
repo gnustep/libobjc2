@@ -1,7 +1,7 @@
 #ifndef __OBJC_LOADER_H_INCLUDED
 #define __OBJC_LOADER_H_INCLUDED
 #include "category.h"
-#include "method_list.h"
+#include "method.h"
 #include "module.h"
 #include "class.h"
 #include "protocol.h"

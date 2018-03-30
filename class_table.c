@@ -3,7 +3,7 @@
 #include "objc/developer.h"
 #include "alias.h"
 #include "class.h"
-#include "method_list.h"
+#include "method.h"
 #include "selector.h"
 #include "lock.h"
 #include "dtable.h"

@@ -9,7 +9,7 @@
 #include "selector.h"
 #include "class.h"
 #include "lock.h"
-#include "method_list.h"
+#include "method.h"
 #include "dtable.h"
 #include "visibility.h"
 #include "asmconstants.h"
