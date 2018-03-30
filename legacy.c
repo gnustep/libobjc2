@@ -94,10 +94,10 @@ static struct objc_ivar_list *upgradeIvarList(struct objc_class_gsv1 *cls)
 		{
 			n->ivar_list[i].offset = &l->ivar_list[i].offset;
 		}
-		n->ivar_list[i].align = ((type == NULL) || type[0] == 0) ? __alignof__(void*) : objc_alignof_type(type);
+		ivarSetAlign(&n->ivar_list[i], ((type == NULL) || type[0] == 0) ? __alignof__(void*) : objc_alignof_type(type));
 		if (type[0] == '\0')
 		{
-			n->ivar_list[i].align = size;
+			ivarSetAlign(&n->ivar_list[i], size);
 		}
 		ivarSetOwnership(&n->ivar_list[i], ownershipForIvar(cls, i));
 	}

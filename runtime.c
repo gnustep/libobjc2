@@ -124,7 +124,7 @@ BOOL class_addIvar(Class cls, const char *name, size_t size, uint8_t alignment,
 	Ivar ivar = ivar_at_index(cls->ivars, cls->ivars->count - 1);
 	ivar->name = strdup(name);
 	ivar->type = strdup(types);
-	ivar->align = alignment;
+	ivarSetAlign(ivar, alignment);
 	// Round up the offset of the ivar so it is correctly aligned.
 	long offset = cls->instance_size;
 	if (alignment != 0)

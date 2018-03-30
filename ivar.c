@@ -78,14 +78,14 @@ PRIVATE void objc_compute_ivar_offsets(Class class)
 				// We only need to do the realignment for things that are
 				// bigger than a pointer, and we don't need to do it in GC mode
 				// where we don't add any extra padding.
-				if (!isGCEnabled && (ivar->align > __alignof__(void*)))
+				if (!isGCEnabled && (ivarGetAlign(ivar) > __alignof__(void*)))
 				{
 					long offset = ivar_start + *ivar->offset + sizeof(intptr_t);
-					long fudge = ivar->align - (offset % ivar->align);
+					long fudge = ivarGetAlign(ivar) - (offset % ivarGetAlign(ivar));
 					*ivar->offset += fudge;
 					class->instance_size += fudge;
 					cumulative_fudge += fudge;
-					assert((ivar_start + *ivar->offset + sizeof(intptr_t)) % ivar->align == 0);
+					assert((ivar_start + *ivar->offset + sizeof(intptr_t)) % ivarGetAlign(ivar) == 0);
 				}
 				*ivar->offset += ivar_start;
 			}

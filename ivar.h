@@ -20,15 +20,11 @@ struct objc_ivar
 	 * the ivars declared by this class.  It is then set by the runtime to the
 	 * offset from the object pointer.
 	 */
-	int         *offset;
-	/**
-	 * Alignment of this ivar.
-	 */
-	int32_t          align;
+	int        *offset;
 	/**
 	 * Flags for this instance variable.
 	 */
-	int32_t          flags;
+	uint32_t    flags;
 };
 
 /**
@@ -56,14 +52,51 @@ typedef enum {
 } ivar_ownership;
 
 /**
- * Mask applied to the flags field to indicate ownership.
- */
-static const int ivar_ownership_mask = 3;
+ * Shift for instance variable alignment. */
+static const int ivar_align_shift = 3;
+
+typedef enum {
+	/**
+	 * Mask applied to the flags field to indicate ownership.
+	 */
+	ivar_ownership_mask = (1<<0) | (1<<1),
+	/**
+	 * Flag indicating that the ivar contains an extended type encoding.
+	 */
+	ivar_extended_type_encoding = (1<<2),
+	/**
+	 * Mask for describing the alignment.  We need 6 bits to represent any
+	 * power of two aligmnent from 0 to 63-bit alignment.  There is probably no
+	 * point supporting more than 32-bit aligment, because various bits of
+	 * offset assume objects are less than 4GB, but there's definitely no point
+	 * in supporting 64-bit alignment because we currently don't support any
+	 * architectures where an address space could contain more than one 2^64
+	 * byte aligned value.
+	 */
+	ivar_align_mask = (((1<<6)-1) << ivar_align_shift)
+} objc_ivar_flags;
+
+
+static inline size_t ivarGetAlign(Ivar ivar)
+{
+	return 1<<((ivar->flags & ivar_align_mask) >> ivar_align_shift);
+}
+
+static inline void ivarSetAlign(Ivar ivar, size_t align)
+{
+	if (align != 0)
+	{
+		align = sizeof(size_t) * 8 - __builtin_clz(align) - 1;
+	}
+	align  <<= ivar_align_shift;
+	ivar->flags = (ivar->flags & ~ivar_align_mask) | align;
+}
 
 static inline void ivarSetOwnership(Ivar ivar, ivar_ownership o)
 {
 	ivar->flags = (ivar->flags & ~ivar_ownership_mask) | o;
 }
+
 
 /**
  * Look up the ownership for a given instance variable.
