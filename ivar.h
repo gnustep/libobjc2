@@ -32,6 +32,7 @@ struct objc_ivar
 /**
  * Instance variable ownership.
  */
+// begin: objc_ivar_ownership
 typedef enum {
 	/**
 	 * Invalid.  Indicates that this is not an instance variable with ownership
@@ -51,7 +52,8 @@ typedef enum {
 	 * Object that has `__unsafe_unretained` semantics.
 	 */
 	ownership_unsafe  = 3
-} ivar_ownership;
+} objc_ivar_ownership;
+// end: objc_ivar_ownership
 
 /**
  * Shift for instance variable alignment. */

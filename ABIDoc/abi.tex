@@ -291,10 +291,25 @@ The \ccode{type} field contains the extended type encoding of the instance varia
 
 The \ccode{offset} field contains a pointer to the instance variable offset variable.
 This is of the form \ccode{__objc_ivar_offset_\{class name\}.\{ivar name\}.\{type encoding\}}.
+This variable is a 32-bit integer, which restricts objects to 4GB plus the size of the last field.
 The type encoding is in the traditional format, with the mangling defined in \Fref{sec:symbolnaming} applied.
 This means that, for example, changing the type of an instance variable from \objc{NSString*} to \objc{NSConstantString*} will not cause a linker failure, but changing its type from \objc{int} to \objc{float} will.
 
+The \ccode{flags} field is a bitmask.
+The first two bits indicate the ownership, as shown in \Fref{lst:ivarown}.
+This is always \ccode{ownership_invalid} (0) for instance variables that are not objects.
+
+\inccode{ivar.h}{ivarown}{objc_ivar_ownership}{Instance variable ownership.}
+
+The next bit (bit 2) indicates that the \ccode{type} field contains an extended type encoding and should always be set in generated code.
+This bit exists so that instance variable structures generated from older ABIs can be automatically upgraded.
+The next six bits (bits 3--8) contain the base-2 logarithm of the alignment.
+This is enough to describe any power of two alignment from 0 to $2^{63}$.
+There is no point supporting $2^{64}$-byte alignment because we currently don't support any platforms with greater than $2^{64}$-byte address spaces\footnote{Most 64-bit platforms currently support only $2^{48}$- or $2^{56}$-byte address spaces.} and on such a platform there can be at most one object requiring $2^{64}$-byte alignment, and it therefore fit inside an object.
+Instance variable offsets must currently be within a 4GB ($2^{32}$-byte) range and so even 6 bits is somewhat excessive.
+
 \subsection{Methods}
+
 
 \subsection{Protocols}
 
