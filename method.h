@@ -3,6 +3,7 @@
 /**
  * Metadata structure describing a method.  
  */
+// begin: objc_method
 struct objc_method
 {
 	/**
@@ -18,6 +19,7 @@ struct objc_method
 	 */
 	const char *types;
 };
+// end: objc_method
 
 struct objc_method_gcc
 {
@@ -44,6 +46,7 @@ struct objc_method_gcc
  * When constructing the dispatch table, methods in the start of the list are
  * used in preference to ones at the end.
  */
+// begin: objc_method_list
 struct objc_method_list
 {
 	/**
@@ -64,6 +67,7 @@ struct objc_method_list
 	 */
 	struct objc_method        methods[];
 };
+// end: objc_method_list
 
 /**
  * Returns a pointer to the method inside the `objc_method` structure.  This
