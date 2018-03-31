@@ -91,6 +91,7 @@ enum PropertyAttributeKind2
  * impossible.  Instead, we strive to achieve compatibility with the
  * documentation.
  */
+// begin: objc_property
 struct objc_property
 {
 	/**
@@ -114,6 +115,7 @@ struct objc_property
 	 */
 	SEL setter;
 };
+// end: objc_property
 
 /**
  * GNUstep v1 ABI version of `struct objc_property`
@@ -183,6 +185,7 @@ struct objc_property_list_gsv1
 /**
  * List of property introspection data.
  */
+// begin: objc_property_list
 struct objc_property_list
 {
 	/**
@@ -204,6 +207,7 @@ struct objc_property_list
 	 */
 	struct objc_property properties[];
 };
+// end: objc_property_list
 
 /**
  * Returns a pointer to the property inside the `objc_property` structure.

@@ -124,7 +124,7 @@ typedef struct objc_method *Method;
 #	ifdef STRICT_APPLE_COMPATIBILITY
 typedef signed char BOOL;
 #	else
-#		ifdef __vxwords
+#		ifdef __vxworks
 typedef  int BOOL;
 #		else
 typedef unsigned char BOOL;

@@ -311,9 +311,45 @@ Instance variable offsets must currently be within a 4GB ($2^{32}$-byte) range a
 \subsection{Methods}
 
 
+Methods are defined in list shown in \Fref{lst:methodlist}, which follows the structure outlined in \Fref{sec:metadata}.
+The entries in the list are elements of the \ccode{struct objc_method} structure, described in \Fref{lst:method}.
+Future versions of the ABI may add additional fields, in which case they should increase the value of \ccode{size} in the list structure.
+
+The method list structure contains a \ccode{next} pointer so that method lists in categories and classes can be combined.
+This should always be initialised to null in the compiler.
+
+\inccode{method.h}{methodlist}{objc_method_list}{The method structure.}
+\inccode{method.h}{method}{objc_method}{The method structure.}
+
+The method structure is comparatively simple.
+The first field (\ccode{imp}) is a pointer to the method.
+The second field is a pointer to the selector, which should be generated as described in \Fref{chap:selectors}.
+The final field is the extended type encoding.
+Note that the selector is typed and incorporates the traditional type encoding.
+This allows the runtime to return either the traditional or extended type encoding, as required.
+
 \subsection{Protocols}
 
-\subsection{Properties}
+Protocols adopted by a class are stored in the \ccode{objc_protocol_list} structure, described in \Fref{lst:protocollist}.
+These do not have a field indicating the size, because protocols are referenced by pointer.
+
+\inccode{protocol.h}{protocollist}{objc_protocol_list}{The protocol structure.}
+
+Protocols are emitted as described in \Fref{chap:protocols} and referenced directly in this structure.
+Explicit \objc{@protocol} references are handled via an indirection layer, but it is safe to reference the global variable describing a protocol directly in this structure.
+If a future version of the runtime wishes to update the protocol structure then it is able to do so and update the pointers in the protocol list to point to the upgraded structures.
+
+\subsection{Declared properties}
+
+
+Declared properties are defined in list shown in \Fref{lst:propertylist}, which follows the structure outlined in \Fref{sec:metadata}.
+The entries in the list are elements of the \ccode{struct objc_property} structure, described in \Fref{lst:property}.
+Future versions of the ABI may add additional fields, in which case they should increase the value of \ccode{size} in the list structure.
+
+
+\inccode{properties.h}{propertylist}{objc_property_list}{The property structure.}
+\inccode{properties.h}{property}{objc_property}{The property structure.}
+
 
 \section{Class references}
 \label{sec:classref}
@@ -329,6 +365,207 @@ The current version of the runtime ignores this section, but if a future runtime
 \chapter{Categories}
 
 \chapter{Protocols}
+\label{chap:protocols}
+
+\chapter{Encoding strings}
+
+Objective-C defines three kinds of type encoding string:
+
+\begin{description}
+	\item[Traditional type encodings] come from the NeXT Objective-C implementation\footnote{Or possibly the earlier StepStone version?} and are widely used in reflection.  The \objc{@encode} directive generates a type encoding in this form.
+	\item[Extended type encodings] were introduced by Apple.  They extend the traditional type encodings and provide types for classes and parameter types for blocks.
+	\item[Property attribute encodings] define the properties of an attribute string.
+\end{description}
+
+The type encoding always uses the underlying type, ignoring \ccode{typedef}s.
+This means that type encodings are not stable across platforms.
+For example, \ccode{int64_t} may be treated as \ccode{long} or \ccode{long long}, depending on the target.
+
+\section{Traditional type encodings}
+
+Traditional type encodings are intended to be able to encode any C or Objective-C 1.0 types, providing only information that cannot be obtained via other introspection interfaces.
+
+\subsection{Primitive types}
+
+All primitive C types are represented in traditional type encodings using a single character, listed in \Fref{tab:primencode}.
+For each C type that has \ccode{signed} and \ccode{unsigned} variants, the encoding format uses the same letter with the uppercase letter for the \ccode{unsigned} form and the lowercase letter for the \ccode{signed} form.
+
+\begin{table}
+	\begin{center}
+		\begin{tabular}{c|l}
+			Character & Type\\\hline
+			\texttt{c} & \ccode{signed char} \\
+			\texttt{C} & \ccode{unsigned char} \\
+			\texttt{s} & \ccode{signed short} \\
+			\texttt{S} & \ccode{unsigned short} \\
+			\texttt{i} & \ccode{signed int} \\
+			\texttt{I} & \ccode{unsigned int} \\
+			\texttt{l} & \ccode{signed long} \\
+			\texttt{L} & \ccode{unsigned long} \\
+			\texttt{q} & \ccode{signed long long} \\
+			\texttt{Q} & \ccode{unsigned long long} \\
+			\texttt{f} & \ccode{float} \\
+			\texttt{d} & \ccode{double} \\
+			\texttt{B} & \ccode{_Bool} (\ccode{bool} in C++)\\
+			\texttt{v} & \ccode{void}\\
+			\texttt{?} & Unknown type
+		\end{tabular}
+		\caption{\label{tab:primencode}Type encodings of primitive types.}
+	\end{center}
+\end{table}
+
+Note that, in C, all types except for \ccode{char} are implicitly signed if the \ccode{signed} keyword is omitted.
+In contrast, whether \ccode{char} is equivalent to \ccode{signed char} or \ccode{unsigned char} is implementation dependent.
+The type encoding for \ccode{char} will always match the underlying type.
+
+BOOL
+
+\subsection{Composite types}
+
+C contains two composite types; arrays and structures.
+C also provides pointers, for describing indirection.
+C++ classes are, for the purpose of type encodings, treated as structures.
+
+Array are encoded in square brackets, with the number of elements followed by the element type.
+For example:
+
+\begin{codesnippet}
+int array[42];
+\end{codesnippet}
+
+The type encoding of \ccode{array} will be \texttt{[42i]}.
+
+Structure encodings are in braces, with the name of the structure, followed by an equals sign, followed by the encodings of all elements.
+For example:
+
+\begin{codesnippet}
+struct Z
+{
+	int x;
+	float y;
+};
+\end{codesnippet}
+
+The encoding of \ccode{struct Z} will be \texttt{{Z=if}}.
+These encodings are combined, for example an array of 10 elements of \ccode{struct Z} would be encoded as \texttt{[10{Z=if}]}.
+
+Pointers are described by prefixing the type with a caret (\texttt{\^{}}).
+For example, a pointer to \ccode{struct Z} would be encoded as \texttt{\^{}{Z=if}}.
+Pointers to incomplete structures---either forward definitions or structures currently in the process of being defined---or any pointers to structures from within other structures include the name but not the fields in the structure definition.
+This allows recursive structures to be represented, for example:
+
+\begin{codesnippet}
+struct Recursive
+{
+	int x;
+	struct Recursive *r;
+};
+\end{codesnippet}
+
+This structure will yield a type encoding of \texttt{{Recursive=i\^{}{Recursive}}}.
+The compiler is not required to detect recursion and may simply refer to any structure referenced by pointer omitting its encoding.
+
+C++ references---including r-value references---are encoded as pointers.
+
+\subsection{C strings}
+
+A single asterisk is used as shorthand when encoding \ccode{char*}.
+This was intended to be an encoding for null-terminated C strings, so that the Distributed Objects system was able to copy the string.
+
+Unfortunately, recent versions of clang will generate \texttt{*} as the encoding for both \ccode{signed char*} and even for \objc{BOOL*} (because \objc{BOOL} is a \ccode{typedef} for \ccode{char}.
+As such, an encoding of \texttt{*} gives strictly less information than \texttt{\^{}C} or \texttt{\^{}c} and so its use should be discouraged.
+
+\subsection{Objective-C types}
+
+Objective-C introduces \objc{id}, \objc{Class}, \objc{SEL} and \objc{BOOL} types.
+Of these, \objc{BOOL} is a \ccode{typedef} for an underlying C type (\ccode{signed char} on Apple platforms, \ccode{unsigned char} on most GCC Objective-C platforms, \ccode{int} on VxWorks) and so does not get a new type encoding.
+The other types are encoded as described in \Fref{tab:objcencode}.
+
+\begin{table}
+	\begin{center}
+		\begin{tabular}{c|l}
+			Character   & Type\\\hline
+			\texttt{@}  & \objc{id} \\
+			\texttt{\#} & \objc{Class} \\
+			\texttt{:}  & \objc{SEL}
+		\end{tabular}
+		\caption{\label{tab:objcencode}Type encodings of Objective-C types.}
+	\end{center}
+\end{table}
+
+
+\subsection{Method encodings}
+
+Method type encodings describe the argument frame.
+They include numbers that describe where in a classic all-arguments-on-the-stack calling convention the arguments would reside.
+This is not tremendously useful in most contexts, though the size can be helpful when allocating space to store an invocation.
+
+The format for method encodings begins with the encoding of the return type, followed by the total size of the arguments in bytes.
+Each argument is then listed, followed by its offset in the argument frame (the offset it would be in a \ccode{struct} containing all of the arguments).
+
+For example, the method:
+\begin{codesnippet}
+- (int)foo: (float)a;
+\end{codesnippet}
+
+May encode as \texttt{i20@0:8f16}, assuming that pointers are 8 bytes and \ccode{int} and \ccode{float} are each 4 bytes.
+Note that the \objc{self} and \objc{_cmd} parameters are explicit here, in the \texttt{@0} (object argument at offset 0) and \texttt{:8} (\objc{SEL} argument at offset 8) parts of the encoding.
+
+Methods declared in protocols may include some of the qualifiers described in \Fref{tab:objcqualencode}.
+Each of these precedes the encoding for the type that it is qualifying.
+
+\begin{table}
+	\begin{center}
+		\begin{tabular}{c|l}
+			Character   & Type\\\hline
+			\texttt{n} & \objc{in} \\
+			\texttt{N} & \objc{inout} \\
+			\texttt{O} & \objc{bycopy} \\
+			\texttt{o} & \objc{out} \\
+			\texttt{R} & \objc{byref} \\
+			\texttt{r} & \objc{const} \\
+			\texttt{V} & \objc{oneway}
+		\end{tabular}
+		\caption{\label{tab:objcqualencode}Type encodings of Objective-C method argument qualifier types.}
+	\end{center}
+\end{table}
+
+\subsection{Blocks and function pointers}
+
+In the traditional type encoding format, functions are treated as unknown and so function pointers are encoded as \texttt{\^{}?} (pointer to unknown type).
+Blocks did not exist when the format was defined and so are encoded as \texttt{@?}, signifying an unknown type that is also an object.
+
+\section{Extended type encodings}
+
+The extended type encoding format is a superset of the traditional format, providing extended information about blocks and objects.
+Objective-C object pointer types include the class or protocol types for which they are valid, blocks include their full argument signature in the same format as a method encoding.
+
+The extended type encoding for an object is encoded in double quotes after the \texttt{@} symbol.
+If a class is specified, then this includes the name, followed by any specified protocols in angle brackets.
+For example:
+
+\begin{codesnippet}
+@class NSObject;
+@protocol Proto1;
+@protocol Proto2;
+
+NSObject *obj;
+id<Proto> proto;
+NSObject<Proto1> *qualObj;
+NSObject<Proto1,Proto2> *qualObj2;
+\end{codesnippet}
+
+The extended encoding for \objc{obj} is \texttt{@"NSObject"}.
+There can be at most one class type in an extended encoding, but multiple protocol types.
+The \objc{proto} variable does not include a type, indicating an object that may be of any class but must confirm to the protocol \objc{Proto}.
+This is encoded as \texttt{@"<Proto>"}.
+If more than one protocol is specified, then they are listed in turn.
+The encoding of \objc{qualObj} is therefore \texttt{@"NSObject<Proto1>"} and the encoding of \objc{qualObj2} is \texttt{@"NSObject<Proto1><Proto2>"}.
+Note that, in the encoding of \objc{qualObj2}, each protocol is listed separately in angle brackets, unlike the Objective-C syntax where they are listed as a comma-separated list inside a single pair of angle brackets.
+
+\section{Property attribute encodings}
+
+
 
 \chapter{Message sending}
 

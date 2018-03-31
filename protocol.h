@@ -176,6 +176,7 @@ _Static_assert(sizeof(struct objc_protocol_gsv1) == sizeof(struct objc_protocol)
  * List of protocols.  Attached to a class or a category by the compiler and to
  * a class by the runtime.
  */
+// begin: objc_protocol_list
 struct objc_protocol_list
 {
 	/**
@@ -197,5 +198,6 @@ struct objc_protocol_list
 	 */
 	struct objc_protocol      *list[];
 };
+// end: objc_protocol_list
 
 #endif // PROTOCOL_H_INCLUDED
