@@ -12,6 +12,7 @@ set(TESTS
 	AssociatedObject2.m
 	BlockImpTest.m
 	BlockTest_arc.m
+	ConstantString.m
 	BoxedForeignException.m
 	ExceptionTest.m
 	ForeignException.m
