@@ -12,12 +12,15 @@ __attribute__((objc_root_class))
 @interface helloclass {
 	@private int varName;
 }
+@property (class, retain) id clsProp;
 @property (readwrite,assign) int propName;
 @end
 
 @implementation helloclass
 @synthesize propName = varName;
 + (id)class { return self; }
++ (id)clsProp { return nil; }
++ (void)setClsProp: (id)arg {}
 @end
 
 int main()
@@ -29,6 +32,15 @@ int main()
 	assert(strcmp(property_getName(property), "propName") == 0);
 	assert(strcmp(property_getAttributes(property), "Ti,VvarName") == 0);
 	free(properties);
+
+	objc_property_t *clsproperties = class_copyPropertyList(object_getClass([helloclass class]), &outCount);
+	assert(outCount == 1);
+	property = properties[0];
+	assert(strcmp(property_getName(property), "clsProp") == 0);
+	fprintf(stderr, "%s\n", property_getAttributes(property));
+	assert(strcmp(property_getAttributes(property), "T@,&") == 0);
+	free(properties);
+
 	Method* methods = class_copyMethodList([helloclass class], &outCount);
 	assert(outCount == 2);
 	free(methods);
