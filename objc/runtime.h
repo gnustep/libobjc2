@@ -757,10 +757,6 @@ const char* protocol_getName(Protocol *p);
 
 /**
  * Returns the property metadata for the property with the specified name.
- *
- * Note: The Apple documentation for this method contains some nonsense for
- * isInstanceProperty.  As there is no language syntax for defining properties
- * on classes, we return NULL if this is not YES.
  */
 objc_property_t protocol_getProperty(Protocol *p, const char *name,
 	BOOL isRequiredProperty, BOOL isInstanceProperty);
