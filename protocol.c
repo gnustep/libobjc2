@@ -60,6 +60,10 @@ static id incompleteProtocolClass(void)
  */
 static id protocol_class_gcc;
 /**
+ * Class used for legacy GNUstep V1 ABI  protocols (`ProtocolGSv1`).
+ */
+static id protocol_class_gsv1;
+/**
  * Class used for protocols (`Protocol`).
  */
 static id protocol_class_gsv2;
@@ -70,16 +74,30 @@ static BOOL init_protocol_classes(void)
 	{
 		protocol_class_gcc = objc_getClass("ProtocolGCC");
 	}
+	if (nil == protocol_class_gsv1)
+	{
+		protocol_class_gsv1 = objc_getClass("ProtocolGSv1");
+	}
 	if (nil == protocol_class_gsv2)
 	{
 		protocol_class_gsv2 = objc_getClass("Protocol");
 	}
 	if ((nil == protocol_class_gcc) ||
+	    (nil == protocol_class_gsv1) ||
 	    (nil == protocol_class_gsv2))
 	{
 		return NO;
 	}
 	return YES;
+}
+
+static BOOL protocol_hasClassProperties(struct objc_protocol *p)
+{
+	if (!init_protocol_classes())
+	{
+		return NO;
+	}
+	return p->isa == protocol_class_gsv2;
 }
 
 static BOOL protocol_hasOptionalMethodsAndProperties(struct objc_protocol *p)
@@ -92,7 +110,6 @@ static BOOL protocol_hasOptionalMethodsAndProperties(struct objc_protocol *p)
 	{
 		return NO;
 	}
-	assert((p->isa == protocol_class_gsv2));
 	return YES;
 }
 
@@ -107,8 +124,10 @@ static int isEmptyProtocol(struct objc_protocol *aProto)
 		  (aProto->protocol_list->count == 0));
 	if (protocol_hasOptionalMethodsAndProperties(aProto))
 	{
-		isEmpty &= (aProto->optional_instance_methods->count == 0);
-		isEmpty &= (aProto->optional_class_methods->count == 0);
+		isEmpty &= (aProto->optional_instance_methods == NULL) ||
+			(aProto->optional_instance_methods->count == 0);
+		isEmpty &= (aProto->optional_class_methods == NULL) ||
+			(aProto->optional_class_methods->count == 0);
 		isEmpty &= (aProto->properties == 0) || (aProto->properties->count == 0);
 		isEmpty &= (aProto->optional_properties == 0) || (aProto->optional_properties->count == 0);
 	}
@@ -175,22 +194,6 @@ static struct objc_protocol *unique_protocol(struct objc_protocol *aProto)
 	}
 }
 
-enum protocol_version
-{
-	/**
-	 * Legacy (GCC-compatible) protocol version.
-	 */
-	protocol_version_gcc = 2,
-	/**
-	 * GNUstep V1 ABI protocol.
-	 */
-	protocol_version_gsv1 = 3,
-	/**
-	 * GNUstep V2 ABI protocol.
-	 */
-	protocol_version_gsv2 = 4
-};
-
 static BOOL init_protocols(struct objc_protocol_list *protocols)
 {
 	if (!init_protocol_classes())
@@ -223,7 +226,6 @@ static BOOL init_protocols(struct objc_protocol_list *protocols)
 				break;
 			case protocol_version_gsv1:
 				protocols->list[i] = aProto = objc_upgrade_protocol_gsv1((struct objc_protocol_gsv1 *)aProto);
-				// The upgrade process should have done an in-place replacement.
 				assert(aProto->isa == protocol_class_gsv2);
 				break;
 			case protocol_version_gsv2:
@@ -436,15 +438,18 @@ objc_property_t protocol_getProperty(Protocol *p,
                                      BOOL isInstanceProperty)
 {
 	if (NULL == p) { return NULL; }
-	// Class properties are not supported yet (there is no language syntax for
-	// defining them!)
-	if (!isInstanceProperty) { return NULL; }
 	if (!protocol_hasOptionalMethodsAndProperties(p))
 	{
 		return NULL;
 	}
+	if (!isInstanceProperty && !protocol_hasClassProperties(p))
+	{
+		return NULL;
+	}
 	struct objc_property_list *properties =
-	    isRequiredProperty ? p->properties : p->optional_properties;
+	    isInstanceProperty ?
+	        (isRequiredProperty ? p->properties : p->optional_properties) :
+	        (isRequiredProperty ? p->class_properties : p->optional_class_properties);
 	while (NULL != properties)
 	{
 		for (int i=0 ; i<properties->count ; i++)

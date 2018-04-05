@@ -4,12 +4,18 @@
 #include <stdlib.h>
 #include <assert.h>
 
+@protocol X
+@optional
+@property (readonly) int x;
+@end
+
 #ifdef __has_attribute
 #if __has_attribute(objc_root_class)
 __attribute__((objc_root_class))
 #endif
 #endif
-@interface helloclass {
+
+@interface helloclass <X> {
 	@private int varName;
 }
 @property (class, retain) id clsProp;

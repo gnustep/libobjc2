@@ -35,3 +35,4 @@
 @implementation Object @end
 
 @implementation ProtocolGCC @end
+@implementation ProtocolGSv1 @end

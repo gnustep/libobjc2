@@ -20,6 +20,27 @@ struct objc_protocol_method_description_list_gcc
 };
 
 /**
+ * Protocol versions.  The compiler generates these in the `isa` field for
+ * protocols and they are replaced with class pointers by the runtime.
+ */
+enum protocol_version
+{
+	/**
+	 * Legacy (GCC-compatible) protocol version.
+	 */
+	protocol_version_gcc = 2,
+	/**
+	 * GNUstep V1 ABI protocol.
+	 */
+	protocol_version_gsv1 = 3,
+	/**
+	 * GNUstep V2 ABI protocol.
+	 */
+	protocol_version_gsv2 = 4
+};
+
+
+/**
  * A description of a method in a protocol.
  */
 struct objc_protocol_method_description
@@ -68,12 +89,26 @@ protocol_method_at_index(struct objc_protocol_method_description_list *l, int i)
 struct objc_protocol
 {
 	/**
-	 * Redefinition of the superclass ivars in the C version.
+	 * Class pointer.
 	 */
 	id                                   isa;
+	/**
+	 * Protocol name.
+	 */
 	char                                *name;
+	/**
+	 * Protocols that this protocol conforms to.
+	 */
 	struct objc_protocol_list           *protocol_list;
+	/**
+	 * Required instance methods that classes conforming to this protocol must
+	 * implement.
+	 */
 	struct objc_protocol_method_description_list *instance_methods;
+	/**
+	 * Required class methods that classes conforming to this protocol must
+	 * implement.
+	 */
 	struct objc_protocol_method_description_list *class_methods;
 	/**
 	 * Instance methods that are declared as optional for this protocol.
@@ -91,8 +126,15 @@ struct objc_protocol
 	 * Optional properties.
 	 */
 	struct objc_property_list           *optional_properties;
+	/**
+	 * Class properties that are required by this protocol.
+	 */
+	struct objc_property_list           *class_properties;
+	/**
+	 * Optional class properties.
+	 */
+	struct objc_property_list           *optional_class_properties;
 };
-
 
 struct objc_protocol_gcc
 {
@@ -145,19 +187,6 @@ struct objc_protocol_gsv1
 	struct objc_property_list_gsv1      *optional_properties;
 };
 
-// Note: If you introduce a new protocol type that is larger than the current
-// one then it's fine to auto-upgrade anything using the v2 ABI, because
-// protocol structures there are referenced only via the indirection layer or
-// via other runtime-managed structures.
-//
-// Auto-upgrading GNUstep v1 ABI protocols relies on their being the same size
-// as v2, so the upgrade can happen in place.  If this isn't possible, then we
-// will need to add a new protocol class for v1 ABI struct and make sure that
-// anything accessing the missing fields checks for this class before doing so.
-_Static_assert(sizeof(struct objc_protocol_gsv1) == sizeof(struct objc_protocol),
-	"The V1 ABI protocol strcuture has a different size to the current AIB.  "
-	"The auto-upgrader will not be able to do in-place replacement.");
-
 #ifdef __OBJC__
 @interface Object { id isa; } @end
 /**
@@ -168,6 +197,9 @@ _Static_assert(sizeof(struct objc_protocol_gsv1) == sizeof(struct objc_protocol)
 @end
 
 @interface ProtocolGCC : Protocol
+@end
+
+@interface ProtocolGSv1 : Protocol
 @end
 
 #endif
