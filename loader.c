@@ -264,7 +264,6 @@ void __objc_exec_class(struct objc_module_abi_8 *module)
 	// In future, we should pass the ABI version to the class / category load
 	// functions so that we can change various structures more easily.
 	assert(objc_check_abi_version(module));
-	fprintf(stderr, "Loading %s\n", module->name);
 
 
 	// The runtime mutex is held for the entire duration of a load.  It does
