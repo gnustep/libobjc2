@@ -96,7 +96,7 @@ static inline void ivarSetAlign(Ivar ivar, size_t align)
 	ivar->flags = (ivar->flags & ~ivar_align_mask) | align;
 }
 
-static inline void ivarSetOwnership(Ivar ivar, ivar_ownership o)
+static inline void ivarSetOwnership(Ivar ivar, objc_ivar_ownership o)
 {
 	ivar->flags = (ivar->flags & ~ivar_ownership_mask) | o;
 }
@@ -105,9 +105,9 @@ static inline void ivarSetOwnership(Ivar ivar, ivar_ownership o)
 /**
  * Look up the ownership for a given instance variable.
  */
-static inline ivar_ownership ivarGetOwnership(Ivar ivar)
+static inline objc_ivar_ownership ivarGetOwnership(Ivar ivar)
 {
-	return (ivar_ownership)(ivar->flags & ivar_ownership_mask);
+	return (objc_ivar_ownership)(ivar->flags & ivar_ownership_mask);
 }
 
 /**

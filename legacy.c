@@ -47,7 +47,7 @@ static inline int objc_get_class_version_gsv1(struct objc_class_gsv1 *aClass)
 	return aClass->abi_version + 1;
 }
 
-static ivar_ownership ownershipForIvar(struct objc_class_gsv1 *cls, int idx)
+static objc_ivar_ownership ownershipForIvar(struct objc_class_gsv1 *cls, int idx)
 {
 	if (objc_get_class_version_gsv1(cls) < 2)
 	{
