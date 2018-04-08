@@ -6,6 +6,8 @@
 #include <assert.h>
 #include "Test.h"
 
+@implementation NSConstantString @end
+
 @implementation Test
 + (Class)class { return self; }
 + (id)new

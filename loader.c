@@ -106,6 +106,42 @@ struct objc_alias
 	Class *alias;
 };
 
+/**
+ * Type of the NSConstantString structure.
+ */
+struct nsstr
+{
+	/** Class pointer. */
+	id isa;
+	/**
+	 * Flags.  Low 2 bits store the encoding:
+	 * 0: ASCII
+	 * 1: UTF-8
+	 * 2: UTF-16
+	 * 3: UTF-32
+	 *
+	 * Low 16 bits are reserved for the compiler, high 32 bits are reserved for
+	 * the Foundation framework.
+	 */
+	uint32_t flags;
+	/**
+	 * Number of UTF-16 code units in the string.
+	 */
+	uint32_t length;
+	/**
+	 * Number of bytes in the string.
+	 */
+	uint32_t size;
+	/**
+	 * Hash (Foundation framework defines the hash algorithm).
+	 */
+	uint32_t hash;
+	/**
+	 * Character data.
+	 */
+	const char *data;
+};
+
 // begin: objc_init
 struct objc_init
 {
@@ -124,6 +160,8 @@ struct objc_init
 	struct objc_protocol **proto_ref_end;
 	struct objc_alias *alias_begin;
 	struct objc_alias *alias_end;
+	struct nsstr *strings_begin;
+	struct nsstr *strings_end;
 };
 // end: objc_init
 #include <dlfcn.h>
