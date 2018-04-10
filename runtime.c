@@ -526,7 +526,10 @@ Class class_setSuperclass(Class cls, Class newSuper)
 
 	LOCK_RUNTIME();
 
-	if (cls->super_class == newSuper) { return newSuper; }
+	if (cls->super_class == newSuper) {
+		UNLOCK_RUNTIME();
+		return newSuper;
+	}
 
 	safe_remove_from_subclass_list(cls);
 	objc_resolve_class(newSuper);
