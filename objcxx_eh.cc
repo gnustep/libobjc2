@@ -15,6 +15,7 @@ namespace __cxxabiv1
 
 using __cxxabiv1::__class_type_info;
 
+#ifndef _NATIVE_OBJC_EXCEPTIONS
 namespace std
 {
 	/**
@@ -48,6 +49,7 @@ namespace std
 				                void **thrown_object) const;
 	};
 }
+#endif
 
 using namespace std;
 

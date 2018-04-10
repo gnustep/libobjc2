@@ -138,7 +138,7 @@ set(INCLUDE_DIRECTORY "objc" CACHE STRING
 
 
 if (${CMAKE_C_COMPILER_ID} MATCHES Clang*)
-	set(CMAKE_OBJC_FLAGS "${CMAKE_OBJC_FLAGS} -Wno-deprecated-objc-isa-usage -Wno-objc-root-class")
+	set(CMAKE_OBJC_FLAGS "${CMAKE_OBJC_FLAGS} -Wno-deprecated-objc-isa-usage -Wno-objc-root-class -D_NATIVE_OBJC_EXCEPTIONS")
 	if (${CMAKE_C_COMPILER_VERSION} VERSION_GREATER 3.1)
 		set(CMAKE_OBJC_FLAGS "${CMAKE_OBJC_FLAGS} -fobjc-runtime=gnustep-1.7")
 	endif ()
@@ -162,6 +162,9 @@ set_source_files_properties(
 # C++ Runtime interaction
 #
 
+if (${CMAKE_CXX_COMPILER_ID} MATCHES Clang*)
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_NATIVE_OBJC_EXCEPTIONS")
+endif ()
 
 function(test_cxx CXX_RUNTIME_NAME IS_STDLIB)
 	set(CXX_RUNTIME_NAME "${CMAKE_SHARED_LIBRARY_PREFIX}${CXX_RUNTIME_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX}")
@@ -367,4 +370,3 @@ if (TESTS)
 	enable_testing()
 	add_subdirectory(Test)
 endif (TESTS)
-

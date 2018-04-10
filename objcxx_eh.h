@@ -5,8 +5,10 @@ extern "C" {
  * Allocates a C++ exception.  This function is part of the Itanium C++ ABI and
  * is provided externally.
  */
+#ifndef _NATIVE_OBJC_EXCEPTIONS
 __attribute__((weak))
 void *__cxa_allocate_exception(size_t thrown_size);
+#endif
 /**
  * Initialises an exception object returned by __cxa_allocate_exception() for
  * storing an Objective-C object.  The return value is the location of the
