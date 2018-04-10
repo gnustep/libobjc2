@@ -15,7 +15,7 @@ namespace __cxxabiv1
 
 using __cxxabiv1::__class_type_info;
 
-#ifndef _NATIVE_OBJC_EXCEPTIONS
+#ifndef USE_STD_EXCEPTION_TYPES
 namespace std
 {
 	/**
