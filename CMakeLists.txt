@@ -369,22 +369,22 @@ if (TESTS)
 	add_subdirectory(Test)
 endif (TESTS)
 
-CHECK_CXX_SOURCE_COMPILES(
-	"
+CHECK_CXX_SOURCE_COMPILES("
 	#include <stdlib.h>
 	extern \"C\" {
 	__attribute__((weak))
-	void *__cxa_allocate_exception(size_t thrown_size);
+	void *__cxa_allocate_exception(size_t thrown_size) noexcept;
 	}
 	#include <exception>
-	int main() { return 0; }" CXA_ALLOCATE_EXCEPTION_CAN_THROW_COMPILES)
+	int main() { return 0; }" CXA_ALLOCATE_EXCEPTION_NOEXCEPT_COMPILES)
 
-if (NOT CXA_ALLOCATE_EXCEPTION_CAN_THROW_COMPILES)
-	add_definitions(-DCXA_ALLOCATE_EXCEPTION_IS_NOEXCEPT)
+if (CXA_ALLOCATE_EXCEPTION_NOEXCEPT_COMPILES)
+	add_definitions(-DCXA_ALLOCATE_EXCEPTION_SPECIFIER=noexcept)
+else ()
+	add_definitions(-DCXA_ALLOCATE_EXCEPTION_SPECIFIER=)
 endif ()
 
-CHECK_CXX_SOURCE_COMPILES(
-	"
+CHECK_CXX_SOURCE_COMPILES("
 	#include <exception>
 	namespace std { class type_info { }; }
 	int main() { return 0; }" TYPE_INFO_REDEFINITION_COMPILES)
@@ -392,4 +392,3 @@ CHECK_CXX_SOURCE_COMPILES(
 if (NOT TYPE_INFO_REDEFINITION_COMPILES)
 	add_definitions(-DTYPE_INFO_IS_EXPOSED)
 endif ()
-
