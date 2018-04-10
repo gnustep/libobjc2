@@ -6,8 +6,8 @@ extern "C" {
  * is provided externally.
  */
 /*
- * Note: Recent versions of libstdc++ already provide a prototype for
- * __cxa__allocate_exception(). Since the standard version is defined with
+ * Note: Recent versions of libsupc++ already provide a prototype for
+ * __cxa__allocate_exception(). Since the libsupc++ version is defined with
  * _GLIBCXX_NOTHROW, clang gives a type mismatch error.
  */
 #ifndef __cplusplus

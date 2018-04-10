@@ -15,7 +15,6 @@ namespace __cxxabiv1
 
 using __cxxabiv1::__class_type_info;
 
-#ifndef TYPE_INFO_IS_EXPOSED
 namespace std
 {
 	/**
@@ -49,7 +48,6 @@ namespace std
 				                void **thrown_object) const;
 	};
 }
-#endif
 
 using namespace std;
 

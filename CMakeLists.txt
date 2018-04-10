@@ -164,6 +164,7 @@ set_source_files_properties(
 # C++ Runtime interaction
 #
 
+
 function(test_cxx CXX_RUNTIME_NAME IS_STDLIB)
 	set(CXX_RUNTIME_NAME "${CMAKE_SHARED_LIBRARY_PREFIX}${CXX_RUNTIME_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX}")
 	find_library(CXX_RUNTIME_LIB NAMES ${CXX_RUNTIME_NAME})
@@ -382,13 +383,4 @@ if (CXA_ALLOCATE_EXCEPTION_NOEXCEPT_COMPILES)
 	add_definitions(-DCXA_ALLOCATE_EXCEPTION_SPECIFIER=noexcept)
 else ()
 	add_definitions(-DCXA_ALLOCATE_EXCEPTION_SPECIFIER=)
-endif ()
-
-CHECK_CXX_SOURCE_COMPILES("
-	#include <exception>
-	namespace std { class type_info { }; }
-	int main() { return 0; }" TYPE_INFO_REDEFINITION_COMPILES)
-
-if (NOT TYPE_INFO_REDEFINITION_COMPILES)
-	add_definitions(-DTYPE_INFO_IS_EXPOSED)
 endif ()
