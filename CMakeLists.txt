@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 3.1)
 project(libobjc)
 enable_language(ASM)
 
+INCLUDE (CheckCXXSourceCompiles)
+
 macro(install_symlink filepath sympath)
 	install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ${filepath} ${sympath})")
 	install(CODE "message(\"-- Symlinking: ${sympath} -> ${filepath}\")")
@@ -367,9 +369,27 @@ if (TESTS)
 	add_subdirectory(Test)
 endif (TESTS)
 
-option(USE_PROVIDED_EXCEPTION_TYPES
-	"Whether to use the type_info structure and the __cxa__allocate_exception() prototype provided by libstdc++." FALSE)
+CHECK_CXX_SOURCE_COMPILES(
+	"
+	#include <stdlib.h>
+	extern \"C\" {
+	__attribute__((weak))
+	void *__cxa_allocate_exception(size_t thrown_size);
+	}
+	#include <exception>
+	int main() { return 0; }" CXA_ALLOCATE_EXCEPTION_CAN_THROW_COMPILES)
 
-if (USE_STD_EXCEPTION_TYPES)
-	add_definitions(-DUSE_STD_EXCEPTION_TYPES)
+if (NOT CXA_ALLOCATE_EXCEPTION_CAN_THROW_COMPILES)
+	add_definitions(-DCXA_ALLOCATE_EXCEPTION_IS_NOEXCEPT)
 endif ()
+
+CHECK_CXX_SOURCE_COMPILES(
+	"
+	#include <exception>
+	namespace std { class type_info { }; }
+	int main() { return 0; }" TYPE_INFO_REDEFINITION_COMPILES)
+
+if (NOT TYPE_INFO_REDEFINITION_COMPILES)
+	add_definitions(-DTYPE_INFO_IS_EXPOSED)
+endif ()
+

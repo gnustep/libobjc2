@@ -10,10 +10,12 @@ extern "C" {
  * __cxa__allocate_exception(). Since the standard version is defined with
  * _GLIBCXX_NOTHROW, clang gives a type mismatch error.
  */
-#if !__cplusplus || !USE_STD_EXCEPTION_TYPES
 __attribute__((weak))
-void *__cxa_allocate_exception(size_t thrown_size);
+void *__cxa_allocate_exception(size_t thrown_size)
+#if defined __cplusplus && defined CXA_ALLOCATE_EXCEPTION_IS_NOEXCEPT
+  noexcept
 #endif
+;
 
 /**
  * Initialises an exception object returned by __cxa_allocate_exception() for

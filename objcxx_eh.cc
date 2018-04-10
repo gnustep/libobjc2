@@ -15,7 +15,7 @@ namespace __cxxabiv1
 
 using __cxxabiv1::__class_type_info;
 
-#ifndef USE_STD_EXCEPTION_TYPES
+#ifndef TYPE_INFO_IS_EXPOSED
 namespace std
 {
 	/**
