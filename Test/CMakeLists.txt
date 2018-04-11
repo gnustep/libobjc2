@@ -38,6 +38,8 @@ set(TESTS
 	MethodArguments.m
 	zeroSizedIVar.m
 	exchange.m
+	hash_table_delete.c
+	setSuperclass.m
 )
 
 # List of single-file tests that won't work with the legacy ABI and so

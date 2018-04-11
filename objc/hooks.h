@@ -2,6 +2,10 @@
 #pragma clang system_header
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * This file includes all of the hooks that can be used to alter the behaviour
  * of the runtime.  
@@ -106,4 +110,6 @@ typedef IMP (*objc_tracing_hook)(id, SEL, IMP, int, void*);
  */
 int objc_registerTracingHook(SEL, objc_tracing_hook);
 
-
+#ifdef __cplusplus
+}
+#endif

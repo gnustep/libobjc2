@@ -54,7 +54,7 @@
 	push  %ecx                           # _cmd
 	push  %eax                           # &self
 	.cfi_def_cfa_offset 12
-	call  slowMsgLookup@PLT
+	call  CDECL(slowMsgLookup)@PLT
 	add   $8, %esp                       # restore the stack
 
 
@@ -65,8 +65,14 @@
 7:
 	popl  %ebx;
 8:
+#if __ELF__
+	# ELF can support GOT-relative addressing;
+	# PE/COFF and Mach-O need a text relocation.
 	addl  $_GLOBAL_OFFSET_TABLE_+(8b-7b), %ebx
 	leal  SmallObjectClasses@GOTOFF(%ebx), %eax
+#else
+	leal  CDECL(SmallObjectClasses), %eax
+#endif
 	mov   (%eax), %eax
 	popl  %ebx
 	jmp   1b 

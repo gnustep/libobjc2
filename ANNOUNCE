@@ -43,6 +43,13 @@ Highlights of this release include:
   requirements, which should fix issues relating to using vector types in
   Objective-C objects.
 
+- The option to build a separate libobjcxx has been removed.  The runtime will
+  now depend on the C++ standard library implementation if no useable C++
+  runtime is available.  Note that C++ exception interworking does not work
+  because LLVM's libc++abi (shipped by Apple) does not provide GNU-compatible
+  hooks and so Objective-C++ exception support will be automatically disabled
+  on this platform.  Any other platforms shipping libc++abi should consider
+  either GNU libsupc++ or libcxxrt as an alternative.
 
 You may obtain the code for this release from git and use the 1.x branch:
 

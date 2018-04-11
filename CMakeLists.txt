@@ -1,7 +1,9 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.1)
 
 project(libobjc)
 enable_language(ASM)
+
+INCLUDE (CheckCXXSourceCompiles)
 
 macro(install_symlink filepath sympath)
 	install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ${filepath} ${sympath})")
@@ -364,3 +366,17 @@ if (TESTS)
 	add_subdirectory(Test)
 endif (TESTS)
 
+CHECK_CXX_SOURCE_COMPILES("
+	#include <stdlib.h>
+	extern \"C\" {
+	__attribute__((weak))
+	void *__cxa_allocate_exception(size_t thrown_size) noexcept;
+	}
+	#include <exception>
+	int main() { return 0; }" CXA_ALLOCATE_EXCEPTION_NOEXCEPT_COMPILES)
+
+if (CXA_ALLOCATE_EXCEPTION_NOEXCEPT_COMPILES)
+	add_definitions(-DCXA_ALLOCATE_EXCEPTION_SPECIFIER=noexcept)
+else ()
+	add_definitions(-DCXA_ALLOCATE_EXCEPTION_SPECIFIER=)
+endif ()

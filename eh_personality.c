@@ -562,7 +562,7 @@ struct thread_data *get_thread_data(void)
 	}
 	return td;
 #else
-	return &td;
+	return &thread_data;
 #endif
 }
 
@@ -572,7 +572,7 @@ struct thread_data *get_thread_data_fast(void)
 	struct thread_data *td = pthread_getspecific(key);
 	return td;
 #else
-	return &td;
+	return &thread_data;
 #endif
 }
 

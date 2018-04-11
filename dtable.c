@@ -392,6 +392,78 @@ PRIVATE void objc_update_dtable_for_class(Class cls)
 	checkARCAccessors(cls);
 }
 
+static void rebaseDtableRecursive(Class cls, Class newSuper)
+{
+	dtable_t parentDtable = dtable_for_class(newSuper);
+	// Collect all of the methods for this class:
+	dtable_t temporaryDtable = SparseArrayNewWithDepth(dtable_depth);
+
+	for (struct objc_method_list *list = cls->methods ; list != NULL ; list = list->next)
+	{
+		for (unsigned i=0 ; i<list->count ; i++)
+		{
+			struct objc_method *m = method_at_index(list, i);
+			uint32_t idx = m->selector->index;
+			// Don't replace existing methods - we're doing the traversal
+			// pre-order so we'll see methods from categories first.
+			if (SparseArrayLookup(temporaryDtable, idx) == NULL)
+			{
+				SparseArrayInsert(temporaryDtable, idx, m);
+			}
+		}
+	}
+
+
+	dtable_t dtable = dtable_for_class(cls);
+	uint32_t idx = 0;
+	struct objc_method *method;
+	// Install all methods in the dtable with the correct ones.
+	while ((method = SparseArrayNext(temporaryDtable, &idx)))
+	{
+		SparseArrayInsert(dtable, idx, method);
+	}
+	idx = 0;
+	// Now look at all of the methods in the dtable.  If they're not ones from
+	// the dtable that we've just created, then they must come from the
+	// superclass, so replace them with whatever the superclass has (which may
+	// be NULL).
+	while ((method = SparseArrayNext(dtable, &idx)))
+	{
+		if (SparseArrayLookup(temporaryDtable, idx) == NULL)
+		{
+			SparseArrayInsert(dtable, idx, SparseArrayLookup(parentDtable, idx));
+		}
+	}
+	SparseArrayDestroy(temporaryDtable);
+
+	// merge can make a class ARC-compatible.
+	checkARCAccessors(cls);
+
+	// Now visit all of our subclasses and propagate the changes downwards.
+	for (struct objc_class *subclass=cls->subclass_list ;
+	     Nil != subclass ; subclass = subclass->sibling_class)
+	{
+		// Don't bother updating dtables for subclasses that haven't been
+		// initialized yet
+		if (!classHasDtable(subclass)) { continue; }
+		rebaseDtableRecursive(subclass, cls);
+	}
+
+}
+
+PRIVATE void objc_update_dtable_for_new_superclass(Class cls, Class newSuper)
+{
+	// Only update real dtables
+	if (!classHasDtable(cls)) { return; }
+
+	LOCK_RUNTIME_FOR_SCOPE();
+	rebaseDtableRecursive(cls, newSuper);
+	// Invalidate all caches after this operation.
+	objc_method_cache_version++;
+
+	return;
+}
+
 PRIVATE void add_method_list_to_class(Class cls,
                                       struct objc_method_list *list)
 {
@@ -410,7 +482,7 @@ PRIVATE void add_method_list_to_class(Class cls,
 	checkARCAccessors(cls);
 }
 
-static dtable_t create_dtable_for_class(Class class, dtable_t root_dtable)
+PRIVATE dtable_t create_dtable_for_class(Class class, dtable_t root_dtable)
 {
 	// Don't create a dtable for a class that already has one
 	if (classHasDtable(class)) { return dtable_for_class(class); }

@@ -75,14 +75,16 @@ static BOOL isAtomic(uintptr_t policy)
 
 static struct reference* findReference(struct reference_list *list, void *key)
 {
-	if (NULL == list) { return NULL; }
-
-	for (int i=0 ; i<REFERENCE_LIST_SIZE ; i++)
+	while (list)
 	{
-		if (list->list[i].key == key)
+		for (int i=0 ; i<REFERENCE_LIST_SIZE ; i++)
 		{
-			return &list->list[i];
+			if (list->list[i].key == key)
+			{
+				return &list->list[i];
+			}
 		}
+		list = list->next;
 	}
 	return NULL;
 }
@@ -166,12 +168,17 @@ static void setReference(struct reference_list *list,
 		lock = lock_for_pointer(r);
 		lock_spinlock(lock);
 	}
-	r->policy = policy;
-	id old = r->object;
-	r->object = obj;
-	if (OBJC_ASSOCIATION_ASSIGN != r->policy)
+	@try
 	{
-		objc_release(old);
+		if (OBJC_ASSOCIATION_ASSIGN != r->policy)
+		{
+			objc_release(r->object);
+		}
+	}
+	@finally
+	{
+		r->policy = policy;
+		r->object = obj;
 	}
 	if (needLock)
 	{
