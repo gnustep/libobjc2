@@ -5,7 +5,11 @@
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 
 __attribute__((objc_root_class))
-@interface Root @end
+@interface Root
+{
+	id isa;
+}
+@end
 @interface DefaultSuperclass: Root @end
 
 // test: new superclass when not initialized at the time of class_setSuperclass
