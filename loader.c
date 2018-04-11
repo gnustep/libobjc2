@@ -11,6 +11,7 @@
 #include <gc/gc.h>
 #endif
 #include <stdio.h>
+#include <string.h>
 
 /**
  * Runtime lock.  This is exposed in 
@@ -166,6 +167,12 @@ struct objc_init
 // end: objc_init
 #include <dlfcn.h>
 
+static enum {
+	LegacyABI,
+	NewABI,
+	UnknownABI
+} CurrentABI = UnknownABI;
+
 void registerProtocol(Protocol *proto);
 
 void __objc_load(struct objc_init *init)
@@ -183,6 +190,19 @@ void __objc_load(struct objc_init *init)
 	}
 #endif
 	LOCK_RUNTIME_FOR_SCOPE();
+	BOOL isFirstLoad = NO;
+	switch (CurrentABI)
+	{
+		case LegacyABI:
+			fprintf(stderr, "Version 2 Objective-C ABI may not be mixed with earlier versions.\n");
+			abort();
+		case UnknownABI:
+			isFirstLoad = YES;
+			CurrentABI = NewABI;
+			break;
+		case NewABI:
+			break;
+	}
 	assert(init->version == 0);
 	assert((((uintptr_t)init->sel_end-(uintptr_t)init->sel_begin) % sizeof(*init->sel_begin)) == 0);
 	assert((((uintptr_t)init->cls_end-(uintptr_t)init->cls_begin) % sizeof(*init->cls_begin)) == 0);
@@ -210,6 +230,11 @@ void __objc_load(struct objc_init *init)
 		if (*cls == NULL)
 		{
 			continue;
+		}
+		// As a special case, allow using legacy ABI code with a new runtime.
+		if (isFirstLoad && (strcmp((*cls)->name, "Protocol")))
+		{
+			CurrentABI = UnknownABI;
 		}
 		objc_load_class(*cls);
 	}
@@ -259,6 +284,18 @@ void __objc_load(struct objc_init *init)
 void __objc_exec_class(struct objc_module_abi_8 *module)
 {
 	init_runtime();
+
+	switch (CurrentABI)
+	{
+		case UnknownABI:
+			CurrentABI = LegacyABI;
+			break;
+		case LegacyABI:
+			break;
+		case NewABI:
+			fprintf(stderr, "Version 2 Objective-C ABI may not be mixed with earlier versions.\n");
+			abort();
+	}
 
 	// Check that this module uses an ABI version that we recognise.  
 	// In future, we should pass the ABI version to the class / category load
