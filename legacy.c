@@ -110,6 +110,10 @@ static struct objc_method_list *upgradeMethodList(struct objc_method_list_gcc *o
 	{
 		return NULL;
 	}
+	if (old->count == 0)
+	{
+		return NULL;
+	}
 	struct objc_method_list *l = calloc(sizeof(struct objc_method_list) + old->count * sizeof(struct objc_method), 1);
 	l->count = old->count;
 	if (old->next)
@@ -309,13 +313,20 @@ PRIVATE Class objc_upgrade_class(struct objc_class_gsv1 *oldClass)
 	}
 	return cls;
 }
-
 PRIVATE struct objc_category *objc_upgrade_category(struct objc_category_gcc *old)
 {
 	struct objc_category *cat = calloc(1, sizeof(struct objc_category));
 	memcpy(cat, old, sizeof(struct objc_category_gcc));
 	cat->instance_methods = upgradeMethodList(old->instance_methods);
 	cat->class_methods = upgradeMethodList(old->class_methods);
+	if (cat->instance_methods != NULL)
+	{
+		objc_register_selectors_from_list(cat->instance_methods);
+	}
+	if (cat->class_methods != NULL)
+	{
+		objc_register_selectors_from_list(cat->class_methods);
+	}
 	for (int i=0 ; i<cat->protocols->count ; i++)
 	{
 		objc_init_protocols(cat->protocols);

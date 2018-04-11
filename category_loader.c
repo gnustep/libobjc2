@@ -14,8 +14,6 @@ static void register_methods(struct objc_class *cls, struct objc_method_list *l)
 {
 	if (NULL == l) { return; }
 
-	// Replace the method names with selectors.
-	objc_register_selectors_from_list(l);
 	// Add the method list at the head of the list of lists.
 	l->next = cls->methods;
 	cls->methods = l;
