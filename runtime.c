@@ -356,6 +356,9 @@ id class_createInstance(Class cls, size_t extraBytes)
 	}
 
 	if (Nil == cls)	{ return nil; }
+	// Don't try to allocate an object of size 0, because there's no space for
+	// its isa pointer!
+	if (cls->instance_size == 0) { return nil; }
 	id obj = gc->allocate_class(cls, extraBytes);
 	obj->isa = cls;
 	checkARCAccessorsSlow(cls);
