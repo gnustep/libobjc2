@@ -165,6 +165,7 @@ PRIVATE BOOL objc_resolve_class(Class cls)
 			}
 		}
 	}
+#ifdef OLDABI_COMPAT
 	else
 	{
 		struct objc_class_gsv1 *ocls = objc_legacy_class_for_class(cls);
@@ -183,6 +184,7 @@ PRIVATE BOOL objc_resolve_class(Class cls)
 			}
 		}
 	}
+#endif
 
 
 	// Remove the class from the unresolved class list
@@ -258,12 +260,14 @@ PRIVATE BOOL objc_resolve_class(Class cls)
 
 	// Fix up the ivar offsets
 	objc_compute_ivar_offsets(cls);
+#ifdef OLDABI_COMPAT
 	struct objc_class_gsv1 *oldCls = objc_legacy_class_for_class(cls);
 	if (oldCls)
 	{
 		oldCls->super_class = cls->super_class;
 		oldCls->isa->super_class = cls->isa->super_class;
 	}
+#endif
 	// Send the +load message, if required
 	if (!objc_test_class_flag(cls, objc_class_flag_user_created))
 	{

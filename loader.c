@@ -281,6 +281,7 @@ void __objc_load(struct objc_init *init)
 	init->version = 0xffffffffffffffffULL;
 }
 
+#ifdef OLDABI_COMPAT
 void __objc_exec_class(struct objc_module_abi_8 *module)
 {
 	init_runtime();
@@ -351,3 +352,4 @@ void __objc_exec_class(struct objc_module_abi_8 *module)
 		}
 	}
 }
+#endif

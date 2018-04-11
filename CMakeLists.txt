@@ -31,7 +31,6 @@ set(libobjc_OBJC_SRCS
 	blocks_runtime.m
 	properties.m)
 set(libobjc_C_SRCS 
-	abi_version.c
 	alias_table.c
 	block_to_imp.c
 	caps.c
@@ -43,8 +42,6 @@ set(libobjc_C_SRCS
 	hash_table.c
 	hooks.c
 	ivar.c
-	legacy_malloc.c
-	legacy.c
 	loader.c
 	mutation.m
 	protocol.c
@@ -120,8 +117,17 @@ else ()
 	list(APPEND libobjc_OBJC_SRCS gc_none.c)
 endif ()
 
+set(OLDABI_COMPAT TRUE CACHE BOOL
+	"Enable compatibility with GCC and old GNUstep ABIs")
+
 set(LEGACY_COMPAT FALSE CACHE BOOL
 	"Enable legacy compatibility features")
+
+if (OLDABI_COMPAT)
+	list(APPEND libobjc_C_SRCS legacy.c abi_version.c)
+	add_definitions(-DOLDABI_COMPAT=1)
+endif()
+
 if (LEGACY_COMPAT)
 	list(APPEND libobjc_C_SRCS legacy_malloc.c)
 else ()

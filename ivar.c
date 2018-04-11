@@ -89,6 +89,7 @@ PRIVATE void objc_compute_ivar_offsets(Class class)
 				}
 				*ivar->offset += ivar_start;
 			}
+#ifdef OLDABI_COMPAT
 			// If we have a legacy ivar list, update the offset in it too -
 			// code from older compilers may access this directly!
 			struct objc_class_gsv1* legacy = objc_legacy_class_for_class(class);
@@ -99,6 +100,7 @@ PRIVATE void objc_compute_ivar_offsets(Class class)
 					legacy->ivars->ivar_list[i].offset = *ivar_at_index(class->ivars, i)->offset;
 				}
 			}
+#endif
 		}
 	}
 }

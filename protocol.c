@@ -220,6 +220,7 @@ static BOOL init_protocols(struct objc_protocol_list *protocols)
 			default:
 				fprintf(stderr, "Unknown protocol version");
 				abort();
+#ifdef OLDABI_COMPAT
 			case protocol_version_gcc:
 				protocols->list[i] = aProto = objc_upgrade_protocol_gcc((struct objc_protocol_gcc *)aProto);
 				assert(aProto->isa == protocol_class_gcc);
@@ -228,6 +229,7 @@ static BOOL init_protocols(struct objc_protocol_list *protocols)
 				protocols->list[i] = aProto = objc_upgrade_protocol_gsv1((struct objc_protocol_gsv1 *)aProto);
 				assert(aProto->isa == protocol_class_gsv2);
 				break;
+#endif
 			case protocol_version_gsv2:
 				aProto->isa = protocol_class_gsv2;
 				break;
