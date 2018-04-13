@@ -39,7 +39,6 @@ set(libobjc_C_SRCS
 	dtable.c
 	eh_personality.c
 	encoding2.c
-	hash_table.c
 	hooks.c
 	ivar.c
 	loader.c
@@ -49,8 +48,7 @@ set(libobjc_C_SRCS
 	sarray2.c
 	selector_table.c
 	sendmsg2.c
-	statics_loader.c
-	toydispatch.c)
+	)
 set(libobjc_HDRS
 	objc/Availability.h
 	objc/Object.h
@@ -124,7 +122,7 @@ set(LEGACY_COMPAT FALSE CACHE BOOL
 	"Enable legacy compatibility features")
 
 if (OLDABI_COMPAT)
-	list(APPEND libobjc_C_SRCS legacy.c abi_version.c)
+	list(APPEND libobjc_C_SRCS legacy.c abi_version.c statics_loader.c)
 	add_definitions(-DOLDABI_COMPAT=1)
 endif()
 
@@ -271,12 +269,6 @@ endif ()
 # Explicitly link libgc if we are compiling with gc support.
 if (LIBGC)
 	target_link_libraries(objc ${LIBGC})
-endif ()
-
-# Link libdispatch if available (we'll miss symbols for toydispatch otherwise)
-find_library(LIBDISPATCH dispatch)
-if (LIBDISPATCH)
-	target_link_libraries(objc ${LIBDISPATCH})
 endif ()
 
 # Make weak symbols work on OS X
