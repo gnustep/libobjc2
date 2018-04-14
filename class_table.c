@@ -457,6 +457,12 @@ BOOL objc_registerSmallObjectClass_np(Class class, uintptr_t mask)
 	return YES;
 }
 
+PRIVATE void class_table_remove(Class cls)
+{
+	assert(objc_test_class_flag(cls, objc_class_flag_user_created));
+	class_table_internal_remove(class_table, (void*)cls->name);
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // Public API
