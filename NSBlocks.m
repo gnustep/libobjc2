@@ -48,5 +48,8 @@ BOOL objc_create_block_classes_as_subclasses_of(Class super)
 	NEW_CLASS(&_NSBlock, _NSConcreteStackBlock);
 	NEW_CLASS(&_NSBlock, _NSConcreteGlobalBlock);
 	NEW_CLASS(&_NSBlock, _NSConcreteMallocBlock);
+	// Global blocks never need refcount manipulation.
+	objc_set_class_flag(&_NSConcreteGlobalBlock,
+	                    objc_class_flag_permanent_instances);
 	return YES;
 }

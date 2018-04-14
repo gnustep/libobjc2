@@ -433,6 +433,12 @@ PRIVATE void objc_load_class(struct objc_class *class)
 	class->dtable = uninstalled_dtable;
 	class->isa->dtable = uninstalled_dtable;
 
+	// Mark constant string instances as never needing refcount manipulation.
+	if (strcmp(class->name, "NSConstantString") == 0)
+	{
+		objc_set_class_flag(class, objc_class_flag_permanent_instances);
+	}
+
 	// If this is a root class, make the class into the metaclass's superclass.
 	// This means that all instance methods will be available to the class.
 	if (NULL == class->super_class)

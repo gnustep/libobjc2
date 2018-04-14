@@ -258,9 +258,27 @@ id objc_retain_fast_np(id obj)
 	return obj;
 }
 
+__attribute__((always_inline))
+static inline BOOL isPersistentObject(id obj)
+{
+	// No reference count manipulations on nil objects.
+	if (obj == nil)
+	{
+		return YES;
+	}
+	// Small objects are never accessibly by reference
+	if (isSmallObject(obj))
+	{
+		return YES;
+	}
+	// Persistent objects are persistent.  Safe to access isa directly here
+	// because we've already handled the small object case separately.
+	return objc_test_class_flag(obj->isa, objc_class_flag_permanent_instances);
+}
+
 static inline id retain(id obj)
 {
-	if (isSmallObject(obj)) { return obj; }
+	if (isPersistentObject(obj)) { return obj; }
 	Class cls = obj->isa;
 	if ((Class)&_NSConcreteMallocBlock == cls ||
 	    (Class)&_NSConcreteStackBlock == cls)
@@ -322,15 +340,14 @@ void objc_release_fast_np(id obj)
 
 static inline void release(id obj)
 {
-	if (isSmallObject(obj)) { return; }
+	if (isPersistentObject(obj)) { return; }
 	Class cls = obj->isa;
 	if (cls == &_NSConcreteMallocBlock)
 	{
 		_Block_release(obj);
 		return;
 	}
-	if ((cls == &_NSConcreteStackBlock) ||
-	    (cls == &_NSConcreteGlobalBlock))
+	if (cls == &_NSConcreteStackBlock)
 	{
 		return;
 	}
@@ -691,18 +708,8 @@ id objc_storeWeak(id *addr, id obj)
 	{
 		return obj;
 	}
-	BOOL isGlobalObject = (obj == nil) || isSmallObject(obj);
-	Class cls = Nil;
-	if (!isGlobalObject)
-	{
-		cls = classForObject(obj);
-		// TODO: We probably also want to do the same for constant strings and
-		// classes.
-		if (cls == &_NSConcreteGlobalBlock)
-		{
-			isGlobalObject = YES;
-		}
-	}
+	BOOL isGlobalObject = isPersistentObject(obj);
+	Class cls = isGlobalObject ? Nil : obj->isa;
 	if (obj && cls && objc_test_class_flag(cls, objc_class_flag_fast_arc))
 	{
 		uintptr_t *refCount = ((uintptr_t*)obj) - 1;
@@ -838,6 +845,10 @@ id objc_loadWeakRetained(id* addr)
 	if (&_NSConcreteMallocBlock == cls)
 	{
 		obj = block_load_weak(obj);
+	}
+	else if (objc_test_class_flag(cls, objc_class_flag_permanent_instances))
+	{
+		return obj;
 	}
 	else if (!objc_test_class_flag(cls, objc_class_flag_fast_arc))
 	{
