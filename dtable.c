@@ -936,6 +936,12 @@ PRIVATE void objc_send_initialize(id object)
 		return;
 	}
 	BOOL skipMeta = objc_test_class_flag(meta, objc_class_flag_initialized);
+	// Mark metaclasses as never needing refcount manipulation for their
+	// instances (classes).
+	if (!skipMeta)
+	{
+		objc_set_class_flag(meta, objc_class_flag_permanent_instances);
+	}
 
 	// Set the initialized flag on both this class and its metaclass, to make
 	// sure that +initialize is only ever sent once.

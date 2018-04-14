@@ -238,7 +238,13 @@ enum objc_class_flags
 	/**
 	 * This class is a hidden class used to store associated values.
 	 */
-	objc_class_flag_assoc_class = (1<<8)
+	objc_class_flag_assoc_class = (1<<8),
+	/**
+	 * This class has instances that are never deallocated and are therefore
+	 * safe to store directly into weak variables and to skip all reference
+	 * count manipulations.
+	 */
+	objc_class_flag_permanent_instances = (1<<14)
 };
 
 /**
