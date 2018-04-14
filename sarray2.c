@@ -29,8 +29,6 @@ void *EmptyChildForShift(uint32_t shift)
 			return (void*)&EmptyArray8;
 		case 24:
 			return (void*)&EmptyArray16;
-		case 32:
-			return (void*)&EmptyArray24;
 	}
 }
 
