@@ -715,11 +715,19 @@ struct objc_method_description *protocol_copyMethodDescriptionList(Protocol *p,
 	BOOL isRequiredMethod, BOOL isInstanceMethod, unsigned int *count);
 
 /**
- * Returns an array of property metadata values, with the number being stored
- * in the variable pointed to by the last argument.  The caller is responsible
- * for freeing the returned array.
+ * Returns an array of required instance properties, with the number being
+ * stored in the variable pointed to by the last argument.  The caller is
+ * responsible for freeing the returned array.
  */
 objc_property_t *protocol_copyPropertyList(Protocol *p, unsigned int *count);
+
+/**
+ * Returns an array of properties specified by this class, with the number
+ * being stored in the variable pointed to by the last argument.  The caller is
+ * responsible for freeing the returned array.
+ */
+objc_property_t *protocol_copyPropertyList2(Protocol *p, unsigned int *count,
+	BOOL isRequiredProperty, BOOL isInstanceProperty);
 
 /**
  * Returns an array of protocols that this protocol conforms to, with the
