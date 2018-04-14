@@ -671,6 +671,7 @@ static inline BOOL weakRefRelease(WeakRef *ref)
 	ref->weak_count--;
 	if (ref->weak_count == 0)
 	{
+		weak_ref_remove(weakRefs, ref->obj);
 		free(ref);
 		return YES;
 	}

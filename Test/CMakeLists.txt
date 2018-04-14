@@ -7,6 +7,7 @@
 set(TESTS
 	alignTest.m
 	AllocatePair.m
+	ARCTest_arc.m
 	AssociatedObject.m
 	AssociatedObject2.m
 	BlockImpTest.m
