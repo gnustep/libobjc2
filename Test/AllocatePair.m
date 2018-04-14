@@ -39,6 +39,11 @@ int main()
 	e = objc_allocateClassPair(d, "E", 0);
 	objc_registerClassPair(e);
 	assert(loaded == 0);
+	assert(objc_getClass("C") == c);
+	assert(objc_getClass("D") == d);
+	assert(objc_getClass("E") == e);
+	objc_disposeClassPair(e);
+	assert(objc_getClass("E") == nil);
 
 	return 0;
 }

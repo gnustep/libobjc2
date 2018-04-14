@@ -692,6 +692,7 @@ void objc_disposeClassPair(Class cls)
 		LOCK_RUNTIME_FOR_SCOPE();
 		safe_remove_from_subclass_list(meta);
 		safe_remove_from_subclass_list(cls);
+		class_table_remove(cls);
 	}
 
 	// Free the method and ivar lists.

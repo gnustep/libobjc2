@@ -373,10 +373,17 @@ static inline BOOL objc_test_class_flag(struct objc_class *aClass,
 	return (aClass->info & (unsigned long)flag) == (unsigned long)flag;
 }
 
+
 /**
  * Adds a class to the class table.
  */
 void class_table_insert(Class class);
+
+/**
+ * Removes a class from the class table.  Must be called with the runtime lock
+ * held!
+ */
+void class_table_remove(Class cls);
 
 /**
  * Array of classes used for small objects.  Small objects are embedded in
