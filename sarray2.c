@@ -228,6 +228,8 @@ PRIVATE void SparseArrayDestroy(SparseArray * sarray)
 	free(sarray);
 }
 
+#if 0
+// Unused function, but helpful when debugging.
 PRIVATE int SparseArraySize(SparseArray *sarray)
 {
 	int size = 0;
@@ -249,3 +251,4 @@ PRIVATE int SparseArraySize(SparseArray *sarray)
 	}
 	return size;
 }
+#endif
