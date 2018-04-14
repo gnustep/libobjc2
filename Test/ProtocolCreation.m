@@ -88,7 +88,27 @@ int main(void)
 	assert(strcmp("T@,Voptional", property_getAttributes(*props)) == 0);
 
 
-	//objc_copyProtocolList
+	Protocol **list = objc_copyProtocolList(&count);
+	assert(count >= 4);
+	Protocol *expected[4] = {@protocol(Test2), @protocol(Test3), @protocol(Test4), p};
+	const char *expectedNames[4] = {"Test2", "Test3", "Test4", "Test"};
+	BOOL found[4];
+	for (unsigned i=0 ; i<count ; i++)
+	{
+		Protocol *f = list[i];
+		for (int j=0 ; j<4 ; j++)
+		{
+			if (strcmp(expectedNames[j], protocol_getName(f)) == 0)
+			{
+				assert(protocol_isEqual(f, expected[j]));
+				found[j] = YES;
+			}
+		}
+	}
+	for (int j=0 ; j<4 ; j++)
+	{
+		assert(found[j]);
+	}
 
 	return 0;
 }
