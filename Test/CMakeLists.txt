@@ -81,7 +81,7 @@ function(addtest_flags TEST_NAME FLAGS TEST_SOURCE)
 		LINKER_LANGUAGE C
 	)
 	set_property(TEST ${TEST_NAME} PROPERTY
-		ENVIRONMENT "LD_LIBRARY_PATH="
+		ENVIRONMENT "LD_LIBRARY_PATH=" "LLVM_PROFILE_FILE=${TEST_NAME}.profraw"
 	)
 	target_link_libraries(${TEST_NAME} objc)
 endfunction(addtest_flags)
