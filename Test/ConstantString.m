@@ -1,19 +1,10 @@
 #import "Test.h"
 #include <string.h>
 
-@interface NSConstantString : Test
-{
-	const char * const str;
-	const unsigned int len;
-}
-- (unsigned int)length;
-- (const char*)cString;
-@end
-
 @implementation NSConstantString
 - (unsigned int)length
 {
-	return len;
+	return length;
 }
 - (const char*)cString
 {

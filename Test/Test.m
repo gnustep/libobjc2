@@ -8,3 +8,5 @@
 #define SINGLE_FILE_TEST 1
 #endif
 #include "Test.h"
+
+@implementation NSConstantString @end

@@ -23,6 +23,27 @@ __attribute__((objc_root_class))
 #endif
 @end
 
+#ifdef __OBJC_GNUSTEP_RUNTIME_ABI__
+#	if __OBJC_GNUSTEP_RUNTIME_ABI__ >= 20
+#		define NEW_ABI
+#	endif
+#endif
+
+@interface NSConstantString : Test
+{
+#ifdef NEW_ABI
+	uint32_t flags;
+	uint32_t length;
+	uint32_t size;
+	uint32_t hash;
+	const char * const str;
+#else
+	const char * const str;
+	const unsigned int length;
+#endif
+}
+@end
+
 @interface NSAutoreleasePool : Test
 @end
 
