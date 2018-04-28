@@ -278,6 +278,17 @@ void __objc_load(struct objc_init *init)
 			class_registerAlias_np(*alias->alias, alias->alias_name);
 		}
 	}
+#if 0
+	// If future versions of the ABI need to do anything with constant strings,
+	// they may do so here.
+	for (struct nsstr *string = init->strings_begin ; string < init->strings_end ;
+	     string++)
+	{
+		if (string->isa)
+		{
+		}
+	}
+#endif
 	init->version = 0xffffffffffffffffULL;
 }
 
