@@ -25,14 +25,14 @@
  * pointer of the receiver and the message and the version of the slot to your
  * cached version.
  */
-struct objc_slot
+struct objc_slot2
 {
 	IMP method;
 } OBJC_NONPORTABLE;
 
 _Atomic(uint64_t) objc_method_cache_version;
 
-struct objc_slot_v1
+struct objc_slot
 {
 	/** The class to which this slot is attached (used internally).  */
 	Class owner;

@@ -22,7 +22,7 @@ _Static_assert(__builtin_offsetof(SparseArray, data) == DATA_OFFSET,
 		"Incorrect data offset for assembly");
 // Slots are now a public interface to part of the method structure, so make
 // sure that it's safe to use method and slot structures interchangeably.
-_Static_assert(__builtin_offsetof(struct objc_slot, method) == SLOT_OFFSET,
+_Static_assert(__builtin_offsetof(struct objc_slot2, method) == SLOT_OFFSET,
 		"Incorrect slot offset for assembly");
 _Static_assert(__builtin_offsetof(struct objc_method, imp) == SLOT_OFFSET,
 		"Incorrect slot offset for assembly");
@@ -49,7 +49,7 @@ static uint32_t dtable_depth = 8;
  */
 static Class ownerForMethod(Class cls, SEL sel)
 {
-	struct objc_slot *slot = objc_get_slot2(cls, sel, NULL);
+	struct objc_slot2 *slot = objc_get_slot2(cls, sel, NULL);
 	if (slot == NULL)
 	{
 		return Nil;

@@ -855,14 +855,14 @@ unsigned sel_copyTypedSelectors_np(const char *selName, SEL *const sels, unsigne
  * New ABI lookup function.  Receiver may be modified during lookup or proxy
  * forwarding and the sender may affect how lookup occurs.
  */
-extern struct objc_slot_v1 *objc_msg_lookup_sender(id *receiver, SEL selector, id sender)
+extern struct objc_slot *objc_msg_lookup_sender(id *receiver, SEL selector, id sender)
 	OBJC_NONPORTABLE OBJC_DEPRECATED;
 
 /**
  * Deprecated function for accessing a slot without going via any forwarding
  * mechanisms.
  */
-extern struct objc_slot_v1 *objc_get_slot(Class, SEL)
+extern struct objc_slot *objc_get_slot(Class, SEL)
 	OBJC_NONPORTABLE OBJC_DEPRECATED;
 
 /**
@@ -871,7 +871,7 @@ extern struct objc_slot_v1 *objc_get_slot(Class, SEL)
  * counter.  If this value is equal to `objc_method_cache_version` then the
  * slot is safe to reuse without performing another lookup.
  */
-extern struct objc_slot *objc_get_slot2(Class, SEL, uint64_t*)
+extern struct objc_slot2 *objc_get_slot2(Class, SEL, uint64_t*)
 	OBJC_NONPORTABLE;
 
 /**
@@ -880,7 +880,7 @@ extern struct objc_slot *objc_get_slot2(Class, SEL, uint64_t*)
  * counter.  If this value is equal to `objc_method_cache_version` then the
  * slot is safe to reuse without performing another lookup.
  */
-extern struct objc_slot *objc_slot_lookup_version(id *receiver, SEL selector, uint64_t*)
+extern struct objc_slot2 *objc_slot_lookup_version(id *receiver, SEL selector, uint64_t*)
 	OBJC_NONPORTABLE;
 
 /**

@@ -39,7 +39,7 @@ extern id (*objc_proxy_lookup)(id receiver, SEL op);
  * New runtime forwarding hook.  This is no longer used, but is retained to
  * prevent errors at link time.
  */
-extern struct objc_slot_v1 *(*__objc_msg_forward3)(id, SEL) OBJC_DEPRECATED;
+extern struct objc_slot *(*__objc_msg_forward3)(id, SEL) OBJC_DEPRECATED;
 /**
  * Forwarding hook.  Takes an object and a selector and returns a method that
  * handles the forwarding.
@@ -67,13 +67,13 @@ OBJC_HOOK Class (*_objc_class_for_boxing_foreign_exception)(int64_t exceptionCla
  * an exception or perform some other action.
  */
 extern IMP (*_objc_selector_type_mismatch2)(Class cls, 
-       SEL selector, struct objc_slot *result);
+       SEL selector, struct objc_slot2 *result);
 /**
  * Legacy hook for when selector types do not match.  This is only called
  * `_objc_selector_type_mismatch2` is not installed.
  */
-OBJC_HOOK struct objc_slot_v1 *(*_objc_selector_type_mismatch)(Class cls,
-       SEL selector, struct objc_slot_v1 *result) OBJC_DEPRECATED;
+OBJC_HOOK struct objc_slot *(*_objc_selector_type_mismatch)(Class cls,
+       SEL selector, struct objc_slot *result) OBJC_DEPRECATED;
 
 /**
  * Returns the object if it is not currently in the process of being
