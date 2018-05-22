@@ -40,11 +40,14 @@ PRIVATE void call_cxx_destruct(id obj)
 
 	while (cls)
 	{
-		if (cls->cxx_destruct)
-		{
-			cls->cxx_destruct(obj, cxx_destruct);
-		}
+		// If we're deallocating a class with a hidden class, then the
+		// `.cxx_destruct` method may deallocate the class.
+		Class currentClass = cls;
 		cls = cls->super_class;
+		if (currentClass->cxx_destruct)
+		{
+			currentClass->cxx_destruct(obj, cxx_destruct);
+		}
 	}
 }
 
