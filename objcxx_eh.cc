@@ -2,18 +2,23 @@
 #include <stdio.h>
 #include "dwarf_eh.h"
 #include "objcxx_eh.h"
-#include <exception>
 
-extern "C" 
-{
 #include "objc/runtime.h"
-};
+
 namespace __cxxabiv1
 {
 	struct __class_type_info;
 }
 
 using __cxxabiv1::__class_type_info;
+
+// Define some C++ ABI types here, rather than including them.  This prevents
+// conflicts with the libstdc++ headers, which expose only a subset of the
+// type_info class (the part required for standards compliance, not the
+// implementation details).
+
+typedef void (*unexpected_handler)();
+typedef void (*terminate_handler)();
 
 namespace std
 {
