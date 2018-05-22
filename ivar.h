@@ -23,6 +23,10 @@ struct objc_ivar
 	 */
 	int        *offset;
 	/**
+	 * The size of this ivar.  Note that the current ABI limits ivars to 4GB.
+	 */
+	uint32_t    size;
+	/**
 	 * Flags for this instance variable.
 	 */
 	uint32_t    flags;
