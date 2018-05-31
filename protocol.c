@@ -206,6 +206,7 @@ static BOOL init_protocols(struct objc_protocol_list *protocols)
 		struct objc_protocol *aProto = protocols->list[i];
 		// Don't initialise a protocol twice
 		if ((aProto->isa == protocol_class_gcc) ||
+		    (aProto->isa == protocol_class_gsv1) ||
 		    (aProto->isa == protocol_class_gsv2))
 		{
 			continue;
@@ -222,12 +223,16 @@ static BOOL init_protocols(struct objc_protocol_list *protocols)
 				abort();
 #ifdef OLDABI_COMPAT
 			case protocol_version_gcc:
-				protocols->list[i] = aProto = objc_upgrade_protocol_gcc((struct objc_protocol_gcc *)aProto);
+				protocols->list[i] = objc_upgrade_protocol_gcc((struct objc_protocol_gcc *)aProto);
 				assert(aProto->isa == protocol_class_gcc);
+				assert(protocols->list[i]->isa == protocol_class_gsv2);
+				aProto = protocols->list[i];
 				break;
 			case protocol_version_gsv1:
-				protocols->list[i] = aProto = objc_upgrade_protocol_gsv1((struct objc_protocol_gsv1 *)aProto);
-				assert(aProto->isa == protocol_class_gsv2);
+				protocols->list[i] = objc_upgrade_protocol_gsv1((struct objc_protocol_gsv1 *)aProto);
+				assert(aProto->isa == protocol_class_gsv1);
+				assert(protocols->list[i]->isa == protocol_class_gsv2);
+				aProto = protocols->list[i];
 				break;
 #endif
 			case protocol_version_gsv2:

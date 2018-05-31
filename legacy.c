@@ -400,7 +400,7 @@ PRIVATE struct objc_protocol *objc_upgrade_protocol_gsv1(struct objc_protocol_gs
 	p->class_methods = (struct objc_protocol_method_description_list_gcc*)n->class_methods;
 	p->properties = (struct objc_property_list_gsv1*)n->properties;
 	p->optional_properties = (struct objc_property_list_gsv1*)n->optional_properties;
-	p->isa = objc_getClass("Protocol");
+	p->isa = objc_getClass("ProtocolGSv1");
 	assert(p->isa);
 	return n;
 }
