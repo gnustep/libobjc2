@@ -13,6 +13,7 @@ endmacro(install_symlink)
 set(CMAKE_C_FLAGS_DEBUG "-g -O0 -fno-inline ${CMAKE_C_FLAGS_DEBUG}")
 set(CMAKE_C_FLAGS_RELEASE "-O3 ${CMAKE_C_FLAGS_RELEASE}")
 set(CMAKE_C_FLAGS "-std=gnu99 ${CMAKE_C_FLAGS}")
+set(CMAKE_CXX_FLAGS "-std=c++11 -stdlib=libc++ ${CMAKE_CXX_FLAGS}")
 
 set(libobjc_VERSION 4.6)
 
