@@ -212,14 +212,14 @@ static const long weak_mask = ((size_t)1)<<((sizeof(size_t)*8)-1);
  */
 static const long refcount_mask = ~weak_mask;
 
-size_t object_getRetainCount_np(id obj)
+PUBLIC size_t object_getRetainCount_np(id obj)
 {
 	uintptr_t *refCount = ((uintptr_t*)obj) - 1;
 	uintptr_t refCountVal = __sync_fetch_and_add(refCount, 0);
 	return (((size_t)refCountVal) & refcount_mask) + 1;
 }
 
-id objc_retain_fast_np(id obj)
+PUBLIC id objc_retain_fast_np(id obj)
 {
 	uintptr_t *refCount = ((uintptr_t*)obj) - 1;
 	uintptr_t refCountVal = __sync_fetch_and_add(refCount, 0);
@@ -292,7 +292,7 @@ static inline id retain(id obj)
 	return [obj retain];
 }
 
-BOOL objc_release_fast_no_destroy_np(id obj)
+PUBLIC BOOL objc_release_fast_no_destroy_np(id obj)
 {
 	uintptr_t *refCount = ((uintptr_t*)obj) - 1;
 	uintptr_t refCountVal = __sync_fetch_and_add(refCount, 0);
@@ -330,7 +330,7 @@ BOOL objc_release_fast_no_destroy_np(id obj)
 	return NO;
 }
 
-void objc_release_fast_np(id obj)
+PUBLIC void objc_release_fast_np(id obj)
 {
 	if (objc_release_fast_no_destroy_np(obj))
 	{
@@ -420,7 +420,7 @@ static inline id autorelease(id obj)
 	return [obj autorelease];
 }
 
-unsigned long objc_arc_autorelease_count_np(void)
+PUBLIC unsigned long objc_arc_autorelease_count_np(void)
 {
 	struct arc_tls* tls = getARCThreadData();
 	unsigned long count = 0;
@@ -434,7 +434,7 @@ unsigned long objc_arc_autorelease_count_np(void)
 	}
 	return count;
 }
-unsigned long objc_arc_autorelease_count_for_object_np(id obj)
+PUBLIC unsigned long objc_arc_autorelease_count_for_object_np(id obj)
 {
 	struct arc_tls* tls = getARCThreadData();
 	unsigned long count = 0;
@@ -488,7 +488,7 @@ void *objc_autoreleasePoolPush(void)
 	if (0 == NewAutoreleasePool) { return NULL; }
 	return NewAutoreleasePool(AutoreleasePool, SELECTOR(new));
 }
-void objc_autoreleasePoolPop(void *pool)
+PUBLIC void objc_autoreleasePoolPop(void *pool)
 {
 	if (useARCAutoreleasePool)
 	{
@@ -511,7 +511,7 @@ void objc_autoreleasePoolPop(void *pool)
 	}
 }
 
-id objc_autorelease(id obj)
+PUBLIC id objc_autorelease(id obj)
 {
 	if (nil != obj)
 	{
@@ -520,7 +520,7 @@ id objc_autorelease(id obj)
 	return obj;
 }
 
-id objc_autoreleaseReturnValue(id obj)
+PUBLIC id objc_autoreleaseReturnValue(id obj)
 {
 	if (!useARCAutoreleasePool) 
 	{
@@ -535,7 +535,7 @@ id objc_autoreleaseReturnValue(id obj)
 	return objc_autorelease(obj);
 }
 
-id objc_retainAutoreleasedReturnValue(id obj)
+PUBLIC id objc_retainAutoreleasedReturnValue(id obj)
 {
 	// If the previous object was released  with objc_autoreleaseReturnValue()
 	// just before return, then it will not have actually been autoreleased.
@@ -567,36 +567,36 @@ id objc_retainAutoreleasedReturnValue(id obj)
 	return objc_retain(obj);
 }
 
-id objc_retain(id obj)
+PUBLIC id objc_retain(id obj)
 {
 	if (nil == obj) { return nil; }
 	return retain(obj);
 }
 
-id objc_retainAutorelease(id obj)
+PUBLIC id objc_retainAutorelease(id obj)
 {
 	return objc_autorelease(objc_retain(obj));
 }
 
-id objc_retainAutoreleaseReturnValue(id obj)
+PUBLIC id objc_retainAutoreleaseReturnValue(id obj)
 {
 	if (nil == obj) { return obj; }
 	return objc_autoreleaseReturnValue(retain(obj));
 }
 
 
-id objc_retainBlock(id b)
+PUBLIC id objc_retainBlock(id b)
 {
 	return _Block_copy(b);
 }
 
-void objc_release(id obj)
+PUBLIC void objc_release(id obj)
 {
 	if (nil == obj) { return; }
 	release(obj);
 }
 
-id objc_storeStrong(id *addr, id value)
+PUBLIC id objc_storeStrong(id *addr, id value)
 {
 	value = objc_retain(value);
 	id oldValue = *addr;
@@ -697,7 +697,7 @@ static inline BOOL weakRefRelease(WeakRef *ref)
 
 void* block_load_weak(void *block);
 
-id objc_storeWeak(id *addr, id obj)
+PUBLIC id objc_storeWeak(id *addr, id obj)
 {
 	LOCK_FOR_SCOPE(&weakRefLock);
 	WeakRef *oldRef;
@@ -787,7 +787,7 @@ id objc_storeWeak(id *addr, id obj)
 	return obj;
 }
 
-BOOL objc_delete_weak_refs(id obj)
+PUBLIC BOOL objc_delete_weak_refs(id obj)
 {
 	LOCK_FOR_SCOPE(&weakRefLock);
 	if (objc_test_class_flag(classForObject(obj), objc_class_flag_fast_arc))
@@ -797,7 +797,7 @@ BOOL objc_delete_weak_refs(id obj)
 		// have done so in between this thread's decrementing the reference
 		// count and its acquiring the lock.  In this case, report failure.
 		uintptr_t *refCount = ((uintptr_t*)obj) - 1;
-		if ((long)((__sync_fetch_and_add(refCount, 0) & refcount_mask)) < 0)
+		if ((long)((__sync_fetch_and_add(refCount, 0) & refcount_mask)) >= 0)
 		{
 			return NO;
 		}
@@ -805,13 +805,15 @@ BOOL objc_delete_weak_refs(id obj)
 	WeakRef *oldRef = weak_ref_table_get(weakRefs, obj);
 	if (0 != oldRef)
 	{
-		// Zero the object pointer.  This prevents any other weak
-		// accesses from loading from this.
-		oldRef->obj = nil;
 		// The address of obj is likely to be reused, so remove it from
 		// the table so that we don't accidentally alias weak
 		// references
 		weak_ref_remove(weakRefs, obj);
+		// Zero the object pointer.  This prevents any other weak
+		// accesses from loading from this.  This must be done after
+		// removing the ref from the table, because the compare operation
+		// tests the obj field.
+		oldRef->obj = nil;
 		// If the weak reference count is zero, then we should have
 		// already removed this.
 		assert(oldRef->weak_count > 0);
@@ -819,7 +821,7 @@ BOOL objc_delete_weak_refs(id obj)
 	return YES;
 }
 
-id objc_loadWeakRetained(id* addr)
+PUBLIC id objc_loadWeakRetained(id* addr)
 {
 	LOCK_FOR_SCOPE(&weakRefLock);
 	id obj;
@@ -857,12 +859,12 @@ id objc_loadWeakRetained(id* addr)
 	return objc_retain(obj);
 }
 
-id objc_loadWeak(id* object)
+PUBLIC id objc_loadWeak(id* object)
 {
 	return objc_autorelease(objc_loadWeakRetained(object));
 }
 
-void objc_copyWeak(id *dest, id *src)
+PUBLIC void objc_copyWeak(id *dest, id *src)
 {
 	// Don't retain or release.  While the weak ref lock is held, we know that
 	// the object can't be deallocated, so we just move the value and update
@@ -884,7 +886,7 @@ void objc_copyWeak(id *dest, id *src)
 	}
 }
 
-void objc_moveWeak(id *dest, id *src)
+PUBLIC void objc_moveWeak(id *dest, id *src)
 {
 	// Don't retain or release.  While the weak ref lock is held, we know that
 	// the object can't be deallocated, so we just move the value and update
@@ -902,12 +904,12 @@ void objc_moveWeak(id *dest, id *src)
 	}
 }
 
-void objc_destroyWeak(id* obj)
+PUBLIC void objc_destroyWeak(id* obj)
 {
 	objc_storeWeak(obj, nil);
 }
 
-id objc_initWeak(id *object, id value)
+PUBLIC id objc_initWeak(id *object, id value)
 {
 	*object = nil;
 	return objc_storeWeak(object, value);

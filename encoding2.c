@@ -8,6 +8,10 @@
 #include "method.h"
 #include "visibility.h"
 
+#ifdef max
+#	undef max
+#endif
+
 size_t objc_alignof_type (const char *type);
 
 // It would be so nice if this works, but in fact it returns nonsense:

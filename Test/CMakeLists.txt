@@ -3,6 +3,16 @@
 # the installed version
 
 
+# On Windows, CMake adds /TC to the clang-cl flags and doesn't provide a way to
+# tell it not to.  We fix this by telling clang do disregard that option,
+# unconditionally (which means that it still defaults to C for .c files).
+set(ENV{CCC_OVERRIDE_OPTIONS} "x/TC x/TP")
+set(INCREMENTAL " ")
+if (MSVC)
+	set(CMAKE_EXE_LINKER_FLAGS "/DEBUG /INCREMENTAL:NO ${CMAKE_EXE_LINKER_FLAGS}")
+	set(INCREMENTAL "/INCREMENTAL:NO")
+endif ()
+
 # List of single-file tests.
 set(TESTS
 	alias.m
@@ -14,10 +24,8 @@ set(TESTS
 	BlockImpTest.m
 	BlockTest_arc.m
 	ConstantString.m
-	BoxedForeignException.m
 	Category.m
 	ExceptionTest.m
-	ForeignException.m
 	Forward.m
 	ManyManySelectors.m
 	NestedExceptions.m
@@ -43,24 +51,33 @@ set(TESTS
 	setSuperclass.m
 )
 
+if (WIN32)
+else ()
+	list(APPEND TESTS
+	BoxedForeignException.m
+	ForeignException.m
+	)
+endif ()
+
 # List of single-file tests that won't work with the legacy ABI and so
 # shouldn't be run in legacy mode.
 set(NEW_TESTS
 	category_properties.m
 )
 
+remove_definitions(-D__OBJC_RUNTIME_INTERNAL__=1)
 
 add_library(test_runtime_legacy OBJECT Test.m)
 set_target_properties(test_runtime_legacy PROPERTIES
 	INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}"
-	COMPILE_FLAGS "-fblocks -fobjc-runtime=gnustep-1.7"
+	COMPILE_FLAGS "-Xclang -fblocks -fobjc-runtime=gnustep-1.7"
 	LINKER_LANGUAGE C
 )
 
 add_library(test_runtime OBJECT Test.m)
 set_target_properties(test_runtime PROPERTIES
 	INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}"
-	COMPILE_FLAGS "-fblocks -fobjc-runtime=gnustep-2.0"
+	COMPILE_FLAGS "-Xclang -fblocks -fobjc-runtime=gnustep-2.0"
 	LINKER_LANGUAGE C
 )
 
@@ -71,14 +88,14 @@ function(addtest_flags TEST_NAME FLAGS TEST_SOURCE)
 	if (${TEST_NAME} MATCHES ".*_arc")
 		# Only compile the main file with ARC
 		set_source_files_properties(${TEST_SOURCE}
-			COMPILE_FLAGS "-fobjc-arc")
+			COMPILE_FLAGS "-Xclang -fobjc-arc")
 	endif()
 	add_executable(${TEST_NAME} ${TEST_SOURCE})
 	add_test(${TEST_NAME} ${TEST_NAME})
 	set(ARC "")
 	set_target_properties(${TEST_NAME} PROPERTIES
 		INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}"
-		COMPILE_FLAGS "-fblocks ${FLAGS}"
+		COMPILE_FLAGS "-Xclang -fblocks ${FLAGS}"
 		LINKER_LANGUAGE C
 	)
 	set_property(TEST ${TEST_NAME} PROPERTY
@@ -114,5 +131,5 @@ endforeach()
 addtest_variants("CXXExceptions" "CXXException.m;CXXException.cc" true)
 addtest_variants("ForwardDeclareProtocolAccess" "ForwardDeclareProtocolAccess.m;ForwardDeclareProtocol.m" true)
 if (ENABLE_OBJCXX)
-addtest_variants(ObjCXXEHInterop "ObjCXXEHInterop.mm;ObjCXXEHInterop.m" true)
+	addtest_variants(ObjCXXEHInterop "ObjCXXEHInterop.mm;ObjCXXEHInterop.m" true)
 endif()

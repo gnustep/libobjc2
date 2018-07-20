@@ -1,14 +1,14 @@
-#import "objc/runtime.h"
-#import "class.h"
-#import "loader.h"
-#import "lock.h"
-#import "objc/blocks_runtime.h"
-#import "dtable.h"
+#include "objc/runtime.h"
+#include "class.h"
+#include "loader.h"
+#include "lock.h"
+#include "objc/blocks_runtime.h"
+#include "dtable.h"
 #include <assert.h>
 
-struct objc_class _NSConcreteGlobalBlock;
-struct objc_class _NSConcreteStackBlock;
-struct objc_class _NSConcreteMallocBlock;
+PUBLIC struct objc_class _NSConcreteGlobalBlock;
+PUBLIC struct objc_class _NSConcreteStackBlock;
+PUBLIC struct objc_class _NSConcreteMallocBlock;
 
 static struct objc_class _NSConcreteGlobalBlockMeta;
 static struct objc_class _NSConcreteStackBlockMeta;
@@ -40,6 +40,7 @@ static void createNSBlockSubclass(Class superclass, Class newClass,
 #define NEW_CLASS(super, sub) \
 	createNSBlockSubclass(super, &sub, &sub ## Meta, #sub)
 
+PUBLIC
 BOOL objc_create_block_classes_as_subclasses_of(Class super)
 {
 	if (_NSBlock.super_class != NULL) { return NO; }

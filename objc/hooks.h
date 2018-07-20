@@ -1,6 +1,7 @@
 #if defined(__clang__) && !defined(__OBJC_RUNTIME_INTERNAL__)
 #pragma clang system_header
 #endif
+#include "objc-visibility.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -13,7 +14,7 @@ extern "C" {
 
 
 #ifndef OBJC_HOOK
-#define OBJC_HOOK extern
+#define OBJC_HOOK PUBLIC extern
 #endif
 struct objc_category;
 /**
@@ -34,17 +35,17 @@ OBJC_HOOK void (*_objc_load_callback)(Class cls, struct objc_category *category)
  * The hook used for fast proxy lookups.  This takes an object and a selector
  * and returns the instance that the message should be forwarded to.
  */
-extern id (*objc_proxy_lookup)(id receiver, SEL op);
+OBJC_HOOK id (*objc_proxy_lookup)(id receiver, SEL op);
 /**
  * New runtime forwarding hook.  This is no longer used, but is retained to
  * prevent errors at link time.
  */
-extern struct objc_slot *(*__objc_msg_forward3)(id, SEL) OBJC_DEPRECATED;
+OBJC_HOOK struct objc_slot *(*__objc_msg_forward3)(id, SEL) OBJC_DEPRECATED;
 /**
  * Forwarding hook.  Takes an object and a selector and returns a method that
  * handles the forwarding.
  */
-extern IMP (*__objc_msg_forward2)(id, SEL);
+OBJC_HOOK IMP (*__objc_msg_forward2)(id, SEL);
 /**
  * Hook defined for handling unhandled exceptions.  If the unwind library
  * reaches the end of the stack without finding a handler then this hook is
@@ -66,7 +67,7 @@ OBJC_HOOK Class (*_objc_class_for_boxing_foreign_exception)(int64_t exceptionCla
  * receiver.  This should return the slot to use instead, although it may throw
  * an exception or perform some other action.
  */
-extern IMP (*_objc_selector_type_mismatch2)(Class cls, 
+OBJC_HOOK IMP (*_objc_selector_type_mismatch2)(Class cls, 
        SEL selector, struct objc_slot2 *result);
 /**
  * Legacy hook for when selector types do not match.  This is only called
@@ -108,7 +109,7 @@ typedef IMP (*objc_tracing_hook)(id, SEL, IMP, int, void*);
 /**
  * Registers a tracing hook for a specified selector.  
  */
-int objc_registerTracingHook(SEL, objc_tracing_hook);
+PUBLIC int objc_registerTracingHook(SEL, objc_tracing_hook);
 
 #ifdef __cplusplus
 }

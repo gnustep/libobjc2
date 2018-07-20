@@ -42,7 +42,7 @@ static void *_HeapBlockByRef = (void*)1;
 /**
  * Returns the Objective-C type encoding for the block.
  */
-const char *block_getType_np(const void *b)
+PUBLIC const char *block_getType_np(const void *b)
 {
 	const struct Block_layout *block = b;
 	if ((NULL == block) || !(block->flags & BLOCK_HAS_SIGNATURE))
@@ -111,7 +111,7 @@ static int cas(void *ptr, void *old, void *new)
  * the other choices which are mutually exclusive.  Only in a Block copy helper
  * will one see BLOCK_FIELD_IS_BYREF.
  */
-void _Block_object_assign(void *destAddr, const void *object, const int flags)
+PUBLIC void _Block_object_assign(void *destAddr, const void *object, const int flags)
 {
 	//printf("Copying %x to %x with flags %x\n", object, destAddr, flags);
 	// FIXME: Needs to be implemented
@@ -190,7 +190,7 @@ void _Block_object_assign(void *destAddr, const void *object, const int flags)
  * The same flags used in the copy helper should be used for each call
  * generated to this function:
  */
-void _Block_object_dispose(const void *object, const int flags)
+PUBLIC void _Block_object_dispose(const void *object, const int flags)
 {
 	// FIXME: Needs to be implemented
 	//if(flags & BLOCK_FIELD_IS_WEAK)
@@ -235,7 +235,7 @@ void _Block_object_dispose(const void *object, const int flags)
 
 
 // Copy a block to the heap if it's still on the stack or increments its retain count.
-void *_Block_copy(const void *src)
+PUBLIC void *_Block_copy(const void *src)
 {
 	if (NULL == src) { return NULL; }
 	struct Block_layout *self = (struct Block_layout*)src;
@@ -269,7 +269,7 @@ void *_Block_copy(const void *src)
 }
 
 // Release a block and frees the memory when the retain count hits zero.
-void _Block_release(const void *src)
+PUBLIC void _Block_release(const void *src)
 {
 	if (NULL == src) { return; }
 	struct Block_layout *self = (struct Block_layout*)src;

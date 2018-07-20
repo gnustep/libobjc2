@@ -1,7 +1,11 @@
 #include "Test.h"
 #include <stdio.h>
 #include <string.h>
-#include <unistd.h>
+#ifdef _WIN32
+#	define sleep Sleep
+#else
+#	include <unistd.h>
+#endif
 
 static int exitStatus = 0;
 
@@ -125,10 +129,11 @@ id exceptionObj = @"Exception";
 	@catch (id e)
 	{
 		test(e == exceptionObj);
-	}
-	@finally
-	{
 		return YES;
+	}
+	@catch(...)
+	{
+		return NO;
 	}
 	return NO;
 }

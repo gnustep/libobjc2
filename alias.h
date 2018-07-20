@@ -24,4 +24,4 @@
 */
 #include "objc/runtime.h"
 
-Class alias_getClass(const char *alias_name);
+PUBLIC Class alias_getClass(const char *alias_name);

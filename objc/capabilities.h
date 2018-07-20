@@ -136,6 +136,7 @@ extern "C" {
  * Run time feature test.  This function returns 1 if the runtime supports the
  * specified feature or 0 if it does not.
  */
+PUBLIC
 int objc_test_capability(int x) OBJC_NONPORTABLE;
 #ifdef __cplusplus
 }

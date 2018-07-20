@@ -34,7 +34,7 @@ static const int32_t caps =
 #endif
 	0;
 
-int objc_test_capability(int x)
+PUBLIC int objc_test_capability(int x)
 {
 	if (x >= 32) { return 0; }
 	if (caps & (1<<x)) { return 1; }

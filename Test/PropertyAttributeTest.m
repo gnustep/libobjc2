@@ -39,7 +39,7 @@ int main()
 	assert(strcmp(property_getAttributes(property), "Ti,VvarName") == 0);
 	free(properties);
 
-	objc_property_t *clsproperties = class_copyPropertyList(object_getClass([helloclass class]), &outCount);
+	properties = class_copyPropertyList(object_getClass([helloclass class]), &outCount);
 	assert(outCount == 1);
 	property = properties[0];
 	assert(strcmp(property_getName(property), "clsProp") == 0);

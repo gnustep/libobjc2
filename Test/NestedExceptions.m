@@ -26,6 +26,7 @@ int main(void)
 		assert(x == e1);
 		@try {
 			a = e2;
+			@throw a;
 		}
 		@catch (id y)
 		{

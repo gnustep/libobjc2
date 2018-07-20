@@ -1,6 +1,24 @@
 
-.macro MSGSEND receiver, sel
-	.cfi_startproc                        # Start emitting unwind data.  We
+#ifdef _WIN64
+#	define START_PROC(x) .seh_proc x
+#	define END_PROC(x) .seh_endproc
+#	define FRAME_OFFSET(x) .seh_stackalloc x
+#	define FIRST_ARGUMENT_STR "%rcx"
+#	define FIRST_ARGUMENT %rcx
+#	define SECOND_ARGUMENT %rdx
+#	define THIRD_ARGUMENT %r8
+#else
+#	define START_PROC(x) .cfi_startproc
+#	define END_PROC(x) .cfi_endproc
+#	define FRAME_OFFSET(x) .cfi_adjust_cfa_offset x
+#	define FIRST_ARGUMENT_STR "%rdi"
+#	define FIRST_ARGUMENT %rdi
+#	define SECOND_ARGUMENT %rsi
+#	define THIRD_ARGUMENT %rdx
+#endif
+
+.macro MSGSEND fnname receiver, sel
+	START_PROC(\fnname)                   # Start emitting unwind data.  We
 	                                      # don't actually care about any of
 	                                      # the stuff except the slow call,
 	                                      # because that's the only one that
@@ -202,26 +220,26 @@
 
 #rdi rsi rdx
 	# We're (potentially) modifying the self argument with the lookup, so we don't want to be 
-.ifc "\receiver", "%rdi"
-	push  %rdi
-	mov   %rsp, %rdi
-	push  %rsi                           # Save _cmd (not preserved across calls)
-	push  %rdx
+.ifc "\receiver", FIRST_ARGUMENT_STR
+	push  FIRST_ARGUMENT
+	mov   %rsp, FIRST_ARGUMENT
+	push  SECOND_ARGUMENT                # Save _cmd (not preserved across calls)
+	push  THIRD_ARGUMENT
 .else
-	push  %rdi                           # Save the sret pointer
-	push  %rsi                           # Save self where it can be modified
-	mov   %rsp, %rdi
-	push  %rdx
-	mov   %rdx, %rsi                     # move _cmd to where the callee expects it to be
+	push  FIRST_ARGUMENT                 # Save the sret pointer
+	push  SECOND_ARGUMENT                # Save self where it can be modified
+	mov   %rsp, FIRST_ARGUMENT
+	push  THIRD_ARGUMENT
+	mov   THIRD_ARGUMENT, SECOND_ARGUMENT # move _cmd to where the callee expects it to be
 .endif
 
-	.cfi_adjust_cfa_offset 0xD8
+	FRAME_OFFSET(0xD8)
 	call  CDECL(slowMsgLookup)           # Call the slow lookup function
 	mov   %rax, %r10                     # Load the returned IMP
 
-	pop   %rdx
-	pop   %rsi
-	pop   %rdi
+	pop   THIRD_ARGUMENT
+	pop   SECOND_ARGUMENT
+	pop   FIRST_ARGUMENT
 
 	movups	0x80(%rsp), %xmm0
 	movups	0x70(%rsp), %xmm1
@@ -244,16 +262,43 @@
 	lea   CDECL(SmallObjectClasses)(%rip), %r11
 	mov   (%r11, %r10, 8), %r10
 	jmp   1b 
-	.cfi_endproc
+	END_PROC(\fnname)
 .endm
+#ifdef _WIN64
+.text
+.def objc_msgSend;
+.scl 2;
+.type 32;
+.endef
+.def objc_msgSend_fpret;
+.scl 2;
+.type 32;
+.endef
+.def objc_msgSend_stret;
+.scl 2;
+.type 32;
+.endef
+.globl CDECL(objc_msgSend_fpret)
+TYPE_DIRECTIVE(CDECL(objc_msgSend_fpret), @function)
+.globl CDECL(objc_msgSend)
+TYPE_DIRECTIVE(CDECL(objc_msgSend), @function)
+CDECL(objc_msgSend_fpret):
+CDECL(objc_msgSend):
+	MSGSEND objc_msgSend, %rcx, %rdx
+.globl CDECL(objc_msgSend_stret)
+TYPE_DIRECTIVE(CDECL(objc_msgSend_stret), @function)
+CDECL(objc_msgSend_stret):
+	MSGSEND objc_msgSend_stret, %rdx, %r8
+#else
 .globl CDECL(objc_msgSend)
 TYPE_DIRECTIVE(CDECL(objc_msgSend), @function)
 .globl CDECL(objc_msgSend_fpret)
 TYPE_DIRECTIVE(CDECL(objc_msgSend_fpret), @function)
 CDECL(objc_msgSend_fpret):
 CDECL(objc_msgSend):
-	MSGSEND %rdi, %rsi
+	MSGSEND objc_msgSend, %rdi, %rsi
 .globl CDECL(objc_msgSend_stret)
 TYPE_DIRECTIVE(CDECL(objc_msgSend_stret), @function)
 CDECL(objc_msgSend_stret):
-	MSGSEND %rsi, %rdx
+	MSGSEND objc_msgSend_stret, %rsi, %rdx
+#endif

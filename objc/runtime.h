@@ -1,6 +1,7 @@
 #if defined(__clang__) && !defined(__OBJC_RUNTIME_INTERNAL__)
 #pragma clang system_header
 #endif
+#include "objc-visibility.h"
 
 #ifndef __LIBOBJC_RUNTIME_H_INCLUDED__
 #define __LIBOBJC_RUNTIME_H_INCLUDED__
@@ -124,7 +125,7 @@ typedef struct objc_method *Method;
 #	ifdef STRICT_APPLE_COMPATIBILITY
 typedef signed char BOOL;
 #	else
-#		ifdef __vxworks
+#		if defined(__vxworks) || defined(_WIN32)
 typedef  int BOOL;
 #		else
 typedef unsigned char BOOL;
@@ -224,6 +225,7 @@ typedef struct
  * registered by the runtime.  The alignment must be the base-2 logarithm of
  * the alignment requirement and the types should be an Objective-C type encoding.
  */
+PUBLIC
 BOOL class_addIvar(Class cls,
                    const char *name,
                    size_t size,
@@ -233,11 +235,13 @@ BOOL class_addIvar(Class cls,
 /**
  * Adds a method to the class.
  */
+PUBLIC
 BOOL class_addMethod(Class cls, SEL name, IMP imp, const char *types);
 
 /**
  * Adds a protocol to the class.
  */
+PUBLIC
 BOOL class_addProtocol(Class cls, Protocol *protocol);
 
 /**
@@ -245,6 +249,7 @@ BOOL class_addProtocol(Class cls, Protocol *protocol);
  * name are regarded as equivalent, even if they have different methods.  This
  * behaviour will change in a future version.
  */
+PUBLIC
 BOOL class_conformsToProtocol(Class cls, Protocol *protocol);
 
 /**
@@ -252,6 +257,7 @@ BOOL class_conformsToProtocol(Class cls, Protocol *protocol);
  * the outCount argument is set to the number of instance variables returned.
  * The caller is responsible for freeing the returned buffer.
  */
+PUBLIC
 Ivar* class_copyIvarList(Class cls, unsigned int *outCount);
 
 /**
@@ -259,6 +265,7 @@ Ivar* class_copyIvarList(Class cls, unsigned int *outCount);
  * outCount argument is set to the number of methods returned.  The caller is
  * responsible for freeing the returned buffer.
  */
+PUBLIC
 Method * class_copyMethodList(Class cls, unsigned int *outCount);
 
 /**
@@ -266,6 +273,7 @@ Method * class_copyMethodList(Class cls, unsigned int *outCount);
  * the outCount argument is set to the number of declared properties returned.
  * The caller is responsible for freeing the returned buffer.
  */
+PUBLIC
 objc_property_t* class_copyPropertyList(Class cls, unsigned int *outCount);
 
 /**
@@ -273,11 +281,13 @@ objc_property_t* class_copyPropertyList(Class cls, unsigned int *outCount);
  * outCount argument is set to the number of protocols returned.  The caller is
  * responsible for freeing the returned buffer.
  */
+PUBLIC
 Protocol *__unsafe_unretained* class_copyProtocolList(Class cls, unsigned int *outCount);
 
 /**
  * Creates an instance of this class, allocating memory using malloc.
  */
+PUBLIC
 id class_createInstance(Class cls, size_t extraBytes);
 
 /**
@@ -285,6 +295,7 @@ id class_createInstance(Class cls, size_t extraBytes);
  * class.  This is an opaque data type and must be accessed with the method_*()
  * family of functions.
  */
+PUBLIC
 Method class_getClassMethod(Class aClass, SEL aSelector);
 
 /**
@@ -292,6 +303,7 @@ Method class_getClassMethod(Class aClass, SEL aSelector);
  * this class.  This is an opaque data type and must be accessed with the
  * ivar_*() family of functions.
  */
+PUBLIC
 Ivar class_getClassVariable(Class cls, const char* name);
 
 /**
@@ -299,6 +311,7 @@ Ivar class_getClassVariable(Class cls, const char* name);
  * in this class.  This is an opaque data type and must be accessed with the
  * method_*() family of functions.
  */
+PUBLIC
 Method class_getInstanceMethod(Class aClass, SEL aSelector);
 
 /**
@@ -306,6 +319,7 @@ Method class_getInstanceMethod(Class aClass, SEL aSelector);
  * class's superclasses must be loaded before this call, or the result is
  * undefined with the non-fragile ABI.
  */
+PUBLIC
 size_t class_getInstanceSize(Class cls);
 
 /**
@@ -313,22 +327,26 @@ size_t class_getInstanceSize(Class cls);
  * returning a pointer to the instance variable definition or a null
  * pointer if no instance variable of that name was found.
  */
+PUBLIC
 Ivar class_getInstanceVariable(Class cls, const char* name);
 
 /**
  * Sets the object value of a specified instance variable.
  */
+PUBLIC
 void object_setIvar(id object, Ivar ivar, id value);
 /**
  * Sets a named instance variable to the value specified by *value.  Note that
  * the instance variable must be a pointer-sized quantity.
  */
+PUBLIC
 Ivar object_setInstanceVariable(id obj, const char *name, void *value);
 
 /**
  * Returns the value of the named instance variable.  This should not be used
  * with instance variables that are not pointers.
  */
+PUBLIC
 id object_getIvar(id object, Ivar ivar);
 
 /**
@@ -337,6 +355,7 @@ id object_getIvar(id object, Ivar ivar);
  *
  * Note that the instance variable must be a pointer-sized quantity.
  */
+PUBLIC
 Ivar object_getInstanceVariable(id obj, const char *name, void **outValue);
 
 /**
@@ -344,54 +363,62 @@ Ivar object_getInstanceVariable(id obj, const char *name, void **outValue);
  * the receiver does not have a method corresponding to this message then this
  * function may return a runtime function that performs forwarding.
  */
+PUBLIC
 IMP class_getMethodImplementation(Class cls, SEL name);
 
 /**
  * Identical to class_getMethodImplementation().
  */
+PUBLIC
 IMP class_getMethodImplementation_stret(Class cls, SEL name);
 
 /**
  * Returns the name of the class.  This string is owned by the runtime and is
  * valid for (at least) as long as the class remains loaded.
  */
+PUBLIC
 const char * class_getName(Class cls);
 
 /**
  * Retrieves metadata about the property with the specified name.
  */
+PUBLIC
 objc_property_t class_getProperty(Class cls, const char *name);
 
 /**
  * Returns the superclass of the specified class.
  */
+PUBLIC
 Class class_getSuperclass(Class cls);
 
 /**
  * Returns the version of the class.  Currently, the class version is not used
  * inside the runtime at all, however it may be used for the developer-mode ABI.
  */
+PUBLIC
 int class_getVersion(Class theClass);
 
 /**
  * Sets the version for this class.
  */
+PUBLIC
 void class_setVersion(Class theClass, int version);
 
-OBJC_GNUSTEP_RUNTIME_UNSUPPORTED("Weak instance variables")
+PUBLIC OBJC_GNUSTEP_RUNTIME_UNSUPPORTED("Weak instance variables")
 const char *class_getWeakIvarLayout(Class cls);
 
 /**
  * Returns whether the class is a metaclass.  This can be used in conjunction
  * with object_getClass() for differentiating between objects and classes.
  */
+PUBLIC
 BOOL class_isMetaClass(Class cls);
 
 /**
  * Registers an alias for the class. Returns YES if the alias could be
  * registered successfully.
  */
-OBJC_NONPORTABLE
+PUBLIC OBJC_NONPORTABLE
 BOOL class_registerAlias_np(Class cls, const char *alias);
 
 /**
@@ -399,6 +426,7 @@ BOOL class_registerAlias_np(Class cls, const char *alias);
  * Objective-C runtime uses typed selectors, however the types of the selector
  * will be ignored and a new selector registered with the specified types.
  */
+PUBLIC
 IMP class_replaceMethod(Class cls, SEL name, IMP imp, const char *types);
 
 /**
@@ -407,17 +435,20 @@ IMP class_replaceMethod(Class cls, SEL name, IMP imp, const char *types);
  * or more of the various forwarding mechanisms, then this will still return
  * NO.
  */
+PUBLIC
 BOOL class_respondsToSelector(Class cls, SEL sel);
 
 /**
  * Returns the instance variable layout of this class as an opaque list that
  * can be applied to other classes.
  */
+PUBLIC
 const char *class_getIvarLayout(Class cls);
 /**
  * Sets the class's instance variable layout.  The layout argument must be a
  * value returned by class_getIvarLayout().
  */
+PUBLIC
 void class_setIvarLayout(Class cls, const char *layout);
 
 /**
@@ -425,26 +456,29 @@ void class_setIvarLayout(Class cls, const char *layout);
  * because modifying the superclass of a class at run time is a very complex
  * operation and this function is almost always used incorrectly.
  */
-__attribute__((deprecated))
+PUBLIC __attribute__((deprecated))
 Class class_setSuperclass(Class cls, Class newSuper);
 
-OBJC_GNUSTEP_RUNTIME_UNSUPPORTED("Weak instance variables")
+PUBLIC OBJC_GNUSTEP_RUNTIME_UNSUPPORTED("Weak instance variables")
 void class_setWeakIvarLayout(Class cls, const char *layout);
 
 /**
  * Returns the name of an instance variable.
  */
+PUBLIC
 const char* ivar_getName(Ivar ivar);
 
 /**
  * Returns the offset of an instance variable.  This value can be added to the
  * object pointer to get the address of the instance variable.
  */
+PUBLIC
 ptrdiff_t ivar_getOffset(Ivar ivar);
 
 /**
  * Returns the Objective-C type encoding of the instance variable.
  */
+PUBLIC
 const char* ivar_getTypeEncoding(Ivar ivar);
 
 /**
@@ -453,12 +487,14 @@ const char* ivar_getTypeEncoding(Ivar ivar);
  * Objective-C method will be the self and _cmd parameters, so the returned
  * value will be "@" and ":" respectively.
  */
+PUBLIC
 char* method_copyArgumentType(Method method, unsigned int index);
 
 /**
  * Copies the type encoding of an argument of this method.  The caller is
  * responsible for freeing the returned C string.
  */
+PUBLIC
 char* method_copyReturnType(Method method);
 
 /**
@@ -466,6 +502,7 @@ char* method_copyReturnType(Method method);
  * expensive on the GNUstep runtime and its use is discouraged.  It is
  * recommended that users call class_replaceMethod() instead.
  */
+PUBLIC
 void method_exchangeImplementations(Method m1, Method m2);
 
 /**
@@ -475,11 +512,13 @@ void method_exchangeImplementations(Method m1, Method m2);
  * output string if there is enough space for the argument type and the NULL
  * terminator.  Its use is therefore discouraged.
  */
+PUBLIC
 void method_getArgumentType(Method method, unsigned int index, char *dst, size_t dst_len);
 
 /**
  * Returns a pointer to the function used to implement this method.
  */
+PUBLIC
 IMP method_getImplementation(Method method);
 
 /**
@@ -489,12 +528,14 @@ IMP method_getImplementation(Method method);
  * although calling method_getTypeEncoding() is faster if you just require the
  * types.
  */
+PUBLIC
 SEL method_getName(Method method);
 
 /**
  * Returns the number of arguments (including self and _cmd) that this method
  * expects.
  */
+PUBLIC
 unsigned method_getNumberOfArguments(Method method);
 
 /**
@@ -504,6 +545,7 @@ unsigned method_getNumberOfArguments(Method method);
  * output string if there is enough space for the argument type and the NULL
  * terminator.  Its use is therefore discouraged.
  */
+PUBLIC
 void method_getReturnType(Method method, char *dst, size_t dst_len);
 
 /**
@@ -511,6 +553,7 @@ void method_getReturnType(Method method, char *dst, size_t dst_len);
  * runtime and will persist for (at least) as long as the class owning the
  * method is loaded.
  */
+PUBLIC
 const char * method_getTypeEncoding(Method method);
 
 /**
@@ -518,6 +561,7 @@ const char * method_getTypeEncoding(Method method);
  * expensive with the GNUstep runtime and its use is discouraged.  It is
  * recommended that you call class_replaceMethod() instead.
  */
+PUBLIC
 IMP method_setImplementation(Method method, IMP imp);
 
 /**
@@ -526,6 +570,7 @@ IMP method_setImplementation(Method method, IMP imp);
  * used for class variables by adding instance variables to the returned
  * metaclass.
  */
+PUBLIC
 Class objc_allocateClassPair(Class superclass, const char *name, size_t extraBytes);
 
 /**
@@ -533,6 +578,7 @@ Class objc_allocateClassPair(Class superclass, const char *name, size_t extraByt
  * attempts to send messages to instances of this class or its subclasses
  * result in undefined behaviour.
  */
+PUBLIC
 void objc_disposeClassPair(Class cls);
 
 /**
@@ -541,6 +587,7 @@ void objc_disposeClassPair(Class cls);
  * loaded, it calls the _objc_lookup_class() callback to allow an external
  * library to load the module providing this class.
  */
+PUBLIC
 id objc_getClass(const char *name);
 
 /**
@@ -549,18 +596,21 @@ id objc_getClass(const char *name);
  * is 0, it returns the total number of classes registered with the runtime.
  * Otherwise, it copies classes and returns the number copied.
  */
+PUBLIC
 int objc_getClassList(Class *buffer, int bufferLen);
 /**
  * Returns a copy of the list of all classes in the system.  The caller is
  * responsible for freeing this list.  The number of classes is returned in the
  * parameter.
  */
+PUBLIC
 Class *objc_copyClassList(unsigned int *outCount);
 
 /**
  * Returns the metaclass with the specified name.  This is equivalent to
  * calling object_getClass() on the result of objc_getClass().
  */
+PUBLIC
 id objc_getMetaClass(const char *name);
 
 /**
@@ -568,17 +618,20 @@ id objc_getMetaClass(const char *name);
  * function should generally only be called early on in a program, to ensure
  * that all required libraries are loaded.
  */
+PUBLIC
 id objc_getRequiredClass(const char *name);
 
 /**
  * Looks up the class with the specified name, but does not invoke any
  * external lazy loading mechanisms.
  */
+PUBLIC
 id objc_lookUpClass(const char *name);
 
 /**
  * Returns the protocol with the specified name.
  */
+PUBLIC
 Protocol *objc_getProtocol(const char *name);
 /**
  * Allocates a new protocol.  This returns NULL if a protocol with the same
@@ -587,15 +640,18 @@ Protocol *objc_getProtocol(const char *name);
  * Protocols are immutable after they have been registered, so may only be
  * modified between calling this function and calling objc_registerProtocol().
  */
+PUBLIC
 Protocol *objc_allocateProtocol(const char *name);
 /**
  * Registers a protocol with the runtime.  After this point, the protocol may
  * not be modified.
  */
+PUBLIC
 void objc_registerProtocol(Protocol *proto);
 /**
  * Adds a method to the protocol.
  */
+PUBLIC
 void protocol_addMethodDescription(Protocol *aProtocol,
                                    SEL name,
                                    const char *types,
@@ -604,10 +660,12 @@ void protocol_addMethodDescription(Protocol *aProtocol,
 /**
  * Adds a protocol to the protocol.
  */
+PUBLIC
 void protocol_addProtocol(Protocol *aProtocol, Protocol *addition);
 /**
  * Adds a property to the protocol.
  */
+PUBLIC
 void protocol_addProperty(Protocol *aProtocol,
                           const char *name,
                           const objc_property_attribute_t *attributes,
@@ -622,6 +680,7 @@ void protocol_addProperty(Protocol *aProtocol,
  * adding instance variables and methods to it.  A class can not have instance
  * variables added to it after objc_registerClassPair() has been called.
  */
+PUBLIC
 void objc_registerClassPair(Class cls);
 
 /**
@@ -629,6 +688,7 @@ void objc_registerClassPair(Class cls);
  * object.  This is a pointer to the storage specified with the extraBytes
  * parameter given when allocating an object.
  */
+PUBLIC
 void *object_getIndexedIvars(id obj);
 
 // FIXME: The GNU runtime has a version of this which omits the size parameter
@@ -637,30 +697,35 @@ void *object_getIndexedIvars(id obj);
 /**
  * Free an object created with class_createInstance().
  */
+PUBLIC
 id object_dispose(id obj);
 
 /**
  * Returns the class of the object.  Note: the isa pointer should not be
  * accessed directly with the GNUstep runtime.
  */
+PUBLIC
 Class object_getClass(id obj);
 
 /**
  * Sets the class of the object.  Note: the isa pointer should not be
  * accessed directly with the GNUstep runtime.
  */
+PUBLIC
 Class object_setClass(id obj, Class cls);
 
 /**
  * Returns the name of the class of the object.  This is equivalent to calling
  * class_getName() on the result of object_getClass().
  */
+PUBLIC
 const char *object_getClassName(id obj);
 
 
 /**
  * Returns the name of a specified property.
  */
+PUBLIC
 const char *property_getName(objc_property_t property);
 
 /**
@@ -669,11 +734,13 @@ const char *property_getName(objc_property_t property);
  * description of the format for this string may be found in Apple's
  * Objective-C Runtime Programming Guide.
  */
+PUBLIC
 const char *property_getAttributes(objc_property_t property);
 
 /**
  * Returns an array of attributes for this property.
  */
+PUBLIC
 objc_property_attribute_t *property_copyAttributeList(objc_property_t property,
                                                       unsigned int *outCount);
 /**
@@ -681,6 +748,7 @@ objc_property_attribute_t *property_copyAttributeList(objc_property_t property,
  * that this only sets the property metadata.  The property accessor methods
  * must already be created.
  */
+PUBLIC
 BOOL class_addProperty(Class cls,
                        const char *name,
                        const objc_property_attribute_t *attributes, 
@@ -690,6 +758,7 @@ BOOL class_addProperty(Class cls,
  * Replaces property metadata.  If the property does not exist, then this is
  * equivalent to calling class_addProperty().
  */
+PUBLIC
 void class_replaceProperty(Class cls,
                            const char *name,
                            const objc_property_attribute_t *attributes,
@@ -698,12 +767,14 @@ void class_replaceProperty(Class cls,
 /**
  * Returns a copy of a single attribute.
  */
+PUBLIC
 char *property_copyAttributeValue(objc_property_t property,
                                   const char *attributeName);
 
 /**
  * Testswhether a protocol conforms to another protocol.
  */
+PUBLIC
 BOOL protocol_conformsToProtocol(Protocol *p, Protocol *other);
 
 /**
@@ -711,6 +782,7 @@ BOOL protocol_conformsToProtocol(Protocol *p, Protocol *other);
  * the array in the variable pointed to by the last parameter.  The caller is
  * responsible for freeing this array.
  */
+PUBLIC
 struct objc_method_description *protocol_copyMethodDescriptionList(Protocol *p,
 	BOOL isRequiredMethod, BOOL isInstanceMethod, unsigned int *count);
 
@@ -719,6 +791,7 @@ struct objc_method_description *protocol_copyMethodDescriptionList(Protocol *p,
  * stored in the variable pointed to by the last argument.  The caller is
  * responsible for freeing the returned array.
  */
+PUBLIC
 objc_property_t *protocol_copyPropertyList(Protocol *p, unsigned int *count);
 
 /**
@@ -726,6 +799,7 @@ objc_property_t *protocol_copyPropertyList(Protocol *p, unsigned int *count);
  * being stored in the variable pointed to by the last argument.  The caller is
  * responsible for freeing the returned array.
  */
+PUBLIC
 objc_property_t *protocol_copyPropertyList2(Protocol *p, unsigned int *count,
 	BOOL isRequiredProperty, BOOL isInstanceProperty);
 
@@ -734,6 +808,7 @@ objc_property_t *protocol_copyPropertyList2(Protocol *p, unsigned int *count,
  * number of protocols in the array being returned via the last argument.  The
  * caller is responsible for freeing this array.
  */
+PUBLIC
 Protocol *__unsafe_unretained*protocol_copyProtocolList(Protocol *p, unsigned int *count);
 
 /**
@@ -744,11 +819,13 @@ Protocol *__unsafe_unretained*protocol_copyProtocolList(Protocol *p, unsigned in
  *
  * The caller is responsible for freeing the returned array.
  */
+PUBLIC
 Protocol *__unsafe_unretained*objc_copyProtocolList(unsigned int *outCount);
 /**
  * Returns the method description for the specified method within a given
  * protocol.
  */
+PUBLIC
 struct objc_method_description protocol_getMethodDescription(Protocol *p,
 	SEL aSel, BOOL isRequiredMethod, BOOL isInstanceMethod);
 
@@ -759,17 +836,20 @@ struct objc_method_description protocol_getMethodDescription(Protocol *p,
  * implementation and so its semantics may change in the future and this
  * runtime may diverge from Apple's.
  */
+PUBLIC
 const char *_protocol_getMethodTypeEncoding(Protocol *p, SEL aSel,
 	BOOL isRequiredMethod, BOOL isInstanceMethod);
 
 /**
  * Returns the name of the specified protocol.
  */
+PUBLIC
 const char* protocol_getName(Protocol *p);
 
 /**
  * Returns the property metadata for the property with the specified name.
  */
+PUBLIC
 objc_property_t protocol_getProperty(Protocol *p, const char *name,
 	BOOL isRequiredProperty, BOOL isInstanceProperty);
 
@@ -779,6 +859,7 @@ objc_property_t protocol_getProperty(Protocol *p, const char *name,
  * which made not attempt to unique protocols (or even register them with the
  * runtime).
  */
+PUBLIC
 BOOL protocol_isEqual(Protocol *p, Protocol *other);
 
 /**
@@ -786,21 +867,25 @@ BOOL protocol_isEqual(Protocol *p, Protocol *other);
  * the function (either a method or a forwarding hook) that should be called in
  * response to a given message.
  */
+PUBLIC
 IMP objc_msg_lookup(id, SEL) OBJC_NONPORTABLE;
 /**
  * The message lookup function used for messages sent to super in the GCC ABI.
  * This specifies both the class and the 
  */
+PUBLIC
 IMP objc_msg_lookup_super(struct objc_super*, SEL) OBJC_NONPORTABLE;
 
 /**
  * Returns the name of the specified selector.
  */
+PUBLIC
 const char *sel_getName(SEL sel);
 
 /**
  * Registers a selector with the runtime.  This is equivalent to sel_registerName().
  */
+PUBLIC
 SEL sel_getUid(const char *selName);
 
 /**
@@ -813,22 +898,26 @@ SEL sel_getUid(const char *selName);
  * both b and c are typed selectors with different types, then then the first
  * two will return YES, but the third case will return NO.
  */
+PUBLIC
 BOOL sel_isEqual(SEL sel1, SEL sel2);
 
 /**
  * Registers an untyped selector with the runtime.
  */
+PUBLIC
 SEL sel_registerName(const char *selName);
 
 /**
  * Register a typed selector.
  */
+PUBLIC
 SEL sel_registerTypedName_np(const char *selName, const char *types) OBJC_NONPORTABLE;
 
 /**
  * Returns the type encoding associated with a selector, or the empty string is
  * there is no such type.
  */
+PUBLIC
 const char *sel_getType_np(SEL aSel) OBJC_NONPORTABLE;
 
 /**
@@ -839,6 +928,7 @@ const char *sel_getType_np(SEL aSel) OBJC_NONPORTABLE;
  * once with a relatively small on-stack buffer and then only call it again
  * with a heap-allocated buffer if there is not enough space.
  */
+PUBLIC
 unsigned sel_copyTypes_np(const char *selName, const char **types, unsigned count) OBJC_NONPORTABLE;
 
 /**
@@ -849,12 +939,14 @@ unsigned sel_copyTypes_np(const char *selName, const char **types, unsigned coun
  * once with a relatively small on-stack buffer and then only call it again
  * with a heap-allocated buffer if there is not enough space.
  */
+PUBLIC
 unsigned sel_copyTypedSelectors_np(const char *selName, SEL *const sels, unsigned count) OBJC_NONPORTABLE;
 
 /**
  * New ABI lookup function.  Receiver may be modified during lookup or proxy
  * forwarding and the sender may affect how lookup occurs.
  */
+PUBLIC
 extern struct objc_slot *objc_msg_lookup_sender(id *receiver, SEL selector, id sender)
 	OBJC_NONPORTABLE OBJC_DEPRECATED;
 
@@ -862,6 +954,7 @@ extern struct objc_slot *objc_msg_lookup_sender(id *receiver, SEL selector, id s
  * Deprecated function for accessing a slot without going via any forwarding
  * mechanisms.
  */
+PUBLIC
 extern struct objc_slot *objc_get_slot(Class, SEL)
 	OBJC_NONPORTABLE OBJC_DEPRECATED;
 
@@ -871,6 +964,7 @@ extern struct objc_slot *objc_get_slot(Class, SEL)
  * counter.  If this value is equal to `objc_method_cache_version` then the
  * slot is safe to reuse without performing another lookup.
  */
+PUBLIC
 extern struct objc_slot2 *objc_get_slot2(Class, SEL, uint64_t*)
 	OBJC_NONPORTABLE;
 
@@ -880,12 +974,14 @@ extern struct objc_slot2 *objc_get_slot2(Class, SEL, uint64_t*)
  * counter.  If this value is equal to `objc_method_cache_version` then the
  * slot is safe to reuse without performing another lookup.
  */
+PUBLIC
 extern struct objc_slot2 *objc_slot_lookup_version(id *receiver, SEL selector, uint64_t*)
 	OBJC_NONPORTABLE;
 
 /**
  * Look up a slot, invoking any required forwarding mechanisms.
  */
+PUBLIC
 extern IMP objc_msg_lookup2(id *receiver, SEL selector) OBJC_NONPORTABLE;
 
 /**
@@ -893,6 +989,7 @@ extern IMP objc_msg_lookup2(id *receiver, SEL selector) OBJC_NONPORTABLE;
  * pointer.  If the class can be registered, then this returns YES.  The second
  * argument specifies the bit pattern to use to identify the small object.
  */
+PUBLIC
 BOOL objc_registerSmallObjectClass_np(Class cls, uintptr_t classId);
 
 /**
@@ -956,6 +1053,7 @@ typedef uintptr_t objc_AssociationPolicy;
  * Returns an object previously stored by calling objc_setAssociatedObject()
  * with the same arguments, or nil if none exists.
  */
+PUBLIC
 id objc_getAssociatedObject(id object, void *key);
 /**
  * Associates an object with another.  This provides a mechanism for storing
@@ -965,10 +1063,12 @@ id objc_getAssociatedObject(id object, void *key);
  * value may be any object, but must respond to -copy or -retain, and -release,
  * if an association policy of copy or retain is passed as the final argument.
  */
+PUBLIC
 void objc_setAssociatedObject(id object, void *key, id value, objc_AssociationPolicy policy);
 /**
  * Removes all associations from an object.  
  */
+PUBLIC
 void objc_removeAssociatedObjects(id object);
 
 /**
@@ -976,6 +1076,7 @@ void objc_removeAssociatedObjects(id object);
  * take an object pointer (self) as its first argument, and then the same
  * arguments as the method.
  */
+PUBLIC
 IMP imp_implementationWithBlock(void *block);
 /**
  * Returns the type encoding of an IMP that would be returned by passing the
@@ -983,42 +1084,49 @@ IMP imp_implementationWithBlock(void *block);
  * block encoding for transforming to an IMP (it must take id as its first
  * argument).  The caller is responsible for freeing the returned value.
  */
+PUBLIC
 char *block_copyIMPTypeEncoding_np(void*block);
 /**
  * Returns the block that was used in an IMP created by
  * imp_implementationWithBlock().  The result of calling this function with any
  * other IMP is undefined.
  */
+PUBLIC
 void *imp_getBlock(IMP anImp);
 /**
  * Removes a block that was converted to an IMP with
  * imp_implementationWithBlock().  The result of calling this function with any
  * other IMP is undefined.  Returns YES on success, NO on failure.
  */
+PUBLIC
 BOOL imp_removeBlock(IMP anImp);
 
 /**
  * Adds a method to a specific object,  This method will not be added to any
  * other instances of the same class.
  */
+PUBLIC
 BOOL object_addMethod_np(id object, SEL name, IMP imp, const char *types);
 
 /**
  * Replaces a method on a specific object,  This method will not be added to
  * any other instances of the same class.
  */
+PUBLIC
 IMP object_replaceMethod_np(id object, SEL name, IMP imp, const char *types);
 
 /**
  * Creates a clone, in the JavaScript sense - an object which inherits both
  * associated references and methods from the original object.
  */
+PUBLIC
 id object_clone_np(id object);
 
 /**
  * Returns the prototype of the object if it was created with
  * object_clone_np(), or nil otherwise.
  */
+PUBLIC
 id object_getPrototype_np(id object);
 
 /**
@@ -1039,6 +1147,7 @@ id object_getPrototype_np(id object);
  * This currently sets a global value.  In the future, it may be configurable
  * on a per-thread basis.
  */
+PUBLIC
 int objc_set_apple_compatible_objcxx_exceptions(int newValue) OBJC_NONPORTABLE;
 
 

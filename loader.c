@@ -165,7 +165,10 @@ struct objc_init
 	struct nsstr *strings_end;
 };
 // end: objc_init
+
+#ifdef DEBUG_LOADING
 #include <dlfcn.h>
+#endif
 
 static enum {
 	LegacyABI,
@@ -175,7 +178,7 @@ static enum {
 
 void registerProtocol(Protocol *proto);
 
-void __objc_load(struct objc_init *init)
+PUBLIC void __objc_load(struct objc_init *init)
 {
 	init_runtime();
 #ifdef DEBUG_LOADING
@@ -293,7 +296,7 @@ void __objc_load(struct objc_init *init)
 }
 
 #ifdef OLDABI_COMPAT
-void __objc_exec_class(struct objc_module_abi_8 *module)
+PUBLIC void __objc_exec_class(struct objc_module_abi_8 *module)
 {
 	init_runtime();
 

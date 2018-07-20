@@ -18,7 +18,6 @@
  * which has a static size.
  */
 #include "lock.h"
-#include <unistd.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>

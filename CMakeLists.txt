@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 3.1)
 
-project(libobjc)
-enable_language(ASM)
+project(libobjc C ASM CXX)
 
 INCLUDE (CheckCXXSourceCompiles)
 
@@ -10,13 +9,15 @@ macro(install_symlink filepath sympath)
 	install(CODE "message(\"-- Symlinking: ${sympath} -> ${filepath}\")")
 endmacro(install_symlink)
 
-set(CMAKE_C_FLAGS_DEBUG "-g -O0 -fno-inline ${CMAKE_C_FLAGS_DEBUG}")
+set(CMAKE_C_FLAGS_DEBUG "/Z7 -O0 -Xclang -fno-inline ${CMAKE_C_FLAGS_DEBUG}")
+set(CMAKE_SHARED_LINKER_FLAGS "/DEBUG /INCREMENTAL:NO ${CMAKE_SHARED_LINKER_FLAGS}")
 set(CMAKE_C_FLAGS_RELEASE "-O3 ${CMAKE_C_FLAGS_RELEASE}")
-set(CMAKE_C_FLAGS "-std=gnu99 ${CMAKE_C_FLAGS}")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
 
 set(libobjc_VERSION 4.6)
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fexceptions")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /EHas -Xclang -fexceptions -Xclang -fobjc-exceptions")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHas")
 # Build configuration
 add_definitions( -DGNUSTEP -D__OBJC_RUNTIME_INTERNAL__=1)
 
@@ -37,7 +38,6 @@ set(libobjc_C_SRCS
 	category_loader.c
 	class_table.c
 	dtable.c
-	eh_personality.c
 	encoding2.c
 	hooks.c
 	ivar.c
@@ -68,10 +68,16 @@ set(libobjc_HDRS
 	objc/objc.h
 	objc/runtime-deprecated.h
 	objc/runtime.h
-	objc/slot.h
-)
+	objc/slot.h)
 
-set(libobjcxx_CXX_SRCS objcxx_eh.cc)
+# Windows does not use DWARF EH
+if (WIN32)
+	list(APPEND libobjc_CXX_SRCS eh_win32_msvc.cc)
+else ()
+	list(APPEND libobjc_C_SRCS eh_personality.c)
+	set(libobjcxx_CXX_SRCS objcxx_eh.cc)
+endif (WIN32)
+
 
 # For release builds, we disable spamming the terminal with warnings about
 # selector type mismatches
@@ -154,10 +160,26 @@ endif ()
 
 set(INSTALL_TARGETS objc)
 
+# On Windows, CMake adds /TC to the clang-cl flags and doesn't provide a way to
+# tell it not to.  We fix this by telling clang do disregard that option,
+# unconditionally (which means that it still defaults to C for .c files).
+set(ENV{CCC_OVERRIDE_OPTIONS} "x/TC x/Gm-")
+
+set_source_files_properties(
+	${libobjc_ASM_SRCS}
+	LANGUAGE C
+	COMPILE_FLAGS "${CMAKE_OBJC_FLAGS} -Xclang -x -Xclang assembler-with-cpp"
+)
+
+set_source_files_properties(
+	${libobjc_CXX_SRCS}
+	LANGUAGE CXX
+	COMPILE_FLAGS "${CMAKE_CXX_FLAGS}"
+)
+
 set_source_files_properties(
 	${libobjc_OBJC_SRCS}
-	PROPERTIES LANGUAGE C
-	COMPILE_FLAGS "${CMAKE_OBJC_FLAGS}"
+	COMPILE_FLAGS "${CMAKE_OBJC_FLAGS} -Xclang -x -Xclang objective-c"
 )
 
 #
@@ -186,40 +208,55 @@ set(ENABLE_OBJCXX true CACHE BOOL
 
 set(CXXRT_IS_STDLIB false)
 
-add_library(objc SHARED ${libobjc_C_SRCS} ${libobjc_ASM_SRCS} ${libobjc_OBJC_SRCS})
+add_custom_command(OUTPUT block_trampolines.obj
+	COMMAND ${CMAKE_C_COMPILER} -c "${CMAKE_SOURCE_DIR}/block_trampolines.S" -o "${CMAKE_BINARY_DIR}/block_trampolines.obj"
+	MAIN_DEPENDENCY block_trampolines.S
+)
+add_custom_command(OUTPUT objc_msgSend.obj
+	COMMAND ${CMAKE_C_COMPILER} -c "${CMAKE_SOURCE_DIR}/objc_msgSend.S" -o "${CMAKE_BINARY_DIR}/objc_msgSend.obj"
+	MAIN_DEPENDENCY objc_msgSend.S
+	DEPENDS objc_msgSend.aarch64.S objc_msgSend.arm.S objc_msgSend.mips.S objc_msgSend.x86-32.S objc_msgSend.x86-64.S
+)
+
+
+add_library(objc SHARED ${libobjc_C_SRCS} ${libobjc_ASM_SRCS} ${libobjc_OBJC_SRCS} block_trampolines.obj objc_msgSend.obj)
 
 if (ENABLE_OBJCXX)
-	message(STATUS "Testing C++ interop")
-	# Try to find libcxxrt.so.  We can link to this to provide the C++ ABI
-	# layer, if it exists.
-	test_cxx(cxxrt false)
-	# If it doesn't, then look for GNU libsupc++.so instead (either works,
-	# they're ABI compatible).
-	if (NOT CXX_RUNTIME)
-		test_cxx(supc++ false)
-	endif (NOT CXX_RUNTIME)
-	if (NOT CXX_RUNTIME)
-		test_cxx(c++abi false)
-	endif (NOT CXX_RUNTIME)
+	if (WIN32)
+		message(STATUS "Using MSVC-compatible exception model")
+	else ()
+		message(STATUS "Testing C++ interop")
+		# Try to find libcxxrt.so.  We can link to this to provide the C++ ABI
+		# layer, if it exists.
+		test_cxx(cxxrt false)
+		# If it doesn't, then look for GNU libsupc++.so instead (either works,
+		# they're ABI compatible).
+		if (NOT CXX_RUNTIME)
+			test_cxx(supc++ false)
+		endif (NOT CXX_RUNTIME)
+		if (NOT CXX_RUNTIME)
+			test_cxx(c++abi false)
+		endif (NOT CXX_RUNTIME)
 
-	# If we have a C++ ABI library, then we can produce a single libobjc that
-	# works for Objective-C and Objective-C++.  If not, then we need to provide
-	# a separate libobjcxx.
-	if (CXX_RUNTIME)
-		message(STATUS "Using ${CXX_RUNTIME} as the C++ runtime library")
-	else()
-		message(STATUS "Testing C++ standard library")
-		try_compile(USERUNTIME 
-			"${CMAKE_BINARY_DIR}/CMake"
-			"${CMAKE_SOURCE_DIR}/CMake"
-			test_cxx_runtime)
-		if (${USERUNTIME})
-			message(STATUS "libobjc will depend on C++ standard library")
-			set(CXXRT_IS_STDLIB true)
+		# If we have a C++ ABI library, then we can produce a single libobjc that
+		# works for Objective-C and Objective-C++.  If not, then we need to provide
+		# a separate libobjcxx.
+		if (CXX_RUNTIME)
+			message(STATUS "Using ${CXX_RUNTIME} as the C++ runtime library")
 		else()
-			message(STATUS "No useable C++ runtime found")
-			set(ENABLE_OBJCXX false)
-		endif()
+			message(STATUS "Testing C++ standard library")
+			try_compile(USERUNTIME 
+				"${CMAKE_BINARY_DIR}/CMake"
+				"${CMAKE_SOURCE_DIR}/CMake"
+				test_cxx_runtime)
+			if (${USERUNTIME})
+				message(STATUS "libobjc will depend on C++ standard library")
+				set(CXXRT_IS_STDLIB true)
+			else()
+				message(STATUS "No useable C++ runtime found")
+				set(ENABLE_OBJCXX false)
+			endif()
+		endif ()
 	endif ()
 endif (ENABLE_OBJCXX)
 
@@ -231,8 +268,8 @@ if (ENABLE_OBJCXX)
 		set(CMAKE_CXX_IMPLICIT_LINK_LIBRARIES "")
 		target_link_libraries(objc ${CXX_RUNTIME})
 	endif()
-	set(libobjc_CXX_SRCS ${libobjcxx_CXX_SRCS})
-	target_sources(objc PRIVATE ${libobjcxx_CXX_SRCS})
+	list(APPEND libobjc_CXX_SRCS ${libobjcxx_CXX_SRCS})
+	target_sources(objc PRIVATE ${libobjc_CXX_SRCS})
 endif()
 
 
@@ -263,8 +300,6 @@ if (BUILD_STATIC_LIBOBJC)
 		OUTPUT_NAME ${LIBOBJC_NAME})
 	list(APPEND INSTALL_TARGETS objc-static)
 endif ()
-
-
 
 # Explicitly link libgc if we are compiling with gc support.
 if (LIBGC)

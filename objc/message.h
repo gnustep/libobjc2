@@ -1,6 +1,7 @@
 #if defined(__clang__)
 #pragma clang system_header
 #endif
+#include "objc-visibility.h"
 
 #ifndef _OBJC_MESSAGE_H_
 #define _OBJC_MESSAGE_H_
@@ -22,6 +23,7 @@
  * systems even within the same architecture, so take great care if using this
  * function for small (two integer) structures.
  */
+PUBLIC
 id objc_msgSend(id self, SEL _cmd, ...);
 /**
  * Standard message sending function.  This function must be cast to the
@@ -38,6 +40,7 @@ id objc_msgSend(id self, SEL _cmd, ...);
  * architecture, so take great care if using this function for small (two
  * integer) structures.
  */
+PUBLIC
 #ifdef __cplusplus 
 id objc_msgSend_stret(id self, SEL _cmd, ...);
 #else
@@ -55,6 +58,7 @@ void objc_msgSend_stret(id self, SEL _cmd, ...);
  * This version of the function is used for all messages that return floating
  * point values.
  */
+PUBLIC
 long double objc_msgSend_fpret(id self, SEL _cmd, ...);
 
 #endif

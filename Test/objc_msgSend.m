@@ -10,7 +10,6 @@
 
 //#define assert(x) if (!(x)) { printf("Failed %d\n", __LINE__); }
 
-id objc_msgSend(id, SEL, ...);
 
 typedef struct { int a,b,c,d,e; } s;
 @interface Fake
@@ -81,13 +80,14 @@ __attribute__((objc_root_class))
 + (void)printf: (const char*)str, ...
 {
 	va_list ap;
-	char *s;
+	char s[100];
 
 	va_start(ap, str);
 
-	vasprintf(&s, str, ap);
+	vsnprintf(&s, 100, str, ap);
 	va_end(ap);
-	//fprintf(stderr, "String: '%s'\n", s);
+	fprintf(stderr, "String: '%s'\n", s);
+	vfprintf(stderr, s, ap);
 	assert(strcmp(s, "Format string 42 42.000000\n") ==0);
 }
 + (void)initialize
@@ -172,6 +172,7 @@ struct objc_slot *forward_slot(id o, SEL s)
 	slot.method = (IMP)fwd;
 	return &slot;
 }
+
 
 
 int main(void)

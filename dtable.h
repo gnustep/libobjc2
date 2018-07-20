@@ -46,7 +46,9 @@ static inline int classHasInstalledDtable(struct objc_class *cls)
 	return (cls->dtable != uninstalled_dtable);
 }
 
+PUBLIC
 int objc_sync_enter(id object);
+PUBLIC
 int objc_sync_exit(id object);
 /**
  * Returns the dtable for a given class.  If we are currently in an +initialize
