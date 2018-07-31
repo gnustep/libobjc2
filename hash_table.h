@@ -395,7 +395,7 @@ static void PREFIX(_remove)(PREFIX(_table) *table, void *key)
 
 	uint32_t hash = MAP_TABLE_HASH_KEY(key);
 	PREFIX(_table_cell) baseCell = PREFIX(_table_lookup)(table, hash);
-	if (baseCell && baseCell <= cell && cell - baseCell <= 32)
+	if (baseCell && baseCell < cell && cell - baseCell <= 32)
 	{
 		uint32_t jump = 1 << (cell - baseCell - 1);
 		if ((baseCell->secondMaps & jump))

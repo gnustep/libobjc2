@@ -36,6 +36,7 @@ set(TESTS
 	zeroSizedIVar.m
 	exchange.m
 	hash_table_delete.c
+	hash_test.c
 	setSuperclass.m
 )
 
