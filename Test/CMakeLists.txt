@@ -48,6 +48,7 @@ set(TESTS
 	zeroSizedIVar.m
 	exchange.m
 	hash_table_delete.c
+	hash_test.c
 	setSuperclass.m
 )
 
@@ -96,6 +97,7 @@ function(addtest_flags TEST_NAME FLAGS TEST_SOURCE)
 	set_target_properties(${TEST_NAME} PROPERTIES
 		INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}"
 		COMPILE_FLAGS "-Xclang -fblocks ${FLAGS}"
+		LINK_FLAGS "/INCREMENTAL:NO"
 		LINKER_LANGUAGE C
 	)
 	set_property(TEST ${TEST_NAME} PROPERTY
