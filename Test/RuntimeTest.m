@@ -2,7 +2,8 @@
 #include <stdio.h>
 #include <string.h>
 #ifdef _WIN32
-#	define sleep Sleep
+#	include "../safewindows.h"
+#	define sleep(x) Sleep(1000 * x)
 #else
 #	include <unistd.h>
 #endif
