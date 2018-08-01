@@ -77,7 +77,37 @@ static struct objc_ivar_list *upgradeIvarList(struct objc_class_gsv1 *cls)
 	n->count = l->count;
 	for (int i=0 ; i<l->count ; i++)
 	{
-		int nextOffset = (i+1 < l->count) ? l->ivar_list[i+1].offset : cls->instance_size;
+		BOOL isBitfield = NO;
+		int bitfieldSize = 0;
+		int nextOffset;
+		// Bitfields have the same offset, but should have their size set to
+		// the size of the bitfield.  We calculate the size of the bitfield by
+		// looking for the next ivar after the current one that has a different
+		// offset.
+		if (i+1 < l->count)
+		{
+			nextOffset = l->ivar_list[i+1].offset;
+			if (l->ivar_list[i].offset == l->ivar_list[i+1].offset)
+			{
+				isBitfield = YES;
+				for (int j=i+2 ; j<l->count ; j++)
+				{
+					if (l->ivar_list[i].offset != l->ivar_list[j].offset)
+					{
+						bitfieldSize = l->ivar_list[j].offset - l->ivar_list[i].offset;
+						break;
+					}
+				}
+				if (bitfieldSize == 0)
+				{
+					bitfieldSize = cls->instance_size - l->ivar_list[i].offset;
+				}
+			}
+		}
+		else
+		{
+			nextOffset = cls->instance_size;
+		}
 		if (nextOffset < 0)
 		{
 			nextOffset = -nextOffset;
@@ -86,6 +116,7 @@ static struct objc_ivar_list *upgradeIvarList(struct objc_class_gsv1 *cls)
 		int size = nextOffset - l->ivar_list[i].offset;
 		n->ivar_list[i].name = l->ivar_list[i].name;
 		n->ivar_list[i].type = type;
+		n->ivar_list[i].size = isBitfield ? bitfieldSize : size;
 		if (objc_test_class_flag_gsv1(cls, objc_class_flag_new_abi_gsv1))
 		{
 			n->ivar_list[i].offset = cls->ivar_offsets[i];

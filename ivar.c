@@ -48,7 +48,7 @@ PRIVATE void objc_compute_ivar_offsets(Class class)
 			ivar_start = super->instance_size;
 		}
 		long class_size = 0 - class->instance_size;
-		class->instance_size = ivar_start - class->instance_size;
+		class->instance_size = ivar_start;
 		/* For each instance variable, we add the offset if required (it will be zero
 		* if this class is compiled with a static ivar layout).  We then set the
 		* value of a global variable to the offset value.  
@@ -62,7 +62,11 @@ PRIVATE void objc_compute_ivar_offsets(Class class)
 		*/
 		if (class->ivars)
 		{
-			long cumulative_fudge = 0;
+			// If the first instance variable had any alignment padding, then we need 
+			// to discard it.  We will recompute padding ourself later.
+			long next_ivar = ivar_start;
+			long last_offset = -1;
+			long last_computed_offset = -1;
 			for (i = 0 ; i < class->ivars->count ; i++)
 			{
 				struct objc_ivar *ivar = ivar_at_index(class->ivars, i);
@@ -70,24 +74,31 @@ PRIVATE void objc_compute_ivar_offsets(Class class)
 				// in front of the object.  This doesn't matter for aligment most of
 				// the time, but if we have an instance variable that is a vector type
 				// then we will need to ensure that we are properly aligned again.
-				long ivar_size = (i+1 == class->ivars->count)
-					? (class_size - *ivar->offset)
-					: *ivar_at_index(class->ivars, i+1)->offset - *ivar->offset ;
-				// FIXME: use alignment
-				*ivar->offset += cumulative_fudge;
+				long ivar_size = ivar->size;
+				if (*ivar->offset == last_offset)
+				{
+					*ivar->offset = last_computed_offset;
+				}
+				else
+				{
+					last_offset = *ivar->offset;
+					*ivar->offset = next_ivar;
+					last_computed_offset = *ivar->offset;
+					next_ivar += ivar_size;
+				}
 				// We only need to do the realignment for things that are
 				// bigger than a pointer, and we don't need to do it in GC mode
 				// where we don't add any extra padding.
 				if (!isGCEnabled && (ivarGetAlign(ivar) > __alignof__(void*)))
 				{
-					long offset = ivar_start + *ivar->offset + sizeof(intptr_t);
-					long fudge = ivarGetAlign(ivar) - (offset % ivarGetAlign(ivar));
-					*ivar->offset += fudge;
-					class->instance_size += fudge;
-					cumulative_fudge += fudge;
-					assert((ivar_start + *ivar->offset + sizeof(intptr_t)) % ivarGetAlign(ivar) == 0);
+					long offset = *ivar->offset + sizeof(intptr_t);
+					long padding = ivarGetAlign(ivar) - (offset % ivarGetAlign(ivar));
+					*ivar->offset += padding;
+					class->instance_size += padding;
+					next_ivar += padding;
+					assert((*ivar->offset + sizeof(intptr_t)) % ivarGetAlign(ivar) == 0);
 				}
-				*ivar->offset += ivar_start;
+				class->instance_size += ivar_size;
 			}
 #ifdef OLDABI_COMPAT
 			// If we have a legacy ivar list, update the offset in it too -
