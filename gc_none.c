@@ -8,13 +8,26 @@
 
 static id allocate_class(Class cls, size_t extraBytes)
 {
-	intptr_t *addr = calloc(cls->instance_size + extraBytes + sizeof(intptr_t), 1);
+	size_t size = cls->instance_size + extraBytes + sizeof(intptr_t);
+	intptr_t *addr =
+#ifdef _WIN32
+	// Malloc on Windows doesn't guarantee 32-byte alignment, but we
+	// require this for any class that may contain vectors
+		_aligned_malloc(size, 32);
+	memset(addr, 0, size);
+#else
+		calloc(size, 1);
+#endif
 	return (id)(addr + 1);
 }
 
 static void free_object(id obj)
 {
+#ifdef _WIN32
+	_aligned_free((void*)(((intptr_t*)obj) - 1));
+#else
 	free((void*)(((intptr_t*)obj) - 1));
+#endif
 }
 
 static void *alloc(size_t size)
