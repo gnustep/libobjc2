@@ -54,6 +54,8 @@ set(TESTS
 
 if (WIN32)
 else ()
+	# Don't run the tests that are specific to Itanium-style exceptions on
+	# Windows.
 	list(APPEND TESTS
 	BoxedForeignException.m
 	ForeignException.m
@@ -97,7 +99,7 @@ function(addtest_flags TEST_NAME FLAGS TEST_SOURCE)
 	set_target_properties(${TEST_NAME} PROPERTIES
 		INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}"
 		COMPILE_FLAGS "-Xclang -fblocks ${FLAGS}"
-		LINK_FLAGS "/INCREMENTAL:NO"
+		LINK_FLAGS ${INCREMENTAL}
 		LINKER_LANGUAGE C
 	)
 	set_property(TEST ${TEST_NAME} PROPERTY

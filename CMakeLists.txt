@@ -9,15 +9,21 @@ macro(install_symlink filepath sympath)
 	install(CODE "message(\"-- Symlinking: ${sympath} -> ${filepath}\")")
 endmacro(install_symlink)
 
-set(CMAKE_C_FLAGS_DEBUG "/Z7 -O0 -Xclang -fno-inline ${CMAKE_C_FLAGS_DEBUG}")
-set(CMAKE_SHARED_LINKER_FLAGS "/DEBUG /INCREMENTAL:NO ${CMAKE_SHARED_LINKER_FLAGS}")
+set(CMAKE_C_FLAGS_DEBUG "-O0 -Xclang -fno-inline ${CMAKE_C_FLAGS_DEBUG}")
 set(CMAKE_C_FLAGS_RELEASE "-O3 ${CMAKE_C_FLAGS_RELEASE}")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
 
 set(libobjc_VERSION 4.6)
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /EHas -Xclang -fexceptions -Xclang -fobjc-exceptions")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHas")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Xclang -fexceptions -Xclang -fobjc-exceptions")
+if (MSVC)
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /EHas")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHas")
+	set(CMAKE_C_FLAGS_DEBUG "/Z7 ${CMAKE_C_FLAGS_DEBUG}")
+	set(CMAKE_SHARED_LINKER_FLAGS "/DEBUG /INCREMENTAL:NO ${CMAKE_SHARED_LINKER_FLAGS}")
+	set(CMAKE_EXE_LINKER_FLAGS "/DEBUG /INCREMENTAL:NO ${CMAKE_EXE_LINKER_FLAGS}")
+	set(objc_LINK_FLAGS "/DEBUG /INCREMENTAL:NO ${objc_LINK_FLAGS}")
+endif()
 # Build configuration
 add_definitions( -DGNUSTEP -D__OBJC_RUNTIME_INTERNAL__=1)
 
@@ -208,18 +214,33 @@ set(ENABLE_OBJCXX true CACHE BOOL
 
 set(CXXRT_IS_STDLIB false)
 
-add_custom_command(OUTPUT block_trampolines.obj
-	COMMAND ${CMAKE_C_COMPILER} -c "${CMAKE_SOURCE_DIR}/block_trampolines.S" -o "${CMAKE_BINARY_DIR}/block_trampolines.obj"
-	MAIN_DEPENDENCY block_trampolines.S
-)
-add_custom_command(OUTPUT objc_msgSend.obj
-	COMMAND ${CMAKE_C_COMPILER} -c "${CMAKE_SOURCE_DIR}/objc_msgSend.S" -o "${CMAKE_BINARY_DIR}/objc_msgSend.obj"
-	MAIN_DEPENDENCY objc_msgSend.S
-	DEPENDS objc_msgSend.aarch64.S objc_msgSend.arm.S objc_msgSend.mips.S objc_msgSend.x86-32.S objc_msgSend.x86-64.S
-)
+if(WIN32)
+	if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+		set(ASM_TARGET -m64)
+	else()
+		set(ASM_TARGET -m32)
+	endif()
+endif()
 
 
-add_library(objc SHARED ${libobjc_C_SRCS} ${libobjc_ASM_SRCS} ${libobjc_OBJC_SRCS} block_trampolines.obj objc_msgSend.obj)
+if (MSVC)
+	# CMake is completely broken when you try to build assembly files on Windows.
+	add_custom_command(OUTPUT block_trampolines.obj
+		COMMAND echo ${CMAKE_C_COMPILER} ${ASM_TARGET} -c "${CMAKE_SOURCE_DIR}/block_trampolines.S" -o "${CMAKE_BINARY_DIR}/block_trampolines.obj"
+		COMMAND ${CMAKE_C_COMPILER} ${ASM_TARGET} -c "${CMAKE_SOURCE_DIR}/block_trampolines.S" -o "${CMAKE_BINARY_DIR}/block_trampolines.obj"
+		MAIN_DEPENDENCY block_trampolines.S
+	)
+	add_custom_command(OUTPUT objc_msgSend.obj
+		COMMAND echo ${CMAKE_C_COMPILER} ${ASM_TARGET} -c "${CMAKE_SOURCE_DIR}/objc_msgSend.S" -o "${CMAKE_BINARY_DIR}/objc_msgSend.obj"
+		COMMAND ${CMAKE_C_COMPILER} ${ASM_TARGET} -c "${CMAKE_SOURCE_DIR}/objc_msgSend.S" -o "${CMAKE_BINARY_DIR}/objc_msgSend.obj"
+		MAIN_DEPENDENCY objc_msgSend.S
+		DEPENDS objc_msgSend.aarch64.S objc_msgSend.arm.S objc_msgSend.mips.S objc_msgSend.x86-32.S objc_msgSend.x86-64.S
+	)
+	set(libobjc_ASM_OBJS block_trampolines.obj objc_msgSend.obj)
+endif()
+
+
+add_library(objc SHARED ${libobjc_C_SRCS} ${libobjc_ASM_SRCS} ${libobjc_OBJC_SRCS} ${libobjc_ASM_OBJS})
 
 if (ENABLE_OBJCXX)
 	if (WIN32)
