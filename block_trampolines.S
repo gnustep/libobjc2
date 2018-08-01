@@ -42,6 +42,19 @@
 ////////////////////////////////////////////////////////////////////////////////
 // x86-32 trampoline
 ////////////////////////////////////////////////////////////////////////////////
+
+#ifdef _WIN32
+// Mark this compilation unit as SEH-safe
+.text
+.def     @feat.00;
+.scl    3;
+.type   0;
+.endef
+.globl  @feat.00
+.set @feat.00, 1
+.data
+#endif
+
 .macro trampoline arg0, arg1
 	call  1f                   # Store the instruction pointer on the stack
 1:
