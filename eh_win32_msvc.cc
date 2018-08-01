@@ -65,9 +65,9 @@ namespace
 static std::string mangleObjcObject()
 {
 #if defined(__SIZEOF_POINTER__) && __SIZEOF_POINTER__ == 8
-	return ".PEAUobjc_object@@";
+	return ".PEAU.objc_object@@";
 #else
-	return ".PAUobjc_object@@";
+	return ".PAU.objc_object@@";
 #endif
 }
 
@@ -80,9 +80,9 @@ static std::string mangleStructNamed(const char* className)
 	//return
 	auto r =
 #if defined(__SIZEOF_POINTER__) && __SIZEOF_POINTER__ == 8
-		std::string(".PEAU") +
+		std::string(".PEAU.objc_cls_") +
 #else
-		std::string(".PAU") +
+		std::string(".PAU.objc_cls_") +
 #endif
 		className + "@@";
 	return r;
@@ -183,14 +183,23 @@ PUBLIC extern "C" void objc_exception_throw(id object)
 	exception.ExceptionFlags = EXCEPTION_NONCONTINUABLE;
 	exception.ExceptionRecord = nullptr;
 	exception.ExceptionAddress = nullptr;
-	exception.NumberParameters = 4;
+	// The fourth parameter is the base address of the image (for us, this stack 
+	// frame), but we only use image-relative 32-bit addresses on 64-bit
+	// platforms.  On 32-bit platforms, we use 32-bit absolute addresses.
+	exception.NumberParameters = sizeof(void*) == 4 ? 3 : 4;
 	exception.ExceptionInformation[0] = EH_MAGIC_NUMBER1;
 	exception.ExceptionInformation[1] = reinterpret_cast<ULONG_PTR>(&object);
 	exception.ExceptionInformation[2] = reinterpret_cast<ULONG_PTR>(&ti);
 	exception.ExceptionInformation[3] = reinterpret_cast<ULONG_PTR>(&x);
 
-
+#ifdef _WIN64
  	RtlRaiseException(&exception);
+#else
+	RaiseException(exception.ExceptionCode,
+		exception.ExceptionFlags,
+		exception.NumberParameters,
+		exception.ExceptionInformation);
+#endif
 	__builtin_unreachable();
 }
 
