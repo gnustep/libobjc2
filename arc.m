@@ -201,12 +201,13 @@ extern BOOL FastARCAutorelease;
 
 static BOOL useARCAutoreleasePool;
 
+static const long refcount_shift = 1;
 /**
  * We use the top bit of the reference count to indicate whether an object has
  * ever had a weak reference taken.  This lets us avoid acquiring the weak
  * table lock for most objects on deallocation.
  */
-static const long weak_mask = ((size_t)1)<<((sizeof(size_t)*8)-1);
+static const long weak_mask = ((size_t)1)<<((sizeof(size_t)*8)-refcount_shift);
 /**
  * All of the bits other than the top bit are the real reference count.
  */
@@ -780,6 +781,7 @@ PUBLIC id objc_storeWeak(id *addr, id obj)
 		}
 		else
 		{
+			assert(ref->obj == obj);
 			ref->weak_count++;
 		}
 		*addr = (id)ref;
@@ -797,7 +799,11 @@ PUBLIC BOOL objc_delete_weak_refs(id obj)
 		// have done so in between this thread's decrementing the reference
 		// count and its acquiring the lock.  In this case, report failure.
 		uintptr_t *refCount = ((uintptr_t*)obj) - 1;
-		if ((long)((__sync_fetch_and_add(refCount, 0) & refcount_mask)) >= 0)
+		// Reconstruct the sign bit.  We don't need to do this on any other 
+		// operations, because even on increment the overflow will be correct
+		// after truncation.
+		uintptr_t refCountVal = (__sync_fetch_and_add(refCount, 0) & refcount_mask) << refcount_shift;
+		if ((((intptr_t)refCountVal) >> refcount_shift) >= 0)
 		{
 			return NO;
 		}
