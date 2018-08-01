@@ -8,6 +8,7 @@ BOOL finallyEntered = NO;
 BOOL cleanupRun = NO;
 BOOL idRethrown = NO;
 BOOL catchallRethrown = NO;
+BOOL testCaught = NO;
 BOOL wrongMatch = NO;
 
 @interface NSString : Test @end
@@ -41,11 +42,29 @@ int rethrow_id(void)
 	}
 	return 0;
 }
-int rethrow_catchall(void)
+int rethrow_test(void)
 {
 	@try { rethrow_id(); }
+	@catch (Test *t)
+	{
+		testCaught = YES;
+		@throw;
+	}
+	@catch (id x)
+	{
+		assert(0 && "should not be reached!");
+	}
+	@catch (...)
+	{
+		assert(0 && "should not be reached!");
+	}
+}
+int rethrow_catchall(void)
+{
+	@try { rethrow_test(); }
 	@catch(...)
 	{
+		assert(testCaught);
 		catchallRethrown = YES;
 		@throw;
 	}
