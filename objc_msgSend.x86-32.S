@@ -78,6 +78,29 @@
 	jmp   1b 
 	.cfi_endproc
 .endm
+
+#ifdef _WIN32
+.text
+.def     @feat.00;
+.scl    3;
+.type   0;
+.endef
+.globl  @feat.00
+@feat.00 = 1
+.def _objc_msgSend;
+.scl 2;
+.type 32;
+.endef
+.def _objc_msgSend_fpret;
+.scl 2;
+.type 32;
+.endef
+.def _objc_msgSend_stret;
+.scl 2;
+.type 32;
+.endef
+#endif
+
 .globl CDECL(objc_msgSend_fpret)
 TYPE_DIRECTIVE(CDECL(objc_msgSend_fpret), @function)
 CDECL(objc_msgSend_fpret):
@@ -90,3 +113,10 @@ CDECL(objc_msgSend):
 TYPE_DIRECTIVE(CDECL(objc_msgSend_stret), @function)
 CDECL(objc_msgSend_stret):
 	MSGSEND 8, 12, 0
+
+#ifdef _WIN32
+        .section        .drectve,"yn"
+        .ascii  " /EXPORT:_objc_msgSend"
+        .ascii  " /EXPORT:_objc_msgSend_stret"
+        .ascii  " /EXPORT:_objc_msgSend_fpret"
+#endif

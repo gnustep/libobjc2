@@ -289,6 +289,10 @@ CDECL(objc_msgSend):
 TYPE_DIRECTIVE(CDECL(objc_msgSend_stret), @function)
 CDECL(objc_msgSend_stret):
 	MSGSEND objc_msgSend_stret, %rdx, %r8
+.section        .drectve,"yn"
+.ascii  " /EXPORT:objc_msgSend"
+.ascii  " /EXPORT:objc_msgSend_fpret"
+.ascii  " /EXPORT:objc_msgSend_stret"
 #else
 .globl CDECL(objc_msgSend)
 TYPE_DIRECTIVE(CDECL(objc_msgSend), @function)

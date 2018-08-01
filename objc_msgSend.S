@@ -15,9 +15,4 @@
 #endif
 #ifdef __ELF__
 .section .note.GNU-stack,"",%progbits
-#elif defined(_WIN32)
-.section        .drectve,"yn"
-.ascii  " /EXPORT:objc_msgSend"
-.ascii  " /EXPORT:objc_msgSend_fpret"
-.ascii  " /EXPORT:objc_msgSend_stret"
 #endif
