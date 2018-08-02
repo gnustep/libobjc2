@@ -84,10 +84,8 @@ __attribute__((objc_root_class))
 
 	va_start(ap, str);
 
-	vsnprintf(&s, 100, str, ap);
+	vsnprintf(s, 100, str, ap);
 	va_end(ap);
-	fprintf(stderr, "String: '%s'\n", s);
-	vfprintf(stderr, s, ap);
 	assert(strcmp(s, "Format string 42 42.000000\n") ==0);
 }
 + (void)initialize
