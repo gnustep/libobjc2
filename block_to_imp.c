@@ -35,6 +35,61 @@ void __clear_cache(void* start, void* end);
 #include <nbutil.h>
 #endif
 
+#ifdef _WIN32
+#include "safewindows.h"
+#if defined(WINAPI_FAMILY) && WINAPI_FAMILY != WINAPI_FAMILY_DESKTOP_APP && _WIN32_WINNT >= 0x0A00
+// Prefer the *FromApp versions when we're being built in a Windows Store App context on
+// Windows >= 10. *FromApp require the application to be manifested for "codeGeneration".
+#define VirtualAlloc VirtualAllocFromApp
+#define VirtualProtect VirtualProtectFromApp
+#endif // App family partition
+
+#ifndef PROT_READ
+#define PROT_READ  0x4
+#endif
+
+#ifndef PROT_WRITE
+#define PROT_WRITE 0x2
+#endif
+
+#ifndef PROT_EXEC
+#define PROT_EXEC  0x1
+#endif
+
+static void *valloc(size_t len)
+{
+	return VirtualAlloc(NULL, len, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+}
+
+static int mprotect(void *buffer, size_t len, int prot)
+{
+	DWORD oldProt = 0, newProt = PAGE_NOACCESS;
+	// Windows doesn't offer values that can be ORed together...
+	if ((prot & PROT_WRITE))
+	{
+		// promote to readwrite as there's no writeonly protection constant
+		newProt = PAGE_READWRITE;
+	}
+	else if ((prot & PROT_READ))
+	{
+		newProt = PAGE_READONLY;
+	}
+
+	if ((prot & PROT_EXEC))
+	{
+		switch (newProt)
+		{
+			case PAGE_NOACCESS: newProt = PAGE_EXECUTE; break;
+			case PAGE_READONLY: newProt = PAGE_EXECUTE_READ; break;
+			case PAGE_READWRITE: newProt = PAGE_EXECUTE_READWRITE; break;
+		}
+	}
+
+	return 0 != VirtualProtect(buffer, len, newProt, &oldProt);
+}
+#endif // _WIN32
+
+
 #define PAGE_SIZE 4096
 
 struct block_header
@@ -111,11 +166,7 @@ static struct trampoline_set *alloc_trampolines(char *start, char *end)
 {
 	struct trampoline_set *metadata = calloc(1, sizeof(struct trampoline_set));
 	metadata->buffers =
-#ifdef _WIN32
-		VirtualAlloc(NULL, sizeof(struct trampoline_buffers), MEM_COMMIT, PAGE_READWRITE);
-#else
-		valloc(sizeof(struct trampoline_buffers));
-#endif
+	valloc(sizeof(struct trampoline_buffers));
 	for (int i=0 ; i<HEADERS_PER_PAGE ; i++)
 	{
 		metadata->buffers->headers[i].fnptr = (void(*)(void))invalid;
@@ -124,12 +175,7 @@ static struct trampoline_set *alloc_trampolines(char *start, char *end)
 		memcpy(block, start, end-start);
 	}
 	metadata->buffers->headers[HEADERS_PER_PAGE-1].block = NULL;
-#ifdef _WIN32
-	DWORD ignored;
-	VirtualProtect(metadata->buffers->rx_buffer, PAGE_SIZE, PAGE_EXECUTE_READ, &ignored);
-#else
 	mprotect(metadata->buffers->rx_buffer, PAGE_SIZE, PROT_READ | PROT_EXEC);
-#endif
 	clear_cache(metadata->buffers->rx_buffer, &metadata->buffers->rx_buffer[PAGE_SIZE]);
 	return metadata;
 }
