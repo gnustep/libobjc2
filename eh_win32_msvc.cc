@@ -210,13 +210,3 @@ PUBLIC extern "C" void objc_exception_rethrow(void* exc)
 	__builtin_unreachable();
 }
 
-// DO NOT COMMIT THIS!
-// It's just here to get things to build while I work on EH support
-PUBLIC extern "C" void *objc_begin_catch(void* exc)
-{
-	return exc;
-}
-PUBLIC extern "C" void *objc_end_catch(void* exc)
-{
-	return exc;
-}
