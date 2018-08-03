@@ -5,8 +5,10 @@ project(libobjc C ASM CXX)
 INCLUDE (CheckCXXSourceCompiles)
 
 macro(install_symlink filepath sympath)
-	install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ${filepath} ${sympath})")
-	install(CODE "message(\"-- Symlinking: ${sympath} -> ${filepath}\")")
+	if (UNIX)
+		install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ${filepath} ${sympath})")
+		install(CODE "message(\"-- Symlinking: ${sympath} -> ${filepath}\")")
+	endif ()
 endmacro(install_symlink)
 
 set(CMAKE_C_FLAGS_DEBUG "-O0 -Xclang -fno-inline ${CMAKE_C_FLAGS_DEBUG}")
