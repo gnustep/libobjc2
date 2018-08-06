@@ -15,6 +15,10 @@ int main(void)
 #ifdef GS_RUNTIME_V2
 	// With the new ABI, these should be precisely the same object.
 	assert(p1 == p2);
+	unsigned int count;
+	protocol_copyMethodDescriptionList(p2, YES, YES, &count);
+	// We did get the correct protocol!
+	assert(count == 1);
 #endif
 	return 0;
 }
