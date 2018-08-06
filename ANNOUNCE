@@ -8,7 +8,43 @@ dialects of Objective-C for use with GNUstep and other Objective-C programs.
 This release introduces a new Objective-C ABI, which is designed to be forward
 compatible with future changes and removes a large number of hacks that were
 required for compatibility with the prior ABI that included features introduced
-in the 1980s.
+in the 1980s.  Highlights include:
+
+- The linker now removes duplicate selectors within a library.
+
+- The linker will remove duplicate protocol definitions within a library.
+
+- Protocols and classes are now always accessed via an indirection layer, so
+  they can be extended by future versions of the ABI without breaking
+  compatibility.
+
+- Categories can include property metadata and both categories.
+
+- Constant strings are now emitted with a richer structure, which provides
+  faster hashing and better unicode support.
+
+- Instance variable metadata includes size and alignment, allowing better object
+  layout and more accurate introspection.
+
+- Method metadata now includes extended type information, allowing bridged
+  languages to understand the class that methods expect and not just the fact
+  that they take an object.  This was previously an obstacle to supporting
+  JavaScriptCore's Objective-C bridge with GNUstep.
+
+In addition to the new ABI, there are several improvements on Windows:
+
+- The runtime now uses SEH-based exception handling on Windows.  This
+  interoperates with C++ exceptions in libraries compiled with MSVC or
+  MSVC-compatible compilers.
+
+- All of the assembly code paths now fully support i386 and x64 Windows.
+
+- Public runtime functions are now marked dllexport, so the runtime can be built
+  as objc.dll on Windows.
+
+**WARNING**: The new ABI is currently incompatible with incremental linking on
+Windows, so projects built with Microsoft's linker must disable incremental
+linking.
 
 The runtime will now use the new ABI's data structures internally and will
 automatically upgrade on-disk structures from old ABIs when used with the old
