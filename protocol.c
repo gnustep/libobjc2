@@ -29,10 +29,12 @@ static int protocol_hash(const struct objc_protocol *protocol)
 #include "hash_table.h"
 
 static protocol_table *known_protocol_table;
+mutex_t protocol_table_lock;
 
 void init_protocol_table(void)
 {
 	protocol_initialize(&known_protocol_table, 128);
+	INIT_LOCK(protocol_table_lock);
 }
 
 static void protocol_table_insert(const struct objc_protocol *protocol)
@@ -252,6 +254,7 @@ static BOOL init_protocols(struct objc_protocol_list *protocols)
 
 PRIVATE void objc_init_protocols(struct objc_protocol_list *protocols)
 {
+	LOCK_FOR_SCOPE(&protocol_table_lock);
 	if (!init_protocols(protocols))
 	{
 		set_buffered_object_at_index(protocols, buffered_objects++);
@@ -276,6 +279,7 @@ PRIVATE void objc_init_protocols(struct objc_protocol_list *protocols)
 Protocol *objc_getProtocol(const char *name)
 {
 	if (NULL == name) { return NULL; }
+	LOCK_FOR_SCOPE(&protocol_table_lock);
 	return (Protocol*)protocol_for_name(name);
 }
 
@@ -557,6 +561,7 @@ BOOL protocol_isEqual(Protocol *p, Protocol *other)
 
 Protocol*__unsafe_unretained* objc_copyProtocolList(unsigned int *outCount)
 {
+	LOCK_FOR_SCOPE(&protocol_table_lock);
 	unsigned int total = known_protocol_table->table_used;
 	Protocol **p = calloc(sizeof(Protocol*), known_protocol_table->table_used);
 
@@ -588,7 +593,7 @@ Protocol *objc_allocateProtocol(const char *name)
 void objc_registerProtocol(Protocol *proto)
 {
 	if (NULL == proto) { return; }
-	LOCK_RUNTIME_FOR_SCOPE();
+	LOCK_FOR_SCOPE(&protocol_table_lock);
 	if (objc_getProtocol(proto->name) != NULL) { return; }
 	if (incompleteProtocolClass() != proto->isa) { return; }
 	init_protocol_classes();
@@ -598,9 +603,12 @@ void objc_registerProtocol(Protocol *proto)
 PRIVATE void registerProtocol(Protocol *proto)
 {
 	init_protocol_classes();
-	LOCK_RUNTIME_FOR_SCOPE();
+	LOCK_FOR_SCOPE(&protocol_table_lock);
 	proto->isa = protocol_class_gsv2;
-	protocol_table_insert(proto);
+	if (protocol_for_name(proto->name) == NULL)
+	{
+		protocol_table_insert(proto);
+	}
 }
 void protocol_addMethodDescription(Protocol *aProtocol,
                                    SEL name,
