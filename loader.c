@@ -228,6 +228,17 @@ PUBLIC void __objc_load(struct objc_init *init)
 		}
 		registerProtocol((struct objc_protocol*)proto);
 	}
+	for (struct objc_protocol **proto = init->proto_ref_begin ; proto < init->proto_ref_end ;
+	     proto++)
+	{
+		if (*proto == NULL)
+		{
+			continue;
+		}
+		struct objc_protocol *p = objc_getProtocol((*proto)->name);
+		assert(p);
+		*proto = p;
+	}
 	for (Class *cls = init->cls_begin ; cls < init->cls_end ; cls++)
 	{
 		if (*cls == NULL)
