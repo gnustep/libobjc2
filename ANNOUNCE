@@ -24,7 +24,8 @@ in the 1980s.  Highlights include:
   faster hashing and better unicode support.
 
 - Instance variable metadata includes size and alignment, allowing better object
-  layout and more accurate introspection.
+  layout and more accurate introspection.  Instance variable metadata now
+  includes more accurate information about ARC ownership semantics.
 
 - Method metadata now includes extended type information, allowing bridged
   languages to understand the class that methods expect and not just the fact
@@ -38,6 +39,12 @@ In addition to the new ABI, there are several improvements on Windows:
   MSVC-compatible compilers.
 
 - All of the assembly code paths now fully support i386 and x64 Windows.
+
+- Object allocations on 32-bit Windows now use `_aligned_malloc` to guarantee
+  sufficient alignment for AVX vectors in instance variables.
+
+- The runtime now uses fibre-local storage and critical sections on Windows,
+  improving performance in multithreaded workloads on Windows.
 
 - Public runtime functions are now marked dllexport, so the runtime can be built
   as objc.dll on Windows.
