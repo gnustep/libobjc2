@@ -130,7 +130,13 @@ else ()
 	list(APPEND libobjc_OBJC_SRCS gc_none.c)
 endif ()
 
-set(OLDABI_COMPAT TRUE CACHE BOOL
+if (WIN32)
+	set(OLD_ABI_COMPAT_DEFAULT false)
+else()
+	set(OLD_ABI_COMPAT_DEFAULT true)
+endif()
+
+set(OLDABI_COMPAT ${OLD_ABI_COMPAT_DEFAULT} CACHE BOOL
 	"Enable compatibility with GCC and old GNUstep ABIs")
 
 set(LEGACY_COMPAT FALSE CACHE BOOL
