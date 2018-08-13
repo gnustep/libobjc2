@@ -12,7 +12,6 @@ struct
 } foreign_exception;
 
 BOOL finally_called = NO;
-int id_catchall;
 
 id e1;
 void throw_id(void)
@@ -66,7 +65,6 @@ int main(void)
 		assert(x == e1);
 	}
 	assert(catchid == YES);
-	assert(id_catchall == 1);
 	[e1 dealloc];
 	return 0;
 }
