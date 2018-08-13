@@ -6,7 +6,7 @@
 # On Windows, CMake adds /TC to the clang-cl flags and doesn't provide a way to
 # tell it not to.  We fix this by telling clang do disregard that option,
 # unconditionally (which means that it still defaults to C for .c files).
-set(ENV{CCC_OVERRIDE_OPTIONS} "x/TC x/TP")
+set(ENV{CCC_OVERRIDE_OPTIONS} "x/TC x/TP x-TC x-TP")
 set(INCREMENTAL " ")
 if (MSVC)
 	set(CMAKE_EXE_LINKER_FLAGS "/DEBUG /INCREMENTAL:NO ${CMAKE_EXE_LINKER_FLAGS}")
@@ -98,7 +98,7 @@ function(addtest_flags TEST_NAME FLAGS TEST_SOURCE)
 	set(ARC "")
 	set_target_properties(${TEST_NAME} PROPERTIES
 		INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}"
-		COMPILE_FLAGS "-Xclang -fblocks ${FLAGS}"
+		COMPILE_FLAGS "-Xclang -fblocks -Xclang -fobjc-exceptions ${FLAGS}"
 		LINK_FLAGS ${INCREMENTAL}
 		LINKER_LANGUAGE C
 	)
