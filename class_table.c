@@ -422,6 +422,20 @@ PRIVATE void objc_load_class(struct objc_class *class)
 		return;
 	}
 
+#ifdef _WIN32
+	// On Windows, the super_class pointer may point to the local __imp_
+	// symbol, rather than to the external symbol.  The runtime must remove the
+	// extra indirection.
+	if (class->super_class)
+	{
+		Class superMeta = class->super_class->isa;
+		if (!class_isMetaClass(superMeta))
+		{
+			class->super_class = superMeta;
+		}
+	}
+#endif
+
 	// Work around a bug in some versions of GCC that don't initialize the
 	// class structure correctly.
 	class->subclass_list = NULL;
