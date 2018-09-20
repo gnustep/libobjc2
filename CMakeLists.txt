@@ -209,7 +209,7 @@ function(test_cxx CXX_RUNTIME_NAME IS_STDLIB)
 		message(STATUS "Testing ${CXX_RUNTIME_LIB} as the C++ runtime library")
 		try_compile(USERUNTIME 
 			"${CMAKE_BINARY_DIR}/CMake"
-			"${CMAKE_SOURCE_DIR}/CMake"
+			"${CMAKE_CURRENT_LIST_DIR}/CMake"
 			test_cxx_runtime
 			CMAKE_FLAGS "-DCXX_RUNTIME=${CXX_RUNTIME_LIB}")
 		if (USERUNTIME)
@@ -277,7 +277,7 @@ if (ENABLE_OBJCXX)
 			message(STATUS "Testing C++ standard library")
 			try_compile(USERUNTIME 
 				"${CMAKE_BINARY_DIR}/CMake"
-				"${CMAKE_SOURCE_DIR}/CMake"
+				"${CMAKE_CURRENT_LIST_DIR}/CMake"
 				test_cxx_runtime)
 			if (${USERUNTIME})
 				message(STATUS "libobjc will depend on C++ standard library")
