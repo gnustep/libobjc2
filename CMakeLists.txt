@@ -392,8 +392,8 @@ install(TARGETS ${INSTALL_TARGETS}
 install(FILES ${libobjc_HDRS}
 	DESTINATION "${HEADER_INSTALL_PATH}/${INCLUDE_DIRECTORY}")
 
-install_symlink(${HEADER_INSTALL_PATH}/${INCLUDE_DIRECTORY}/blocks_runtime.h ${HEADER_INSTALL_PATH}/Block.h)
-install_symlink(${HEADER_INSTALL_PATH}/${INCLUDE_DIRECTORY}/blocks_private.h ${HEADER_INSTALL_PATH}/Block_private.h)
+install_symlink(${CMAKE_INSTALL_PREFIX}/${HEADER_INSTALL_PATH}/${INCLUDE_DIRECTORY}/blocks_runtime.h ${CMAKE_INSTALL_PREFIX}/${HEADER_INSTALL_PATH}/Block.h)
+install_symlink(${CMAKE_INSTALL_PREFIX}/${HEADER_INSTALL_PATH}/${INCLUDE_DIRECTORY}/blocks_private.h ${CMAKE_INSTALL_PREFIX}/${HEADER_INSTALL_PATH}/Block_private.h)
 
 set(CPACK_GENERATOR TGZ CACHE STRING
 	"Installer types to generate.  Sensible options include TGZ, RPM and DEB")
