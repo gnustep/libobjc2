@@ -117,7 +117,7 @@ typedef struct PREFIX(_table_struct)
 	struct PREFIX(_table_cell_struct) *table;
 } PREFIX(_table);
 
-struct PREFIX(_table_cell_struct) *PREFIX(alloc_cells)(PREFIX(_table) *table, int count)
+static struct PREFIX(_table_cell_struct) *PREFIX(alloc_cells)(PREFIX(_table) *table, int count)
 {
 #	if defined(ENABLE_GC) && defined(MAP_TABLE_TYPES_BITMAP)
 	return GC_CALLOC_EXPLICITLY_TYPED(count,
@@ -127,7 +127,7 @@ struct PREFIX(_table_cell_struct) *PREFIX(alloc_cells)(PREFIX(_table) *table, in
 #	endif
 }
 
-PREFIX(_table) *PREFIX(_create)(uint32_t capacity)
+static PREFIX(_table) *PREFIX(_create)(uint32_t capacity)
 {
 	PREFIX(_table) *table = CALLOC(1, sizeof(PREFIX(_table)));
 #	ifndef MAP_TABLE_NO_LOCK
@@ -144,7 +144,7 @@ PREFIX(_table) *PREFIX(_create)(uint32_t capacity)
 	return table;
 }
 
-void PREFIX(_initialize)(PREFIX(_table) **table, uint32_t capacity)
+static void PREFIX(_initialize)(PREFIX(_table) **table, uint32_t capacity)
 {
 #ifdef ENABLE_GC
 	GC_add_roots(table, table+1);

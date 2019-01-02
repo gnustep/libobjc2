@@ -18,7 +18,7 @@ const static SparseArray EmptyArray24 = { 24, 0, .data[0 ... 255] = (void*)&Empt
 #define base_shift 8
 #define base_mask ((1<<base_shift) - 1)
 
-void *EmptyChildForShift(uint32_t shift)
+static void *EmptyChildForShift(uint32_t shift)
 {
 	switch(shift)
 	{

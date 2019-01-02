@@ -533,19 +533,19 @@ struct thread_data
 #ifdef NO_PTHREADS
 static __thread struct thread_data thread_data;
 #else
-void clean_tls(void *td)
+static void clean_tls(void *td)
 {
 	struct thread_data *data = td;
 }
 
 static pthread_key_t key;
-void init_key(void)
+static void init_key(void)
 {
 	pthread_key_create(&key, clean_tls);
 }
 #endif
 
-struct thread_data *get_thread_data(void)
+static struct thread_data *get_thread_data(void)
 {
 #ifndef NO_PTHREADS
 	static pthread_once_t once_control = PTHREAD_ONCE_INIT;
@@ -566,7 +566,7 @@ struct thread_data *get_thread_data(void)
 #endif
 }
 
-struct thread_data *get_thread_data_fast(void)
+static struct thread_data *get_thread_data_fast(void)
 {
 #ifndef NO_PTHREADS
 	struct thread_data *td = pthread_getspecific(key);

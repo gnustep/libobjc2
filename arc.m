@@ -107,8 +107,8 @@ static inline struct arc_tls* getARCThreadData(void)
 	return tls;
 #endif
 }
-int count = 0;
-int poolCount = 0;
+static int count = 0;
+static int poolCount = 0;
 static inline void release(id obj);
 
 /**
