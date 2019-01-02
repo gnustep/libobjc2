@@ -311,7 +311,7 @@ PRIVATE void objc_resolve_class_links(void)
 		}
 	} while (resolvedClass);
 }
-void __objc_resolve_class_links(void)
+PRIVATE void __objc_resolve_class_links(void)
 {
 	static BOOL warned = NO;
 	if (!warned)
