@@ -250,6 +250,9 @@ PUBLIC void __objc_load(struct objc_init *init)
 		{
 			CurrentABI = UnknownABI;
 		}
+#ifdef DEBUG_LOADING
+		fprintf(stderr, "Loading class %s\n", (*cls)->name);
+#endif
 		objc_load_class(*cls);
 	}
 #if 0
@@ -268,6 +271,9 @@ PUBLIC void __objc_load(struct objc_init *init)
 			continue;
 		}
 		objc_try_load_category(cat);
+#ifdef DEBUG_LOADING
+		fprintf(stderr, "Loading category %s (%s)\n", cat->class_name, cat->name);
+#endif
 	}
 	// Load categories and statics that were deferred.
 	objc_load_buffered_categories();
