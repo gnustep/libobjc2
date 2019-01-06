@@ -4,13 +4,6 @@ project(libobjc C ASM CXX)
 
 INCLUDE (CheckCXXSourceCompiles)
 
-macro(install_symlink filepath sympath)
-	if (UNIX)
-		install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ${filepath} ${sympath})")
-		install(CODE "message(\"-- Symlinking: ${sympath} -> ${filepath}\")")
-	endif ()
-endmacro(install_symlink)
-
 set(CMAKE_C_FLAGS_DEBUG "-O0 -Xclang -fno-inline ${CMAKE_C_FLAGS_DEBUG}")
 set(CMAKE_C_FLAGS_RELEASE "-O3 ${CMAKE_C_FLAGS_RELEASE}")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
@@ -78,7 +71,10 @@ set(libobjc_HDRS
 	objc/runtime-deprecated.h
 	objc/runtime.h
 	objc/slot.h)
-
+set(libBlocksRuntime_COMPATIBILITY_HDRS
+	Block.h
+	Block_private.h
+	)
 # Windows does not use DWARF EH
 if (WIN32)
 	list(APPEND libobjc_CXX_SRCS eh_win32_msvc.cc)
@@ -391,9 +387,8 @@ install(TARGETS ${INSTALL_TARGETS}
 	ARCHIVE DESTINATION ${LIB_INSTALL_PATH})
 install(FILES ${libobjc_HDRS}
 	DESTINATION "${HEADER_INSTALL_PATH}/${INCLUDE_DIRECTORY}")
-
-install_symlink(${CMAKE_INSTALL_PREFIX}/${HEADER_INSTALL_PATH}/${INCLUDE_DIRECTORY}/blocks_runtime.h ${CMAKE_INSTALL_PREFIX}/${HEADER_INSTALL_PATH}/Block.h)
-install_symlink(${CMAKE_INSTALL_PREFIX}/${HEADER_INSTALL_PATH}/${INCLUDE_DIRECTORY}/blocks_private.h ${CMAKE_INSTALL_PREFIX}/${HEADER_INSTALL_PATH}/Block_private.h)
+install(FILES ${libBlocksRuntime_COMPATIBILITY_HDRS}
+	DESTINATION "${HEADER_INSTALL_PATH}")
 
 set(CPACK_GENERATOR TGZ CACHE STRING
 	"Installer types to generate.  Sensible options include TGZ, RPM and DEB")
