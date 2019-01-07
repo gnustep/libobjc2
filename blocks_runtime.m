@@ -39,12 +39,17 @@
 static void *_HeapBlockByRef = (void*)1;
 
 
+_Bool _Block_has_signature(id b)
+{
+	const struct Block_layout *block = (struct Block_layout*)b;
+	return ((NULL != block) && (block->flags & BLOCK_HAS_SIGNATURE));
+}
 /**
  * Returns the Objective-C type encoding for the block.
  */
-const char *block_getType_np(const void *b)
+const char * _Block_signature(id b)
 {
-	const struct Block_layout *block = b;
+	const struct Block_layout *block = (struct Block_layout*)b;
 	if ((NULL == block) || !(block->flags & BLOCK_HAS_SIGNATURE))
 	{
 		return NULL;
@@ -54,6 +59,10 @@ const char *block_getType_np(const void *b)
 		return ((struct Block_descriptor_basic*)block->descriptor)->encoding;
 	}
 	return block->descriptor->encoding;
+}
+const char *block_getType_np(const void *b)
+{
+	return _Block_signature(b);
 }
 
 static int increment24(int *ref)

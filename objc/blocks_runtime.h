@@ -16,6 +16,14 @@
 BLOCKS_EXPORT void *_Block_copy(const void *);
 BLOCKS_EXPORT void _Block_release(const void *);
 BLOCKS_EXPORT const char *block_getType_np(const void *b) OBJC_NONPORTABLE;
+#ifdef __OBJC__
+BLOCKS_EXPORT _Bool _Block_has_signature(id);
+BLOCKS_EXPORT const char * _Block_signature(id);
+#else
+BLOCKS_EXPORT _Bool _Block_has_signature(void *);
+BLOCKS_EXPORT const char * _Block_signature(void *);
+#endif
+
 
 #define Block_copy(x) ((__typeof(x))_Block_copy((const void *)(x)))
 #define Block_release(x) _Block_release((const void *)(x))
