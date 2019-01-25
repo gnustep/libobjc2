@@ -94,7 +94,15 @@ static inline void ivarSetAlign(Ivar ivar, size_t align)
 {
 	if (align != 0)
 	{
-		align = sizeof(size_t) * 8 - __builtin_clz(align) - 1;
+		if (sizeof(size_t) == 4)
+		{
+			align = 4 * 8 - __builtin_clz(align) - 1;
+		}
+		else if (sizeof(size_t) == 8)
+		{
+			align = 8 * 8 - __builtin_clzll(align) - 1;
+		}
+		_Static_assert((sizeof(size_t) == 4) || (sizeof(size_t) == 8), "Unexpected type for size_t");
 	}
 	align  <<= ivar_align_shift;
 	ivar->flags = (ivar->flags & ~ivar_align_mask) | align;
