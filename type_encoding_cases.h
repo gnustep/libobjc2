@@ -8,6 +8,7 @@
 #ifndef APPLY_TYPE
 #error Define APPLY_TYPE(type, name, capitalizedName, encodingChar) before including this file
 #endif
+APPLY_TYPE(long double, long double, LongDouble, 'D')
 APPLY_TYPE(double, double, Double, 'd')
 APPLY_TYPE(float, float, Float, 'f')
 APPLY_TYPE(signed char, char, Char, 'c')
