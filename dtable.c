@@ -43,6 +43,8 @@ PRIVATE mutex_t initialize_lock;
  * 2^x in increments of 8. */
 static uint32_t dtable_depth = 8;
 
+_Atomic(uint64_t) objc_method_cache_version;
+
 /**
  * Starting at `cls`, finds the class that provides the implementation of the
  * method identified by `sel`.
