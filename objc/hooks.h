@@ -14,7 +14,7 @@ extern "C" {
 
 
 #ifndef OBJC_HOOK
-#define OBJC_HOOK PUBLIC extern
+#define OBJC_HOOK OBJC_PUBLIC extern
 #endif
 struct objc_category;
 /**
@@ -109,7 +109,7 @@ typedef IMP (*objc_tracing_hook)(id, SEL, IMP, int, void*);
 /**
  * Registers a tracing hook for a specified selector.  
  */
-PUBLIC int objc_registerTracingHook(SEL, objc_tracing_hook);
+OBJC_PUBLIC int objc_registerTracingHook(SEL, objc_tracing_hook);
 
 #ifdef __cplusplus
 }

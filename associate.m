@@ -388,7 +388,7 @@ PRIVATE void gc_setTypeForClass(Class cls, void *type)
 	list->gc_type = type;
 }
 
-PUBLIC
+OBJC_PUBLIC
 int objc_sync_enter(id object)
 {
 	if ((object == 0) || isSmallObject(object)) { return 0; }
@@ -397,7 +397,7 @@ int objc_sync_enter(id object)
 	return 0;
 }
 
-PUBLIC
+OBJC_PUBLIC
 int objc_sync_exit(id object)
 {
 	if ((object == 0) || isSmallObject(object)) { return 0; }

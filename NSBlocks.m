@@ -6,9 +6,9 @@
 #include "dtable.h"
 #include <assert.h>
 
-PUBLIC struct objc_class _NSConcreteGlobalBlock;
-PUBLIC struct objc_class _NSConcreteStackBlock;
-PUBLIC struct objc_class _NSConcreteMallocBlock;
+OBJC_PUBLIC struct objc_class _NSConcreteGlobalBlock;
+OBJC_PUBLIC struct objc_class _NSConcreteStackBlock;
+OBJC_PUBLIC struct objc_class _NSConcreteMallocBlock;
 
 static struct objc_class _NSConcreteGlobalBlockMeta;
 static struct objc_class _NSConcreteStackBlockMeta;
@@ -40,7 +40,7 @@ static void createNSBlockSubclass(Class superclass, Class newClass,
 #define NEW_CLASS(super, sub) \
 	createNSBlockSubclass(super, &sub, &sub ## Meta, #sub)
 
-PUBLIC
+OBJC_PUBLIC
 BOOL objc_create_block_classes_as_subclasses_of(Class super)
 {
 	if (_NSBlock.super_class != NULL) { return NO; }

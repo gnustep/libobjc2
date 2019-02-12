@@ -18,7 +18,7 @@ PRIVATE int spinlocks[spinlock_count];
 /**
  * Public function for getting a property.  
  */
-PUBLIC
+OBJC_PUBLIC
 id objc_getProperty(id obj, SEL _cmd, ptrdiff_t offset, BOOL isAtomic)
 {
 	if (nil == obj) { return nil; }
@@ -46,7 +46,7 @@ id objc_getProperty(id obj, SEL _cmd, ptrdiff_t offset, BOOL isAtomic)
 	return ret;
 }
 
-PUBLIC
+OBJC_PUBLIC
 void objc_setProperty(id obj, SEL _cmd, ptrdiff_t offset, id arg, BOOL isAtomic, BOOL isCopy)
 {
 	if (nil == obj) { return; }
@@ -87,7 +87,7 @@ void objc_setProperty(id obj, SEL _cmd, ptrdiff_t offset, id arg, BOOL isAtomic,
 	objc_release(old);
 }
 
-PUBLIC
+OBJC_PUBLIC
 void objc_setProperty_atomic(id obj, SEL _cmd, id arg, ptrdiff_t offset)
 {
 	char *addr = (char*)obj;
@@ -101,7 +101,7 @@ void objc_setProperty_atomic(id obj, SEL _cmd, id arg, ptrdiff_t offset)
 	objc_release(old);
 }
 
-PUBLIC
+OBJC_PUBLIC
 void objc_setProperty_atomic_copy(id obj, SEL _cmd, id arg, ptrdiff_t offset)
 {
 	char *addr = (char*)obj;
@@ -116,7 +116,7 @@ void objc_setProperty_atomic_copy(id obj, SEL _cmd, id arg, ptrdiff_t offset)
 	objc_release(old);
 }
 
-PUBLIC
+OBJC_PUBLIC
 void objc_setProperty_nonatomic(id obj, SEL _cmd, id arg, ptrdiff_t offset)
 {
 	char *addr = (char*)obj;
@@ -127,7 +127,7 @@ void objc_setProperty_nonatomic(id obj, SEL _cmd, id arg, ptrdiff_t offset)
 	objc_release(old);
 }
 
-PUBLIC
+OBJC_PUBLIC
 void objc_setProperty_nonatomic_copy(id obj, SEL _cmd, id arg, ptrdiff_t offset)
 {
 	char *addr = (char*)obj;
@@ -137,7 +137,7 @@ void objc_setProperty_nonatomic_copy(id obj, SEL _cmd, id arg, ptrdiff_t offset)
 	objc_release(old);
 }
 
-PUBLIC
+OBJC_PUBLIC
 void objc_copyCppObjectAtomic(void *dest, const void *src,
                               void (*copyHelper) (void *dest, const void *source))
 {
@@ -150,7 +150,7 @@ void objc_copyCppObjectAtomic(void *dest, const void *src,
 	unlock_spinlock(lock2);
 }
 
-PUBLIC
+OBJC_PUBLIC
 void objc_getCppObjectAtomic(void *dest, const void *src,
                              void (*copyHelper) (void *dest, const void *source))
 {
@@ -160,7 +160,7 @@ void objc_getCppObjectAtomic(void *dest, const void *src,
 	unlock_spinlock(lock);
 }
 
-PUBLIC
+OBJC_PUBLIC
 void objc_setCppObjectAtomic(void *dest, const void *src,
                              void (*copyHelper) (void *dest, const void *source))
 {
@@ -177,7 +177,7 @@ void objc_setCppObjectAtomic(void *dest, const void *src,
  * pointers corresponds to the object, which causes some excessive locking to
  * be needed.
  */
-PUBLIC
+OBJC_PUBLIC
 void objc_copyPropertyStruct(void *dest,
                              void *src,
                              ptrdiff_t size,
@@ -204,7 +204,7 @@ void objc_copyPropertyStruct(void *dest,
  * Get property structure function.  Copies a structure from an ivar to another
  * variable.  Locks on the address of src.
  */
-PUBLIC
+OBJC_PUBLIC
 void objc_getPropertyStruct(void *dest,
                             void *src,
                             ptrdiff_t size,
@@ -228,7 +228,7 @@ void objc_getPropertyStruct(void *dest,
  * Set property structure function.  Copes a structure to an ivar.  Locks on
  * dest.
  */
-PUBLIC
+OBJC_PUBLIC
 void objc_setPropertyStruct(void *dest,
                             void *src,
                             ptrdiff_t size,
@@ -249,7 +249,7 @@ void objc_setPropertyStruct(void *dest,
 }
 
 
-PUBLIC
+OBJC_PUBLIC
 objc_property_t class_getProperty(Class cls, const char *name)
 {
 	if (Nil == cls)
@@ -272,7 +272,7 @@ objc_property_t class_getProperty(Class cls, const char *name)
 	return NULL;
 }
 
-PUBLIC
+OBJC_PUBLIC
 objc_property_t* class_copyPropertyList(Class cls, unsigned int *outCount)
 {
 	if (Nil == cls)
@@ -327,7 +327,7 @@ static const char* property_getIVar(objc_property_t property)
 	return 0;
 }
 
-PUBLIC
+OBJC_PUBLIC
 const char *property_getName(objc_property_t property)
 {
 	if (NULL == property) { return NULL; }
@@ -352,7 +352,7 @@ static const char *property_getTypeEncoding(objc_property_t property)
 	return property->type;
 }
 
-PUBLIC
+OBJC_PUBLIC
 const char *property_getAttributes(objc_property_t property)
 {
 	if (NULL == property) { return NULL; }
@@ -360,7 +360,7 @@ const char *property_getAttributes(objc_property_t property)
 }
 
 
-PUBLIC
+OBJC_PUBLIC
 objc_property_attribute_t *property_copyAttributeList(objc_property_t property,
                                                       unsigned int *outCount)
 {
@@ -551,7 +551,7 @@ PRIVATE struct objc_property propertyFromAttrs(const objc_property_attribute_t *
 }
 
 
-PUBLIC
+OBJC_PUBLIC
 BOOL class_addProperty(Class cls,
                        const char *name,
                        const objc_property_attribute_t *attributes, 
@@ -572,7 +572,7 @@ BOOL class_addProperty(Class cls,
 	return YES;
 }
 
-PUBLIC
+OBJC_PUBLIC
 void class_replaceProperty(Class cls,
                            const char *name,
                            const objc_property_attribute_t *attributes,
@@ -589,7 +589,7 @@ void class_replaceProperty(Class cls,
 	LOCK_RUNTIME_FOR_SCOPE();
 	memcpy(old, &p, sizeof(struct objc_property));
 }
-PUBLIC
+OBJC_PUBLIC
 char *property_copyAttributeValue(objc_property_t property,
                                   const char *attributeName)
 {
