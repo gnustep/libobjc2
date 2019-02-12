@@ -23,7 +23,7 @@ struct objc_slot2
  * invalid, for example if a subclass loads a category containing methods that
  * were inherited from the superclass.
  */
-PUBLIC _Atomic(uint64_t) objc_method_cache_version;
+PUBLIC extern _Atomic(uint64_t) objc_method_cache_version;
 
 /**
  * Legacy cache structure.  This is no longer maintained in the runtime and is
