@@ -246,7 +246,7 @@ OBJC_PUBLIC void __objc_load(struct objc_init *init)
 			continue;
 		}
 		// As a special case, allow using legacy ABI code with a new runtime.
-		if (isFirstLoad && (strcmp((*cls)->name, "Protocol")))
+		if (isFirstLoad && (strcmp((*cls)->name, "Protocol") == 0))
 		{
 			CurrentABI = UnknownABI;
 		}
