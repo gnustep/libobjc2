@@ -101,9 +101,9 @@ void fillCatchableType(_MSVC_CatchableType* exceptType)
 } // <anonymous-namespace>
 
 struct X {};
-PUBLIC extern "C" void objc_exception_rethrow(void* exc);
+OBJC_PUBLIC extern "C" void objc_exception_rethrow(void* exc);
 
-PUBLIC extern "C" void objc_exception_throw(id object)
+OBJC_PUBLIC extern "C" void objc_exception_throw(id object)
 {
 	// Base used for image-relative addresses.
 	char x;
@@ -204,7 +204,7 @@ PUBLIC extern "C" void objc_exception_throw(id object)
 }
 
 
-PUBLIC extern "C" void objc_exception_rethrow(void* exc)
+OBJC_PUBLIC extern "C" void objc_exception_rethrow(void* exc)
 {
 	_CxxThrowException(nullptr, nullptr);
 	__builtin_unreachable();
