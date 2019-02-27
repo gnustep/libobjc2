@@ -65,9 +65,9 @@ namespace
 static std::string mangleObjcObject()
 {
 #if defined(__SIZEOF_POINTER__) && __SIZEOF_POINTER__ == 8
-	return ".PEAU.objc_object@@";
+	return ".PEAUobjc_object@@";
 #else
-	return ".PAU.objc_object@@";
+	return ".PAUobjc_object@@";
 #endif
 }
 
@@ -80,9 +80,9 @@ static std::string mangleStructNamed(const char* className)
 	//return
 	auto r =
 #if defined(__SIZEOF_POINTER__) && __SIZEOF_POINTER__ == 8
-		std::string(".PEAU.objc_cls_") +
+		std::string(".PEAU") +
 #else
-		std::string(".PAU.objc_cls_") +
+		std::string(".PAU") +
 #endif
 		className + "@@";
 	return r;
