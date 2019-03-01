@@ -207,26 +207,29 @@ OBJC_PUBLIC void __objc_load(struct objc_init *init)
 			break;
 	}
 	assert(init->version == 0);
-	assert((((uintptr_t)init->sel_end-(uintptr_t)init->sel_begin) % sizeof(*init->sel_begin)) == 0);
-	assert((((uintptr_t)init->cls_end-(uintptr_t)init->cls_begin) % sizeof(*init->cls_begin)) == 0);
-	assert((((uintptr_t)init->cat_end-(uintptr_t)init->cat_begin) % sizeof(*init->cat_begin)) == 0);
-	for (SEL sel = init->sel_begin ; sel < init->sel_end ; sel++)
+	assert(((uintptr_t)init->sel_end-(uintptr_t)init->sel_begin) >= sizeof(*init->sel_begin));
+	assert(((uintptr_t)init->cls_end-(uintptr_t)init->cls_begin) >= sizeof(*init->cls_begin));
+	assert(((uintptr_t)init->cat_end-(uintptr_t)init->cat_begin) >= sizeof(*init->cat_begin));
+	for (SEL sel = init->sel_begin ; sel < init->sel_end ;)
 	{
 		if (sel->name == 0)
 		{
+			sel = (SEL)((uintptr_t*)sel + 1);
 			continue;
 		}
 		objc_register_selector(sel);
+		sel++;
 	}
 	int i = 0;
-	for (struct objc_protocol *proto = init->proto_begin ; proto < init->proto_end ;
-	     proto++)
+	for (struct objc_protocol *proto = init->proto_begin ; proto < init->proto_end ;)
 	{
-		if (proto->name == NULL)
+		if (proto->isa == NULL)
 		{
+			proto = (struct objc_protocol*)((uintptr_t*)proto + 1);
 			continue;
 		}
-		registerProtocol((struct objc_protocol*)proto);
+		registerProtocol(proto);
+		proto++;
 	}
 	for (struct objc_protocol **proto = init->proto_ref_begin ; proto < init->proto_ref_end ;
 	     proto++)
@@ -263,40 +266,48 @@ OBJC_PUBLIC void __objc_load(struct objc_init *init)
 	{
 	}
 #endif
-	for (struct objc_category *cat = init->cat_begin ; cat < init->cat_end ;
-	     cat++)
+	for (struct objc_category *cat = init->cat_begin ; cat < init->cat_end ;)
 	{
-		if ((cat == NULL) || (cat->class_name == NULL))
+		if (cat->name == NULL)
 		{
+			cat = (struct objc_category*)((uintptr_t*)cat + 1);
 			continue;
 		}
 		objc_try_load_category(cat);
 #ifdef DEBUG_LOADING
 		fprintf(stderr, "Loading category %s (%s)\n", cat->class_name, cat->name);
 #endif
+		cat++;
 	}
 	// Load categories and statics that were deferred.
 	objc_load_buffered_categories();
 	// Fix up the class links for loaded classes.
 	objc_resolve_class_links();
-	for (struct objc_category *cat = init->cat_begin ; cat < init->cat_end ;
-	     cat++)
+	for (struct objc_category *cat = init->cat_begin ; cat < init->cat_end ;)
 	{
+		if (cat->name == NULL)
+		{
+			cat = (struct objc_category*)((uintptr_t*)cat + 1);
+			continue;
+		}
 		Class class = (Class)objc_getClass(cat->class_name);
 		if ((Nil != class) && 
 		    objc_test_class_flag(class, objc_class_flag_resolved))
 		{
 			objc_send_load_message(class);
 		}
+		cat++;
 	}
 	// Register aliases
-	for (struct objc_alias *alias = init->alias_begin ; alias < init->alias_end ;
-	     alias++)
+	for (struct objc_alias *alias = init->alias_begin ; alias < init->alias_end ;)
 	{
-		if (alias->alias_name)
+		if (alias->alias_name == NULL)
 		{
-			class_registerAlias_np(*alias->alias, alias->alias_name);
+			alias = (struct objc_alias*)((uintptr_t*)alias + 1);
+			continue;
 		}
+		class_registerAlias_np(*alias->alias, alias->alias_name);
+		alias++;
 	}
 #if 0
 	// If future versions of the ABI need to do anything with constant strings,
