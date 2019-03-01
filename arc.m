@@ -12,6 +12,8 @@
 #import "objc/objc-arc.h"
 #import "objc/blocks_runtime.h"
 
+id (*_objc_weak_load)(id object);
+
 #if defined(_WIN32)
 // We're using the Fiber-Local Storage APIs on Windows
 // because the TLS APIs won't pass app certification.
