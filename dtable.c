@@ -419,21 +419,24 @@ static void rebaseDtableRecursive(Class cls, Class newSuper)
 	dtable_t dtable = dtable_for_class(cls);
 	uint32_t idx = 0;
 	struct objc_method *method;
-	// Install all methods in the dtable with the correct ones.
-	while ((method = SparseArrayNext(temporaryDtable, &idx)))
+	// Install all methods from the parent that aren't overridden here.
+	while ((method = SparseArrayNext(parentDtable, &idx)))
 	{
-		SparseArrayInsert(dtable, idx, method);
+		if (SparseArrayLookup(temporaryDtable, idx) == NULL)
+		{
+			SparseArrayInsert(dtable, idx, method);
+			SparseArrayInsert(temporaryDtable, idx, method);
+		}
 	}
 	idx = 0;
 	// Now look at all of the methods in the dtable.  If they're not ones from
-	// the dtable that we've just created, then they must come from the
-	// superclass, so replace them with whatever the superclass has (which may
-	// be NULL).
+	// the dtable that we've just created, then they must have come from the
+	// original superclass, so remove them by replacing them with NULL.
 	while ((method = SparseArrayNext(dtable, &idx)))
 	{
 		if (SparseArrayLookup(temporaryDtable, idx) == NULL)
 		{
-			SparseArrayInsert(dtable, idx, SparseArrayLookup(parentDtable, idx));
+			SparseArrayInsert(dtable, idx, NULL);
 		}
 	}
 	SparseArrayDestroy(temporaryDtable);
