@@ -56,11 +56,6 @@ void __clear_cache(void* start, void* end);
 #define PROT_EXEC  0x1
 #endif
 
-static void *valloc(size_t len)
-{
-	return VirtualAlloc(NULL, len, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-}
-
 static int mprotect(void *buffer, size_t len, int prot)
 {
 	DWORD oldProt = 0, newProt = PAGE_NOACCESS;
@@ -165,8 +160,11 @@ static id invalid(id self, SEL _cmd)
 static struct trampoline_set *alloc_trampolines(char *start, char *end)
 {
 	struct trampoline_set *metadata = calloc(1, sizeof(struct trampoline_set));
-	metadata->buffers =
-	valloc(sizeof(struct trampoline_buffers));
+#if _WIN32
+	metadata->buffers = VirtualAlloc(NULL, sizeof(struct trampoline_buffers), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+#else
+	posix_memalign((void **)&metadata->buffers, getpagesize(), sizeof(struct trampoline_buffers));
+#endif
 	for (int i=0 ; i<HEADERS_PER_PAGE ; i++)
 	{
 		metadata->buffers->headers[i].fnptr = (void(*)(void))invalid;
