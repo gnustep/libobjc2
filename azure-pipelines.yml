@@ -50,10 +50,11 @@ jobs:
 
 
     - script: |
-        "C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\vcvarsall.bat" x64
+        mkdir build
+        cd build
+        "C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvars64.bat" x64
         cmake .. -G Ninja -DCMAKE_C_COMPILER="c:/Program Files/LLVM/bin/clang-cl.exe" -DCMAKE_CXX_COMPILER="c:/Program Files/LLVM/bin/clang-cl.exe"
 
-      workingDirectory: build
       failOnStderr: true
       displayName: 'CMake'
 
