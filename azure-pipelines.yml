@@ -54,7 +54,7 @@ jobs:
         mkdir build
         cd build
         echo Importing visual studio environment variables...
-        "C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvars64.bat" x64
+        call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvars64.bat" x64
         echo Checking that we're calling the correct link.exe
         where link.exe
         echo Running cmake...
@@ -68,7 +68,7 @@ jobs:
         cd build
         dir
         echo Importing visual studio environment variables...
-        "C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvars64.bat" x64
+        call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvars64.bat" x64
         set CCC_OVERRIDE_OPTIONS=x-TC x-TP x/TC x/TP
         echo Running ninja...
         ninja
