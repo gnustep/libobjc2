@@ -59,17 +59,18 @@ jobs:
       displayName: 'CMake'
 
     - script: |
+        cd build
+        "C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvars64.bat" x64
         set CCC_OVERRIDE_OPTIONS=x-TC x-TP x/TC x/TP
         ninja
-        copy libobjc.dll Tests
 
-      workingDirectory: build
       failOnStderr: true
       displayName: 'Compile'
 
     - script: |
+        cd build
+        copy libobjc.dll Tests
         ctest -j 4 --output-on-failure
 
-      workingDirectory: build
       failOnStderr: true
       displayName: 'Test'
