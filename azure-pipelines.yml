@@ -51,7 +51,7 @@ jobs:
 
     - script: |
         echo Deleting stupid link.exe from the path...
-        del c:\Program Files\Git\usr\bin\link.exe
+        del "C:\Program Files\Git\usr\bin\link.exe"
         echo Checking that we're calling the correct link.exe
         where link.exe
         echo Creating build directory...
