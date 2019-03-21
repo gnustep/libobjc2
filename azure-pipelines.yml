@@ -39,4 +39,38 @@ jobs:
 
       workingDirectory: build
       failOnStderr: true
+  - job: Windows
+    displayName: Windows-2016
+    pool:
+      vmImage: vs2017-win2016
+    strategy:
+      matrix:
+        Debug:
+          BuildType: Debug
+        Release:
+          BuildType: Release
+    steps:
+    - script: |
+        choco.exe install ninja
+        choco.exe install llvm
+
+    - task: CMake@1
+      inputs:
+          cmakeArgs: 'cmake -G Ninja -DCMAKE_C_COMPILER="c:/Program Files/LLVM/bin/clang-cl.exe" -DCMAKE_CXX_COMPILER="c:/Program Files/LLVM/bin/clang-cl.exe"'
+
+    - script: |
+        set CCC_OVERRIDE_OPTIONS=x-TC x-TP x/TC x/TP
+        ninja
+        copy libobjc.dll Tests\
+
+      workingDirectory: build
+      failOnStderr: true
+      displayName: 'Compile'
+
+    - script: |
+        ctest -j 4 --output-on-failure
+
+      workingDirectory: build
+      failOnStderr: true
+      displayName: 'Test'
       displayName: 'Test'
