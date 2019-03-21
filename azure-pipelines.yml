@@ -69,7 +69,7 @@ jobs:
 
     - script: |
         cd build
-        copy libobjc.dll Tests
+        copy /y objc.dll Test
         ctest -j 4 --output-on-failure
 
       failOnStderr: true
