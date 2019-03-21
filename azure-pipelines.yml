@@ -73,4 +73,3 @@ jobs:
       workingDirectory: build
       failOnStderr: true
       displayName: 'Test'
-      displayName: 'Test'
