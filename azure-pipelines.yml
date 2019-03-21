@@ -49,7 +49,7 @@ jobs:
 
     - task: CMake@1
       inputs:
-          cmakeArgs: 'cmake -G Ninja -DCMAKE_C_COMPILER="c:/Program Files/LLVM/bin/clang-cl.exe" -DCMAKE_CXX_COMPILER="c:/Program Files/LLVM/bin/clang-cl.exe"'
+          cmakeArgs: '.. -G Ninja -DCMAKE_C_COMPILER="c:/Program Files/LLVM/bin/clang-cl.exe" -DCMAKE_CXX_COMPILER="c:/Program Files/LLVM/bin/clang-cl.exe"'
 
     - script: |
         set CCC_OVERRIDE_OPTIONS=x-TC x-TP x/TC x/TP
