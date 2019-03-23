@@ -39,12 +39,17 @@
 static void *_HeapBlockByRef = (void*)1;
 
 
+OBJC_PUBLIC _Bool _Block_has_signature(id b)
+{
+	const struct Block_layout *block = (struct Block_layout*)b;
+	return ((NULL != block) && (block->flags & BLOCK_HAS_SIGNATURE));
+}
 /**
  * Returns the Objective-C type encoding for the block.
  */
-PUBLIC const char *block_getType_np(const void *b)
+OBJC_PUBLIC const char * _Block_signature(id b)
 {
-	const struct Block_layout *block = b;
+	const struct Block_layout *block = (struct Block_layout*)b;
 	if ((NULL == block) || !(block->flags & BLOCK_HAS_SIGNATURE))
 	{
 		return NULL;
@@ -54,6 +59,10 @@ PUBLIC const char *block_getType_np(const void *b)
 		return ((struct Block_descriptor_basic*)block->descriptor)->encoding;
 	}
 	return block->descriptor->encoding;
+}
+OBJC_PUBLIC const char *block_getType_np(const void *b)
+{
+	return _Block_signature(b);
 }
 
 static int increment24(int *ref)
@@ -111,7 +120,7 @@ static int cas(void *ptr, void *old, void *new)
  * the other choices which are mutually exclusive.  Only in a Block copy helper
  * will one see BLOCK_FIELD_IS_BYREF.
  */
-PUBLIC void _Block_object_assign(void *destAddr, const void *object, const int flags)
+OBJC_PUBLIC void _Block_object_assign(void *destAddr, const void *object, const int flags)
 {
 	//printf("Copying %x to %x with flags %x\n", object, destAddr, flags);
 	// FIXME: Needs to be implemented
@@ -190,7 +199,7 @@ PUBLIC void _Block_object_assign(void *destAddr, const void *object, const int f
  * The same flags used in the copy helper should be used for each call
  * generated to this function:
  */
-PUBLIC void _Block_object_dispose(const void *object, const int flags)
+OBJC_PUBLIC void _Block_object_dispose(const void *object, const int flags)
 {
 	// FIXME: Needs to be implemented
 	//if(flags & BLOCK_FIELD_IS_WEAK)
@@ -235,7 +244,7 @@ PUBLIC void _Block_object_dispose(const void *object, const int flags)
 
 
 // Copy a block to the heap if it's still on the stack or increments its retain count.
-PUBLIC void *_Block_copy(const void *src)
+OBJC_PUBLIC void *_Block_copy(const void *src)
 {
 	if (NULL == src) { return NULL; }
 	struct Block_layout *self = (struct Block_layout*)src;
@@ -269,7 +278,7 @@ PUBLIC void *_Block_copy(const void *src)
 }
 
 // Release a block and frees the memory when the retain count hits zero.
-PUBLIC void _Block_release(const void *src)
+OBJC_PUBLIC void _Block_release(const void *src)
 {
 	if (NULL == src) { return; }
 	struct Block_layout *self = (struct Block_layout*)src;

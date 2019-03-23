@@ -70,6 +70,12 @@ PRIVATE void objc_compute_ivar_offsets(Class class)
 			for (i = 0 ; i < class->ivars->count ; i++)
 			{
 				struct objc_ivar *ivar = ivar_at_index(class->ivars, i);
+				// Clang 7 and 8 have a bug where the size of _Bool is encoded
+				// as 0, not 1.  Silently fix this up when we see it.
+				if (ivar->size == 0 && ivar->type[0] == 'B')
+				{
+					ivar->size = 1;
+				}
 				// We are going to be allocating an extra word for the reference count
 				// in front of the object.  This doesn't matter for aligment most of
 				// the time, but if we have an instance variable that is a vector type

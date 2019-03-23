@@ -8,7 +8,7 @@
 #ifdef NO_LEGACY
 #	define LEGACY PRIVATE
 #else
-#	define LEGACY PUBLIC
+#	define LEGACY OBJC_PUBLIC
 #endif
 
 #if defined(DEBUG) || (!defined(__clang__))

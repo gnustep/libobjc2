@@ -77,7 +77,7 @@ static Alias alias_table_get_safe(const char *alias_name)
 }
 
 
-PUBLIC Class alias_getClass(const char *alias_name)
+OBJC_PUBLIC Class alias_getClass(const char *alias_name)
 {
 	if (NULL == alias_name)
 	{
@@ -99,7 +99,7 @@ PRIVATE void alias_table_insert(Alias alias)
 	alias_table_internal_insert(alias_table, alias);
 }
 
-PUBLIC BOOL class_registerAlias_np(Class class, const char *alias)
+OBJC_PUBLIC BOOL class_registerAlias_np(Class class, const char *alias)
 {
 	if ((NULL == alias) || (NULL == class))
 	{

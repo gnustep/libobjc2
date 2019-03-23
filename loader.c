@@ -178,7 +178,7 @@ static enum {
 
 void registerProtocol(Protocol *proto);
 
-PUBLIC void __objc_load(struct objc_init *init)
+OBJC_PUBLIC void __objc_load(struct objc_init *init)
 {
 	init_runtime();
 #ifdef DEBUG_LOADING
@@ -246,10 +246,13 @@ PUBLIC void __objc_load(struct objc_init *init)
 			continue;
 		}
 		// As a special case, allow using legacy ABI code with a new runtime.
-		if (isFirstLoad && (strcmp((*cls)->name, "Protocol")))
+		if (isFirstLoad && (strcmp((*cls)->name, "Protocol") == 0))
 		{
 			CurrentABI = UnknownABI;
 		}
+#ifdef DEBUG_LOADING
+		fprintf(stderr, "Loading class %s\n", (*cls)->name);
+#endif
 		objc_load_class(*cls);
 	}
 #if 0
@@ -268,6 +271,9 @@ PUBLIC void __objc_load(struct objc_init *init)
 			continue;
 		}
 		objc_try_load_category(cat);
+#ifdef DEBUG_LOADING
+		fprintf(stderr, "Loading category %s (%s)\n", cat->class_name, cat->name);
+#endif
 	}
 	// Load categories and statics that were deferred.
 	objc_load_buffered_categories();
@@ -307,7 +313,7 @@ PUBLIC void __objc_load(struct objc_init *init)
 }
 
 #ifdef OLDABI_COMPAT
-PUBLIC void __objc_exec_class(struct objc_module_abi_8 *module)
+OBJC_PUBLIC void __objc_exec_class(struct objc_module_abi_8 *module)
 {
 	init_runtime();
 

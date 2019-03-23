@@ -12,6 +12,8 @@
 #import "objc/objc-arc.h"
 #import "objc/blocks_runtime.h"
 
+id (*_objc_weak_load)(id object);
+
 #if defined(_WIN32)
 // We're using the Fiber-Local Storage APIs on Windows
 // because the TLS APIs won't pass app certification.
@@ -107,8 +109,8 @@ static inline struct arc_tls* getARCThreadData(void)
 	return tls;
 #endif
 }
-int count = 0;
-int poolCount = 0;
+static int count = 0;
+static int poolCount = 0;
 static inline void release(id obj);
 
 /**
@@ -213,14 +215,14 @@ static const long weak_mask = ((size_t)1)<<((sizeof(size_t)*8)-refcount_shift);
  */
 static const long refcount_mask = ~weak_mask;
 
-PUBLIC size_t object_getRetainCount_np(id obj)
+OBJC_PUBLIC size_t object_getRetainCount_np(id obj)
 {
 	uintptr_t *refCount = ((uintptr_t*)obj) - 1;
 	uintptr_t refCountVal = __sync_fetch_and_add(refCount, 0);
 	return (((size_t)refCountVal) & refcount_mask) + 1;
 }
 
-PUBLIC id objc_retain_fast_np(id obj)
+OBJC_PUBLIC id objc_retain_fast_np(id obj)
 {
 	uintptr_t *refCount = ((uintptr_t*)obj) - 1;
 	uintptr_t refCountVal = __sync_fetch_and_add(refCount, 0);
@@ -293,7 +295,7 @@ static inline id retain(id obj)
 	return [obj retain];
 }
 
-PUBLIC BOOL objc_release_fast_no_destroy_np(id obj)
+OBJC_PUBLIC BOOL objc_release_fast_no_destroy_np(id obj)
 {
 	uintptr_t *refCount = ((uintptr_t*)obj) - 1;
 	uintptr_t refCountVal = __sync_fetch_and_add(refCount, 0);
@@ -331,7 +333,7 @@ PUBLIC BOOL objc_release_fast_no_destroy_np(id obj)
 	return NO;
 }
 
-PUBLIC void objc_release_fast_np(id obj)
+OBJC_PUBLIC void objc_release_fast_np(id obj)
 {
 	if (objc_release_fast_no_destroy_np(obj))
 	{
@@ -421,7 +423,7 @@ static inline id autorelease(id obj)
 	return [obj autorelease];
 }
 
-PUBLIC unsigned long objc_arc_autorelease_count_np(void)
+OBJC_PUBLIC unsigned long objc_arc_autorelease_count_np(void)
 {
 	struct arc_tls* tls = getARCThreadData();
 	unsigned long count = 0;
@@ -435,7 +437,7 @@ PUBLIC unsigned long objc_arc_autorelease_count_np(void)
 	}
 	return count;
 }
-PUBLIC unsigned long objc_arc_autorelease_count_for_object_np(id obj)
+OBJC_PUBLIC unsigned long objc_arc_autorelease_count_for_object_np(id obj)
 {
 	struct arc_tls* tls = getARCThreadData();
 	unsigned long count = 0;
@@ -489,7 +491,7 @@ void *objc_autoreleasePoolPush(void)
 	if (0 == NewAutoreleasePool) { return NULL; }
 	return NewAutoreleasePool(AutoreleasePool, SELECTOR(new));
 }
-PUBLIC void objc_autoreleasePoolPop(void *pool)
+OBJC_PUBLIC void objc_autoreleasePoolPop(void *pool)
 {
 	if (useARCAutoreleasePool)
 	{
@@ -512,7 +514,7 @@ PUBLIC void objc_autoreleasePoolPop(void *pool)
 	}
 }
 
-PUBLIC id objc_autorelease(id obj)
+OBJC_PUBLIC id objc_autorelease(id obj)
 {
 	if (nil != obj)
 	{
@@ -521,7 +523,7 @@ PUBLIC id objc_autorelease(id obj)
 	return obj;
 }
 
-PUBLIC id objc_autoreleaseReturnValue(id obj)
+OBJC_PUBLIC id objc_autoreleaseReturnValue(id obj)
 {
 	if (!useARCAutoreleasePool) 
 	{
@@ -536,7 +538,7 @@ PUBLIC id objc_autoreleaseReturnValue(id obj)
 	return objc_autorelease(obj);
 }
 
-PUBLIC id objc_retainAutoreleasedReturnValue(id obj)
+OBJC_PUBLIC id objc_retainAutoreleasedReturnValue(id obj)
 {
 	// If the previous object was released  with objc_autoreleaseReturnValue()
 	// just before return, then it will not have actually been autoreleased.
@@ -568,36 +570,36 @@ PUBLIC id objc_retainAutoreleasedReturnValue(id obj)
 	return objc_retain(obj);
 }
 
-PUBLIC id objc_retain(id obj)
+OBJC_PUBLIC id objc_retain(id obj)
 {
 	if (nil == obj) { return nil; }
 	return retain(obj);
 }
 
-PUBLIC id objc_retainAutorelease(id obj)
+OBJC_PUBLIC id objc_retainAutorelease(id obj)
 {
 	return objc_autorelease(objc_retain(obj));
 }
 
-PUBLIC id objc_retainAutoreleaseReturnValue(id obj)
+OBJC_PUBLIC id objc_retainAutoreleaseReturnValue(id obj)
 {
 	if (nil == obj) { return obj; }
 	return objc_autoreleaseReturnValue(retain(obj));
 }
 
 
-PUBLIC id objc_retainBlock(id b)
+OBJC_PUBLIC id objc_retainBlock(id b)
 {
 	return _Block_copy(b);
 }
 
-PUBLIC void objc_release(id obj)
+OBJC_PUBLIC void objc_release(id obj)
 {
 	if (nil == obj) { return; }
 	release(obj);
 }
 
-PUBLIC id objc_storeStrong(id *addr, id value)
+OBJC_PUBLIC id objc_storeStrong(id *addr, id value)
 {
 	value = objc_retain(value);
 	id oldValue = *addr;
@@ -698,7 +700,7 @@ static inline BOOL weakRefRelease(WeakRef *ref)
 
 void* block_load_weak(void *block);
 
-PUBLIC id objc_storeWeak(id *addr, id obj)
+OBJC_PUBLIC id objc_storeWeak(id *addr, id obj)
 {
 	LOCK_FOR_SCOPE(&weakRefLock);
 	WeakRef *oldRef;
@@ -789,7 +791,7 @@ PUBLIC id objc_storeWeak(id *addr, id obj)
 	return obj;
 }
 
-PUBLIC BOOL objc_delete_weak_refs(id obj)
+OBJC_PUBLIC BOOL objc_delete_weak_refs(id obj)
 {
 	LOCK_FOR_SCOPE(&weakRefLock);
 	if (objc_test_class_flag(classForObject(obj), objc_class_flag_fast_arc))
@@ -827,7 +829,7 @@ PUBLIC BOOL objc_delete_weak_refs(id obj)
 	return YES;
 }
 
-PUBLIC id objc_loadWeakRetained(id* addr)
+OBJC_PUBLIC id objc_loadWeakRetained(id* addr)
 {
 	LOCK_FOR_SCOPE(&weakRefLock);
 	id obj;
@@ -865,12 +867,12 @@ PUBLIC id objc_loadWeakRetained(id* addr)
 	return objc_retain(obj);
 }
 
-PUBLIC id objc_loadWeak(id* object)
+OBJC_PUBLIC id objc_loadWeak(id* object)
 {
 	return objc_autorelease(objc_loadWeakRetained(object));
 }
 
-PUBLIC void objc_copyWeak(id *dest, id *src)
+OBJC_PUBLIC void objc_copyWeak(id *dest, id *src)
 {
 	// Don't retain or release.  While the weak ref lock is held, we know that
 	// the object can't be deallocated, so we just move the value and update
@@ -892,7 +894,7 @@ PUBLIC void objc_copyWeak(id *dest, id *src)
 	}
 }
 
-PUBLIC void objc_moveWeak(id *dest, id *src)
+OBJC_PUBLIC void objc_moveWeak(id *dest, id *src)
 {
 	// Don't retain or release.  While the weak ref lock is held, we know that
 	// the object can't be deallocated, so we just move the value and update
@@ -910,12 +912,12 @@ PUBLIC void objc_moveWeak(id *dest, id *src)
 	}
 }
 
-PUBLIC void objc_destroyWeak(id* obj)
+OBJC_PUBLIC void objc_destroyWeak(id* obj)
 {
 	objc_storeWeak(obj, nil);
 }
 
-PUBLIC id objc_initWeak(id *object, id value)
+OBJC_PUBLIC id objc_initWeak(id *object, id value)
 {
 	*object = nil;
 	return objc_storeWeak(object, value);

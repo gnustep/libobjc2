@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <inttypes.h>
 
-static BOOL deallocCalled = NO;
+BOOL deallocCalled = NO;
 static const char* objc_setAssociatedObjectKey = "objc_setAssociatedObjectKey";
 
 @interface Associated : Test

@@ -1,0 +1,91 @@
+jobs:
+  - job: Linux
+    displayName: Ubuntu-16.04
+    pool:
+      vmImage: ubuntu-16.04
+    strategy:
+      matrix:
+        Debug:
+          BuildType: Debug
+        Release:
+          BuildType: Release
+    steps:
+    - script: |
+        sudo add-apt-repository "deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-8 main"
+        sudo apt-get update
+        sudo apt-get install -y ninja-build
+        sudo apt-get install -y clang-8
+
+    - task: CMake@1
+      inputs:
+        cmakeArgs: '.. -GNinja -DCMAKE_BUILD_TYPE=$(BuildType) -DTESTS=ON -DCMAKE_CXX_COMPILER=clang++-8 -DCMAKE_C_COMPILER=clang-8'
+
+    - script: |
+        ninja
+
+      workingDirectory: build
+      failOnStderr: true
+      displayName: 'Compile'
+
+    - script: |
+        ctest -j 4 --output-on-failure
+
+      workingDirectory: build
+      failOnStderr: true
+  - job: Windows
+    displayName: Windows-2016
+    pool:
+      vmImage: vs2017-win2016
+    strategy:
+      matrix:
+        Debug:
+          BuildType: Debug
+        Release:
+          BuildType: Release
+    steps:
+    - script: |
+        choco.exe install ninja
+        choco.exe install llvm
+
+
+
+    - script: |
+        echo Creating build directory...
+        mkdir build
+        cd build
+        echo Importing visual studio environment variables...
+        call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvars64.bat" x64
+        echo Checking that we're calling the correct link.exe
+        where link.exe
+        echo Running cmake...
+        cmake .. -G Ninja -DTESTS=ON -DCMAKE_C_COMPILER="c:/Program Files/LLVM/bin/clang-cl.exe" -DCMAKE_CXX_COMPILER="c:/Program Files/LLVM/bin/clang-cl.exe"
+        echo CMake completed.
+
+      failOnStderr: false
+      displayName: 'CMake'
+
+    - script: |
+        cd build
+        dir
+        echo Importing visual studio environment variables...
+        call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvars64.bat" x64
+        set CCC_OVERRIDE_OPTIONS=x-TC x-TP x/TC x/TP
+        echo Running ninja...
+        ninja
+        echo Ninja completed.
+
+      failOnStderr: false
+      displayName: 'Compile'
+
+    - script: |
+        cd build
+        dir
+        echo Copying objc.dll into Test directory...
+        copy /y objc.dll Test
+        echo Running CTest...
+        ctest -j 4 --output-on-failure
+        echo CTest completed.
+
+
+      failOnStderr: true
+      displayName: 'Test'

@@ -32,6 +32,12 @@ __attribute__((objc_root_class))
 @interface InitializesOneClassWhileBeingInitialized: NotInitializedSuperclass2 @end
 @interface Subclass3: DefaultSuperclass @end
 
+// test: transitioning an initialized class to an initialized superclass
+// Test4Subclass only inherits access to "onlyExistsOnFinalSuperclass" from
+// its new superclass's superclass (Test4FinalSuperclass)
+@interface Test4Subclass: Root @end
+@interface Test4FinalSuperclass: DefaultSuperclass @end
+
 @implementation Root
 + (Class)class { return self; }
 + (BOOL)respondsToSelector:(SEL)selector {
@@ -139,6 +145,13 @@ static BOOL _otherInitializedClassInitialized = NO;
 @end
 
 @implementation Subclass3
+@end
+
+@implementation Test4Subclass
+@end
+@implementation Test4FinalSuperclass
++ (int)onlyExistsOnFinalSuperclassMeta { return 501; }
+- (int)onlyExistsOnFinalSuperclass { return 500; }
 @end
 
 static int failures = 0;
@@ -291,6 +304,29 @@ int main(int argc, char **argv) {
 		expect(_otherInitializedClassInitialized);
 		expect(13 == [Subclass3 sameNameMeta]);
 		expect(13 == [Subclass3 overriddenMeta]);
+	}
+
+	/* Transitioning an initialized class to an initialized superclass. */
+	{
+		Class test4subclass = objc_getClass("Test4Subclass");
+		Class newSuperclass = objc_getClass("Test4FinalSuperclass");
+
+		// Make sure every class in the hierarchy is initialized.
+		[Test4Subclass class];
+		[Test4FinalSuperclass class];
+
+		expect(![test4subclass respondsToSelector:@selector(onlyExistsOnFinalSuperclassMeta)]);
+		expect(![test4subclass instancesRespondToSelector:@selector(onlyExistsOnFinalSuperclass)]);
+
+		class_setSuperclass(test4subclass, newSuperclass);
+
+		Test4Subclass *test4instance = class_createInstance(test4subclass, 0);
+
+		expect([test4subclass respondsToSelector:@selector(onlyExistsOnFinalSuperclassMeta)]);
+		expect([test4subclass instancesRespondToSelector:@selector(onlyExistsOnFinalSuperclass)]);
+
+		expect(501 == [(id)test4subclass onlyExistsOnFinalSuperclassMeta]);
+		expect(500 == [(id)test4instance onlyExistsOnFinalSuperclass]);
 	}
 
 	return failures;
