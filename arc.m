@@ -870,42 +870,14 @@ id objc_loadWeak(id* object)
 
 void objc_copyWeak(id *dest, id *src)
 {
-	// Don't retain or release.  While the weak ref lock is held, we know that
-	// the object can't be deallocated, so we just move the value and update
-	// the weak reference table entry to indicate the new address.
 	LOCK_FOR_SCOPE(&weakRefLock);
-	id obj;
-	WeakRef *srcRef;
-	WeakRef *dstRef;
-	loadWeakPointer(dest, &obj, &dstRef);
-	loadWeakPointer(src, &obj, &srcRef);
-	*dest = *src;
-	if (srcRef)
-	{
-		srcRef->weak_count++;
-	}
-	if (dstRef)
-	{
-		weakRefRelease(dstRef);
-	}
+	objc_release(objc_initWeak(dest, objc_loadWeakRetained(src)));
 }
 
 void objc_moveWeak(id *dest, id *src)
 {
-	// Don't retain or release.  While the weak ref lock is held, we know that
-	// the object can't be deallocated, so we just move the value and update
-	// the weak reference table entry to indicate the new address.
 	LOCK_FOR_SCOPE(&weakRefLock);
-	id obj;
-	WeakRef *oldRef;
-	// If the destination is a weak ref, free it.
-	loadWeakPointer(dest, &obj, &oldRef);
-	*dest = *src;
-	*src = nil;
-	if (oldRef != NULL)
-	{
-		weakRefRelease(oldRef);
-	}
+	objc_copyWeak(dest, src);
 }
 
 void objc_destroyWeak(id* obj)
