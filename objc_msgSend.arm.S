@@ -52,11 +52,9 @@
 	tst    \receiver, SMALLOBJ_MASK        // Sets Z if this is not a small int
 
 
-	ldr    r4, 6f
-42:
-	add    r4, pc
-	ldr    r4, [r4]
-	it     eq
+	itte   ne
+	ldrne  r4, LSmallIntClass              // Small Int class -> r4 if this is a small int
+	ldrne  r4, [r4]
 	ldreq  r4, [\receiver]                 // Load class to r4 if not a small int
 
 	ldr    r4, [r4, #DTABLE_OFFSET]        // Dtable -> r4
@@ -125,9 +123,6 @@
 #endif
 	bx     lr
 .fnend
-6:
-	.p2align 2
-	.long   SmallObjectClasses(GOT_PREL)-((42b+4)-6b)
 .endm
 
 .globl CDECL(objc_msgSend_fpret)
@@ -142,3 +137,6 @@ TYPE_DIRECTIVE(CDECL(objc_msgSend_stret), %function)
 CDECL(objc_msgSend_stret):
 	MSGSEND r1, r2
 
+LSmallIntClass:
+	.long   SmallObjectClasses
+	.align  2
