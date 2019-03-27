@@ -65,22 +65,13 @@ PRIVATE void objc_compute_ivar_offsets(Class class)
 			// If the first instance variable had any alignment padding, then we need 
 			// to discard it.  We will recompute padding ourself later.
 			long next_ivar = ivar_start;
-			long last_offset = -1;
+			long last_offset = LONG_MIN;
+			long last_size = 0;
 			long last_computed_offset = -1;
 			size_t refcount_size = isGCEnabled ? 0 : sizeof(uintptr_t);
 			for (i = 0 ; i < class->ivars->count ; i++)
 			{
 				struct objc_ivar *ivar = ivar_at_index(class->ivars, i);
-				// The compiler may generate negative offsets for the first
-				// instance variable, because the last instance variable falls
-				// within the space allocated for the last instance variable.
-				// We are completely recomputing the instance size, so we
-				// simply discard this and recompute the padding ourselves.
-				if (*ivar->offset < 0)
-				{
-					assert(i == 0);
-					*ivar->offset = ivar_start;
-				}
 				// Clang 7 and 8 have a bug where the size of _Bool is encoded
 				// as 0, not 1.  Silently fix this up when we see it.
 				if (ivar->size == 0 && ivar->type[0] == 'B')
@@ -93,18 +84,20 @@ PRIVATE void objc_compute_ivar_offsets(Class class)
 				// then we will need to ensure that we are properly aligned again.
 				long ivar_size = ivar->size;
 				// Bitfields have the same offset - the base of the variable
-				// that contains them.  If we are in a bitfield, 
-				if (*ivar->offset == last_offset)
+				// that contains them.  If we are in a bitfield, then we need
+				// to make sure that we don't add any displacement from the
+				// previous value.
+				if (*ivar->offset < last_offset + last_size)
 				{
-					*ivar->offset = last_computed_offset;
+					*ivar->offset = last_computed_offset + (*ivar->offset - last_offset);
+					ivar_size = 0;
+					continue;
 				}
-				else
-				{
-					last_offset = *ivar->offset;
-					*ivar->offset = next_ivar;
-					last_computed_offset = *ivar->offset;
-					next_ivar += ivar_size;
-				}
+				last_offset = *ivar->offset;
+				*ivar->offset = next_ivar;
+				last_computed_offset = *ivar->offset;
+				next_ivar += ivar_size;
+				last_size = ivar->size;
 				size_t align = ivarGetAlign(ivar);
 				if ((*ivar->offset + refcount_size) % align != 0)
 				{

@@ -41,6 +41,7 @@ set(TESTS
 	WeakImportClass.m
 	ivar_arc.m
 	IVarOverlap.m
+	IVarSuperclassOverlap.m
 	objc_msgSend.m
 	msgInterpose.m
 	NilException.m

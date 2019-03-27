@@ -56,7 +56,7 @@ int main()
 	Ivar flag3 = class_getInstanceVariable(bitfield, "flag3");
 	assert(flag3);
 	assert(ivar_getOffset(flag3) == sizeof(id));
-	assert(ivar_getOffset(flag3) + sizeof(int) <= class_getInstanceSize(bitfield));
+	assert(ivar_getOffset(flag3) + sizeof(BOOL) <= class_getInstanceSize(bitfield));
 
 	bitfield = objc_getClass("BitfieldTest2");
 	flag1 = class_getInstanceVariable(bitfield, "flag1");
