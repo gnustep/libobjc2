@@ -67,9 +67,20 @@ PRIVATE void objc_compute_ivar_offsets(Class class)
 			long next_ivar = ivar_start;
 			long last_offset = -1;
 			long last_computed_offset = -1;
+			size_t refcount_size = isGCEnabled ? 0 : sizeof(uintptr_t);
 			for (i = 0 ; i < class->ivars->count ; i++)
 			{
 				struct objc_ivar *ivar = ivar_at_index(class->ivars, i);
+				// The compiler may generate negative offsets for the first
+				// instance variable, because the last instance variable falls
+				// within the space allocated for the last instance variable.
+				// We are completely recomputing the instance size, so we
+				// simply discard this and recompute the padding ourselves.
+				if (*ivar->offset < 0)
+				{
+					assert(i == 0);
+					*ivar->offset = ivar_start;
+				}
 				// Clang 7 and 8 have a bug where the size of _Bool is encoded
 				// as 0, not 1.  Silently fix this up when we see it.
 				if (ivar->size == 0 && ivar->type[0] == 'B')
@@ -81,6 +92,8 @@ PRIVATE void objc_compute_ivar_offsets(Class class)
 				// the time, but if we have an instance variable that is a vector type
 				// then we will need to ensure that we are properly aligned again.
 				long ivar_size = ivar->size;
+				// Bitfields have the same offset - the base of the variable
+				// that contains them.  If we are in a bitfield, 
 				if (*ivar->offset == last_offset)
 				{
 					*ivar->offset = last_computed_offset;
@@ -92,18 +105,15 @@ PRIVATE void objc_compute_ivar_offsets(Class class)
 					last_computed_offset = *ivar->offset;
 					next_ivar += ivar_size;
 				}
-				// We only need to do the realignment for things that are
-				// bigger than a pointer, and we don't need to do it in GC mode
-				// where we don't add any extra padding.
-				if (!isGCEnabled && (ivarGetAlign(ivar) > __alignof__(void*)))
+				size_t align = ivarGetAlign(ivar);
+				if ((*ivar->offset + refcount_size) % align != 0)
 				{
-					long offset = *ivar->offset + sizeof(intptr_t);
-					long padding = ivarGetAlign(ivar) - (offset % ivarGetAlign(ivar));
+					long padding = align - ((*ivar->offset + refcount_size) % align); 
 					*ivar->offset += padding;
 					class->instance_size += padding;
 					next_ivar += padding;
-					assert((*ivar->offset + sizeof(intptr_t)) % ivarGetAlign(ivar) == 0);
 				}
+				assert((*ivar->offset + sizeof(uintptr_t)) % ivarGetAlign(ivar) == 0);
 				class->instance_size += ivar_size;
 			}
 #ifdef OLDABI_COMPAT
