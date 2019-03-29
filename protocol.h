@@ -232,4 +232,12 @@ struct objc_protocol_list
 };
 // end: objc_protocol_list
 
+
+/**
+ * Function that ensures that protocol classes are linked.  Calling this
+ * guarantees that the Protocol classes are linked into a statically linked
+ * runtime.
+ */
+void link_protocol_classes(void);
+
 #endif // PROTOCOL_H_INCLUDED

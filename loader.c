@@ -45,6 +45,12 @@ __attribute__((weak)) void (*dispatch_end_thread_4GC)(void);
 __attribute__((weak)) void *(*_dispatch_begin_NSAutoReleasePool)(void);
 __attribute__((weak)) void (*_dispatch_end_NSAutoReleasePool)(void *);
 
+__attribute__((used))
+static void link_protos(void)
+{
+	link_protocol_classes();
+}
+
 static void init_runtime(void)
 {
 	static BOOL first_run = YES;

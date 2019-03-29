@@ -36,3 +36,10 @@
 
 @implementation ProtocolGCC @end
 @implementation ProtocolGSv1 @end
+
+PRIVATE void link_protocol_classes(void)
+{
+	[Protocol class];
+	[ProtocolGCC class];
+	[ProtocolGSv1 class];
+}
