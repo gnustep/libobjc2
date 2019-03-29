@@ -34,16 +34,12 @@
 
 @implementation Object @end
 
-#ifdef OLDABI_COMPAT
 @implementation ProtocolGCC @end
 @implementation ProtocolGSv1 @end
-#endif
 
 PRIVATE void link_protocol_classes(void)
 {
 	[Protocol class];
-#ifdef OLDABI_COMPAT
 	[ProtocolGCC class];
 	[ProtocolGSv1 class];
-#endif
 }
