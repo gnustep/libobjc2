@@ -1,6 +1,7 @@
 .syntax unified
 .fpu neon
 #if ((__ARM_ARCH >= 7) || defined (__ARM_ARCH_6T2__))
+#define RELOC_OFFSET 4
 // If we're using a CPU that supports Thumb-2, use it.  This makes the
 // objc_msgSend function 130 bytes instead of 176.  The fast path drops from 108
 // bytes to 82, meaning that it will fit in 3 32-byte i-cache lines, rather
@@ -18,6 +19,7 @@
 	ubfx   \dst, \src, #16, #8
 .endm
 #else
+#define RELOC_OFFSET 8
 .macro byte1 dst, src
 	and \dst, \src, #0xff
 .endm
@@ -51,10 +53,12 @@
 	                                       // directives for them, but not for any other pushes
 	tst    \receiver, SMALLOBJ_MASK        // Sets Z if this is not a small int
 
-
+	ldr    r4, 7f
+6:
+	add    r4, pc
 	itte   ne
-	ldrne  r4, LSmallIntClass              // Small Int class -> r4 if this is a small int
 	ldrne  r4, [r4]
+	ldrne  r4, [r4]                        // Small Int class -> r4 if this is a small int
 	ldreq  r4, [\receiver]                 // Load class to r4 if not a small int
 
 	ldr    r4, [r4, #DTABLE_OFFSET]        // Dtable -> r4
@@ -122,6 +126,9 @@
 #	endif
 #endif
 	bx     lr
+7:
+	.long	SmallObjectClasses(GOT_PREL)-((6b+RELOC_OFFSET)-7b)
+	.align  2
 .fnend
 .endm
 
@@ -137,6 +144,3 @@ TYPE_DIRECTIVE(CDECL(objc_msgSend_stret), %function)
 CDECL(objc_msgSend_stret):
 	MSGSEND r1, r2
 
-LSmallIntClass:
-	.long   SmallObjectClasses
-	.align  2
