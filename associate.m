@@ -275,6 +275,9 @@ static void deallocHiddenClass(id obj, SEL _cmd)
 		}
 	}
 	obj->isa = hiddenClass->super_class;
+	// Free the introspection structures:
+	freeMethodLists(hiddenClass);
+	freeIvarLists(hiddenClass);
 	// Free the class
 	free(hiddenClass);
 }

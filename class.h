@@ -434,4 +434,13 @@ static inline BOOL classIsOrInherits(Class cls, Class base)
 	return NO;
 }
 
+/**
+ * Free the instance variable lists associated with a class.
+ */
+void freeIvarLists(Class aClass);
+/**
+ * Free the method lists associated with a class.
+ */
+void freeMethodLists(Class aClass);
+
 #endif //__OBJC_CLASS_H_INCLUDED

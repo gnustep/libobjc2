@@ -622,7 +622,7 @@ id objc_getRequiredClass(const char *name)
 	return cls;
 }
 
-static void freeMethodLists(Class aClass)
+PRIVATE void freeMethodLists(Class aClass)
 {
 	struct objc_method_list *methods = aClass->methods;
 	while(methods != NULL)
@@ -637,7 +637,7 @@ static void freeMethodLists(Class aClass)
 	}
 }
 
-static void freeIvarLists(Class aClass)
+PRIVATE void freeIvarLists(Class aClass)
 {
 	struct objc_ivar_list *ivarlist = aClass->ivars;
 	if (NULL == ivarlist) { return; }
