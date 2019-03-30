@@ -89,7 +89,7 @@ static void saveLandingPad(struct _Unwind_Context *context,
                            int selector,
                            dw_eh_ptr_t landingPad)
 {
-#ifdef __arm__ && !defined(__ARM_DWARF_EH__)
+#if defined(__arm__) && !defined(__ARM_DWARF_EH__)
 	// On ARM, we store the saved exception in the generic part of the structure
 	ucb->barrier_cache.sp = _Unwind_GetGR(context, 13);
 	ucb->barrier_cache.bitpattern[1] = (uint32_t)selector;
@@ -116,7 +116,7 @@ static int loadLandingPad(struct _Unwind_Context *context,
                           unsigned long *selector,
                           dw_eh_ptr_t *landingPad)
 {
-#ifdef __arm__ && !defined(__ARM_DWARF_EH__)
+#if defined(__arm__) && !defined(__ARM_DWARF_EH__)
 	*selector = ucb->barrier_cache.bitpattern[1];
 	*landingPad = (dw_eh_ptr_t)ucb->barrier_cache.bitpattern[3];
 	return 1;
@@ -134,7 +134,7 @@ static int loadLandingPad(struct _Unwind_Context *context,
 static inline _Unwind_Reason_Code continueUnwinding(struct _Unwind_Exception *ex,
                                                     struct _Unwind_Context *context)
 {
-#ifdef __arm__ && !defined(__ARM_DWARF_EH__)
+#if defined(__arm__) && !defined(__ARM_DWARF_EH__)
 	if (__gnu_unwind_frame(ex, context) != _URC_OK) { return _URC_FAILURE; }
 #endif
 	return _URC_CONTINUE_UNWIND;
@@ -421,7 +421,7 @@ static inline _Unwind_Reason_Code internal_objc_personality(int version,
 		// On ARM, we occasionally get called to install a handler without
 		// phase 1 running (no idea why, I suspect a bug in the generic
 		// unwinder), so skip this check.
-#ifdef __arm__ && !defined(__ARM_DWARF_EH__)
+#if defined(__arm__) && !defined(__ARM_DWARF_EH__)
 		// If this is not a cleanup, ignore it and keep unwinding.
 		if ((handler != handler_cleanup) && !objcxxException)
 		{
