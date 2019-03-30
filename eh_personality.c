@@ -421,7 +421,7 @@ static inline _Unwind_Reason_Code internal_objc_personality(int version,
 		// On ARM, we occasionally get called to install a handler without
 		// phase 1 running (no idea why, I suspect a bug in the generic
 		// unwinder), so skip this check.
-#if defined(__arm__) && !defined(__ARM_DWARF_EH__)
+#if !(defined(__arm__) && !defined(__ARM_DWARF_EH__))
 		// If this is not a cleanup, ignore it and keep unwinding.
 		if ((handler != handler_cleanup) && !objcxxException)
 		{
