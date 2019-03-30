@@ -95,7 +95,7 @@
 	.save  {r0-r4, lr}
 #ifndef __SOFTFP__
 	vpush  {q0-q3}
-	.pad   #64
+	.vsave {q0-q3}
 #endif
 
 	push   {\receiver}                    // &self, _cmd in arguments
