@@ -48,7 +48,7 @@ typedef int v4si __attribute__ ((vector_size (16)));
 {
 	size_t addr = (size_t)&var;
 	fprintf(stderr, "self: %p Addr: %p\n", self, &var);
-	assert(addr % 16 == 0);
+	assert(addr % __alignof__(v4si) == 0);
 }
 @end
 
