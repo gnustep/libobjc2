@@ -38,10 +38,22 @@ jobs:
       vmImage: vs2017-win2016
     strategy:
       matrix:
-        Debug:
+        Debug-32:
           BuildType: Debug
-        Release:
+          Arch: x64_x86
+          Flags: -m32
+        Release-32:
           BuildType: Release
+          Arch: x64_x86
+          Flags: -m32
+        Debug-64:
+          BuildType: Debug
+          Arch: x64
+          Flags: -m64
+        Release-64:
+          BuildType: Release
+          Arch: x64
+          Flags: -m64
     steps:
     - script: |
         choco.exe install ninja
@@ -54,11 +66,13 @@ jobs:
         mkdir build
         cd build
         echo Importing visual studio environment variables...
-        call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvars64.bat" x64
+        call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvars64.bat" $(Arch)
         echo Checking that we're calling the correct link.exe
         where link.exe
+        set CFLAGS=$(Flags)
+        set CXXFLAGS=$(Flags)
         echo Running cmake...
-        cmake .. -G Ninja -DTESTS=ON -DCMAKE_C_COMPILER="c:/Program Files/LLVM/bin/clang-cl.exe" -DCMAKE_CXX_COMPILER="c:/Program Files/LLVM/bin/clang-cl.exe"
+        cmake .. -G Ninja -DTESTS=ON -DCMAKE_C_COMPILER="c:/Program Files/LLVM/bin/clang-cl.exe" -DCMAKE_CXX_COMPILER="c:/Program Files/LLVM/bin/clang-cl.exe" -DCMAKE_BUILD_TYPE=$(BuildType)
         echo CMake completed.
 
       failOnStderr: false
@@ -66,9 +80,8 @@ jobs:
 
     - script: |
         cd build
-        dir
         echo Importing visual studio environment variables...
-        call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvars64.bat" x64
+        call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvars64.bat" $(Arch)
         set CCC_OVERRIDE_OPTIONS=x-TC x-TP x/TC x/TP
         echo Running ninja...
         ninja
@@ -79,7 +92,6 @@ jobs:
 
     - script: |
         cd build
-        dir
         echo Copying objc.dll into Test directory...
         copy /y objc.dll Test
         echo Running CTest...
