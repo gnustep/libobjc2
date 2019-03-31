@@ -75,7 +75,7 @@ static inline struct sel_type_list *selLookup(uint32_t idx)
 	return selLookup_locked(idx);
 }
 
-PRIVATE inline BOOL isSelRegistered(SEL sel)
+PRIVATE BOOL isSelRegistered(SEL sel)
 {
 	if ((uintptr_t)sel->name < (uintptr_t)selector_count)
 	{
