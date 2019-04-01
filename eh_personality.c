@@ -7,10 +7,6 @@
 #include "class.h"
 #include "objcxx_eh.h"
 
-#ifndef NO_PTHREADS
-#include <pthread.h>
-#endif
-
 #ifndef DEBUG_EXCEPTIONS
 #define DEBUG_LOG(...)
 #else
@@ -530,53 +526,16 @@ struct thread_data
 	struct objc_exception *caughtExceptions;
 };
 
-// IF we don't have pthreads, then we fall back to using a per-thread
-// structure.  This will leak memory if we terminate any threads with
-// exceptions in-flight.
-#ifdef NO_PTHREADS
 static __thread struct thread_data thread_data;
-#else
-static void clean_tls(void *td)
-{
-	struct thread_data *data = td;
-}
-
-static pthread_key_t key;
-static void init_key(void)
-{
-	pthread_key_create(&key, clean_tls);
-}
-#endif
 
 static struct thread_data *get_thread_data(void)
 {
-#ifndef NO_PTHREADS
-	static pthread_once_t once_control = PTHREAD_ONCE_INIT;
-	pthread_once(&once_control, init_key);
-	struct thread_data *td = pthread_getspecific(key);
-	if (td == NULL)
-	{
-		td = calloc(sizeof(struct thread_data), 1);
-		pthread_setspecific(key, td);
-		if (pthread_getspecific(key) == NULL)
-		{
-			fprintf(stderr, "Unable to allocate thread-local storage for exceptions\n");
-		}
-	}
-	return td;
-#else
 	return &thread_data;
-#endif
 }
 
 static struct thread_data *get_thread_data_fast(void)
 {
-#ifndef NO_PTHREADS
-	struct thread_data *td = pthread_getspecific(key);
-	return td;
-#else
 	return &thread_data;
-#endif
 }
 
 id objc_begin_catch(struct _Unwind_Exception *exceptionObject)
