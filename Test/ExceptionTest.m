@@ -27,6 +27,7 @@ int finally(void)
 {
 	__attribute__((cleanup(runCleanup)))
 	int x;
+	(void)x;
 	@try { throw(); }
 	@finally  { finallyEntered = YES; }
 	return 0;

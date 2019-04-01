@@ -217,7 +217,7 @@ struct objc_property_list
  * `objc_property` structs, which have fields appended that this version of the
  * runtime does not know about.
  */
-static struct objc_property *property_at_index(struct objc_property_list *l, int i)
+static inline struct objc_property *property_at_index(struct objc_property_list *l, int i)
 {
 	assert(l->size >= sizeof(struct objc_property));
 	return (struct objc_property*)(((char*)l->properties) + (i * l->size));

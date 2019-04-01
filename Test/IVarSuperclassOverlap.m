@@ -44,7 +44,7 @@ int main(int argc, char *argv[])
 	Ivar b1 = class_getInstanceVariable(swb, "b1");
 	Ivar b2 = class_getInstanceVariable(swb, "b2");
 	Ivar b3 = class_getInstanceVariable(swb, "b3");
-	Ivar b4 = class_getInstanceVariable(swb, "b3");
+	Ivar b4 = class_getInstanceVariable(swb, "b4");
 	Ivar notBitfield = class_getInstanceVariable(swb, "notBitfield");
 	assert(baseSmall);
 	assert(c1);
@@ -53,6 +53,8 @@ int main(int argc, char *argv[])
 	assert(b1);
 	assert(b2);
 	assert(b3);
+	assert(b4);
+	assert(notBitfield);
 	StartsWithBitfield *swbi = [StartsWithBitfield new];
 
 	// Alternating 01 bit pattern, should catch small overwrites.
@@ -77,8 +79,8 @@ int main(int argc, char *argv[])
 	assert(swbi->b3 == 5);
 	assert(swbi->b4 == 11);
 
-	ptrdiff_t baseSmallOffset = ivar_getOffset(baseSmall);
 #ifdef NEW_ABI
+	ptrdiff_t baseSmallOffset = ivar_getOffset(baseSmall);
 	// These should pass with the old ABI, but they don't at the moment.  The
 	// way that they don't is not very harmful though: we just get a bit of
 	// redundant padding, so I don't consider a fix a very high priority.

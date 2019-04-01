@@ -31,7 +31,7 @@ __attribute__((objc_root_class))
 
 int main()
 {
-	unsigned int outCount, i;
+	unsigned int outCount;
 	objc_property_t *properties = class_copyPropertyList([helloclass class], &outCount);
 	assert(outCount == 1);
 	objc_property_t property = properties[0];

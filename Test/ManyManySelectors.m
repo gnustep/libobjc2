@@ -13,6 +13,10 @@ static char selBuffer[] = "XXXXXXXselectorXXXXXXXX";
 static id x(id self, SEL _cmd)
 {
 	methodCalled = YES;
+	if (strcmp(selBuffer, sel_getName(_cmd)) != 0)
+	{
+		fprintf(stderr, "'%s' != '%s'\n", selBuffer, sel_getName(_cmd));
+	}
 	assert(strcmp(selBuffer, sel_getName(_cmd)) == 0);
 	return self;
 }
