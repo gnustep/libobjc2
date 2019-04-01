@@ -782,7 +782,6 @@ void *object_getIndexedIvars(id obj)
 	size_t size = classForObject(obj)->instance_size;
 	if ((0 == size) && class_isMetaClass(classForObject(obj)))
 	{
-		Class cls = (Class)obj;
 		size = sizeof(struct objc_class);
 	}
 	return ((char*)obj) + size;

@@ -25,6 +25,7 @@ void checkProtocolMethod(Protocol *p, SEL sel, BOOL isClass, BOOL isOptional)
 
 int main(void)
 {
+	__attribute__((unused))
 	Protocol *force_reference = @protocol(Test2);
 	Protocol *p = objc_allocateProtocol("Test");
 	protocol_addMethodDescription(p, @selector(someClassMethod), "@:", YES, NO);

@@ -79,7 +79,7 @@ struct objc_protocol_method_description_list
  * array of some future version of these structs, which have fields appended
  * that this version of the runtime does not know about.
  */
-static struct objc_protocol_method_description *
+static inline struct objc_protocol_method_description *
 protocol_method_at_index(struct objc_protocol_method_description_list *l, int i)
 {
 	assert(l->size >= sizeof(struct objc_protocol_method_description));

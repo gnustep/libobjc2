@@ -166,9 +166,6 @@ static int failures = 0;
 } while(0)
 
 int main(int argc, char **argv) {
-	Class firstSuperclass = objc_getClass("DefaultSuperclass");
-	Class subclass1 = objc_getClass("Subclass1");
-
 	/* Transitioning to a new superclass before +initialize has been called */
 	{
 		Class subclass1 = objc_getClass("Subclass1");
@@ -231,8 +228,6 @@ int main(int argc, char **argv) {
 
 		class_setSuperclass(subclass2, secondSuperclass);
 		assert(_notInitializedSuperclass2Initialized);
-
-		Subclass2 *subclass2instance2 = class_createInstance(subclass2, 0);
 
 		// CLASS
 		// can call method on subclass

@@ -43,7 +43,6 @@ int main()
 	assert(class_getInstanceSize(nsarray) == (sizeof(Class) + sizeof(NSUInteger)));
 	Ivar count = class_getInstanceVariable(nsarray, "count");
 	assert(ivar_getOffset(count) == sizeof(id));
-	Ivar objects = class_getInstanceVariable(nsarray, "objects");
 
 	Class bitfield = objc_getClass("BitfieldTest");
 	assert(bitfield);

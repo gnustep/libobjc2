@@ -14,7 +14,6 @@ ptrdiff_t objc_sizeof_type(const char *);
 
 PRIVATE void objc_compute_ivar_offsets(Class class)
 {
-	struct objc_ivar_list_legacy *legacy = NULL;
 	if (class->ivars == NULL)
 	{
 		Class super_class = class_getSuperclass(class);
@@ -47,7 +46,6 @@ PRIVATE void objc_compute_ivar_offsets(Class class)
 			}
 			ivar_start = super->instance_size;
 		}
-		long class_size = 0 - class->instance_size;
 		class->instance_size = ivar_start;
 		/* For each instance variable, we add the offset if required (it will be zero
 		* if this class is compiled with a static ivar layout).  We then set the

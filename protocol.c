@@ -705,7 +705,6 @@ void protocol_addProperty(Protocol *aProtocol,
 	}
 	struct objc_property_list *list = *listPtr;
 	int index = list->count-1;
-	const char *iVarName = NULL;
 	struct objc_property p = propertyFromAttrs(attributes, attributeCount, name);
 	assert(list->size == sizeof(p));
 	memcpy(&(list->properties[index]), &p, sizeof(p));

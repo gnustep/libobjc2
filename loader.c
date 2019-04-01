@@ -231,7 +231,6 @@ OBJC_PUBLIC void __objc_load(struct objc_init *init)
 		}
 		objc_register_selector(sel);
 	}
-	int i = 0;
 	for (struct objc_protocol *proto = init->proto_begin ; proto < init->proto_end ;
 	     proto++)
 	{

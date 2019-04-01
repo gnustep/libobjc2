@@ -180,7 +180,7 @@ struct objc_ivar_list
  * `objc_ivar` structs, which have fields appended that this version of the
  * runtime does not know about.
  */
-static struct objc_ivar *ivar_at_index(struct objc_ivar_list *l, int i)
+static inline struct objc_ivar *ivar_at_index(struct objc_ivar_list *l, int i)
 {
 	assert(l->size >= sizeof(struct objc_ivar));
 	return (struct objc_ivar*)(((char*)l->ivar_list) + (i * l->size));

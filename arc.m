@@ -109,8 +109,6 @@ static inline struct arc_tls* getARCThreadData(void)
 	return tls;
 #endif
 }
-static int count = 0;
-static int poolCount = 0;
 static inline void release(id obj);
 
 /**
@@ -151,7 +149,6 @@ static void emptyPool(struct arc_tls *tls, id *stop)
 			// This may autorelease some other objects, so we have to work in
 			// the case where the autorelease pool is extended during a -release.
 			release(*tls->pool->insert);
-			count--;
 		}
 		void *old = tls->pool;
 		tls->pool = tls->pool->previous;
@@ -163,7 +160,6 @@ static void emptyPool(struct arc_tls *tls, id *stop)
 		       (tls->pool->insert > tls->pool->pool))
 		{
 			tls->pool->insert--;
-			count--;
 			release(*tls->pool->insert);
 		}
 	}
@@ -405,7 +401,6 @@ static inline id autorelease(id obj)
 				pool->insert = pool->pool;
 				tls->pool = pool;
 			}
-			count++;
 			*pool->insert = obj;
 			pool->insert++;
 			return obj;
