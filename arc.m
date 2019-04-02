@@ -695,17 +695,8 @@ static inline BOOL weakRefRelease(WeakRef *ref)
 
 void* block_load_weak(void *block);
 
-OBJC_PUBLIC id objc_storeWeak(id *addr, id obj)
+static BOOL setObjectHasWeakRefs(id obj)
 {
-	LOCK_FOR_SCOPE(&weakRefLock);
-	WeakRef *oldRef;
-	id old;
-	loadWeakPointer(addr, &old, &oldRef);
-	// If the old and new values are the same, then we don't need to do anything.
-	if (old == obj)
-	{
-		return obj;
-	}
 	BOOL isGlobalObject = isPersistentObject(obj);
 	Class cls = isGlobalObject ? Nil : obj->isa;
 	if (obj && cls && objc_test_class_flag(cls, objc_class_flag_fast_arc))
@@ -746,6 +737,40 @@ OBJC_PUBLIC id objc_storeWeak(id *addr, id obj)
 			} while (newVal != refCountVal);
 		}
 	}
+	return isGlobalObject;
+}
+
+WeakRef *incrementWeakRefCount(id obj)
+{
+	WeakRef *ref = weak_ref_table_get(weakRefs, obj);
+	if (ref == NULL)
+	{
+		ref = calloc(1, sizeof(WeakRef));
+		ref->isa = (Class)&weakref_class;
+		ref->obj = obj;
+		ref->weak_count = 1;
+		weak_ref_insert(weakRefs, ref);
+	}
+	else
+	{
+		assert(ref->obj == obj);
+		ref->weak_count++;
+	}
+	return ref;
+}
+
+OBJC_PUBLIC id objc_storeWeak(id *addr, id obj)
+{
+	LOCK_FOR_SCOPE(&weakRefLock);
+	WeakRef *oldRef;
+	id old;
+	loadWeakPointer(addr, &old, &oldRef);
+	// If the old and new values are the same, then we don't need to do anything.
+	if (old == obj)
+	{
+		return obj;
+	}
+	BOOL isGlobalObject = setObjectHasWeakRefs(obj);
 	// If we old ref exists, decrement its reference count.  This may also
 	// delete the weak reference control block.
 	if (oldRef != NULL)
@@ -767,21 +792,7 @@ OBJC_PUBLIC id objc_storeWeak(id *addr, id obj)
 	}
 	if (nil != obj)
 	{
-		WeakRef *ref = weak_ref_table_get(weakRefs, obj);
-		if (ref == NULL)
-		{
-			ref = calloc(1, sizeof(WeakRef));
-			ref->isa = (Class)&weakref_class;
-			ref->obj = obj;
-			ref->weak_count = 1;
-			weak_ref_insert(weakRefs, ref);
-		}
-		else
-		{
-			assert(ref->obj == obj);
-			ref->weak_count++;
-		}
-		*addr = (id)ref;
+		*addr = (id)incrementWeakRefCount(obj);
 	}
 	return obj;
 }
@@ -903,11 +914,37 @@ OBJC_PUBLIC void objc_moveWeak(id *dest, id *src)
 
 OBJC_PUBLIC void objc_destroyWeak(id* obj)
 {
-	objc_storeWeak(obj, nil);
+	LOCK_FOR_SCOPE(&weakRefLock);
+	WeakRef *oldRef;
+	id old;
+	loadWeakPointer(obj, &old, &oldRef);
+	// If the old ref exists, decrement its reference count.  This may also
+	// delete the weak reference control block.
+	if (oldRef != NULL)
+	{
+		weakRefRelease(oldRef);
+	}
 }
 
-OBJC_PUBLIC id objc_initWeak(id *object, id value)
+OBJC_PUBLIC id objc_initWeak(id *addr, id obj)
 {
-	*object = nil;
-	return objc_storeWeak(object, value);
+	if (obj == nil)
+	{
+		*addr = nil;
+		return nil;
+	}
+	LOCK_FOR_SCOPE(&weakRefLock);
+	BOOL isGlobalObject = setObjectHasWeakRefs(obj);
+	if (isGlobalObject)
+	{
+		// If this is a global object, it's never deallocated, so secretly make
+		// this a strong reference.
+		*addr = obj;
+		return obj;
+	}
+	if (nil != obj)
+	{
+		*(WeakRef**)addr = incrementWeakRefCount(obj);
+	}
+	return obj;
 }
