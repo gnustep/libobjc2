@@ -3,6 +3,8 @@ GNUstep Objective-C Runtime
 
 [![Build Status](https://dev.azure.com/gnustep/libobjc2/_apis/build/status/gnustep.libobjc2?branchName=master)](https://dev.azure.com/gnustep/libobjc2/_build/latest?definitionId=1&branchName=master)
 
+[![Build Status](https://api.cirrus-ci.com/github/gnustep/libobjc2.svg)](https://cirrus-ci.com/github/gnustep/libobjc2)
+
 The GNUstep Objective-C runtime was designed as a drop-in replacement for the
 GCC runtime.  It supports three ABIs:
 
