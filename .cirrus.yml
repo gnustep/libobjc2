@@ -2,10 +2,10 @@ freebsd_instance:
   image: freebsd-12-0-release-amd64
 
 task:
-  install_script: pkg install -y cmake ninja
+  install_script: pkg install -y cmake ninja llvm80
   script: |
       mkdir Build
       cd Build
-      cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Debug
+      cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang80 -DCMAKE_CXX_COMPILER=clang++80
       ninja
       ctest -j4
