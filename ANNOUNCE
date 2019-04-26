@@ -53,6 +53,12 @@ In addition to the new ABI, there are several improvements on Windows:
 Windows, so projects built with Microsoft's linker must disable incremental
 linking.
 
+Note: Microsoft's WinObjC project contains a friendly fork of this library that
+includes a work around for the incremental linking issue.  If you wish to use
+incremental linking on Windows, please use that version.  A subsequent version
+of clang and link.exe should include a fix that will make it possible to use
+this version with incremental linking.
+
 The runtime will now use the new ABI's data structures internally and will
 automatically upgrade on-disk structures from old ABIs when used with the old
 ABI.  As a result, memory usage will be higher when using the old ABI and users
