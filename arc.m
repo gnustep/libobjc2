@@ -205,11 +205,11 @@ static const long refcount_shift = 1;
  * ever had a weak reference taken.  This lets us avoid acquiring the weak
  * table lock for most objects on deallocation.
  */
-static const long weak_mask = ((size_t)1)<<((sizeof(size_t)*8)-refcount_shift);
+static const size_t weak_mask = ((size_t)1)<<((sizeof(size_t)*8)-refcount_shift);
 /**
  * All of the bits other than the top bit are the real reference count.
  */
-static const long refcount_mask = ~weak_mask;
+static const size_t refcount_mask = ~weak_mask;
 
 OBJC_PUBLIC size_t object_getRetainCount_np(id obj)
 {
@@ -225,7 +225,7 @@ OBJC_PUBLIC id objc_retain_fast_np(id obj)
 	uintptr_t newVal = refCountVal;
 	do {
 		refCountVal = newVal;
-		long realCount = refCountVal & refcount_mask;
+		size_t realCount = refCountVal & refcount_mask;
 		// If this object's reference count is already less than 0, then
 		// this is a spurious retain.  This can happen when one thread is
 		// attempting to acquire a strong reference from a weak reference
@@ -708,7 +708,7 @@ static BOOL setObjectHasWeakRefs(id obj)
 			uintptr_t newVal = refCountVal;
 			do {
 				refCountVal = newVal;
-				long realCount = refCountVal & refcount_mask;
+				size_t realCount = refCountVal & refcount_mask;
 				// If this object has already been deallocated (or is in the
 				// process of being deallocated) then don't bother storing it.
 				if (realCount < 0)
