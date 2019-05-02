@@ -29,7 +29,7 @@ int main(void)
 	int sel_size = 0;
 	for (uint32_t i=0 ; i<0xf0000 ; i++)
 	{
-		snprintf(selBuffer, 16, "%" PRId32 "selector%" PRIx32, i, i);
+		snprintf(selBuffer, sizeof(selBuffer), "%" PRId32 "selector%" PRIx32, i, i);
 		nextSel = sel_registerName(selBuffer);
 		if (strcmp(selBuffer, sel_getName(nextSel)) != 0)
 		{
