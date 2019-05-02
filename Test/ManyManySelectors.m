@@ -31,6 +31,11 @@ int main(void)
 	{
 		snprintf(selBuffer, 16, "%" PRId32 "selector%" PRIx32, i, i);
 		nextSel = sel_registerName(selBuffer);
+		if (strcmp(selBuffer, sel_getName(nextSel)) != 0)
+		{
+			fprintf(stderr, "'%s' != '%s'\n", selBuffer, sel_getName(nextSel));
+		}
+		assert(strcmp(selBuffer, sel_getName(nextSel)) == 0);
 		sel_size += strlen(selBuffer);
 	}
 	assert(class_addMethod(object_getClass([Test class]), nextSel, (IMP)x, "@@:"));
