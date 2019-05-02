@@ -138,3 +138,12 @@ addtest_variants("ForwardDeclareProtocolAccess" "ForwardDeclareProtocolAccess.m;
 if (ENABLE_OBJCXX)
 	addtest_variants(ObjCXXEHInterop "ObjCXXEHInterop.mm;ObjCXXEHInterop.m" true)
 endif()
+
+# Some tests use enough memory that they fail on CI intermittently if they
+# happen to run in parallel with each other.
+set_tests_properties(ManyManySelectors PROPERTIES PROCESSORS 3)
+set_tests_properties(ManyManySelectors_optimised PROPERTIES PROCESSORS 3)
+if (${LEGACY})
+	set_tests_properties(ManyManySelectors_legacy PROPERTIES PROCESSORS 3)
+	set_tests_properties(ManyManySelectors_legacy_optimised PROPERTIES PROCESSORS 3)
+endif ()
