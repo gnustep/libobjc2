@@ -109,7 +109,7 @@ static const char *skip_irrelevant_type_info(const char *t)
 	{
 		default: return t;
 		case 'r': case 'n': case 'N': case 'o': case 'O': case 'R':
-		case 'V': case '!': case '0'...'9':
+		case 'V': case 'A': case '!': case '0'...'9':
 			return skip_irrelevant_type_info(t+1);
 	}
 }

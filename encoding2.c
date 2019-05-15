@@ -21,7 +21,7 @@ size_t objc_alignof_type (const char *type);
 
 const char *objc_skip_type_qualifiers (const char *type)
 {
-	static const char *type_qualifiers = "rnNoORV";
+	static const char *type_qualifiers = "rnNoORVA";
 	while('\0' != *type && strchr(type_qualifiers, *type))
 	{
 		type++;
