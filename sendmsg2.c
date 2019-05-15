@@ -183,7 +183,7 @@ struct objc_slot *objc_msg_lookup_sender(id *receiver, SEL selector, id sender)
 			const char *t = selector->types;
 			// Skip type qualifiers
 			while ('r' == *t || 'n' == *t || 'N' == *t || 'o' == *t ||
-			       'O' == *t || 'R' == *t || 'V' == *t)
+			       'O' == *t || 'R' == *t || 'V' == *t || 'A' == *t)
 			{
 				t++;
 			}
@@ -219,7 +219,7 @@ static struct objc_slot2* objc_slot_lookup(id *receiver, SEL selector)
 			const char *t = selector->types;
 			// Skip type qualifiers
 			while ('r' == *t || 'n' == *t || 'N' == *t || 'o' == *t ||
-			       'O' == *t || 'R' == *t || 'V' == *t)
+			       'O' == *t || 'R' == *t || 'V' == *t || 'A' == *t)
 			{
 				t++;
 			}
@@ -253,7 +253,7 @@ struct objc_slot2 *objc_slot_lookup_version(id *receiver, SEL selector, uint64_t
 			const char *t = selector->types;
 			// Skip type qualifiers
 			while ('r' == *t || 'n' == *t || 'N' == *t || 'o' == *t ||
-			       'O' == *t || 'R' == *t || 'V' == *t)
+			       'O' == *t || 'R' == *t || 'V' == *t || 'A' == *t)
 			{
 				t++;
 			}
