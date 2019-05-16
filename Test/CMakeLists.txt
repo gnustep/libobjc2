@@ -40,6 +40,7 @@ set(TESTS
 	WeakReferences_arc.m
 	WeakImportClass.m
 	ivar_arc.m
+	ivar_atomic.m
 	IVarOverlap.m
 	IVarSuperclassOverlap.m
 	objc_msgSend.m
