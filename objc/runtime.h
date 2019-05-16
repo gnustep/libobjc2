@@ -1077,7 +1077,7 @@ void objc_removeAssociatedObjects(id object);
  * arguments as the method.
  */
 OBJC_PUBLIC
-IMP imp_implementationWithBlock(void *block);
+IMP imp_implementationWithBlock(id block);
 /**
  * Returns the type encoding of an IMP that would be returned by passing the
  * block to imp_implementationWithBlock().  Returns NULL if this is not a valid
@@ -1085,14 +1085,14 @@ IMP imp_implementationWithBlock(void *block);
  * argument).  The caller is responsible for freeing the returned value.
  */
 OBJC_PUBLIC
-char *block_copyIMPTypeEncoding_np(void*block);
+char *block_copyIMPTypeEncoding_np(id block);
 /**
  * Returns the block that was used in an IMP created by
  * imp_implementationWithBlock().  The result of calling this function with any
  * other IMP is undefined.
  */
 OBJC_PUBLIC
-void *imp_getBlock(IMP anImp);
+id imp_getBlock(IMP anImp);
 /**
  * Removes a block that was converted to an IMP with
  * imp_implementationWithBlock().  The result of calling this function with any

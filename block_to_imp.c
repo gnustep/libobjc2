@@ -181,7 +181,7 @@ static struct trampoline_set *alloc_trampolines(char *start, char *end)
 static struct trampoline_set *sret_trampolines;
 static struct trampoline_set *trampolines;
 
-IMP imp_implementationWithBlock(void *block)
+IMP imp_implementationWithBlock(id block)
 {
 	struct Block_layout *b = block;
 	void *start;
@@ -250,7 +250,7 @@ static int indexForIMP(IMP anIMP, struct trampoline_set **setptr)
 	return -1;
 }
 
-void *imp_getBlock(IMP anImp)
+id imp_getBlock(IMP anImp)
 {
 	LOCK_FOR_SCOPE(&trampoline_lock);
 	struct trampoline_set *set = trampolines;
@@ -291,7 +291,7 @@ BOOL imp_removeBlock(IMP anImp)
 
 PRIVATE size_t lengthOfTypeEncoding(const char *types);
 
-char *block_copyIMPTypeEncoding_np(void*block)
+char *block_copyIMPTypeEncoding_np(id block)
 {
 	char *buffer = strdup(block_getType_np(block));
 	if (NULL == buffer) { return NULL; }
