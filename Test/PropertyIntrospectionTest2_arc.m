@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+#include <stdatomic.h>
 
 #pragma GCC diagnostic ignored "-Wobjc-property-no-attribute"
 
@@ -36,6 +37,7 @@ __attribute__((objc_root_class))
 {
 @public
 	Class isa;
+	atomic_bool atomicBoolDefault;
 	signed char charDefault;
 	double doubleDefault;
 	enum FooManChu enumDefault;
@@ -68,6 +70,7 @@ __attribute__((objc_root_class))
 	__weak id idReadonlyWeakNonatomic;
 	id _idOther;
 }
+@property atomic_bool atomicBoolDefault;
 @property signed char charDefault;
 @property double doubleDefault;
 @property enum FooManChu enumDefault;
@@ -111,6 +114,7 @@ __attribute__((objc_root_class))
 
 
 @implementation PropertyTest
+@synthesize atomicBoolDefault;
 @synthesize charDefault;
 @synthesize doubleDefault;
 @synthesize enumDefault;
@@ -147,6 +151,7 @@ __attribute__((objc_root_class))
 @end
 
 @protocol ProtocolTest
+@property atomic_bool atomicBoolDefault;
 @property signed char charDefault;
 @property double doubleDefault;
 @property enum FooManChu enumDefault;
@@ -187,6 +192,7 @@ __attribute__((objc_root_class))
 @interface PropertyProtocolTest <ProtocolTest>
 {
 	Class isa;
+	atomic_bool atomicBoolDefault;
 	signed char charDefault;
 	double doubleDefault;
 	enum FooManChu enumDefault;
@@ -222,6 +228,7 @@ __attribute__((objc_root_class))
 @end
 
 @implementation PropertyProtocolTest
+@synthesize atomicBoolDefault;
 @synthesize charDefault;
 @synthesize doubleDefault;
 @synthesize enumDefault;
@@ -503,6 +510,7 @@ void structDefault2Setter(id self, SEL _cmd, struct YorkshireTeaStruct value) {
 
 int main(void)
 {
+	testProperty("atomicBoolDefault", "TAB,VatomicBoolDefault", ATTRS(ATTR("T", "AB"), ATTR("V", "atomicBoolDefault")));
 	testProperty("charDefault", "Tc,VcharDefault", ATTRS(ATTR("T", "c"), ATTR("V", "charDefault")));
 	testProperty("doubleDefault", "Td,VdoubleDefault", ATTRS(ATTR("T", "d"), ATTR("V", "doubleDefault")));
 	testProperty("enumDefault", "Ti,VenumDefault", ATTRS(ATTR("T", "i"), ATTR("V", "enumDefault")));
@@ -593,6 +601,7 @@ int main(void)
                                                                                                           ATTR("S", "setDynamicGetterSetter:")));
 
     Protocol *testProto = objc_getProtocol("ProtocolTest");
+    testPropertyForProtocol(testProto, "atomicBoolDefault", "TAB", ATTRS(ATTR("T", "AB")));
     testPropertyForProtocol(testProto, "charDefault", "Tc", ATTRS(ATTR("T", "c")));
 	testPropertyForProtocol(testProto, "doubleDefault", "Td", ATTRS(ATTR("T", "d")));
 	testPropertyForProtocol(testProto, "enumDefault", "Ti", ATTRS(ATTR("T", "i")));
