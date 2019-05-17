@@ -432,7 +432,6 @@ objc_property_attribute_t *property_copyAttributeList(objc_property_t property,
 				i += strlen(attributes+i)-1;
 				break;
 			default:
-				i++;
 				continue;
 		}
 		count++;
