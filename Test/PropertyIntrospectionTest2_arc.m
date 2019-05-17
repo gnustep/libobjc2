@@ -510,7 +510,9 @@ void structDefault2Setter(id self, SEL _cmd, struct YorkshireTeaStruct value) {
 
 int main(void)
 {
+#ifdef NEW_ABI
 	testProperty("atomicBoolDefault", "TAB,VatomicBoolDefault", ATTRS(ATTR("T", "AB"), ATTR("V", "atomicBoolDefault")));
+#endif
 	testProperty("charDefault", "Tc,VcharDefault", ATTRS(ATTR("T", "c"), ATTR("V", "charDefault")));
 	testProperty("doubleDefault", "Td,VdoubleDefault", ATTRS(ATTR("T", "d"), ATTR("V", "doubleDefault")));
 	testProperty("enumDefault", "Ti,VenumDefault", ATTRS(ATTR("T", "i"), ATTR("V", "enumDefault")));
@@ -601,7 +603,9 @@ int main(void)
                                                                                                           ATTR("S", "setDynamicGetterSetter:")));
 
     Protocol *testProto = objc_getProtocol("ProtocolTest");
+#ifdef NEW_ABI
     testPropertyForProtocol(testProto, "atomicBoolDefault", "TAB", ATTRS(ATTR("T", "AB")));
+#endif
     testPropertyForProtocol(testProto, "charDefault", "Tc", ATTRS(ATTR("T", "c")));
 	testPropertyForProtocol(testProto, "doubleDefault", "Td", ATTRS(ATTR("T", "d")));
 	testPropertyForProtocol(testProto, "enumDefault", "Ti", ATTRS(ATTR("T", "i")));
