@@ -183,7 +183,7 @@ static struct trampoline_set *trampolines;
 
 IMP imp_implementationWithBlock(id block)
 {
-	struct Block_layout *b = block;
+	struct Block_layout *b = (struct Block_layout *)block;
 	void *start;
 	void *end;
 	LOCK_FOR_SCOPE(&trampoline_lock);
