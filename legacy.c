@@ -168,12 +168,36 @@ static inline BOOL checkAttribute(char field, int attr)
 
 static void upgradeProperty(struct objc_property *n, struct objc_property_gsv1 *o)
 {
-	size_t typeSize = lengthOfTypeEncoding(o->getter_types);
-	char *typeEncoding = malloc(typeSize + 1);
-	memcpy(typeEncoding, o->getter_types, typeSize);
-	typeEncoding[typeSize] = 0;
-
+	char *typeEncoding;
+	ptrdiff_t typeSize;
+	if (o->name[0] == '\0')
+	{
+		n->name = o->name + o->name[1];
+		n->attributes = o->name + 2;
+		// If we have an attribute string, then it will contain a more accurate
+		// version of the types than we'll find in the getter (qualifiers such
+		// as _Atomic and volatile may be dropped)
+		assert(n->attributes[0] == 'T');
+		const char *type_start = &n->attributes[1];
+		const char *type_end = strchr(type_start, ',');
+		if (type_end == NULL)
+		{
+			type_end = type_start + strlen(type_start);
+		}
+		typeSize = type_end - type_start;
+		typeEncoding = malloc(typeSize  + 1);
+		memcpy(typeEncoding, type_start, typeSize);
+		typeEncoding[typeSize] = 0;
+	}
+	else
+	{
+		typeSize = (ptrdiff_t)lengthOfTypeEncoding(o->getter_types);
+		typeEncoding = malloc(typeSize + 1);
+		memcpy(typeEncoding, o->getter_types, typeSize);
+		typeEncoding[typeSize] = 0;
+	}
 	n->type = typeEncoding;
+
 	if (o->getter_name)
 	{
 		n->getter = sel_registerTypedName_np(o->getter_name, o->getter_types);
@@ -185,8 +209,6 @@ static void upgradeProperty(struct objc_property *n, struct objc_property_gsv1 *
 
 	if (o->name[0] == '\0')
 	{
-		n->name = o->name + o->name[1];
-		n->attributes = o->name + 2;
 		return;
 	}
 
@@ -251,13 +273,10 @@ static void upgradeProperty(struct objc_property *n, struct objc_property_gsv1 *
 	*(insert++) = 0;
 	*(insert++) = 0;
 	// Set the type encoding
-	if (NULL != typeEncoding)
-	{
-		*(insert++) = 'T';
-		memcpy(insert, typeEncoding, typeSize);
-		insert += typeSize;
-		needsComma = YES;
-	}
+	*(insert++) = 'T';
+	memcpy(insert, typeEncoding, typeSize);
+	insert += typeSize;
+	needsComma = YES;
 	// Set the flags
 	memcpy(insert, flags, i);
 	insert += i;
