@@ -176,11 +176,8 @@ struct objc_init
 #include <dlfcn.h>
 #endif
 
-static enum {
-	LegacyABI,
-	NewABI,
-	UnknownABI
-} CurrentABI = UnknownABI;
+BOOL loadedNewABIClasses = NO;
+BOOL loadedOldABIClasses = NO;
 
 void registerProtocol(Protocol *proto);
 
@@ -199,19 +196,6 @@ OBJC_PUBLIC void __objc_load(struct objc_init *init)
 	}
 #endif
 	LOCK_RUNTIME_FOR_SCOPE();
-	BOOL isFirstLoad = NO;
-	switch (CurrentABI)
-	{
-		case LegacyABI:
-			fprintf(stderr, "Version 2 Objective-C ABI may not be mixed with earlier versions.\n");
-			abort();
-		case UnknownABI:
-			isFirstLoad = YES;
-			CurrentABI = NewABI;
-			break;
-		case NewABI:
-			break;
-	}
 
 	// If we've already loaded this module, don't load it again.
 	if (init->version == ULONG_MAX)
@@ -251,17 +235,23 @@ OBJC_PUBLIC void __objc_load(struct objc_init *init)
 		assert(p);
 		*proto = p;
 	}
+		
+	BOOL testedFirstName = NO;
 	for (Class *cls = init->cls_begin ; cls < init->cls_end ; cls++)
 	{
 		if (*cls == NULL)
 		{
 			continue;
 		}
-		// As a special case, allow using legacy ABI code with a new runtime.
-		if (isFirstLoad && (strcmp((*cls)->name, "Protocol") == 0))
+		if(!testedFirstName)
 		{
-			CurrentABI = UnknownABI;
+			if(strcmp((*cls)->name, "Protocol") != 0)
+			{
+				loadedNewABIClasses = YES;
+			}
+			testedFirstName = YES;
 		}
+		// As a special case, allow using legacy ABI code with a new runtime.
 #ifdef DEBUG_LOADING
 		fprintf(stderr, "Loading class %s\n", (*cls)->name);
 #endif
@@ -322,24 +312,18 @@ OBJC_PUBLIC void __objc_load(struct objc_init *init)
 	}
 #endif
 	init->version = ULONG_MAX;
+
+	/* make sure we are not mixing ABIs */
+	if(loadedNewABIClasses && loadedOldABIClasses) {
+		fprintf(stderr, "Version 2 Objective-C ABI may not be mixed with earlier versions.\n");
+		abort();
+	}
 }
 
 #ifdef OLDABI_COMPAT
 OBJC_PUBLIC void __objc_exec_class(struct objc_module_abi_8 *module)
 {
 	init_runtime();
-
-	switch (CurrentABI)
-	{
-		case UnknownABI:
-			CurrentABI = LegacyABI;
-			break;
-		case LegacyABI:
-			break;
-		case NewABI:
-			fprintf(stderr, "Version 2 Objective-C ABI may not be mixed with earlier versions.\n");
-			abort();
-	}
 
 	// Check that this module uses an ABI version that we recognise.  
 	// In future, we should pass the ABI version to the class / category load
@@ -363,6 +347,7 @@ OBJC_PUBLIC void __objc_exec_class(struct objc_module_abi_8 *module)
 	// Load the classes from this module
 	for (unsigned short i=0 ; i<symbols->class_count ; i++)
 	{
+		loadedOldABIClasses = YES;
 		objc_load_class(objc_upgrade_class(symbols->definitions[defs++]));
 	}
 	unsigned int category_start = defs;
@@ -393,6 +378,12 @@ OBJC_PUBLIC void __objc_exec_class(struct objc_module_abi_8 *module)
 		{
 			objc_send_load_message(class);
 		}
+	}
+
+	/* make sure we are not mixing ABIs */
+	if(loadedNewABIClasses && loadedOldABIClasses) {
+		fprintf(stderr, "Version 2 Objective-C ABI may not be mixed with earlier versions.\n");
+		abort();
 	}
 }
 #endif
