@@ -193,7 +193,12 @@
 
 12:
 #endif // WITH_TRACING
+#ifdef _WIN64
+	mov   %r10, %rax
+	jmp   *__guard_dispatch_icall_fptr(%rip)
+#else
 	jmp   *%r10
+#endif
 4:                                       # returnNil:
 	                                     # Both of the return registers are
 	                                     # callee-save on x86-64, so we can

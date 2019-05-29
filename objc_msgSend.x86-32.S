@@ -36,8 +36,11 @@
 
 	test  %eax, %eax
 	jz    5f                             # Nil slot - invoke some kind of forwarding mechanism
-	mov   SLOT_OFFSET(%eax), %eax
-	jmp   *%eax
+	mov   SLOT_OFFSET(%eax), %ecx
+#ifdef _WIN32
+	call  *CDECL(__guard_check_icall_fptr)
+#endif
+	jmp   *%ecx
 4:                                       # returnNil:
 .if \fpret
 	fldz
@@ -58,7 +61,13 @@
 	add   $8, %esp                       # restore the stack
 
 
+#ifdef _WIN32
+	mov    %eax, %ecx
+	call  *CDECL(__guard_check_icall_fptr)
+	jmp   *%ecx
+#else
 	jmp   *%eax
+#endif
 6:                                       # smallObject:
 	push  %ebx                           # Save old %ebx
 	calll 7f
