@@ -48,7 +48,7 @@ int main(void)
 	int lost = 0;
 	for (uintptr_t i = 1; i <= 20; ++i)
 	{
-		if (object != objc_getAssociatedObject(holder, (void*)i))
+		if (object != objc_getAssociatedObject(holder, (const void*)i))
 		{
 			fprintf(stderr, "lost object %" PRIuPTR "\n", i);
 			++lost;
