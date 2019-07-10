@@ -22,7 +22,7 @@ struct reference
 	 * The key used for identifying this object.  Opaque pointer, should be set
 	 * to 0 when this slot is unused.
 	 */
-	void *key;
+	const void *key;
 	/**
 	 * The associated object.  Note, if the policy is assign then this may be
 	 * some other type of pointer...
@@ -73,7 +73,7 @@ static BOOL isAtomic(uintptr_t policy)
 	return (policy & OBJC_ASSOCIATION_ATOMIC) == OBJC_ASSOCIATION_ATOMIC;
 }
 
-static struct reference* findReference(struct reference_list *list, void *key)
+static struct reference* findReference(struct reference_list *list, const void *key)
 {
 	while (list)
 	{
@@ -121,7 +121,7 @@ static void freeReferenceList(struct reference_list *l)
 }
 
 static void setReference(struct reference_list *list,
-                         void *key,
+                         const void *key,
                          void *obj,
                          uintptr_t policy)
 {
@@ -324,7 +324,7 @@ static struct reference_list* referenceListForObject(id object, BOOL create)
 }
 
 void objc_setAssociatedObject(id object,
-                              void *key,
+                              const void *key,
                               id value,
                               objc_AssociationPolicy policy)
 {
@@ -333,7 +333,7 @@ void objc_setAssociatedObject(id object,
 	setReference(list, key, value, policy);
 }
 
-id objc_getAssociatedObject(id object, void *key)
+id objc_getAssociatedObject(id object, const void *key)
 {
 	if (isSmallObject(object)) { return nil; }
 	struct reference_list *list = referenceListForObject(object, NO);

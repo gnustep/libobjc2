@@ -1054,7 +1054,7 @@ typedef uintptr_t objc_AssociationPolicy;
  * with the same arguments, or nil if none exists.
  */
 OBJC_PUBLIC
-id objc_getAssociatedObject(id object, void *key);
+id objc_getAssociatedObject(id object, const void *key);
 /**
  * Associates an object with another.  This provides a mechanism for storing
  * extra state with an object, beyond its declared instance variables.  The
@@ -1064,7 +1064,7 @@ id objc_getAssociatedObject(id object, void *key);
  * if an association policy of copy or retain is passed as the final argument.
  */
 OBJC_PUBLIC
-void objc_setAssociatedObject(id object, void *key, id value, objc_AssociationPolicy policy);
+void objc_setAssociatedObject(id object, const void *key, id value, objc_AssociationPolicy policy);
 /**
  * Removes all associations from an object.  
  */
