@@ -39,7 +39,7 @@
 static void *_HeapBlockByRef = (void*)1;
 
 
-OBJC_PUBLIC _Bool _Block_has_signature(id b)
+OBJC_PUBLIC bool _Block_has_signature(void *b)
 {
 	const struct Block_layout *block = (struct Block_layout*)b;
 	return ((NULL != block) && (block->flags & BLOCK_HAS_SIGNATURE));
@@ -47,7 +47,7 @@ OBJC_PUBLIC _Bool _Block_has_signature(id b)
 /**
  * Returns the Objective-C type encoding for the block.
  */
-OBJC_PUBLIC const char * _Block_signature(id b)
+OBJC_PUBLIC const char * _Block_signature(void *b)
 {
 	const struct Block_layout *block = (struct Block_layout*)b;
 	if ((NULL == block) || !(block->flags & BLOCK_HAS_SIGNATURE))
