@@ -4,6 +4,11 @@
 
 #ifndef __OBJC_SLOT_H_INCLUDED__
 #define __OBJC_SLOT_H_INCLUDED__
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * The objc_slot structure is used to permit safe IMP caching.  It is returned
  * by the new lookup APIs.  When you call `objc_slot_lookup_version`, the final
@@ -50,4 +55,7 @@ struct objc_slot
 	/** Selector for this method. */
 	SEL selector;
 } OBJC_NONPORTABLE;
+#ifdef __cplusplus
+}
+#endif
 #endif // __OBJC_SLOT_H_INCLUDED__
