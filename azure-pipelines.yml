@@ -10,6 +10,8 @@ jobs:
         Release:
           BuildType: Release
     steps:
+    - checkout: self
+      submodules: true
     - script: |
         sudo add-apt-repository "deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-8 main"
         sudo apt-get update
@@ -55,6 +57,8 @@ jobs:
           Arch: x64
           Flags: -m64
     steps:
+    - checkout: self
+      submodules: true
     - script: |
         choco.exe install ninja
         choco.exe install llvm
