@@ -1,7 +1,9 @@
+#define TSL_NO_EXCEPTIONS 1
+#include <stdio.h>
 #include <stdlib.h>
-#include <stdbool.h>
 #include <assert.h>
-#import "stdio.h"
+#include "third_party/robin-map/include/tsl/robin_map.h"
+#import "lock.h"
 #import "objc/runtime.h"
 #import "objc/blocks_runtime.h"
 #import "nsobject.h"
@@ -12,7 +14,7 @@
 #import "objc/objc-arc.h"
 #import "objc/blocks_runtime.h"
 
-id (*_objc_weak_load)(id object);
+extern "C" id (*_objc_weak_load)(id object);
 
 #if defined(_WIN32)
 // We're using the Fiber-Local Storage APIs on Windows
@@ -54,9 +56,9 @@ static inline arc_tls_key_t arc_tls_key_create(arc_cleanup_function_t cleanupFun
 arc_tls_key_t ARCThreadKey;
 #endif
 
-extern void _NSConcreteMallocBlock;
-extern void _NSConcreteStackBlock;
-extern void _NSConcreteGlobalBlock;
+extern struct objc_class _NSConcreteMallocBlock;
+extern struct objc_class _NSConcreteStackBlock;
+extern struct objc_class _NSConcreteGlobalBlock;
 
 @interface NSAutoreleasePool
 + (Class)class;
@@ -95,15 +97,25 @@ struct arc_tls
 	id returnRetained;
 };
 
+/**
+ * Type-safe wrapper around calloc.
+ */
+template<typename T>
+static inline T* new_zeroed()
+{
+	return static_cast<T*>(calloc(sizeof(T), 1));
+}
+
+
 static inline struct arc_tls* getARCThreadData(void)
 {
 #ifndef arc_tls_store
 	return NULL;
 #else // !defined arc_tls_store
-	struct arc_tls *tls = arc_tls_load(ARCThreadKey);
+	auto tls = static_cast<struct arc_tls*>(arc_tls_load(ARCThreadKey));
 	if (NULL == tls)
 	{
-		tls = calloc(sizeof(struct arc_tls), 1);
+		tls = new_zeroed<struct arc_tls>();
 		arc_tls_store(ARCThreadKey, tls);
 	}
 	return tls;
@@ -115,7 +127,7 @@ static inline void release(id obj);
  * Empties objects from the autorelease pool, stating at the head of the list
  * specified by pool and continuing until it reaches the stop point.  If the stop point is NULL then 
  */
-static void emptyPool(struct arc_tls *tls, id *stop)
+static void emptyPool(struct arc_tls *tls, void *stop)
 {
 	struct arc_autorelease_pool *stopPool = NULL;
 	if (NULL != stop)
@@ -211,14 +223,14 @@ static const size_t weak_mask = ((size_t)1)<<((sizeof(size_t)*8)-refcount_shift)
  */
 static const size_t refcount_mask = ~weak_mask;
 
-OBJC_PUBLIC size_t object_getRetainCount_np(id obj)
+extern "C" OBJC_PUBLIC size_t object_getRetainCount_np(id obj)
 {
 	uintptr_t *refCount = ((uintptr_t*)obj) - 1;
 	uintptr_t refCountVal = __sync_fetch_and_add(refCount, 0);
 	return (((size_t)refCountVal) & refcount_mask) + 1;
 }
 
-OBJC_PUBLIC id objc_retain_fast_np(id obj)
+extern "C" OBJC_PUBLIC id objc_retain_fast_np(id obj)
 {
 	uintptr_t *refCount = ((uintptr_t*)obj) - 1;
 	uintptr_t refCountVal = __sync_fetch_and_add(refCount, 0);
@@ -291,7 +303,7 @@ static inline id retain(id obj)
 	return [obj retain];
 }
 
-OBJC_PUBLIC BOOL objc_release_fast_no_destroy_np(id obj)
+extern "C" OBJC_PUBLIC BOOL objc_release_fast_no_destroy_np(id obj)
 {
 	uintptr_t *refCount = ((uintptr_t*)obj) - 1;
 	uintptr_t refCountVal = __sync_fetch_and_add(refCount, 0);
@@ -329,7 +341,7 @@ OBJC_PUBLIC BOOL objc_release_fast_no_destroy_np(id obj)
 	return NO;
 }
 
-OBJC_PUBLIC void objc_release_fast_np(id obj)
+extern "C" OBJC_PUBLIC void objc_release_fast_np(id obj)
 {
 	if (objc_release_fast_no_destroy_np(obj))
 	{
@@ -341,12 +353,12 @@ static inline void release(id obj)
 {
 	if (isPersistentObject(obj)) { return; }
 	Class cls = obj->isa;
-	if (cls == &_NSConcreteMallocBlock)
+	if (cls == static_cast<Class>(&_NSConcreteMallocBlock))
 	{
 		_Block_release(obj);
 		return;
 	}
-	if (cls == &_NSConcreteStackBlock)
+	if (cls == static_cast<Class>(&_NSConcreteStackBlock))
 	{
 		return;
 	}
@@ -396,7 +408,7 @@ static inline id autorelease(id obj)
 			struct arc_autorelease_pool *pool = tls->pool;
 			if (NULL == pool || (pool->insert >= &pool->pool[POOL_SIZE]))
 			{
-				pool = calloc(sizeof(struct arc_autorelease_pool), 1);
+				pool = new_zeroed<struct arc_autorelease_pool>();
 				pool->previous = tls->pool;
 				pool->insert = pool->pool;
 				tls->pool = pool;
@@ -418,7 +430,7 @@ static inline id autorelease(id obj)
 	return [obj autorelease];
 }
 
-OBJC_PUBLIC unsigned long objc_arc_autorelease_count_np(void)
+extern "C" OBJC_PUBLIC unsigned long objc_arc_autorelease_count_np(void)
 {
 	struct arc_tls* tls = getARCThreadData();
 	unsigned long count = 0;
@@ -432,7 +444,7 @@ OBJC_PUBLIC unsigned long objc_arc_autorelease_count_np(void)
 	}
 	return count;
 }
-OBJC_PUBLIC unsigned long objc_arc_autorelease_count_for_object_np(id obj)
+extern "C" OBJC_PUBLIC unsigned long objc_arc_autorelease_count_for_object_np(id obj)
 {
 	struct arc_tls* tls = getARCThreadData();
 	unsigned long count = 0;
@@ -453,7 +465,7 @@ OBJC_PUBLIC unsigned long objc_arc_autorelease_count_for_object_np(id obj)
 	return count;
 }
 
-void *objc_autoreleasePoolPush(void)
+extern "C" OBJC_PUBLIC void *objc_autoreleasePoolPush(void)
 {
 	initAutorelease();
 	struct arc_tls* tls = getARCThreadData();
@@ -472,7 +484,7 @@ void *objc_autoreleasePoolPush(void)
 			struct arc_autorelease_pool *pool = tls->pool;
 			if (NULL == pool || (pool->insert >= &pool->pool[POOL_SIZE]))
 			{
-				pool = calloc(sizeof(struct arc_autorelease_pool), 1);
+				pool = new_zeroed<struct arc_autorelease_pool>();
 				pool->previous = tls->pool;
 				pool->insert = pool->pool;
 				tls->pool = pool;
@@ -486,7 +498,7 @@ void *objc_autoreleasePoolPush(void)
 	if (0 == NewAutoreleasePool) { return NULL; }
 	return NewAutoreleasePool(AutoreleasePool, SELECTOR(new));
 }
-OBJC_PUBLIC void objc_autoreleasePoolPop(void *pool)
+extern "C" OBJC_PUBLIC void objc_autoreleasePoolPop(void *pool)
 {
 	if (useARCAutoreleasePool)
 	{
@@ -500,7 +512,7 @@ OBJC_PUBLIC void objc_autoreleasePoolPop(void *pool)
 			return;
 		}
 	}
-	DeleteAutoreleasePool(pool, SELECTOR(release));
+	DeleteAutoreleasePool(static_cast<id>(pool), SELECTOR(release));
 	struct arc_tls* tls = getARCThreadData();
 	if (tls && tls->returnRetained)
 	{
@@ -509,7 +521,7 @@ OBJC_PUBLIC void objc_autoreleasePoolPop(void *pool)
 	}
 }
 
-OBJC_PUBLIC id objc_autorelease(id obj)
+extern "C" OBJC_PUBLIC id objc_autorelease(id obj)
 {
 	if (nil != obj)
 	{
@@ -518,7 +530,7 @@ OBJC_PUBLIC id objc_autorelease(id obj)
 	return obj;
 }
 
-OBJC_PUBLIC id objc_autoreleaseReturnValue(id obj)
+extern "C" OBJC_PUBLIC id objc_autoreleaseReturnValue(id obj)
 {
 	if (!useARCAutoreleasePool) 
 	{
@@ -533,7 +545,7 @@ OBJC_PUBLIC id objc_autoreleaseReturnValue(id obj)
 	return objc_autorelease(obj);
 }
 
-OBJC_PUBLIC id objc_retainAutoreleasedReturnValue(id obj)
+extern "C" OBJC_PUBLIC id objc_retainAutoreleasedReturnValue(id obj)
 {
 	// If the previous object was released  with objc_autoreleaseReturnValue()
 	// just before return, then it will not have actually been autoreleased.
@@ -565,36 +577,36 @@ OBJC_PUBLIC id objc_retainAutoreleasedReturnValue(id obj)
 	return objc_retain(obj);
 }
 
-OBJC_PUBLIC id objc_retain(id obj)
+extern "C" OBJC_PUBLIC id objc_retain(id obj)
 {
 	if (nil == obj) { return nil; }
 	return retain(obj);
 }
 
-OBJC_PUBLIC id objc_retainAutorelease(id obj)
+extern "C" OBJC_PUBLIC id objc_retainAutorelease(id obj)
 {
 	return objc_autorelease(objc_retain(obj));
 }
 
-OBJC_PUBLIC id objc_retainAutoreleaseReturnValue(id obj)
+extern "C" OBJC_PUBLIC id objc_retainAutoreleaseReturnValue(id obj)
 {
 	if (nil == obj) { return obj; }
 	return objc_autoreleaseReturnValue(retain(obj));
 }
 
 
-OBJC_PUBLIC id objc_retainBlock(id b)
+extern "C" OBJC_PUBLIC id objc_retainBlock(id b)
 {
-	return _Block_copy(b);
+	return static_cast<id>(_Block_copy(b));
 }
 
-OBJC_PUBLIC void objc_release(id obj)
+extern "C" OBJC_PUBLIC void objc_release(id obj)
 {
 	if (nil == obj) { return; }
 	release(obj);
 }
 
-OBJC_PUBLIC id objc_storeStrong(id *addr, id value)
+extern "C" OBJC_PUBLIC id objc_storeStrong(id *addr, id value)
 {
 	value = objc_retain(value);
 	id oldValue = *addr;
@@ -609,44 +621,53 @@ OBJC_PUBLIC id objc_storeStrong(id *addr, id value)
 
 static int weakref_class;
 
-typedef struct objc_weak_ref
-{
-	void *isa;
-	id obj;
-	size_t weak_count;
-} WeakRef;
+namespace {
 
-
-static int weak_ref_compare(const id obj, const WeakRef *weak_ref)
+struct WeakRef
 {
-	return obj == weak_ref->obj;
+	void *isa = &weakref_class;
+	id obj = nullptr;
+	size_t weak_count = 1;
+	WeakRef(id o) : obj(o) {}
+};
+
+template<typename T>
+struct malloc_allocator
+{
+	typedef T value_type;
+	T* allocate(std::size_t n)
+	{
+		return static_cast<T*>(malloc(sizeof(T) * n));
+	}
+	void deallocate(T* p, std::size_t)
+	{
+		free(p);
+	}
+	template<typename X>
+	operator malloc_allocator<X>() const
+	{
+		return malloc_allocator<X>();
+	}
+};
+
+using weak_ref_table = tsl::robin_pg_map<const void*,
+                                         WeakRef*,
+                                         std::hash<const void*>,
+                                         std::equal_to<const void*>,
+                                         malloc_allocator<std::pair<const void*, WeakRef*>>>;
+
+weak_ref_table &weakRefs()
+{
+	static weak_ref_table w{128};
+	return w;
 }
 
-static uint32_t ptr_hash(const void *ptr)
-{
-	// Bit-rotate right 4, since the lowest few bits in an object pointer will
-	// always be 0, which is not so useful for a hash value
-	return ((uintptr_t)ptr >> 4) | ((uintptr_t)ptr << ((sizeof(id) * 8) - 4));
-}
-static int weak_ref_hash(const WeakRef *weak_ref)
-{
-	return ptr_hash(weak_ref->obj);
-}
-#define MAP_TABLE_NAME weak_ref
-#define MAP_TABLE_COMPARE_FUNCTION weak_ref_compare
-#define MAP_TABLE_HASH_KEY ptr_hash
-#define MAP_TABLE_HASH_VALUE weak_ref_hash
-#define MAP_TABLE_SINGLE_THREAD 1
-#define MAP_TABLE_NO_LOCK 1
-
-#include "hash_table.h"
-
-static weak_ref_table *weakRefs;
 mutex_t weakRefLock;
 
-PRIVATE void init_arc(void)
+}
+
+PRIVATE extern "C" void init_arc(void)
 {
-	weak_ref_initialize(&weakRefs, 128);
 	INIT_LOCK(weakRefLock);
 #ifdef arc_tls_store
 	ARCThreadKey = arc_tls_key_create((arc_cleanup_function_t)cleanupPools);
@@ -686,14 +707,14 @@ static inline BOOL weakRefRelease(WeakRef *ref)
 	ref->weak_count--;
 	if (ref->weak_count == 0)
 	{
-		weak_ref_remove(weakRefs, ref->obj);
-		free(ref);
+		weakRefs().erase(ref->obj);
+		delete ref;
 		return YES;
 	}
 	return NO;
 }
 
-void* block_load_weak(void *block);
+extern "C" void* block_load_weak(void *block);
 
 static BOOL setObjectHasWeakRefs(id obj)
 {
@@ -742,14 +763,10 @@ static BOOL setObjectHasWeakRefs(id obj)
 
 WeakRef *incrementWeakRefCount(id obj)
 {
-	WeakRef *ref = weak_ref_table_get(weakRefs, obj);
-	if (ref == NULL)
+	WeakRef *&ref = weakRefs()[obj];
+	if (ref == nullptr)
 	{
-		ref = calloc(1, sizeof(WeakRef));
-		ref->isa = (Class)&weakref_class;
-		ref->obj = obj;
-		ref->weak_count = 1;
-		weak_ref_insert(weakRefs, ref);
+		ref = new WeakRef(obj);
 	}
 	else
 	{
@@ -759,7 +776,7 @@ WeakRef *incrementWeakRefCount(id obj)
 	return ref;
 }
 
-OBJC_PUBLIC id objc_storeWeak(id *addr, id obj)
+extern "C" OBJC_PUBLIC id objc_storeWeak(id *addr, id obj)
 {
 	LOCK_FOR_SCOPE(&weakRefLock);
 	WeakRef *oldRef;
@@ -797,7 +814,7 @@ OBJC_PUBLIC id objc_storeWeak(id *addr, id obj)
 	return obj;
 }
 
-OBJC_PUBLIC BOOL objc_delete_weak_refs(id obj)
+extern "C" OBJC_PUBLIC BOOL objc_delete_weak_refs(id obj)
 {
 	LOCK_FOR_SCOPE(&weakRefLock);
 	if (objc_test_class_flag(classForObject(obj), objc_class_flag_fast_arc))
@@ -816,13 +833,15 @@ OBJC_PUBLIC BOOL objc_delete_weak_refs(id obj)
 			return NO;
 		}
 	}
-	WeakRef *oldRef = weak_ref_table_get(weakRefs, obj);
-	if (0 != oldRef)
+	auto table = weakRefs();
+	auto old = table.find(obj);
+	if (old != table.end())
 	{
+		WeakRef *oldRef = old->second;
 		// The address of obj is likely to be reused, so remove it from
 		// the table so that we don't accidentally alias weak
 		// references
-		weak_ref_remove(weakRefs, obj);
+		table.erase(old);
 		// Zero the object pointer.  This prevents any other weak
 		// accesses from loading from this.  This must be done after
 		// removing the ref from the table, because the compare operation
@@ -835,7 +854,7 @@ OBJC_PUBLIC BOOL objc_delete_weak_refs(id obj)
 	return YES;
 }
 
-OBJC_PUBLIC id objc_loadWeakRetained(id* addr)
+extern "C" OBJC_PUBLIC id objc_loadWeakRetained(id* addr)
 {
 	LOCK_FOR_SCOPE(&weakRefLock);
 	id obj;
@@ -858,9 +877,9 @@ OBJC_PUBLIC id objc_loadWeakRetained(id* addr)
 		return nil;
 	}
 	Class cls = classForObject(obj);
-	if (&_NSConcreteMallocBlock == cls)
+	if (static_cast<Class>(&_NSConcreteMallocBlock) == cls)
 	{
-		obj = block_load_weak(obj);
+		obj = static_cast<id>(block_load_weak(obj));
 	}
 	else if (objc_test_class_flag(cls, objc_class_flag_permanent_instances))
 	{
@@ -873,12 +892,12 @@ OBJC_PUBLIC id objc_loadWeakRetained(id* addr)
 	return objc_retain(obj);
 }
 
-OBJC_PUBLIC id objc_loadWeak(id* object)
+extern "C" OBJC_PUBLIC id objc_loadWeak(id* object)
 {
 	return objc_autorelease(objc_loadWeakRetained(object));
 }
 
-OBJC_PUBLIC void objc_copyWeak(id *dest, id *src)
+extern "C" OBJC_PUBLIC void objc_copyWeak(id *dest, id *src)
 {
 	// Don't retain or release.
 	// `src` is a valid pointer to a __weak pointer or nil.
@@ -895,7 +914,7 @@ OBJC_PUBLIC void objc_copyWeak(id *dest, id *src)
 	}
 }
 
-OBJC_PUBLIC void objc_moveWeak(id *dest, id *src)
+extern "C" OBJC_PUBLIC void objc_moveWeak(id *dest, id *src)
 {
 	// Don't retain or release.
 	// `dest` is a valid pointer to uninitialized memory.
@@ -912,7 +931,7 @@ OBJC_PUBLIC void objc_moveWeak(id *dest, id *src)
 	*src = nil;
 }
 
-OBJC_PUBLIC void objc_destroyWeak(id* obj)
+extern "C" OBJC_PUBLIC void objc_destroyWeak(id* obj)
 {
 	LOCK_FOR_SCOPE(&weakRefLock);
 	WeakRef *oldRef;
@@ -926,7 +945,7 @@ OBJC_PUBLIC void objc_destroyWeak(id* obj)
 	}
 }
 
-OBJC_PUBLIC id objc_initWeak(id *addr, id obj)
+extern "C" OBJC_PUBLIC id objc_initWeak(id *addr, id obj)
 {
 	if (obj == nil)
 	{

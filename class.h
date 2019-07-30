@@ -1,6 +1,7 @@
 #ifndef __OBJC_CLASS_H_INCLUDED
 #define __OBJC_CLASS_H_INCLUDED
 #include "visibility.h"
+#include "objc/runtime.h"
 #include <stdint.h>
 
 /**
@@ -36,7 +37,6 @@ static inline BOOL objc_bitfield_test(uintptr_t bitfield, uint64_t field)
 	return (bf->values[byte] & bit) == bit;
 }
 
-
 // begin: objc_class
 struct objc_class
 {
@@ -45,13 +45,13 @@ struct objc_class
 	 * methods use when a message is sent to the class, rather than an
 	 * instance.
 	 */
-	struct objc_class         *isa;
+	Class                      isa;
 	/**
 	 * Pointer to the superclass.  The compiler will set this to the name of
 	 * the superclass, the runtime will initialize it to point to the real
 	 * class.
 	 */
-	struct objc_class         *super_class;
+	Class                      super_class;
 	/**
 	 * The name of this class.  Set to the same value for both the class and
 	 * its associated metaclass.
@@ -96,7 +96,7 @@ struct objc_class
 	 * A pointer to the first subclass for this class.  Filled in by the
 	 * runtime.
 	 */
-	struct objc_class         *subclass_list;
+	Class                      subclass_list;
 	/**
 	 * Pointer to the .cxx_construct method if one exists.  This method needs
 	 * to be called outside of the normal dispatch mechanism.
@@ -113,7 +113,7 @@ struct objc_class
 	 * then subsequently following the sibling_class pointers in the
 	 * subclasses.
 	 */
-	struct objc_class         *sibling_class;
+	Class                      sibling_class;
 
 	/**
 	 * Metadata describing the protocols adopted by this class.  Not used by
@@ -143,13 +143,13 @@ struct objc_class_gsv1
 	 * methods use when a message is sent to the class, rather than an
 	 * instance.
 	 */
-	struct objc_class         *isa;
+	Class                      isa;
 	/**
 	 * Pointer to the superclass.  The compiler will set this to the name of
 	 * the superclass, the runtime will initialize it to point to the real
 	 * class.
 	 */
-	struct objc_class         *super_class;
+	Class                      super_class;
 	/**
 	 * The name of this class.  Set to the same value for both the class and
 	 * its associated metaclass.
@@ -194,14 +194,14 @@ struct objc_class_gsv1
 	 * A pointer to the first subclass for this class.  Filled in by the
 	 * runtime.
 	 */
-	struct objc_class         *subclass_list;
+	Class                      subclass_list;
 	/**
 	 * A pointer to the next sibling class to this.  You may find all
 	 * subclasses of a given class by following the subclass_list pointer and
 	 * then subsequently following the sibling_class pointers in the
 	 * subclasses.
 	 */
-	struct objc_class         *sibling_class;
+	Class                      sibling_class;
 
 	/**
 	 * Metadata describing the protocols adopted by this class.  Not used by
@@ -277,17 +277,17 @@ struct objc_class_gsv1
  */
 struct objc_class_gcc
 {
-	struct objc_class         *isa;
-	struct objc_class         *super_class;
+	Class                      isa;
+	Class                      super_class;
 	const char                *name;
 	long                       version;
 	unsigned long              info;
 	long                       instance_size;
-	struct objc_ivar_list_gcc     *ivars;
+	struct objc_ivar_list_gcc *ivars;
 	struct objc_method_list   *methods;
 	void                      *dtable;
-	struct objc_class         *subclass_list;
-	struct objc_class         *sibling_class;
+	Class                      subclass_list;
+	Class                      sibling_class;
 	struct objc_protocol_list *protocols;
 	void                      *gc_object_type;
 };
@@ -357,7 +357,7 @@ enum objc_class_flags
 /**
  * Sets the specific class flag.  Note: This is not atomic.
  */
-static inline void objc_set_class_flag(struct objc_class *aClass,
+static inline void objc_set_class_flag(Class aClass,
                                        enum objc_class_flags flag)
 {
 	aClass->info |= (unsigned long)flag;
@@ -365,7 +365,7 @@ static inline void objc_set_class_flag(struct objc_class *aClass,
 /**
  * Unsets the specific class flag.  Note: This is not atomic.
  */
-static inline void objc_clear_class_flag(struct objc_class *aClass,
+static inline void objc_clear_class_flag(Class aClass,
                                          enum objc_class_flags flag)
 {
 	aClass->info &= ~(unsigned long)flag;
@@ -373,7 +373,7 @@ static inline void objc_clear_class_flag(struct objc_class *aClass,
 /**
  * Checks whether a specific class flag is set.
  */
-static inline BOOL objc_test_class_flag(struct objc_class *aClass,
+static inline BOOL objc_test_class_flag(Class aClass,
                                         enum objc_class_flags flag)
 {
 	return (aClass->info & (unsigned long)flag) == (unsigned long)flag;
@@ -383,7 +383,7 @@ static inline BOOL objc_test_class_flag(struct objc_class *aClass,
 /**
  * Adds a class to the class table.
  */
-void class_table_insert(Class class);
+void class_table_insert(Class cls);
 
 /**
  * Removes a class from the class table.  Must be called with the runtime lock
