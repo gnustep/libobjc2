@@ -56,9 +56,12 @@ static inline arc_tls_key_t arc_tls_key_create(arc_cleanup_function_t cleanupFun
 arc_tls_key_t ARCThreadKey;
 #endif
 
-extern struct objc_class _NSConcreteMallocBlock;
-extern struct objc_class _NSConcreteStackBlock;
-extern struct objc_class _NSConcreteGlobalBlock;
+extern "C"
+{
+	extern struct objc_class _NSConcreteMallocBlock;
+	extern struct objc_class _NSConcreteStackBlock;
+	extern struct objc_class _NSConcreteGlobalBlock;
+}
 
 @interface NSAutoreleasePool
 + (Class)class;
@@ -639,10 +642,23 @@ struct malloc_allocator
 	{
 		return static_cast<T*>(malloc(sizeof(T) * n));
 	}
+
 	void deallocate(T* p, std::size_t)
 	{
 		free(p);
 	}
+
+	template<typename X>
+	malloc_allocator &operator=(const malloc_allocator<X>&) const
+	{
+		return *this;
+	}
+
+	bool operator==(const malloc_allocator &) const
+	{
+		return true;
+	}
+
 	template<typename X>
 	operator malloc_allocator<X>() const
 	{

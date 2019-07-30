@@ -4,6 +4,11 @@
 #include "objc/runtime.h"
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 /**
  * Overflow bitfield.  Used for bitfields that are more than 63 bits.
  */
@@ -443,4 +448,7 @@ void freeIvarLists(Class aClass);
  */
 void freeMethodLists(Class aClass);
 
+#ifdef __cplusplus
+} // extern "C"
+#endif
 #endif //__OBJC_CLASS_H_INCLUDED
