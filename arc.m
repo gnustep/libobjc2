@@ -612,14 +612,19 @@ static int weakref_class;
 typedef struct objc_weak_ref
 {
 	void *isa;
-	id obj;
-	size_t weak_count;
+	id object;
+	size_t weak_count:((sizeof(size_t) * 8) - 1);
+	bool isDeleted:1;
 } WeakRef;
 
+id weakRefGetObj(WeakRef *ref)
+{
+	return ref->isDeleted ? nil : ref->object;
+}
 
 static int weak_ref_compare(const id obj, const WeakRef *weak_ref)
 {
-	return obj == weak_ref->obj;
+	return obj == weak_ref->object;
 }
 
 static uint32_t ptr_hash(const void *ptr)
@@ -630,7 +635,7 @@ static uint32_t ptr_hash(const void *ptr)
 }
 static int weak_ref_hash(const WeakRef *weak_ref)
 {
-	return ptr_hash(weak_ref->obj);
+	return ptr_hash(weak_ref->object);
 }
 #define MAP_TABLE_NAME weak_ref
 #define MAP_TABLE_COMPARE_FUNCTION weak_ref_compare
@@ -672,7 +677,7 @@ static BOOL loadWeakPointer(id *addr, id *obj, WeakRef **ref)
 	if (classForObject(oldObj) == (Class)&weakref_class)
 	{
 		*ref = (WeakRef*)oldObj;
-		*obj = (*ref)->obj;
+		*obj = weakRefGetObj(*ref);
 		return YES;
 	}
 	*ref = NULL;
@@ -686,7 +691,7 @@ static inline BOOL weakRefRelease(WeakRef *ref)
 	ref->weak_count--;
 	if (ref->weak_count == 0)
 	{
-		weak_ref_remove(weakRefs, ref->obj);
+		weak_ref_remove(weakRefs, ref->object);
 		free(ref);
 		return YES;
 	}
@@ -747,13 +752,13 @@ WeakRef *incrementWeakRefCount(id obj)
 	{
 		ref = calloc(1, sizeof(WeakRef));
 		ref->isa = (Class)&weakref_class;
-		ref->obj = obj;
+		ref->object = obj;
 		ref->weak_count = 1;
 		weak_ref_insert(weakRefs, ref);
 	}
 	else
 	{
-		assert(ref->obj == obj);
+		assert(ref->object == obj);
 		ref->weak_count++;
 	}
 	return ref;
@@ -827,7 +832,7 @@ OBJC_PUBLIC BOOL objc_delete_weak_refs(id obj)
 		// accesses from loading from this.  This must be done after
 		// removing the ref from the table, because the compare operation
 		// tests the obj field.
-		oldRef->obj = nil;
+		oldRef->isDeleted = true;
 		// If the weak reference count is zero, then we should have
 		// already removed this.
 		assert(oldRef->weak_count > 0);
