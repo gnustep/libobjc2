@@ -855,11 +855,6 @@ OBJC_PUBLIC id objc_loadWeakRetained(id* addr)
 	// will acquire the lock before attempting to deallocate)
 	if (obj == nil)
 	{
-		// If we've destroyed this weak ref, then make sure that we also deallocate the object.
-		if (weakRefRelease(ref))
-		{
-			*addr = nil;
-		}
 		return nil;
 	}
 	Class cls = classForObject(obj);
