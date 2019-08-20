@@ -678,10 +678,6 @@ static BOOL loadWeakPointer(id *addr, id *obj, WeakRef **ref)
 	{
 		*ref = (WeakRef*)oldObj;
 		*obj = weakRefGetObj(*ref);
-		if(*obj == nil) {
-			*ref = NULL;
-			return NO;
-		}
 		return YES;
 	}
 	*ref = NULL;
