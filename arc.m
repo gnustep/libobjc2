@@ -199,6 +199,8 @@ extern BOOL FastARCAutorelease;
 
 static BOOL useARCAutoreleasePool;
 
+static int weakref_class;
+
 static const long refcount_shift = 1;
 /**
  * We use the top bit of the reference count to indicate whether an object has
@@ -287,6 +289,10 @@ static inline id retain(id obj)
 	if (objc_test_class_flag(cls, objc_class_flag_fast_arc))
 	{
 		return objc_retain_fast_np(obj);
+	}
+	if ((Class)&weakref_class == cls) {
+		// compiler emit retain on weafRef
+		return obj;
 	}
 	return [obj retain];
 }
@@ -606,8 +612,6 @@ OBJC_PUBLIC id objc_storeStrong(id *addr, id value)
 ////////////////////////////////////////////////////////////////////////////////
 // Weak references
 ////////////////////////////////////////////////////////////////////////////////
-
-static int weakref_class;
 
 typedef struct objc_weak_ref
 {
