@@ -76,7 +76,7 @@
 	ldp    q4, q5, [sp, #144]
 	ldp    q6, q7, [sp, #176]
 	ldp    fp, lr, [sp, #208]
-	ldp    \receiver, x8, [sp], #16
+	ldp    \receiver, x8, [sp], #(ARGUMENT_SPILL_SIZE + 16)
 	br     x9
 6:
 	adr    x10, SmallObjectClasses
