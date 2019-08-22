@@ -79,7 +79,8 @@
 	ldp    \receiver, x8, [sp], #(ARGUMENT_SPILL_SIZE + 16)
 	br     x9
 6:
-	adr    x10, SmallObjectClasses
+	adrp   x10, :got:SmallObjectClasses
+	ldr    x10, [x10, :got_lo12:SmallObjectClasses]
 	ldr    x9, [x10, x9, lsl #3]
 	b      1b
 	.cfi_endproc
