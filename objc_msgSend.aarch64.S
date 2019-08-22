@@ -54,9 +54,9 @@
 	stp    fp, lr, [sp, #192]
 	add    fp, sp, 192
 	stp    \receiver, x8, [sp, #-16]!
-	.cfi_def_cfa fp, 0
-	.cfi_offset fp, 0
-	.cfi_offset lr, 8
+	.cfi_def_cfa fp, 16
+	.cfi_offset fp, -16
+	.cfi_offset lr, -8
 	                                      // We now have all argument registers, the link
 	                                      // register and the receiver spilled on the
 	                                      // stack, with sp containing
