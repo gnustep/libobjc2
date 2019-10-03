@@ -26,6 +26,7 @@ int main(void)
 {
 	__block int b = 0;
 	void* blk = ^(id self, int a) {
+		assert([self class] == [Foo class]);
 		b += a; 
 		return b; };
 	blk = Block_copy(blk);
@@ -45,6 +46,7 @@ int main(void)
 	assert(imp_getBlock(imp) != (blk));
 
 	blk = ^(id self) {
+		assert([self class] == [Foo class]);
 		struct big b = {1, 2, 3, 4, 5};
 		return b;
 	};
