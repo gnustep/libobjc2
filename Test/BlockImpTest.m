@@ -24,9 +24,10 @@ __attribute__((objc_root_class))
 
 int main(void)
 {
+	__block Class cls = objc_getClass("Foo");
 	__block int b = 0;
 	void* blk = ^(id self, int a) {
-		assert([self class] == [Foo class]);
+		assert(self == cls);
 		b += a; 
 		return b; };
 	blk = Block_copy(blk);
@@ -34,7 +35,6 @@ int main(void)
 	char *type = block_copyIMPTypeEncoding_np(blk);
 	assert(NULL != type);
 	class_addMethod((objc_getMetaClass("Foo")), @selector(count:), imp, type);
-	Class cls = objc_getClass("Foo");
 	assert(2 == ((int(*)(id,SEL,int))imp)(cls, @selector(count:), 2));
 	free(type);
 	assert(4 == [Foo count: 2]);
@@ -46,7 +46,7 @@ int main(void)
 	assert(imp_getBlock(imp) != (blk));
 
 	blk = ^(id self) {
-		assert([self class] == [Foo class]);
+		assert(self == cls);
 		struct big b = {1, 2, 3, 4, 5};
 		return b;
 	};
