@@ -126,7 +126,7 @@
 .thumb
 .macro trampoline arg0, arg1
 	sub r12, pc, #4095
-	mov \arg0, \arg1            // Move self over _cmd
+	mov \arg1, \arg0            // Move self over _cmd
 	ldr \arg0, [r12, #-5]       // Load the block pointer over self
 	ldr r12, [r12, #-1]         // Jump to the block function
 	bx  r12
@@ -134,7 +134,7 @@
 #	else
 .macro trampoline arg0, arg1
 	sub r12, pc, #4096
-	mov \arg0, \arg1            // Move self over _cmd
+	mov \arg1, \arg0            // Move self over _cmd
 	ldr \arg0, [r12, #-8]       // Load the block pointer over self
 	ldr pc, [r12, #-4]          // Jump to the block function
 .endm
