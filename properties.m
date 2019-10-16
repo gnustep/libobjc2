@@ -302,7 +302,7 @@ objc_property_t* class_copyPropertyList(Class cls, unsigned int *outCount)
 	unsigned int out = 0;
 	for (struct objc_property_list *l=properties ; NULL!=l ; l=l->next)
 	{
-		for (int i=0 ; i<properties->count ; i++)
+		for (int i=0 ; i<l->count ; i++)
 		{
 			list[out++] = property_at_index(l, i);
 		}
