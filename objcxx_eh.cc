@@ -76,6 +76,9 @@ static BOOL isKindOfClass(Class thrown, Class type)
  */
 struct __cxa_exception
 {
+#if __LP64__
+	uintptr_t referenceCount;
+#endif
 	std::type_info *exceptionType;
 	void (*exceptionDestructor) (void *);
 	unexpected_handler unexpectedHandler;
@@ -91,6 +94,9 @@ struct __cxa_exception
 	const char *languageSpecificData;
 	void *catchTemp;
 	void *adjustedPtr;
+#if !__LP64__
+	uintptr_t referenceCount;
+#endif
 	_Unwind_Exception unwindHeader;
 };
 
