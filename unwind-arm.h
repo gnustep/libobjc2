@@ -9,7 +9,7 @@
 	_URC_NO_REASON = 0,
 	_URC_OK = 0,                /* operation completed successfully */
 	_URC_FOREIGN_EXCEPTION_CAUGHT = 1,
-    _URC_END_OF_STACK = 5,
+	_URC_END_OF_STACK = 5,
 	_URC_HANDLER_FOUND = 6,
 	_URC_INSTALL_CONTEXT = 7,
 	_URC_CONTINUE_UNWIND = 8,
@@ -27,7 +27,7 @@ static const _Unwind_State _US_FORCE_UNWIND = 8;
 #	define _US_VIRTUAL_UNWIND_FRAME  0
 #	define _US_UNWIND_FRAME_STARTING 1
 #	define _US_UNWIND_FRAME_RESUME 2
-#   define _US_FORCE_UNWIND 8
+#	define _US_FORCE_UNWIND 8
 #endif
 
 typedef int _Unwind_Action;
