@@ -1,11 +1,27 @@
 freebsd_instance:
   image: freebsd-12-0-release-amd64
 
-task:
+libcxxrt_freebsd_task:
   install_script: pkg install -y cmake ninja llvm80
-  script: |
+  build_script: |
       mkdir Build
       cd Build
       cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang80 -DCMAKE_CXX_COMPILER=clang++80
       ninja
-      ctest -j4
+  test_script: cd Build && ctest -j4
+
+libcxxrt_master_task:
+  install_script: pkg install -y git cmake ninja llvm80
+  install_libcxxrt_script: |
+      git clone https://github.com/libcxxrt/libcxxrt.git
+      mkdir -p libcxxrt/Build
+      cd libcxxrt/Build
+      cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang80 -DCMAKE_CXX_COMPILER=clang++80
+      ninja
+      cp lib/libcxxrt.so /usr/local/lib
+  build_script: |
+      mkdir Build
+      cd Build
+      cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang80 -DCMAKE_CXX_COMPILER=clang++80
+      ninja
+  test_script: cd Build && ctest -j4
