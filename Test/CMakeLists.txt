@@ -37,6 +37,7 @@ set(TESTS
 	ResurrectInDealloc_arc.m
 	RuntimeTest.m
 	WeakBlock_arc.m
+	WeakRefLoad.m
 	WeakReferences_arc.m
 	WeakImportClass.m
 	ivar_arc.m

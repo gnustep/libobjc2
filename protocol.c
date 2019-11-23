@@ -421,7 +421,7 @@ objc_property_t *protocol_copyPropertyList2(Protocol *p, unsigned int *outCount,
 	unsigned int count = 0;
 	for (struct objc_property_list *l=properties ; l!=NULL ; l=l->next)
 	{
-		count += properties->count;
+		count += l->count;
 	}
 	if (0 == count)
 	{

@@ -897,9 +897,11 @@ extern "C" OBJC_PUBLIC id objc_loadWeakRetained(id* addr)
 	// will acquire the lock before attempting to deallocate)
 	if (obj == nil)
 	{
-		// If we've destroyed this weak ref, then make sure that we also deallocate the object.
-		if (weakRefRelease(ref))
+		// If the object is destroyed, drop this reference to the WeakRef
+		// struct.
+		if (ref != NULL)
 		{
+			weakRefRelease(ref);
 			*addr = nil;
 		}
 		return nil;
