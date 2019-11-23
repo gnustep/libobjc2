@@ -25,7 +25,6 @@
  * Class of exceptions to distinguish between this and other exception types.
  */
 static const uint64_t objc_exception_class = EXCEPTION_CLASS('G','N','U','C','O','B','J','C');
-static const uint64_t cxx_exception_class = EXCEPTION_CLASS('G','N','U','C','C','+','+','\0');
 
 /**
  * Structure used as a header on thrown exceptions.  
@@ -492,12 +491,7 @@ BEGIN_PERSONALITY_FUNCTION(__gnustep_objcxx_personality_v0)
 		struct objc_exception *ex = objc_exception_from_header(exceptionObject);
 		if (0 == ex->cxx_exception)
 		{
-			id *newEx = __cxa_allocate_exception(sizeof(id));
-			*newEx = ex->object;
-			ex->cxx_exception = objc_init_cxx_exception(newEx);
-			memcpy(ex->cxx_exception, exceptionObject, sizeof(struct _Unwind_Exception));
-			ex->cxx_exception->exception_class = cxx_exception_class;
-			ex->cxx_exception->exception_cleanup = cleanup;
+			ex->cxx_exception = objc_init_cxx_exception(ex->object);
 		}
 		exceptionObject = ex->cxx_exception;
 		exceptionClass = cxx_exception_class;
