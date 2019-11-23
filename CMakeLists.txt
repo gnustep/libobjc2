@@ -25,10 +25,12 @@ add_definitions( -DGNUSTEP -D__OBJC_RUNTIME_INTERNAL__=1)
 set(libobjc_ASM_SRCS 
 	block_trampolines.S
 	objc_msgSend.S)
+set(libobjc_OBJCXX_SRCS 
+	arc.mm
+	)
 set(libobjc_OBJC_SRCS 
 	NSBlocks.m
 	Protocol2.m
-	arc.m
 	associate.m
 	blocks_runtime.m
 	properties.m)
@@ -193,6 +195,12 @@ set_source_files_properties(
 	COMPILE_FLAGS "${CMAKE_OBJC_FLAGS} -Xclang -x -Xclang objective-c"
 )
 
+set_source_files_properties(
+	${libobjc_OBJCXX_SRCS}
+	COMPILE_FLAGS "${CMAKE_OBJC_FLAGS} -Xclang -x -Xclang objective-c++"
+)
+
+
 #
 # C++ Runtime interaction
 #
@@ -252,7 +260,7 @@ if (MSVC)
 endif()
 
 
-add_library(objc SHARED ${libobjc_C_SRCS} ${libobjc_ASM_SRCS} ${libobjc_OBJC_SRCS} ${libobjc_ASM_OBJS})
+add_library(objc SHARED ${libobjc_C_SRCS} ${libobjc_ASM_SRCS} ${libobjc_OBJC_SRCS} ${libobjc_OBJCXX_SRCS} ${libobjc_ASM_OBJS})
 
 if (ENABLE_OBJCXX)
 	if (WIN32)

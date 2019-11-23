@@ -62,7 +62,7 @@ OBJC_PUBLIC const char * _Block_signature(void *b)
 }
 OBJC_PUBLIC const char *block_getType_np(const void *b)
 {
-	return _Block_signature(b);
+	return _Block_signature((void*)b);
 }
 
 static int increment24(int *ref)
