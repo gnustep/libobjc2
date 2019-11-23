@@ -24,7 +24,7 @@ void *__cxa_allocate_exception(size_t thrown_size) CXA_ALLOCATE_EXCEPTION_SPECIF
  * the C++ personality function.
  */
 __attribute__((weak))
-struct _Unwind_Exception *objc_init_cxx_exception(void *thrown_exception);
+struct _Unwind_Exception *objc_init_cxx_exception(id thrown_exception);
 /**
  * The GNU C++ exception personality function, provided by libsupc++ (GNU) or
  * libcxxrt (PathScale).
@@ -51,6 +51,7 @@ void *objc_object_for_cxx_exception(void *thrown_exception, int *isValid);
 __attribute__((weak))
 void print_type_info(void *thrown_exception);
 
+static const uint64_t cxx_exception_class = EXCEPTION_CLASS('G','N','U','C','C','+','+','\0');
 
 #ifdef __cplusplus
 }
