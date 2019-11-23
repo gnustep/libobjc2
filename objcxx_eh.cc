@@ -3,7 +3,6 @@ typedef struct objc_object* id;
 #include <stdio.h>
 #include "dwarf_eh.h"
 #include "objcxx_eh.h"
-#include <cxxabi.h>
 #include <atomic>
 
 #include "objc/runtime.h"
@@ -14,9 +13,17 @@ namespace __cxxabiv1
 	struct __class_type_info;
 }
 
-extern "C" void
-__cxa_throw(void *thrown_exception, std::type_info *tinfo,
-		            void (*dest)(void *));
+namespace std
+{
+	struct type_info;
+}
+
+extern "C"
+void __cxa_throw(void *thrown_exception, std::type_info *tinfo,
+                 void (*dest)(void *));
+
+extern "C"
+void *__cxa_current_primary_exception();
 
 using namespace __cxxabiv1;
 
