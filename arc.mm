@@ -1,3 +1,4 @@
+#define _LIBCPP_NO_EXCEPTIONS 1
 #define TSL_NO_EXCEPTIONS 1
 #include <stdio.h>
 #include <stdlib.h>
