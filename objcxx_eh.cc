@@ -22,19 +22,8 @@ extern "C"
 void __cxa_throw(void *thrown_exception, std::type_info *tinfo,
                  void (*dest)(void *));
 
-#ifdef __GLIBCXX__
-#include <exception>
-static void *__cxa_current_primary_exception()
-{
-	std::exception_ptr p = std::current_exception();
-	void *obj = *(void**)&p;
-	*(void**)&p = nullptr;
-	return obj;
-}
-#else
 extern "C"
 void *__cxa_current_primary_exception();
-#endif
 
 using namespace __cxxabiv1;
 

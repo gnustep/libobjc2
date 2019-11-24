@@ -82,7 +82,7 @@ if (WIN32)
 	list(APPEND libobjc_CXX_SRCS eh_win32_msvc.cc)
 else ()
 	list(APPEND libobjc_C_SRCS eh_personality.c)
-	set(libobjcxx_CXX_SRCS objcxx_eh.cc)
+	set(libobjcxx_CXX_SRCS objcxx_eh.cc libstdcxx_current_primary_exception.cc)
 endif (WIN32)
 
 
