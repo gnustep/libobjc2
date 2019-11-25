@@ -22,6 +22,8 @@ endif()
 # Build configuration
 add_definitions( -DGNUSTEP -D__OBJC_RUNTIME_INTERNAL__=1)
 
+set(CMAKE_CXX_STANDARD 14)
+
 set(libobjc_ASM_SRCS 
 	block_trampolines.S
 	objc_msgSend.S)
