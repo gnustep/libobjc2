@@ -22,6 +22,8 @@ endif()
 # Build configuration
 add_definitions( -DGNUSTEP -D__OBJC_RUNTIME_INTERNAL__=1)
 
+set(CMAKE_CXX_STANDARD 14)
+
 set(libobjc_ASM_SRCS 
 	block_trampolines.S
 	objc_msgSend.S)
@@ -82,7 +84,7 @@ if (WIN32)
 	list(APPEND libobjc_CXX_SRCS eh_win32_msvc.cc)
 else ()
 	list(APPEND libobjc_C_SRCS eh_personality.c)
-	set(libobjcxx_CXX_SRCS objcxx_eh.cc)
+	set(libobjcxx_CXX_SRCS objcxx_eh.cc libstdcxx_current_primary_exception.cc)
 endif (WIN32)
 
 
