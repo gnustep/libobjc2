@@ -422,6 +422,21 @@ if (UNIX)
 endif ()
 include (CPack)
 
+# pkg-config descriptor
+
+if (BOEHM_GC)
+	set(PC_REQUIRES_PRIVATE_BOEHM_GC "Requires.private: bdw-gc")
+endif ()
+if (ENABLE_OBJCXX AND NOT CXXRT_IS_STDLIB)
+	set(PC_LIBS_PRIVATE "Libs.private: -l${CXX_RUNTIME}")
+endif()
+
+configure_file("libobjc.pc.in" "libobjc.pc" @ONLY)
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/libobjc.pc"
+	DESTINATION "${LIB_INSTALL_PATH}/pkgconfig"
+)
+
+
 # uninstall target
 configure_file(
 	"${CMAKE_CURRENT_SOURCE_DIR}/cmake_uninstall.cmake.in"
