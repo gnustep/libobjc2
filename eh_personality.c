@@ -575,7 +575,8 @@ id objc_begin_catch(struct _Unwind_Exception *exceptionObject)
 	{
 		DEBUG_LOG("c++ catch\n");
 		td->current_exception_type = CXX;
-		return __cxa_begin_catch(exceptionObject);
+		id *obj = __cxa_begin_catch(exceptionObject);
+		return obj ? *obj : nil;
 	}
 	DEBUG_LOG("foreign exception catch\n");
 	// Box if we have a boxing function.
