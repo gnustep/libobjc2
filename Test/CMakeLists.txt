@@ -63,6 +63,8 @@ if (ENABLE_OBJCXX)
 	list(APPEND TESTS
 	ExceptionTestObjCXX.mm
 	ExceptionTestObjCXX_arc.mm
+	NestedExceptionsObjCXX.mm
+	NestedExceptionsObjCXX_arc.mm
 	)
 endif()
 
