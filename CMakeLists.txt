@@ -388,6 +388,7 @@ if (${GNUSTEP_INSTALL_TYPE} STREQUAL "NONE")
 	SET(LIB_INSTALL_PATH "${CMAKE_INSTALL_LIBDIR}" CACHE STRING
 		"Subdirectory of the root prefix where libraries are installed.")
 	SET(HEADER_INSTALL_PATH "include")
+	SET(PC_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX})
 else ()
 	EXEC_PROGRAM(gnustep-config
 		ARGS "--variable=GNUSTEP_${GNUSTEP_INSTALL_TYPE}_LIBRARIES"
@@ -395,6 +396,7 @@ else ()
 	EXEC_PROGRAM(gnustep-config
 		ARGS "--variable=GNUSTEP_${GNUSTEP_INSTALL_TYPE}_HEADERS"
 		OUTPUT_VARIABLE HEADER_INSTALL_PATH)
+	SET(PC_INSTALL_PREFIX "/")
 endif ()
 message(STATUS "GNUstep install type set to ${GNUSTEP_INSTALL_TYPE}")
 
