@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.1)
+project(test_cxx_runtime)
 
 add_executable(test_cxx_runtime typeinfo_test.cc)
 set(CMAKE_CXX_IMPLICIT_LINK_LIBRARIES "")
