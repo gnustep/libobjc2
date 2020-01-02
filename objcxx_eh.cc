@@ -6,17 +6,7 @@ typedef struct objc_object* id;
 #include <atomic>
 
 #include "objc/runtime.h"
-
-
-namespace __cxxabiv1
-{
-	struct __class_type_info;
-}
-
-namespace std
-{
-	struct type_info;
-}
+#include "type_info.h"
 
 extern "C"
 void __cxa_throw(void *thrown_exception, std::type_info *tinfo,
@@ -25,7 +15,6 @@ void __cxa_throw(void *thrown_exception, std::type_info *tinfo,
 extern "C"
 void *__cxa_current_primary_exception();
 
-using namespace __cxxabiv1;
 
 // Define some C++ ABI types here, rather than including them.  This prevents
 // conflicts with the libstdc++ headers, which expose only a subset of the
@@ -34,40 +23,6 @@ using namespace __cxxabiv1;
 
 typedef void (*unexpected_handler)();
 typedef void (*terminate_handler)();
-
-namespace std
-{
-	/**
-	 * std::type_info defined with the GCC ABI.  This may not be exposed in
-	 * public headers, but is required for correctly implementing the unified
-	 * exception model.
-	 */
-	class type_info
-	{
-				public:
-				virtual ~type_info();
-				bool operator==(const type_info &) const;
-				bool operator!=(const type_info &) const;
-				bool before(const type_info &) const;
-				type_info();
-				private:
-				type_info(const type_info& rhs);
-				type_info& operator= (const type_info& rhs);
-				const char *__type_name;
-				protected:
-				type_info(const char *name): __type_name(name) { }
-				public:
-				const char* name() const { return __type_name; }
-				virtual bool __is_pointer_p() const;
-				virtual bool __is_function_p() const;
-				virtual bool __do_catch(const type_info *thrown_type,
-				                        void **thrown_object,
-				                        unsigned outer) const;
-				virtual bool __do_upcast(
-				                const __class_type_info *target,
-				                void **thrown_object) const;
-	};
-}
 
 using namespace std;
 
