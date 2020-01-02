@@ -271,6 +271,15 @@ if (ENABLE_OBJCXX)
 		message(STATUS "Using MSVC-compatible exception model")
 	else ()
 		message(STATUS "Testing C++ interop")
+		try_compile(CXX_STDLIB_IS_NON_GNU
+			"${CMAKE_BINARY_DIR}/CMake"
+			"${CMAKE_CURRENT_LIST_DIR}/CMake/typeinfo_non_gnu.cc"
+		)
+		if (CXX_STDLIB_IS_NON_GNU)
+			message(STATUS "C++ standard library is not libstdc++")
+		else ()
+			message(STATUS "C++ standard library is libstdc++")
+		endif ()
 		# Try to find libcxxrt.so.  We can link to this to provide the C++ ABI
 		# layer, if it exists.
 		test_cxx(cxxrt false)
