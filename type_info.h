@@ -30,6 +30,7 @@ namespace std
 				type_info(const char *name): __type_name(name) { }
 				public:
 				const char* name() const { return __type_name; }
+#				if CXX_STDLIB_IS_GNU == 1
 				virtual bool __is_pointer_p() const;
 				virtual bool __is_function_p() const;
 				virtual bool __do_catch(const type_info *thrown_type,
@@ -38,6 +39,7 @@ namespace std
 				virtual bool __do_upcast(
 				                const __cxxabiv1::__class_type_info *target,
 				                void **thrown_object) const;
+#				endif
 	};
 }
 

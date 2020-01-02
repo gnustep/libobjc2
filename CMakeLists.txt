@@ -208,7 +208,7 @@ set_source_files_properties(
 #
 
 
-function(test_cxx CXX_RUNTIME_NAME IS_STDLIB)
+function(test_cxx CXX_RUNTIME_NAME IS_STDLIB IS_GNU_STDLIB)
 	set(CXX_RUNTIME_NAME_FULL "${CMAKE_SHARED_LIBRARY_PREFIX}${CXX_RUNTIME_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX}")
 	find_library(CXX_RUNTIME_LIB NAMES ${CXX_RUNTIME_NAME_FULL} ${CXX_RUNTIME_NAME})
 	if (CXX_RUNTIME_LIB)
@@ -221,7 +221,7 @@ function(test_cxx CXX_RUNTIME_NAME IS_STDLIB)
 			"${CMAKE_BINARY_DIR}/CMake"
 			"${CMAKE_CURRENT_LIST_DIR}/CMake"
 			test_cxx_runtime
-			CMAKE_FLAGS "-DCXX_RUNTIME=${CXX_RUNTIME_LIB}" ${CXX_RUNTIME_FLAGS})
+			CMAKE_FLAGS "-DCXX_RUNTIME=${CXX_RUNTIME_LIB}" "-DCXX_STDLIB_IS_GNU=${IS_GNU_STDLIB}" ${CXX_RUNTIME_FLAGS})
 		if (USERUNTIME)
 			set(CXX_RUNTIME ${CXX_RUNTIME_LIB} PARENT_SCOPE)
 		else ()
@@ -276,20 +276,24 @@ if (ENABLE_OBJCXX)
 			"${CMAKE_CURRENT_LIST_DIR}/CMake/typeinfo_non_gnu.cc"
 		)
 		if (CXX_STDLIB_IS_NON_GNU)
+			set(CXX_STDLIB_IS_GNU 0)
+			add_definitions( -DCXX_STDLIB_IS_GNU=0)
 			message(STATUS "C++ standard library is not libstdc++")
 		else ()
+			set(CXX_STDLIB_IS_GNU 1)
+			add_definitions( -DCXX_STDLIB_IS_GNU=1)
 			message(STATUS "C++ standard library is libstdc++")
 		endif ()
 		# Try to find libcxxrt.so.  We can link to this to provide the C++ ABI
 		# layer, if it exists.
-		test_cxx(cxxrt false)
+		test_cxx(cxxrt false "${CXX_STDLIB_IS_GNU}")
 		# If it doesn't, then look for GNU libsupc++.so instead (either works,
 		# they're ABI compatible).
 		if (NOT CXX_RUNTIME)
-			test_cxx(supc++ false)
+			test_cxx(supc++ false "${CXX_STDLIB_IS_GNU}")
 		endif (NOT CXX_RUNTIME)
 		if (NOT CXX_RUNTIME)
-			test_cxx(c++abi false)
+			test_cxx(c++abi false "${CXX_STDLIB_IS_GNU}")
 		endif (NOT CXX_RUNTIME)
 
 		# If we have a C++ ABI library, then we can produce a single libobjc that
@@ -302,7 +306,9 @@ if (ENABLE_OBJCXX)
 			try_compile(USERUNTIME 
 				"${CMAKE_BINARY_DIR}/CMake"
 				"${CMAKE_CURRENT_LIST_DIR}/CMake"
-				test_cxx_runtime)
+				test_cxx_runtime
+				CMAKE_FLAGS "-DCXX_STDLIB_IS_GNU=${CXX_STDLIB_IS_GNU}"
+			)
 			if (${USERUNTIME})
 				message(STATUS "libobjc will depend on C++ standard library")
 				set(CXXRT_IS_STDLIB true)
