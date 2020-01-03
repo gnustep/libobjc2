@@ -12,6 +12,8 @@ class type_info2 : public std::type_info
 	                        unsigned outer) const { return true; }
 	virtual bool can_catch(const CXX_TYPE_INFO_CLASS *thrown_type,
 	                        void *&thrown_object) const { return true; }
+	virtual void noop1() const {}
+	virtual void noop2() const {}
 };
 bool type_info2::__is_pointer_p() const { return true; }
 
