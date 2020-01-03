@@ -7,20 +7,40 @@ jobs:
       matrix:
         Debug:
           BuildType: Debug
+          StdLib: libstdc++
+          CxxFlags: ""
+          ObjCLinkFlags: ""
         Release:
           BuildType: Release
+          StdLib: libstdc++
+          CxxFlags: ""
+          ObjCLinkFlags: ""
+        Debug_LibCxx:
+          BuildType: Debug
+          StdLib: libc++
+          CxxFlags: "-stdlib=libc++"
+          ObjCLinkFlags: "-lm -lc++"
+        Release_LibCxx:
+          BuildType: Release
+          StdLib: libc++
+          CxxFlags: "-stdlib=libc++"
+          ObjCLinkFlags: "-lm -lc++"
     steps:
     - checkout: self
       submodules: true
     - script: |
+        wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
         sudo add-apt-repository "deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-8 main"
         sudo apt-get update
         sudo apt-get install -y ninja-build
         sudo apt-get install -y clang-8
+        if [ "$(StdLib)" = "libc++" ]; then
+          sudo apt-get install -y libc++-8-dev libc++abi-8-dev
+        fi
 
     - task: CMake@1
       inputs:
-        cmakeArgs: '.. -GNinja -DCMAKE_BUILD_TYPE=$(BuildType) -DTESTS=ON -DCMAKE_CXX_COMPILER=clang++-8 -DCMAKE_C_COMPILER=clang-8'
+        cmakeArgs: '.. -GNinja -DCMAKE_BUILD_TYPE=$(BuildType) -DTESTS=ON -DCMAKE_CXX_COMPILER=clang++-8 -DCMAKE_C_COMPILER=clang-8 -DCMAKE_CXX_FLAGS="$(CxxFlags)" -Dobjc_LINK_FLAGS="$(ObjCLinkFlags)"'
 
     - script: |
         ninja
