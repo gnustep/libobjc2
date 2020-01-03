@@ -55,16 +55,24 @@ namespace gnustep
 		{
 			__objc_id_type_info() : type_info("@id") {};
 			virtual ~__objc_id_type_info();
+			virtual void noop1() const {};
+            virtual void noop2() const {};
 			virtual bool __do_catch(const type_info *thrownType,
 			                        void **obj,
 			                        unsigned outer) const;
+			virtual bool can_catch(const CXX_TYPE_INFO_CLASS *thrownType,
+			                       void *&obj) const;
 		};
 		struct __objc_class_type_info : std::type_info
 		{
 			virtual ~__objc_class_type_info();
+			virtual void noop1() const {};
+            virtual void noop2() const {};
 			virtual bool __do_catch(const type_info *thrownType,
 			                        void **obj,
 			                        unsigned outer) const;
+			virtual bool can_catch(const CXX_TYPE_INFO_CLASS *thrownType,
+			                       void *&obj) const;
 		};
 	}
 };
@@ -114,6 +122,12 @@ bool gnustep::libobjc::__objc_class_type_info::__do_catch(const type_info *throw
 	return found;
 };
 
+bool gnustep::libobjc::__objc_class_type_info::can_catch(const CXX_TYPE_INFO_CLASS *thrownType,
+                                                          void *&obj) const
+{
+	return __do_catch(thrownType, &obj, 0);
+}
+
 bool gnustep::libobjc::__objc_id_type_info::__do_catch(const type_info *thrownType,
                                                        void **obj,
                                                        unsigned outer) const
@@ -131,6 +145,12 @@ bool gnustep::libobjc::__objc_id_type_info::__do_catch(const type_info *thrownTy
 	}
 	return false;
 };
+
+bool gnustep::libobjc::__objc_id_type_info::can_catch(const CXX_TYPE_INFO_CLASS *thrownType,
+                                                          void *&obj) const
+{
+	return __do_catch(thrownType, &obj, 0);
+}
 
 /**
  * Public interface to the Objective-C++ exception mechanism

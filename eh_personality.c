@@ -7,6 +7,7 @@
 #include "class.h"
 #include "objcxx_eh.h"
 
+#define DEBUG_EXCEPTIONS 1
 #ifndef DEBUG_EXCEPTIONS
 #define DEBUG_LOG(...)
 #else
