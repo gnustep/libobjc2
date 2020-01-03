@@ -15,12 +15,12 @@ jobs:
           StdLib: libstdc++
           CxxFlags: ""
           ObjCLinkFlags: ""
-        Debug_LibCxx:
+        Debug-libc++:
           BuildType: Debug
           StdLib: libc++
           CxxFlags: "-stdlib=libc++"
           ObjCLinkFlags: "-lm -lc++"
-        Release_LibCxx:
+        Release-libc++:
           BuildType: Release
           StdLib: libc++
           CxxFlags: "-stdlib=libc++"
@@ -37,8 +37,10 @@ jobs:
         if [ "$(StdLib)" = "libc++" ]; then
           sudo apt-get install -y libc++-8-dev libc++abi-8-dev
         fi
+      displayName: Install Dependencies
 
     - task: CMake@1
+      displayName: Generate Build Scripts
       inputs:
         cmakeArgs: '.. -GNinja -DCMAKE_BUILD_TYPE=$(BuildType) -DTESTS=ON -DCMAKE_CXX_COMPILER=clang++-8 -DCMAKE_C_COMPILER=clang-8 -DCMAKE_CXX_FLAGS="$(CxxFlags)" -Dobjc_LINK_FLAGS="$(ObjCLinkFlags)"'
 
@@ -52,6 +54,7 @@ jobs:
     - script: |
         ctest -j 4 --output-on-failure
 
+      displayName: 'Test'
       workingDirectory: build
       failOnStderr: true
   - job: Windows
