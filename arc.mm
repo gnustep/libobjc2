@@ -630,21 +630,9 @@ namespace {
 struct WeakRef
 {
 	void *isa = &weakref_class;
-	id object;
-	struct
-	{
-		size_t weak_count:((sizeof(size_t) * 8) - 1);
-		bool isDeleted:1;
-	};
-	id obj()
-	{
-		if (isDeleted)
-		{
-			return nil;
-		}
-		return object;
-	}
-	WeakRef(id o) : object(o), weak_count(1), isDeleted(false) {}
+	id obj = nullptr;
+	size_t weak_count = 1;
+	WeakRef(id o) : obj(o) {}
 };
 
 template<typename T>
@@ -722,7 +710,7 @@ static BOOL loadWeakPointer(id *addr, id *obj, WeakRef **ref)
 	if (classForObject(oldObj) == (Class)&weakref_class)
 	{
 		*ref = (WeakRef*)oldObj;
-		*obj = (*ref)->obj();
+		*obj = (*ref)->obj;
 		return YES;
 	}
 	*ref = NULL;
@@ -736,7 +724,7 @@ static inline BOOL weakRefRelease(WeakRef *ref)
 	ref->weak_count--;
 	if (ref->weak_count == 0)
 	{
-		weakRefs().erase(ref->object);
+		weakRefs().erase(ref->obj);
 		delete ref;
 		return YES;
 	}
@@ -799,7 +787,7 @@ WeakRef *incrementWeakRefCount(id obj)
 	}
 	else
 	{
-		assert(ref->obj() == obj);
+		assert(ref->obj == obj);
 		ref->weak_count++;
 	}
 	return ref;
@@ -875,7 +863,7 @@ extern "C" OBJC_PUBLIC BOOL objc_delete_weak_refs(id obj)
 		// accesses from loading from this.  This must be done after
 		// removing the ref from the table, because the compare operation
 		// tests the obj field.
-		oldRef->isDeleted = true;
+		oldRef->obj = nil;
 		// If the weak reference count is zero, then we should have
 		// already removed this.
 		assert(oldRef->weak_count > 0);
