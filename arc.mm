@@ -850,7 +850,7 @@ extern "C" OBJC_PUBLIC BOOL objc_delete_weak_refs(id obj)
 			return NO;
 		}
 	}
-	auto table = weakRefs();
+	auto &table = weakRefs();
 	auto old = table.find(obj);
 	if (old != table.end())
 	{
