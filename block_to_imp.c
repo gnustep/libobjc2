@@ -82,8 +82,11 @@ static int mprotect(void *buffer, size_t len, int prot)
 
 	return 0 != VirtualProtect(buffer, len, newProt, &oldProt);
 }
-#endif // _WIN32
-
+#else
+#	ifndef MAP_ANONYMOUS
+#		define MAP_ANONYMOUS MAP_ANON
+#	endif
+#endif
 
 #define PAGE_SIZE 4096
 
@@ -163,7 +166,7 @@ static struct trampoline_set *alloc_trampolines(char *start, char *end)
 #if _WIN32
 	metadata->buffers = VirtualAlloc(NULL, sizeof(struct trampoline_buffers), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 #else
-	posix_memalign((void **)&metadata->buffers, getpagesize(), sizeof(struct trampoline_buffers));
+	metadata->buffers = mmap(NULL, sizeof(struct trampoline_buffers), PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
 #endif
 	for (int i=0 ; i<HEADERS_PER_PAGE ; i++)
 	{
