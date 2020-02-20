@@ -104,14 +104,14 @@ static void checkARCAccessors(Class cls)
 		objc_clear_class_flag(cls, objc_class_flag_fast_arc);
 		return;
 	}
-	owner = ownerForMethod(cls, retain);
+	owner = ownerForMethod(cls, release);
 	if ((NULL != owner) && !ownsMethod(owner, isARC))
 	{
 		ARC_DEBUG_LOG("%s does not support ARC correctly (implements release)\n", cls->name);
 		objc_clear_class_flag(cls, objc_class_flag_fast_arc);
 		return;
 	}
-	owner = ownerForMethod(cls, retain);
+	owner = ownerForMethod(cls, autorelease);
 	if ((NULL != owner) && !ownsMethod(owner, isARC))
 	{
 		ARC_DEBUG_LOG("%s does not support ARC correctly (implements autorelease)\n", cls->name);
