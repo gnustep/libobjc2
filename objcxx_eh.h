@@ -51,7 +51,7 @@ void *objc_object_for_cxx_exception(void *thrown_exception, int *isValid);
 __attribute__((weak))
 void print_type_info(void *thrown_exception);
 
-#if CXX_STDLIB_IS_GNU == 1
+#if CXX_ABI_IS_GNU == 1
 static const uint64_t cxx_exception_class = EXCEPTION_CLASS('G','N','U','C','C','+','+','\0');
 #else
 static const uint64_t cxx_exception_class = EXCEPTION_CLASS('C','L','N','G','C','+','+','\0');
