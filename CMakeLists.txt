@@ -284,17 +284,20 @@ if (ENABLE_OBJCXX)
 			add_definitions( -DCXX_STDLIB_IS_GNU=1)
 			message(STATUS "C++ standard library is libstdc++")
 		endif ()
-		# Try to find libcxxrt.so.  We can link to this to provide the C++ ABI
-		# layer, if it exists.
-		test_cxx(cxxrt false "${CXX_STDLIB_IS_GNU}")
-		# If it doesn't, then look for GNU libsupc++.so instead (either works,
-		# they're ABI compatible).
-		if (NOT CXX_RUNTIME)
-			test_cxx(supc++ false "${CXX_STDLIB_IS_GNU}")
-		endif (NOT CXX_RUNTIME)
-		if (NOT CXX_RUNTIME)
-			test_cxx(c++abi false "${CXX_STDLIB_IS_GNU}")
-		endif (NOT CXX_RUNTIME)
+		if (CXX_STDLIB_IS_GNU)
+			# Try to find libcxxrt.so.  We can link to this to provide the C++ ABI
+			# layer, if it exists.
+			test_cxx(cxxrt false "${CXX_STDLIB_IS_GNU}")
+			# If it doesn't, then look for GNU libsupc++.so instead (either works,
+			# they're ABI compatible).
+			if (NOT CXX_RUNTIME)
+				test_cxx(supc++ false "${CXX_STDLIB_IS_GNU}")
+			endif (NOT CXX_RUNTIME)
+		else ()
+			if (NOT CXX_RUNTIME)
+				test_cxx(c++abi false "${CXX_STDLIB_IS_GNU}")
+			endif (NOT CXX_RUNTIME)
+		endif ()
 
 		# If we have a C++ ABI library, then we can produce a single libobjc that
 		# works for Objective-C and Objective-C++.  If not, then we need to provide
