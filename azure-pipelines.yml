@@ -3,7 +3,7 @@ jobs:
     displayName: Ubuntu-16.04
     pool:
       vmImage: ubuntu-16.04
-    container: ubuntu:16.04
+    container: glaux/clang-azure-devops:latest
     strategy:
       matrix:
         Debug:
@@ -30,13 +30,9 @@ jobs:
     - checkout: self
       submodules: true
     - script: |
-        wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
-        sudo add-apt-repository "deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-8 main"
-        sudo apt-get update
-        sudo apt-get install -y ninja-build
-        sudo apt-get install -y clang-8
         if [ "$(StdLib)" = "libc++" ]; then
-          sudo apt-get install -y libc++-8-dev libc++abi-8-dev
+          sudo apt-get update
+          sudo apt-get install -qy libc++-8-dev libc++abi-8-dev
         fi
       displayName: Install Dependencies
 
