@@ -55,24 +55,32 @@ namespace gnustep
 		{
 			__objc_id_type_info() : type_info("@id") {};
 			virtual ~__objc_id_type_info();
+#if CXX_STDLIB_IS_GNU != 1
 			virtual void noop1() const {};
             virtual void noop2() const {};
+#endif
 			virtual bool __do_catch(const type_info *thrownType,
 			                        void **obj,
 			                        unsigned outer) const;
+#if CXX_STDLIB_IS_GNU != 1
 			virtual bool can_catch(const CXX_TYPE_INFO_CLASS *thrownType,
 			                       void *&obj) const;
+#endif
 		};
 		struct __objc_class_type_info : std::type_info
 		{
 			virtual ~__objc_class_type_info();
+#if CXX_STDLIB_IS_GNU != 1
 			virtual void noop1() const {};
             virtual void noop2() const {};
+#endif
 			virtual bool __do_catch(const type_info *thrownType,
 			                        void **obj,
 			                        unsigned outer) const;
+#if CXX_STDLIB_IS_GNU != 1
 			virtual bool can_catch(const CXX_TYPE_INFO_CLASS *thrownType,
 			                       void *&obj) const;
+#endif
 		};
 	}
 };
@@ -122,11 +130,13 @@ bool gnustep::libobjc::__objc_class_type_info::__do_catch(const type_info *throw
 	return found;
 };
 
+#if CXX_STDLIB_IS_GNU != 1
 bool gnustep::libobjc::__objc_class_type_info::can_catch(const CXX_TYPE_INFO_CLASS *thrownType,
                                                           void *&obj) const
 {
 	return __do_catch(thrownType, &obj, 0);
 }
+#endif
 
 bool gnustep::libobjc::__objc_id_type_info::__do_catch(const type_info *thrownType,
                                                        void **obj,
@@ -146,11 +156,13 @@ bool gnustep::libobjc::__objc_id_type_info::__do_catch(const type_info *thrownTy
 	return false;
 };
 
+#if CXX_STDLIB_IS_GNU != 1
 bool gnustep::libobjc::__objc_id_type_info::can_catch(const CXX_TYPE_INFO_CLASS *thrownType,
                                                           void *&obj) const
 {
 	return __do_catch(thrownType, &obj, 0);
 }
+#endif
 
 /**
  * Public interface to the Objective-C++ exception mechanism

@@ -44,7 +44,7 @@ void __cxa_free_exception(void *thrown_exception);
 __attribute__((weak))
 void *objc_object_for_cxx_exception(void *thrown_exception, int *isValid);
 
-/**k46
+/**
  * Prints the type info associated with an exception.  Used only when
  * debugging, not compiled in the normal build.
  */

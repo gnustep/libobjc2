@@ -8,7 +8,7 @@ class type_info2 : public std::type_info
 {
 	public:
 	type_info2() : type_info("foo") {}
-	virtual int __is_pointer_p() const; 
+	virtual int __is_pointer_p() const;
 };
 int type_info2::__is_pointer_p() const { return 123; }
 
