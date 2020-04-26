@@ -302,7 +302,8 @@ struct objc_slot2 *objc_slot_lookup_super2(struct objc_super *super, SEL selecto
 				objc_send_initialize((id)class);
 				return objc_slot_lookup_super2(super, selector);
 			}
-			return (struct objc_slot2*)&nil_slot;
+			uncacheable_slot.imp = __objc_msg_forward2(receiver, selector);
+			return (struct objc_slot2*)&uncacheable_slot;
 		}
 		return result;
 	}
@@ -335,7 +336,11 @@ struct objc_slot *objc_slot_lookup_super(struct objc_super *super, SEL selector)
 				objc_send_initialize((id)class);
 				return objc_slot_lookup_super(super, selector);
 			}
-			return &nil_slot_v1;
+			uncacheable_slot_v1.owner = Nil;
+			uncacheable_slot_v1.types = sel_getType_np(selector);
+			uncacheable_slot_v1.selector = selector;
+			uncacheable_slot_v1.method = __objc_msg_forward2(receiver, selector);
+			return &uncacheable_slot_v1;
 		}
 		uncacheable_slot_v1.owner = Nil;
 		uncacheable_slot_v1.types = sel_getType_np(((struct objc_method*)result)->selector);
