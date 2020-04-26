@@ -30,10 +30,13 @@ jobs:
       displayName: 'Compile'
 
     - script: |
-        ctest -j 4 --output-on-failure
-
+        ctest -j 4 --output-on-failure -T test
       workingDirectory: build
       failOnStderr: true
+    - task: PublishTestResults@2
+      inputs:
+          testResultsFormat: cTest
+          testResultsFiles: build/Testing/*/Test.xml
   - job: Windows
     displayName: Windows-2016
     pool:
@@ -99,9 +102,12 @@ jobs:
         echo Copying objc.dll into Test directory...
         copy /y objc.dll Test
         echo Running CTest...
-        ctest -j 4 --output-on-failure
+        ctest -j 4 --output-on-failure -T test
         echo CTest completed.
-
-
       failOnStderr: true
       displayName: 'Test'
+
+    - task: PublishTestResults@2
+      inputs:
+          testResultsFormat: cTest
+          testResultsFiles: build/Testing/*/Test.xml
