@@ -31,8 +31,9 @@ jobs:
 
     - script: |
         ctest -j 4 --output-on-failure -T test
+
       workingDirectory: build
-      failOnStderr: true
+      failOnStderr: false
     - task: PublishTestResults@2
       inputs:
           testResultsFormat: cTest
@@ -101,10 +102,9 @@ jobs:
         cd build
         echo Copying objc.dll into Test directory...
         copy /y objc.dll Test
-        echo Running CTest...
         ctest -j 4 --output-on-failure -T test
-        echo CTest completed.
-      failOnStderr: true
+
+      failOnStderr: false
       displayName: 'Test'
 
     - task: PublishTestResults@2
