@@ -1,8 +1,8 @@
 jobs:
   - job: Linux
-    displayName: Ubuntu-16.04
+    displayName: Ubuntu-18.04
     pool:
-      vmImage: ubuntu-16.04
+      vmImage: ubuntu-18.04
     strategy:
       matrix:
         Debug:
@@ -13,7 +13,7 @@ jobs:
     - checkout: self
       submodules: true
     - script: |
-        sudo add-apt-repository "deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-8 main"
+        sudo add-apt-repository "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-8 main"
         sudo apt-get update
         sudo apt-get install -y ninja-build
         sudo apt-get install -y clang-8
