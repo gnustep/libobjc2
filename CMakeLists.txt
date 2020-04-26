@@ -264,7 +264,6 @@ if (MSVC)
 endif()
 
 
-add_library(objc SHARED ${libobjc_C_SRCS} ${libobjc_ASM_SRCS} ${libobjc_OBJC_SRCS} ${libobjc_OBJCXX_SRCS} ${libobjc_ASM_OBJS})
 
 if (ENABLE_OBJCXX)
 	if (WIN32)
@@ -302,9 +301,15 @@ if (ENABLE_OBJCXX)
 				set(ENABLE_OBJCXX false)
 			endif()
 		endif ()
+		add_custom_command(OUTPUT eh_trampoline.S
+			COMMAND ${CMAKE_CXX_COMPILER} -fPIC -S "${CMAKE_SOURCE_DIR}/eh_trampoline.cc" -o - -fexceptions -fno-inline | sed "s/__gxx_personality_v0/test_eh_personality/g" > "${CMAKE_BINARY_DIR}/eh_trampoline.S"
+			MAIN_DEPENDENCY eh_trampoline.cc)
+		list(APPEND libobjc_ASM_SRCS eh_trampoline.S)
+		list(APPEND libobjc_CXX_SRCS cxx_eh_setup.cc)
 	endif ()
 endif (ENABLE_OBJCXX)
 
+add_library(objc SHARED ${libobjc_C_SRCS} ${libobjc_ASM_SRCS} ${libobjc_OBJC_SRCS} ${libobjc_OBJCXX_SRCS} ${libobjc_ASM_OBJS})
 
 if (ENABLE_OBJCXX)
 	if (NOT CXXRT_IS_STDLIB)

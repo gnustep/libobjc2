@@ -20,6 +20,8 @@
 #define __builtin_unreachable abort
 #endif
 
+void test_cxx_eh_implementation();
+
 
 /**
  * Class of exceptions to distinguish between this and other exception types.
@@ -326,6 +328,11 @@ static inline _Unwind_Reason_Code internal_objc_personality(int version,
 	void *object = NULL;
 
 #ifndef NO_OBJCXX
+	if (cxx_exception_class == 0)
+	{
+		test_cxx_eh_implementation();
+	}
+
 	if (exceptionClass == cxx_exception_class)
 	{
 		int objcxx;
@@ -486,6 +493,10 @@ BEGIN_PERSONALITY_FUNCTION(__gnustep_objc_personality_v0)
 }
 
 BEGIN_PERSONALITY_FUNCTION(__gnustep_objcxx_personality_v0)
+	if (cxx_exception_class == 0)
+	{
+		test_cxx_eh_implementation();
+	}
 	if (exceptionClass == objc_exception_class)
 	{
 		struct objc_exception *ex = objc_exception_from_header(exceptionObject);

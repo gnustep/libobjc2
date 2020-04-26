@@ -51,7 +51,20 @@ void *objc_object_for_cxx_exception(void *thrown_exception, int *isValid);
 __attribute__((weak))
 void print_type_info(void *thrown_exception);
 
-static const uint64_t cxx_exception_class = EXCEPTION_CLASS('G','N','U','C','C','+','+','\0');
+/**
+ * The exception class that we've detected that C++ runtime library uses.
+ */
+extern uint64_t cxx_exception_class;
+
+/**
+ * The exception class that libsupc++ and libcxxrt use.
+ */
+const uint64_t gnu_cxx_exception_class = EXCEPTION_CLASS('G','N','U','C','C','+','+','\0');
+
+/**
+ * The exception class that libc++abi uses.
+ */
+const uint64_t llvm_cxx_exception_class = EXCEPTION_CLASS('C','L','N','G','C','+','+','\0');
 
 #ifdef __cplusplus
 }
