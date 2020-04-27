@@ -3,6 +3,7 @@
 #import "stdio.h"
 
 void poke_objcxx(void);
+void check_uncaught_count(void);
 
 void rethrow(id x)
 {
@@ -18,5 +19,6 @@ int main(void)
   } @catch (Test *localException) {
     printf("In NS_HANDLER block, %p\n", localException);
   }
+  check_uncaught_count();
 }
 

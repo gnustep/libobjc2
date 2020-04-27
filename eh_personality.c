@@ -503,6 +503,8 @@ BEGIN_PERSONALITY_FUNCTION(__gnustep_objcxx_personality_v0)
 		if (0 == ex->cxx_exception)
 		{
 			ex->cxx_exception = objc_init_cxx_exception(ex->object);
+			ex->cxx_exception->private_1 = exceptionObject->private_1;
+			ex->cxx_exception->private_2 = exceptionObject->private_2;
 		}
 		exceptionObject = ex->cxx_exception;
 		exceptionClass = cxx_exception_class;
