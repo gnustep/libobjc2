@@ -14,6 +14,15 @@ things that can be used by other programs that actually perform the building.
 I recommend that you use Ninja for building if you are compiling regularly, but
 these instructions will use Make to avoid the need for an extra dependency.
 
+When checking out the code make sure you check out git submodules as well
+either by using
+
+	$ git checkout --recursive <URL>
+	
+or by getting submodules after checkout using
+
+	$ git submodule update --init
+
 After checking out the code, build as follows:
 
 	$ mkdir Build
