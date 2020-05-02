@@ -6,7 +6,31 @@
 #include <assert.h>
 #include "Test.h"
 
-@implementation NSConstantString @end
+@implementation NSConstantString
+- (void)dealloc
+{
+	// Silence a warning
+	if (0)
+	{
+		[super dealloc];
+	}
+}
+@end
+
+@interface NSTinyString : NSConstantString @end
+@implementation NSTinyString
++ (void)load
+{
+	if (sizeof(void*) > 4)
+	{
+		objc_registerSmallObjectClass_np(self, 4);
+	}
+}
+- (Class)class { return [NSTinyString class]; }
+- (id)retain { return self; }
+- (id)autorelease { return self; }
+- (void)release {}
+@end
 
 @implementation Test
 + (Class)class { return self; }
