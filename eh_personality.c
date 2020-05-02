@@ -22,6 +22,13 @@
 
 void test_cxx_eh_implementation();
 
+// Weak references to C++ runtime functions.  We don't bother testing that
+// these are 0 before calling them, because if they are not resolved then we
+// should not be in a code path that involves a C++ exception.
+__attribute__((weak)) void *__cxa_begin_catch(void *e);
+__attribute__((weak)) void __cxa_end_catch(void);
+__attribute__((weak)) void __cxa_rethrow(void);
+
 
 /**
  * Class of exceptions to distinguish between this and other exception types.
@@ -74,6 +81,35 @@ typedef enum
 	handler_catchall,
 	handler_class
 } handler_type;
+
+enum exception_type
+{
+	NONE,
+	CXX,
+	OBJC,
+	FOREIGN,
+	BOXED_FOREIGN
+};
+struct thread_data
+{
+	enum exception_type current_exception_type;
+	id lastThrownObject;
+	BOOL cxxCaughtException;
+	struct objc_exception *caughtExceptions;
+};
+
+static __thread struct thread_data thread_data;
+
+static struct thread_data *get_thread_data(void)
+{
+	return &thread_data;
+}
+
+static struct thread_data *get_thread_data_fast(void)
+{
+	return &thread_data;
+}
+
 
 /**
  * Saves the result of the landing pad that we have found.  For ARM, this is
@@ -147,6 +183,9 @@ static void cleanup(_Unwind_Reason_Code reason, struct _Unwind_Exception *e)
 					unwindHeader)));
 					*/
 }
+
+void objc_exception_rethrow(struct _Unwind_Exception *e);
+
 /**
  * Throws an Objective-C exception.  This function is, unfortunately, used for
  * rethrowing caught exceptions too, even in @finally() blocks.  Unfortunately,
@@ -154,6 +193,25 @@ static void cleanup(_Unwind_Reason_Code reason, struct _Unwind_Exception *e)
  */
 void objc_exception_throw(id object)
 {
+	struct thread_data *td = get_thread_data();
+	fprintf(stderr, "Throwing %p, in flight exception: %p\n", object, td->lastThrownObject);
+	fprintf(stderr, "Exception caught by C++: %d\n", td->cxxCaughtException);
+	// If C++ caught the exception, then we may need to make C++ rethrow it if
+	// we want to preserve exception state.  Rethrows should be handled with
+	// objc_exception_rethrow, but clang appears to do the wrong thing for some
+	// cases.
+	if (td->cxxCaughtException)
+	{
+		// For catchalls, we may result in our being passed the pointer to the
+		// object, not the object.
+		if ((object == td->lastThrownObject) ||
+			((object != nil) &&
+			 !isSmallObject(object) &&
+			 (*(id*)object == td->lastThrownObject)))
+		{
+			__cxa_rethrow();
+		}
+	}
 
 	SEL rethrow_sel = sel_registerName("rethrow");
 	if ((nil != object) &&
@@ -174,6 +232,9 @@ void objc_exception_throw(id object)
 	ex->unwindHeader.exception_cleanup = cleanup;
 
 	ex->object = object;
+
+	td->lastThrownObject = object;
+	td->cxxCaughtException = NO;
 
 	_Unwind_Reason_Code err = _Unwind_RaiseException(&ex->unwindHeader);
 	free(ex);
@@ -480,6 +541,7 @@ static inline _Unwind_Reason_Code internal_objc_personality(int version,
 	_Unwind_SetGR(context, __builtin_eh_return_data_regno(1), selector);
 
 	DEBUG_LOG("Installing context, selector %d\n", (int)selector);
+	get_thread_data()->cxxCaughtException = NO;
 	return _URC_INSTALL_CONTEXT;
 }
 
@@ -513,48 +575,20 @@ BEGIN_PERSONALITY_FUNCTION(__gnustep_objcxx_personality_v0)
 		int ret = CALL_PERSONALITY_FUNCTION(__gxx_personality_v0);
 		exceptionObject->private_1 = ex->cxx_exception->private_1;
 		exceptionObject->private_2 = ex->cxx_exception->private_2;
+		if (ret == _URC_INSTALL_CONTEXT)
+		{
+			get_thread_data()->cxxCaughtException = YES;
+		}
 		return ret;
 	}
 	return CALL_PERSONALITY_FUNCTION(__gxx_personality_v0);
-}
-
-// Weak references to C++ runtime functions.  We don't bother testing that
-// these are 0 before calling them, because if they are not resolved then we
-// should not be in a code path that involves a C++ exception.
-__attribute__((weak)) void *__cxa_begin_catch(void *e);
-__attribute__((weak)) void __cxa_end_catch(void);
-__attribute__((weak)) void __cxa_rethrow(void);
-
-enum exception_type
-{
-	NONE,
-	CXX,
-	OBJC,
-	FOREIGN,
-	BOXED_FOREIGN
-};
-struct thread_data
-{
-	enum exception_type current_exception_type;
-	struct objc_exception *caughtExceptions;
-};
-
-static __thread struct thread_data thread_data;
-
-static struct thread_data *get_thread_data(void)
-{
-	return &thread_data;
-}
-
-static struct thread_data *get_thread_data_fast(void)
-{
-	return &thread_data;
 }
 
 id objc_begin_catch(struct _Unwind_Exception *exceptionObject)
 {
 	struct thread_data *td = get_thread_data();
 	DEBUG_LOG("Beginning catch %p\n", exceptionObject);
+	td->cxxCaughtException = NO;
 	if (exceptionObject->exception_class == objc_exception_class)
 	{
 		td->current_exception_type = OBJC;
