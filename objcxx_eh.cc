@@ -266,7 +266,6 @@ namespace gnustep
 			                const __class_type_info *target,
 			                void **thrown_object) const
 			{
-				assert(0);
 				return false;
 			};
 		};
