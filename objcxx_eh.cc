@@ -75,9 +75,12 @@ typedef void (*terminate_handler)();
 namespace std
 {
 	/**
-	 * std::type_info defined with the GCC ABI.  This may not be exposed in
-	 * public headers, but is required for correctly implementing the unified
-	 * exception model.
+	 * std::type_info, containing the minimum requirements for the ABI.
+	 * Public headers on some implementations also expose some implementation
+	 * details.  The layout of our subclasses must respect the layout of the
+	 * C++ runtime library, but also needs to be portable across multiple
+	 * implementations and so should not depend on internal symbols from those
+	 * libraries.
 	 */
 	class type_info
 	{
@@ -95,14 +98,6 @@ namespace std
 				type_info(const char *name): __type_name(name) { }
 				public:
 				const char* name() const { return __type_name; }
-				virtual bool __is_pointer_p() const;
-				virtual bool __is_function_p() const;
-				virtual bool __do_catch(const type_info *thrown_type,
-				                        void **thrown_object,
-				                        unsigned outer) const;
-				virtual bool __do_upcast(
-				                const __class_type_info *target,
-				                void **thrown_object) const;
 	};
 }
 
@@ -226,15 +221,71 @@ namespace gnustep
 {
 	namespace libobjc
 	{
-		struct __objc_id_type_info : std::type_info
+		/**
+		 * Superclass for the type info for Objective-C exceptions.
+		 */
+		struct __objc_type_info : std::type_info
 		{
-			__objc_id_type_info() : type_info("@id") {};
+			/**
+			 * Constructor that sets the name.
+			 */
+			__objc_type_info(const char *name) : type_info(name) {}
+			/**
+			 * Helper function used by libsupc++ and libcxxrt to determine if
+			 * this is a pointer type.  If so, catches automatically
+			 * dereference the pointer to the thrown pointer in
+			 * `__cxa_begin_catch`.
+			 */
+			virtual bool __is_pointer_p() const { return true; }
+			/**
+			 * Helper function used by libsupc++ and libcxxrt to determine if
+			 * this is a function pointer type.  Irrelevant for our purposes.
+			 */
+			virtual bool __is_function_p() const { return false; }
+			/**
+			 * Catch handler.  This is used in the C++ personality function.
+			 * `thrown_type` is the type info of the thrown object, `this` is
+			 * the type info at the catch site.  `thrown_object` is a pointer
+			 * to a pointer to the thrown object and may be adjusted by this
+			 * function.
+			 */
+			virtual bool __do_catch(const type_info *thrown_type,
+			                        void **thrown_object,
+			                        unsigned) const
+			{
+				assert(0);
+				return false;
+			};
+			/**
+			 * Function used for `dynamic_cast` between two C++ class types in
+			 * libsupc++ and libcxxrt.
+			 *
+			 * This should never be called on Objective-C types.
+			 */
+			virtual bool __do_upcast(
+			                const __class_type_info *target,
+			                void **thrown_object) const
+			{
+				assert(0);
+				return false;
+			};
+		};
+		/**
+		 * Singleton type info for the `id` type.
+		 */
+		struct __objc_id_type_info : __objc_type_info
+		{
+			/**
+			 * The `id` type is mangled to `@id`, which is not a valid mangling
+			 * of anything else.
+			 */
+			__objc_id_type_info() : __objc_type_info("@id") {};
 			virtual ~__objc_id_type_info();
 			virtual bool __do_catch(const type_info *thrownType,
 			                        void **obj,
 			                        unsigned outer) const;
 		};
-		struct __objc_class_type_info : std::type_info
+		struct __objc_class_type_info : __objc_type_info
 		{
 			virtual ~__objc_class_type_info();
 			virtual bool __do_catch(const type_info *thrownType,
@@ -266,7 +317,7 @@ bool gnustep::libobjc::__objc_class_type_info::__do_catch(const type_info *throw
 	    || (AppleCompatibleMode && 
 	        dynamic_cast<const __objc_class_type_info*>(thrownType)))
 	{
-		thrown = **(id**)obj;
+		thrown = *(id*)obj;
 		// nil only matches id catch handlers in Apple-compatible mode, or when thrown as an id
 		if (0 == thrown)
 		{
@@ -278,7 +329,7 @@ bool gnustep::libobjc::__objc_class_type_info::__do_catch(const type_info *throw
 	}
 	else if (dynamic_cast<const __objc_class_type_info*>(thrownType))
 	{
-		thrown = **(id**)obj;
+		thrown = *(id*)obj;
 		found = isKindOfClass((Class)objc_getClass(thrownType->name()),
 		                      (Class)objc_getClass(name()));
 	}
@@ -296,12 +347,12 @@ bool gnustep::libobjc::__objc_id_type_info::__do_catch(const type_info *thrownTy
 	// Id catch matches any ObjC throw
 	if (dynamic_cast<const __objc_class_type_info*>(thrownType))
 	{
-		*obj = **(id**)obj;
+		*obj = *(id*)obj;
 		return true;
 	}
 	if (dynamic_cast<const __objc_id_type_info*>(thrownType))
 	{
-		*obj = **(id**)obj;
+		*obj = *(id*)obj;
 		return true;
 	}
 	return false;

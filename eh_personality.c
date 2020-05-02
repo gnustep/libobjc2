@@ -503,11 +503,17 @@ BEGIN_PERSONALITY_FUNCTION(__gnustep_objcxx_personality_v0)
 		if (0 == ex->cxx_exception)
 		{
 			ex->cxx_exception = objc_init_cxx_exception(ex->object);
-			ex->cxx_exception->private_1 = exceptionObject->private_1;
-			ex->cxx_exception->private_2 = exceptionObject->private_2;
 		}
+		// We now have two copies of the _Unwind_Exception object (which stores
+		// state for the unwinder) in flight.  Make sure that they're in sync.
+		ex->cxx_exception->private_1 = exceptionObject->private_1;
+		ex->cxx_exception->private_2 = exceptionObject->private_2;
 		exceptionObject = ex->cxx_exception;
 		exceptionClass = cxx_exception_class;
+		int ret = CALL_PERSONALITY_FUNCTION(__gxx_personality_v0);
+		exceptionObject->private_1 = ex->cxx_exception->private_1;
+		exceptionObject->private_2 = ex->cxx_exception->private_2;
+		return ret;
 	}
 	return CALL_PERSONALITY_FUNCTION(__gxx_personality_v0);
 }
@@ -588,8 +594,7 @@ id objc_begin_catch(struct _Unwind_Exception *exceptionObject)
 	{
 		DEBUG_LOG("c++ catch\n");
 		td->current_exception_type = CXX;
-		id *obj = __cxa_begin_catch(exceptionObject);
-		return obj ? *obj : nil;
+		return __cxa_begin_catch(exceptionObject);
 	}
 	DEBUG_LOG("foreign exception catch\n");
 	// Box if we have a boxing function.
