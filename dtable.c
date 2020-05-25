@@ -77,7 +77,6 @@ static BOOL ownsMethod(Class cls, SEL sel)
 }
 
 
-#define DEBUG_ARC_COMPAT
 #ifdef DEBUG_ARC_COMPAT
 #define ARC_DEBUG_LOG(...) fprintf(stderr, __VA_ARGS__)
 #else

@@ -141,6 +141,13 @@ set(OLDABI_COMPAT ${OLD_ABI_COMPAT_DEFAULT} CACHE BOOL
 set(LEGACY_COMPAT FALSE CACHE BOOL
 	"Enable legacy compatibility features")
 
+set(DEBUG_ARC_COMPAT FALSE CACHE BOOL
+	"Log warnings for classes that don't hit ARC fast paths")
+
+if (DEBUG_ARC_COMPAT)
+	add_definitions(-DDEBUG_ARC_COMPAT)
+endif()
+
 if (OLDABI_COMPAT)
 	list(APPEND libobjc_C_SRCS legacy.c abi_version.c statics_loader.c)
 	add_definitions(-DOLDABI_COMPAT=1)
