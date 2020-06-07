@@ -201,3 +201,9 @@ _Unwind_Reason_Code name(_Unwind_State state,\
 	_Unwind_SetGR (context, 12, (unsigned long)exceptionObject);
 
 #define CALL_PERSONALITY_FUNCTION(name) name(state,exceptionObject,context)
+
+#define COPY_EXCEPTION(dst, src) \
+  memcpy((dst)->unwinder_cache, (src)->unwinder_cache, sizeof(struct unwinder_cache)); \
+  memcpy((dst)->barrier_cache, (src)->barrier_cache, sizeof(struct barrier_cache)); \
+  memcpy((dst)->cleanup_cache, (src)->cleanup_cache, sizeof(struct cleanup_cache)); \
+  memcpy((dst)->pr_cache, (src)->pr_cache, sizeof(struct pr_cache));

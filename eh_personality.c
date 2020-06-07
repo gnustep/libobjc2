@@ -568,13 +568,11 @@ BEGIN_PERSONALITY_FUNCTION(__gnustep_objcxx_personality_v0)
 		}
 		// We now have two copies of the _Unwind_Exception object (which stores
 		// state for the unwinder) in flight.  Make sure that they're in sync.
-		ex->cxx_exception->private_1 = exceptionObject->private_1;
-		ex->cxx_exception->private_2 = exceptionObject->private_2;
+		COPY_EXCEPTION(ex->cxx_exception, exceptionObject)
 		exceptionObject = ex->cxx_exception;
 		exceptionClass = cxx_exception_class;
 		int ret = CALL_PERSONALITY_FUNCTION(__gxx_personality_v0);
-		exceptionObject->private_1 = ex->cxx_exception->private_1;
-		exceptionObject->private_2 = ex->cxx_exception->private_2;
+		COPY_EXCEPTION(exceptionObject, ex->cxx_exception)
 		if (ret == _URC_INSTALL_CONTEXT)
 		{
 			get_thread_data()->cxxCaughtException = YES;
