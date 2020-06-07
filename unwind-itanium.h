@@ -164,6 +164,10 @@ _Unwind_Reason_Code name(int version,\
 
 #define CALL_PERSONALITY_FUNCTION(name) name(version, actions, exceptionClass, exceptionObject, context)
 
+#define COPY_EXCEPTION(dst, src) \
+  (dst)->private_1 = (src)->private_1; \
+  (dst)->private_2 = (src)->private_2;
+
 #ifdef __cplusplus
 }
 #endif
