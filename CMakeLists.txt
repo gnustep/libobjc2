@@ -326,6 +326,8 @@ if (ENABLE_OBJCXX)
 	endif()
 	list(APPEND libobjc_CXX_SRCS ${libobjcxx_CXX_SRCS})
 	target_sources(objc PRIVATE ${libobjc_CXX_SRCS})
+else()
+	add_definitions(-DNO_OBJCXX)
 endif()
 
 
