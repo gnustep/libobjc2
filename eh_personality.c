@@ -555,6 +555,7 @@ BEGIN_PERSONALITY_FUNCTION(__gnustep_objc_personality_v0)
 }
 
 BEGIN_PERSONALITY_FUNCTION(__gnustep_objcxx_personality_v0)
+#ifndef NO_OBJCXX
 	if (cxx_exception_class == 0)
 	{
 		test_cxx_eh_implementation();
@@ -579,6 +580,7 @@ BEGIN_PERSONALITY_FUNCTION(__gnustep_objcxx_personality_v0)
 		}
 		return ret;
 	}
+#endif
 	return CALL_PERSONALITY_FUNCTION(__gxx_personality_v0);
 }
 
@@ -621,6 +623,7 @@ id objc_begin_catch(struct _Unwind_Exception *exceptionObject)
 		// exceptions are in-flight
 		abort();
 	}
+#ifndef NO_OBJCXX
 	// If this is a C++ exception, let the C++ runtime handle it.
 	if (exceptionObject->exception_class == cxx_exception_class)
 	{
@@ -628,6 +631,7 @@ id objc_begin_catch(struct _Unwind_Exception *exceptionObject)
 		td->current_exception_type = CXX;
 		return __cxa_begin_catch(exceptionObject);
 	}
+#endif
 	DEBUG_LOG("foreign exception catch\n");
 	// Box if we have a boxing function.
 	if (_objc_class_for_boxing_foreign_exception)
@@ -719,11 +723,13 @@ void objc_exception_rethrow(struct _Unwind_Exception *e)
 		}
 		abort();
 	}
+#ifndef NO_OBJCXX
 	else if (td->current_exception_type == CXX)
 	{
 		assert(e->exception_class == cxx_exception_class);
 		__cxa_rethrow();
 	}
+#endif
 	if (td->current_exception_type == BOXED_FOREIGN)
 	{
 		SEL rethrow_sel = sel_registerName("rethrow");
