@@ -86,6 +86,13 @@ else ()
 	list(APPEND libobjc_C_SRCS eh_personality.c)
 endif (WIN32)
 
+if (NOT EXISTS "${CMAKE_SOURCE_DIR}/third_party/robin-map/include/tsl/robin_map.h")
+	message(FATAL_ERROR "Git submodules not present, please run:\n\n"
+						" $ git submodule init && git submodule update\n\n"
+						"If you did not checkout via git, you will need to"
+						"fetch the submodule's contents from"
+						"https://github.com/Tessil/robin-map/")
+endif ()
 
 # For release builds, we disable spamming the terminal with warnings about
 # selector type mismatches
