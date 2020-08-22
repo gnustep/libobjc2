@@ -284,8 +284,9 @@ if (ENABLE_OBJCXX)
 		if (NOT CXX_RUNTIME)
 			test_cxx(supc++ false)
 		endif (NOT CXX_RUNTIME)
+		# libc++abi does not currently work, don't try it.
 		if (NOT CXX_RUNTIME)
-			test_cxx(c++abi false)
+			# test_cxx(c++abi false)
 		endif (NOT CXX_RUNTIME)
 
 		# If we have a C++ ABI library, then we can produce a single libobjc that
@@ -295,10 +296,11 @@ if (ENABLE_OBJCXX)
 			message(STATUS "Using ${CXX_RUNTIME} as the C++ runtime library")
 		else()
 			message(STATUS "Testing C++ standard library")
+			message(STATUS "Using ${CMAKE_C_COMPILER}")
 			try_compile(USERUNTIME 
 				"${CMAKE_BINARY_DIR}/CMake"
 				"${CMAKE_CURRENT_LIST_DIR}/CMake"
-				test_cxx_runtime)
+				test_cxx_stdlib)
 			if (${USERUNTIME})
 				message(STATUS "libobjc will depend on C++ standard library")
 				set(CXXRT_IS_STDLIB true)
