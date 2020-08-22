@@ -31,13 +31,13 @@ static id objc_proxy_lookup_null(id receiver, SEL op) { return nil; }
 static struct objc_slot *objc_msg_forward3_null(id receiver, SEL op) { return &nil_slot_v1; }
 
 id (*objc_proxy_lookup)(id receiver, SEL op) = objc_proxy_lookup_null;
-struct objc_slot *(*__objc_msg_forward3)(id receiver, SEL op) = objc_msg_forward3_null;
+extern struct objc_slot *(*__objc_msg_forward3)(id receiver, SEL op) = objc_msg_forward3_null;
 
 static IMP forward2(id self, SEL _cmd)
 {
 	return __objc_msg_forward3(self, _cmd)->method;
 }
-IMP (*__objc_msg_forward2)(id, SEL) = forward2;
+extern IMP (*__objc_msg_forward2)(id, SEL) = forward2;
 
 __thread struct objc_method uncacheable_slot = { (IMP)nil_method, NULL, NULL };
 __thread struct objc_slot uncacheable_slot_v1 = { Nil, Nil, 0, 0, (IMP)nil_method };
@@ -64,9 +64,9 @@ static IMP objc_selector_type_mismatch(Class cls, SEL
 }
 #endif
 
-IMP (*_objc_selector_type_mismatch2)(Class cls, SEL
+extern IMP (*_objc_selector_type_mismatch2)(Class cls, SEL
 		selector, struct objc_slot2 *result) = objc_selector_type_mismatch;
-struct objc_slot *(*_objc_selector_type_mismatch)(Class cls, SEL
+extern struct objc_slot *(*_objc_selector_type_mismatch)(Class cls, SEL
 		selector, struct objc_slot *result);
 
 static IMP call_mismatch_hook(Class cls, SEL sel, struct objc_slot2 *slot)
