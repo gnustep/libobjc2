@@ -35,17 +35,17 @@ OBJC_HOOK void (*_objc_load_callback)(Class cls, struct objc_category *category)
  * The hook used for fast proxy lookups.  This takes an object and a selector
  * and returns the instance that the message should be forwarded to.
  */
-OBJC_HOOK id (*objc_proxy_lookup)(id receiver, SEL op);
+OBJC_PUBLIC extern id (*objc_proxy_lookup)(id receiver, SEL op);
 /**
  * New runtime forwarding hook.  This is no longer used, but is retained to
  * prevent errors at link time.
  */
-OBJC_HOOK struct objc_slot *(*__objc_msg_forward3)(id, SEL) OBJC_DEPRECATED;
+OBJC_PUBLIC extern struct objc_slot *(*__objc_msg_forward3)(id, SEL) OBJC_DEPRECATED;
 /**
  * Forwarding hook.  Takes an object and a selector and returns a method that
  * handles the forwarding.
  */
-OBJC_HOOK IMP (*__objc_msg_forward2)(id, SEL);
+OBJC_PUBLIC extern IMP (*__objc_msg_forward2)(id, SEL);
 /**
  * Hook defined for handling unhandled exceptions.  If the unwind library
  * reaches the end of the stack without finding a handler then this hook is
@@ -67,13 +67,13 @@ OBJC_HOOK Class (*_objc_class_for_boxing_foreign_exception)(int64_t exceptionCla
  * receiver.  This should return the slot to use instead, although it may throw
  * an exception or perform some other action.
  */
-OBJC_HOOK IMP (*_objc_selector_type_mismatch2)(Class cls, 
+OBJC_PUBLIC extern IMP (*_objc_selector_type_mismatch2)(Class cls, 
        SEL selector, struct objc_slot2 *result);
 /**
  * Legacy hook for when selector types do not match.  This is only called
  * `_objc_selector_type_mismatch2` is not installed.
  */
-OBJC_HOOK struct objc_slot *(*_objc_selector_type_mismatch)(Class cls,
+OBJC_PUBLIC extern struct objc_slot *(*_objc_selector_type_mismatch)(Class cls,
        SEL selector, struct objc_slot *result) OBJC_DEPRECATED;
 
 /**
