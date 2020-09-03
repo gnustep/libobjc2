@@ -353,7 +353,7 @@ endif()
 # threading implementation (we do for everything except thread-local storage)
 set(CMAKE_THREAD_PREFER_PTHREAD)
 include(FindThreads)
-set(objc_LINK_FLAGS "${objc_LINK_FLAGS} ${CMAKE_THREAD_LIBS_INIT}")
+target_link_libraries(objc Threads::Threads)
 
 
 
