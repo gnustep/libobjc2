@@ -317,8 +317,11 @@ if (ENABLE_OBJCXX)
 			endif()
 		endif ()
 		separate_arguments(EH_PERSONALITY_FLAGS NATIVE_COMMAND ${CMAKE_CXX_FLAGS})
+		if (CMAKE_CXX_COMPILER_TARGET)
+			list(APPEND EH_PERSONALITY_FLAGS "${CMAKE_CXX_COMPILE_OPTIONS_TARGET}${CMAKE_CXX_COMPILER_TARGET}")
+		endif ()
 		add_custom_command(OUTPUT eh_trampoline.s
-			COMMAND ${CMAKE_CXX_COMPILER} ARGS ${EH_PERSONALITY_FLAGS} -fPIC -S "${CMAKE_SOURCE_DIR}/eh_trampoline.cc" ${EH_PERSONALITY_M32} -o - -fexceptions -fno-inline | sed "s/__gxx_personality_v0/test_eh_personality/g" > "${CMAKE_BINARY_DIR}/eh_trampoline.s"
+			COMMAND ${CMAKE_CXX_COMPILER} ARGS ${EH_PERSONALITY_FLAGS} -fPIC -S "${CMAKE_SOURCE_DIR}/eh_trampoline.cc" -o - -fexceptions -fno-inline | sed "s/__gxx_personality_v0/test_eh_personality/g" > "${CMAKE_BINARY_DIR}/eh_trampoline.s"
 			MAIN_DEPENDENCY eh_trampoline.cc)
 		list(APPEND libobjc_ASM_SRCS eh_trampoline.s)
 		list(APPEND libobjc_CXX_SRCS objcxx_eh.cc)
