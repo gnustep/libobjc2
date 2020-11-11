@@ -54,11 +54,12 @@
 	mov   \sel(%esp), %ecx
 	lea   \receiver(%esp), %eax
 
+	push  %ecx                           # Unused, stack alignment
 	push  %ecx                           # _cmd
 	push  %eax                           # &self
-	.cfi_def_cfa_offset 12
+	.cfi_def_cfa_offset 16
 	call  CDECL(slowMsgLookup)@PLT
-	add   $8, %esp                       # restore the stack
+	add   $12, %esp                      # restore the stack
 
 
 #ifdef _WIN32
