@@ -19,6 +19,7 @@ size_t objc_alignof_type (const char *type);
 //
 #define alignof(type) __builtin_offsetof(struct { const char c; type member; }, member)
 
+OBJC_PUBLIC
 const char *objc_skip_type_qualifiers (const char *type)
 {
 	static const char *type_qualifiers = "rnNoORVA";
@@ -31,12 +32,14 @@ const char *objc_skip_type_qualifiers (const char *type)
 
 static const char *sizeof_type(const char *type, size_t *size);
 
+OBJC_PUBLIC
 const char *objc_skip_typespec(const char *type)
 {
 	size_t ignored = 0;
 	return sizeof_type(type, &ignored);
 }
 
+OBJC_PUBLIC
 const char *objc_skip_argspec(const char *type)
 {
 	type = objc_skip_typespec(type);
@@ -359,6 +362,7 @@ static const char *alignof_type(const char *type, size_t *align)
 	return NULL;
 }
 
+OBJC_PUBLIC
 size_t objc_sizeof_type(const char *type)
 {
 	size_t size = 0;
@@ -366,6 +370,7 @@ size_t objc_sizeof_type(const char *type)
 	return size / 8;
 }
 
+OBJC_PUBLIC
 size_t objc_alignof_type (const char *type)
 {
 	size_t align = 0;
@@ -373,6 +378,7 @@ size_t objc_alignof_type (const char *type)
 	return align / 8;
 }
 
+OBJC_PUBLIC
 size_t objc_aligned_size(const char *type)
 {
 	size_t size  = objc_sizeof_type(type);
@@ -380,12 +386,14 @@ size_t objc_aligned_size(const char *type)
 	return size + (size % align);
 }
 
+OBJC_PUBLIC
 size_t objc_promoted_size(const char *type)
 {
 	size_t size = objc_sizeof_type(type);
 	return size + (size % sizeof(void*));
 }
 
+OBJC_PUBLIC
 void method_getReturnType(Method method, char *dst, size_t dst_len)
 {
 	if (NULL == method) { return; }
@@ -403,13 +411,14 @@ void method_getReturnType(Method method, char *dst, size_t dst_len)
 	}
 }
 
+OBJC_PUBLIC
 const char *method_getTypeEncoding(Method method)
 {
 	if (NULL == method) { return NULL; }
 	return sel_getType_np(method->selector);
 }
 
-
+OBJC_PUBLIC
 void method_getArgumentType(Method method,
                             unsigned int index,
                             char *dst,
@@ -437,6 +446,7 @@ void method_getArgumentType(Method method,
 	}
 }
 
+OBJC_PUBLIC
 unsigned method_getNumberOfArguments(Method method)
 {
 	if (NULL == method) { return 0; }
@@ -450,12 +460,13 @@ unsigned method_getNumberOfArguments(Method method)
 	return count - 1;
 }
 
+OBJC_PUBLIC
 unsigned method_get_number_of_arguments(struct objc_method *method)
 {
 	return method_getNumberOfArguments(method);
 }
 
-
+OBJC_PUBLIC
 char* method_copyArgumentType(Method method, unsigned int index)
 {
 	if (NULL == method) { return NULL; }
@@ -467,12 +478,14 @@ char* method_copyArgumentType(Method method, unsigned int index)
 	return copyTypeEncoding(types);
 }
 
+OBJC_PUBLIC
 char* method_copyReturnType(Method method)
 {
 	if (NULL == method) { return NULL; }
 	return copyTypeEncoding(method_getTypeEncoding(method));
 }
 
+OBJC_PUBLIC
 unsigned objc_get_type_qualifiers (const char *type)
 {
 	unsigned flags = 0;
@@ -494,6 +507,7 @@ unsigned objc_get_type_qualifiers (const char *type)
 }
 
 // Note: The implementations of these functions is horrible.
+OBJC_PUBLIC
 void objc_layout_structure (const char *type,
                             struct objc_struct_layout *layout)
 {
@@ -525,6 +539,7 @@ static const char *layout_structure_callback(const char *type, struct objc_struc
 	return end;
 }
 
+OBJC_PUBLIC
 BOOL objc_layout_structure_next_member(struct objc_struct_layout *layout)
 {
 	const char *end = layout->type;
@@ -538,6 +553,7 @@ BOOL objc_layout_structure_next_member(struct objc_struct_layout *layout)
 	return layout->type != end;
 }
 
+OBJC_PUBLIC
 void objc_layout_structure_get_info (struct objc_struct_layout *layout,
                                      unsigned int *offset,
                                      unsigned int *align,
