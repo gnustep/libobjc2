@@ -291,9 +291,11 @@ if (ENABLE_OBJCXX)
 		if (NOT CXX_RUNTIME)
 			test_cxx(supc++ false)
 		endif (NOT CXX_RUNTIME)
-		# libc++abi does not currently work, don't try it.
 		if (NOT CXX_RUNTIME)
-			# test_cxx(c++abi false)
+			list (FIND CMAKE_CXX_IMPLICIT_LINK_LIBRARIES "c++" _libcxx_index)
+			if (${_libcxx_index} GREATER -1)
+				test_cxx(c++abi false)
+			endif()
 		endif (NOT CXX_RUNTIME)
 
 		# If we have a C++ ABI library, then we can produce a single libobjc that
@@ -325,6 +327,9 @@ if (ENABLE_OBJCXX)
 			MAIN_DEPENDENCY eh_trampoline.cc)
 		list(APPEND libobjc_ASM_SRCS eh_trampoline.s)
 		list(APPEND libobjc_CXX_SRCS objcxx_eh.cc)
+
+		# Find libm for linking, as some versions of libc++ don't link against it
+		find_library(M_LIBRARY m)
 	endif ()
 endif (ENABLE_OBJCXX)
 
@@ -375,6 +380,11 @@ endif ()
 # Explicitly link libgc if we are compiling with gc support.
 if (LIBGC)
 	target_link_libraries(objc ${LIBGC})
+endif ()
+
+# Explicitly link libm, as an implicit dependency of the C++ runtime
+if (M_LIBRARY)
+	target_link_libraries(objc ${M_LIBRARY})
 endif ()
 
 # Make weak symbols work on OS X
@@ -459,8 +469,18 @@ include (CPack)
 if (BOEHM_GC)
 	set(PC_REQUIRES_PRIVATE_BOEHM_GC "Requires.private: bdw-gc")
 endif ()
-if (ENABLE_OBJCXX AND NOT CXXRT_IS_STDLIB)
-	set(PC_LIBS_PRIVATE "Libs.private: -l${CXX_RUNTIME}")
+if (ENABLE_OBJCXX)
+	if (CXXRT_IS_STDLIB)
+		set(PC_LIBS_PRIVATE ${CMAKE_CXX_IMPLICIT_LINK_LIBRARIES})
+	else()
+		list(APPEND PC_LIBS_PRIVATE ${CXX_RUNTIME})
+		if (M_LIBRARY)
+			list(APPEND PC_LIBS_PRIVATE ${M_LIBRARY})
+		endif ()
+	endif()
+	list(REMOVE_DUPLICATES PC_LIBS_PRIVATE)
+	string(REPLACE  ";" " -l" PC_LIBS_PRIVATE "${PC_LIBS_PRIVATE}")
+	set(PC_LIBS_PRIVATE "Libs.private: -l${PC_LIBS_PRIVATE}")
 endif()
 
 configure_file("libobjc.pc.in" "libobjc.pc" @ONLY)

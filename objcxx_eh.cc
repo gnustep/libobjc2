@@ -292,6 +292,16 @@ namespace gnustep
 			                        unsigned outer) const;
 		};
 	}
+
+	static inline id dereference_thrown_object_pointer(void** obj) {
+		/* libc++-abi does not have  __is_pointer_p and won't do the double dereference 
+		 * required to get the object pointer. We need to do it ourselves if we have
+		 * caught an exception with libc++'s exception class. */
+		 if (cxx_exception_class == llvm_cxx_exception_class) {
+			 return **(id**)obj;
+		 }
+		 return *(id*)obj;
+	 }
 };
 
 
@@ -316,7 +326,7 @@ bool gnustep::libobjc::__objc_class_type_info::__do_catch(const type_info *throw
 	    || (AppleCompatibleMode && 
 	        dynamic_cast<const __objc_class_type_info*>(thrownType)))
 	{
-		thrown = *(id*)obj;
+		thrown = dereference_thrown_object_pointer(obj);
 		// nil only matches id catch handlers in Apple-compatible mode, or when thrown as an id
 		if (0 == thrown)
 		{
@@ -328,7 +338,7 @@ bool gnustep::libobjc::__objc_class_type_info::__do_catch(const type_info *throw
 	}
 	else if (dynamic_cast<const __objc_class_type_info*>(thrownType))
 	{
-		thrown = *(id*)obj;
+		thrown = dereference_thrown_object_pointer(obj);
 		found = isKindOfClass((Class)objc_getClass(thrownType->name()),
 		                      (Class)objc_getClass(name()));
 	}

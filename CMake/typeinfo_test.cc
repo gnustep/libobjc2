@@ -49,6 +49,9 @@ class type_info2 : public std::type_info
 	virtual bool __do_catch(const type_info *thrown_type,
 	                        void **thrown_object,
 	                        unsigned outer) const { return true; }
+	virtual bool __do_upcast(
+					const __class_type_info *target,
+					void **thrown_object) const { return true; };
 };
 bool type_info2::__is_pointer_p() const { return true; }
 
