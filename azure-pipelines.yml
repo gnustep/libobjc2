@@ -7,20 +7,36 @@ jobs:
       matrix:
         Debug:
           BuildType: Debug
+          StdLib: libstdc++
+          CxxFlags: ""
         Release:
           BuildType: Release
+          StdLib: libstdc++
+          CxxFlags: ""
+        Debug-libc++:
+          BuildType: Debug
+          StdLib: libc++
+          CxxFlags: "-stdlib=libc++"
+        Release-libc++:
+          BuildType: Release
+          StdLib: libc++
+          CxxFlags: "-stdlib=libc++"
     steps:
     - checkout: self
       submodules: true
     - script: |
         sudo add-apt-repository "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-8 main"
         sudo apt-get update
-        sudo apt-get install -y ninja-build
-        sudo apt-get install -y clang-8
+        sudo apt-get install -y ninja-build clang-8
+        if [ "$(StdLib)" = "libc++" ]; then
+          sudo apt-get install -qy libc++-8-dev libc++abi-8-dev
+        fi
+      displayName: Install Dependencies
 
     - task: CMake@1
+      displayName: Generate Build Scripts
       inputs:
-        cmakeArgs: '.. -GNinja -DCMAKE_BUILD_TYPE=$(BuildType) -DTESTS=ON -DCMAKE_CXX_COMPILER=clang++-8 -DCMAKE_C_COMPILER=clang-8'
+        cmakeArgs: '.. -GNinja -DCMAKE_BUILD_TYPE=$(BuildType) -DTESTS=ON -DCMAKE_CXX_COMPILER=clang++-8 -DCMAKE_C_COMPILER=clang-8 -DCMAKE_CXX_FLAGS="$(CxxFlags)"'
 
     - script: |
         ninja
@@ -32,6 +48,7 @@ jobs:
     - script: |
         ctest -j 4 --output-on-failure -T test
 
+      displayName: 'Test'
       workingDirectory: build
       failOnStderr: false
     - task: PublishTestResults@2
