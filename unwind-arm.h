@@ -1,5 +1,9 @@
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * ARM-specific unwind definitions.  These are taken from the ARM EHABI
  * specification.
@@ -207,3 +211,7 @@ _Unwind_Reason_Code name(_Unwind_State state,\
   (dst)->barrier_cache = (src)->barrier_cache; \
   (dst)->cleanup_cache = (src)->cleanup_cache; \
   (dst)->pr_cache = (src)->pr_cache;
+
+#ifdef __cplusplus
+}
+#endif
