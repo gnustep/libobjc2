@@ -79,12 +79,12 @@ set(libBlocksRuntime_COMPATIBILITY_HDRS
 	Block.h
 	Block_private.h
 	)
-# Windows does not use DWARF EH
-if (WIN32)
+# Windows MSVC does not use DWARF EH
+if (MSVC)
 	list(APPEND libobjc_CXX_SRCS eh_win32_msvc.cc)
 else ()
 	list(APPEND libobjc_C_SRCS eh_personality.c)
-endif (WIN32)
+endif (MSVC)
 
 if (NOT EXISTS "${CMAKE_SOURCE_DIR}/third_party/robin-map/include/tsl/robin_map.h")
 	message(FATAL_ERROR "Git submodules not present, please run:\n\n"
@@ -279,7 +279,7 @@ endif()
 
 
 if (ENABLE_OBJCXX)
-	if (WIN32)
+	if (MSVC)
 		message(STATUS "Using MSVC-compatible exception model")
 	else ()
 		message(STATUS "Testing C++ interop")
@@ -322,8 +322,11 @@ if (ENABLE_OBJCXX)
 		if (CMAKE_CXX_COMPILER_TARGET)
 			list(APPEND EH_PERSONALITY_FLAGS "${CMAKE_CXX_COMPILE_OPTIONS_TARGET}${CMAKE_CXX_COMPILER_TARGET}")
 		endif ()
+		if (NOT WIN32)
+			list(APPEND EH_PERSONALITY_FLAGS "-fPIC")
+		endif ()
 		add_custom_command(OUTPUT eh_trampoline.s
-			COMMAND ${CMAKE_CXX_COMPILER} ARGS ${EH_PERSONALITY_FLAGS} -fPIC -S "${CMAKE_SOURCE_DIR}/eh_trampoline.cc" -o - -fexceptions -fno-inline | sed "s/__gxx_personality_v0/test_eh_personality/g" > "${CMAKE_BINARY_DIR}/eh_trampoline.s"
+			COMMAND ${CMAKE_CXX_COMPILER} ARGS ${EH_PERSONALITY_FLAGS} -S "${CMAKE_SOURCE_DIR}/eh_trampoline.cc" -o - -fexceptions -fno-inline | sed "s/__gxx_personality_v0/test_eh_personality/g" > "${CMAKE_BINARY_DIR}/eh_trampoline.s"
 			MAIN_DEPENDENCY eh_trampoline.cc)
 		list(APPEND libobjc_ASM_SRCS eh_trampoline.s)
 		list(APPEND libobjc_CXX_SRCS objcxx_eh.cc)
