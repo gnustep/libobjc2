@@ -553,15 +553,19 @@ static inline _Unwind_Reason_Code internal_objc_personality(int version,
 	return _URC_INSTALL_CONTEXT;
 }
 
+OBJC_PUBLIC
 BEGIN_PERSONALITY_FUNCTION(__gnu_objc_personality_v0)
 	return internal_objc_personality(version, actions, exceptionClass,
 			exceptionObject, context, NO);
 }
+
+OBJC_PUBLIC
 BEGIN_PERSONALITY_FUNCTION(__gnustep_objc_personality_v0)
 	return internal_objc_personality(version, actions, exceptionClass,
 			exceptionObject, context, YES);
 }
 
+OBJC_PUBLIC
 BEGIN_PERSONALITY_FUNCTION(__gnustep_objcxx_personality_v0)
 #ifndef NO_OBJCXX
 	if (cxx_exception_class == 0)
@@ -593,7 +597,7 @@ BEGIN_PERSONALITY_FUNCTION(__gnustep_objcxx_personality_v0)
 }
 
 #if defined(__SEH__) && !defined(__USING_SJLJ_EXCEPTIONS__)
-EXCEPTION_DISPOSITION
+OBJC_PUBLIC EXCEPTION_DISPOSITION
 __gnu_objc_personality_seh0(PEXCEPTION_RECORD ms_exc, void *this_frame,
 		PCONTEXT ms_orig_context, PDISPATCHER_CONTEXT ms_disp)
 {
