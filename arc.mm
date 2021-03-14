@@ -238,12 +238,14 @@ static const size_t weak_mask = ((size_t)1)<<((sizeof(size_t)*8)-refcount_shift)
  * All of the bits other than the top bit are the real reference count.
  */
 static const size_t refcount_mask = ~weak_mask;
+static const size_t refcount_max = refcount_mask - 1;
 
 extern "C" OBJC_PUBLIC size_t object_getRetainCount_np(id obj)
 {
 	uintptr_t *refCount = ((uintptr_t*)obj) - 1;
 	uintptr_t refCountVal = __sync_fetch_and_add(refCount, 0);
-	return (((size_t)refCountVal) & refcount_mask) + 1;
+	size_t realCount = refCountVal & refcount_mask;
+	return realCount == refcount_mask ? 0 : realCount + 1;
 }
 
 extern "C" OBJC_PUBLIC id objc_retain_fast_np(id obj)
@@ -268,12 +270,12 @@ extern "C" OBJC_PUBLIC id objc_retain_fast_np(id obj)
 		// If the serialisation happens the other way, then the locked
 		// check of the reference count will happen after we've referenced
 		// this and we don't zero the references or deallocate.
-		if (realCount < 0)
+		if (realCount == refcount_mask)
 		{
 			return nil;
 		}
 		// If the reference count is saturated, don't increment it.
-		if (realCount == refcount_mask)
+		if (realCount == refcount_max)
 		{
 			return obj;
 		}
@@ -329,8 +331,8 @@ extern "C" OBJC_PUBLIC BOOL objc_release_fast_no_destroy_np(id obj)
 	do {
 		refCountVal = newVal;
 		size_t realCount = refCountVal & refcount_mask;
-		// If the reference count is saturated, don't decrement it.
-		if (realCount == refcount_mask)
+		// If the reference count is saturated or deallocating, don't decrement it.
+		if (realCount >= refcount_max)
 		{
 			return NO;
 		}
@@ -341,8 +343,7 @@ extern "C" OBJC_PUBLIC BOOL objc_release_fast_no_destroy_np(id obj)
 		uintptr_t updated = (uintptr_t)realCount;
 		newVal = __sync_val_compare_and_swap(refCount, refCountVal, updated);
 	} while (newVal != refCountVal);
-	// We allow refcounts to run into the negative, but should only
-	// deallocate once.
+	
 	if (shouldFree)
 	{
 		if (isWeak)
@@ -761,7 +762,7 @@ static BOOL setObjectHasWeakRefs(id obj)
 				size_t realCount = refCountVal & refcount_mask;
 				// If this object has already been deallocated (or is in the
 				// process of being deallocated) then don't bother storing it.
-				if (realCount < 0)
+				if (realCount == refcount_mask)
 				{
 					obj = nil;
 					cls = Nil;
@@ -848,16 +849,11 @@ extern "C" OBJC_PUBLIC BOOL objc_delete_weak_refs(id obj)
 	LOCK_FOR_SCOPE(&weakRefLock);
 	if (objc_test_class_flag(classForObject(obj), objc_class_flag_fast_arc))
 	{
-		// If another thread has done a load of a weak reference, then it will
-		// have incremented the reference count with the lock held.  It may
-		// have done so in between this thread's decrementing the reference
-		// count and its acquiring the lock.  In this case, report failure.
+		// Don't proceed if the object isn't deallocating.
 		uintptr_t *refCount = ((uintptr_t*)obj) - 1;
-		// Reconstruct the sign bit.  We don't need to do this on any other 
-		// operations, because even on increment the overflow will be correct
-		// after truncation.
-		uintptr_t refCountVal = (__sync_fetch_and_add(refCount, 0) & refcount_mask) << refcount_shift;
-		if ((((intptr_t)refCountVal) >> refcount_shift) >= 0)
+		uintptr_t refCountVal = __sync_fetch_and_add(refCount, 0);
+		size_t realCount = refCountVal & refcount_mask;
+		if (realCount != refcount_mask)
 		{
 			return NO;
 		}
