@@ -21,6 +21,24 @@
 #endif
 
 void test_cxx_eh_implementation();
+/**
+ * The Itanium C++ public structure for in-flight exception status.
+ */
+struct __cxa_eh_globals
+{
+	/**
+	 * The head exception object.  By convention, this is actually the end of
+	 * the `__cxa_exception` structure and points to the address of the thrown
+	 * object.  This is either an `id*` or a pointer to a C++ type that we're
+	 * not going to look at.
+	 */
+	struct __cxa_exception *caughtExceptions;
+	/**
+	 * The number of in-flight exceptions thrown.
+	 */
+	unsigned int uncaughtExceptions;
+};
+
 
 // Weak references to C++ runtime functions.  We don't bother testing that
 // these are 0 before calling them, because if they are not resolved then we
@@ -28,6 +46,7 @@ void test_cxx_eh_implementation();
 __attribute__((weak)) void *__cxa_begin_catch(void *e);
 __attribute__((weak)) void __cxa_end_catch(void);
 __attribute__((weak)) void __cxa_rethrow(void);
+__attribute__((weak)) struct __cxa_eh_globals *__cxa_get_globals(void);
 
 
 /**
@@ -93,7 +112,6 @@ enum exception_type
 struct thread_data
 {
 	enum exception_type current_exception_type;
-	id lastThrownObject;
 	BOOL cxxCaughtException;
 	struct objc_exception *caughtExceptions;
 };
@@ -194,20 +212,15 @@ void objc_exception_rethrow(struct _Unwind_Exception *e);
 void objc_exception_throw(id object)
 {
 	struct thread_data *td = get_thread_data();
-	fprintf(stderr, "Throwing %p, in flight exception: %p\n", object, td->lastThrownObject);
-	fprintf(stderr, "Exception caught by C++: %d\n", td->cxxCaughtException);
 	// If C++ caught the exception, then we may need to make C++ rethrow it if
 	// we want to preserve exception state.  Rethrows should be handled with
 	// objc_exception_rethrow, but clang appears to do the wrong thing for some
 	// cases.
 	if (td->cxxCaughtException)
 	{
-		// For catchalls, we may result in our being passed the pointer to the
-		// object, not the object.
-		if ((object == td->lastThrownObject) ||
-			((object != nil) &&
-			 !isSmallObject(object) &&
-			 (*(id*)object == td->lastThrownObject)))
+		struct __cxa_eh_globals *globals = __cxa_get_globals();
+		if ((globals->caughtExceptions != NULL) &&
+		    (*(id*)globals->caughtExceptions == object))
 		{
 			__cxa_rethrow();
 		}
@@ -233,7 +246,6 @@ void objc_exception_throw(id object)
 
 	ex->object = object;
 
-	td->lastThrownObject = object;
 	td->cxxCaughtException = NO;
 
 	_Unwind_Reason_Code err = _Unwind_RaiseException(&ex->unwindHeader);

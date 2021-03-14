@@ -141,6 +141,7 @@ addtest_variants("CXXExceptions" "CXXException.m;CXXException.cc" true)
 addtest_variants("ForwardDeclareProtocolAccess" "ForwardDeclareProtocolAccess.m;ForwardDeclareProtocol.m" true)
 if (ENABLE_OBJCXX)
 	addtest_variants(ObjCXXEHInterop "ObjCXXEHInterop.mm;ObjCXXEHInterop.m" true)
+	addtest_variants(ObjCXXEHInteropTwice "ObjCXXEHInteropTwice.mm" true)
 	# This test is failing on Win32, but not for any obvious reason.  Disable
 	# it for now to keep CI happy.
 	if (WIN32)
