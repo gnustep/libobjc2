@@ -194,8 +194,8 @@ void objc_exception_rethrow(struct _Unwind_Exception *e);
 void objc_exception_throw(id object)
 {
 	struct thread_data *td = get_thread_data();
-	fprintf(stderr, "Throwing %p, in flight exception: %p\n", object, td->lastThrownObject);
-	fprintf(stderr, "Exception caught by C++: %d\n", td->cxxCaughtException);
+	DEBUG_LOG("Throwing %p, in flight exception: %p\n", object, td->lastThrownObject);
+	DEBUG_LOG("Exception caught by C++: %d\n", td->cxxCaughtException);
 	// If C++ caught the exception, then we may need to make C++ rethrow it if
 	// we want to preserve exception state.  Rethrows should be handled with
 	// objc_exception_rethrow, but clang appears to do the wrong thing for some
