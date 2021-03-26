@@ -1150,6 +1150,14 @@ id object_getPrototype_np(id object);
 OBJC_PUBLIC
 int objc_set_apple_compatible_objcxx_exceptions(int newValue) OBJC_NONPORTABLE;
 
+/** 
+ * This function is inserted by the compiler when a mutation is detected during
+ * a foreach iteration. It is exported as a weak symbol to enable GNUstep or
+ * some other framework to replace it trivially.
+ */
+OBJC_PUBLIC
+void __attribute__((weak)) objc_enumerationMutation(id obj);
+
 
 #define _C_ID       '@'
 #define _C_CLASS    '#'
