@@ -218,7 +218,7 @@ void objc_exception_rethrow(struct _Unwind_Exception *e);
  * rethrowing caught exceptions too, even in @finally() blocks.  Unfortunately,
  * this means that we have some problems if the exception is boxed.
  */
-void objc_exception_throw(id object)
+OBJC_PUBLIC void objc_exception_throw(id object)
 {
 	struct thread_data *td = get_thread_data();
 	DEBUG_LOG("Throwing %p, in flight exception: %p\n", object, td->lastThrownObject);
