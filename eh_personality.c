@@ -199,7 +199,7 @@ void objc_exception_rethrow(struct _Unwind_Exception *e);
  * rethrowing caught exceptions too, even in @finally() blocks.  Unfortunately,
  * this means that we have some problems if the exception is boxed.
  */
-void objc_exception_throw(id object)
+OBJC_PUBLIC void objc_exception_throw(id object)
 {
 	struct thread_data *td = get_thread_data();
 	DEBUG_LOG("Throwing %p, in flight exception: %p\n", object, td->lastThrownObject);
@@ -543,9 +543,9 @@ static inline _Unwind_Reason_Code internal_objc_personality(int version,
 		}
 	}
 
-	_Unwind_SetIP(context, (unsigned long)action.landing_pad);
+	_Unwind_SetIP(context, (uintptr_t)action.landing_pad);
 	_Unwind_SetGR(context, __builtin_eh_return_data_regno(0), 
-			(unsigned long)(isNew ? exceptionObject : object));
+			(uintptr_t)(isNew ? exceptionObject : object));
 	_Unwind_SetGR(context, __builtin_eh_return_data_regno(1), selector);
 
 	DEBUG_LOG("Installing context, selector %d\n", (int)selector);
@@ -606,7 +606,7 @@ __gnu_objc_personality_seh0(PEXCEPTION_RECORD ms_exc, void *this_frame,
 }
 #endif
 
-id objc_begin_catch(struct _Unwind_Exception *exceptionObject)
+OBJC_PUBLIC id objc_begin_catch(struct _Unwind_Exception *exceptionObject)
 {
 	struct thread_data *td = get_thread_data();
 	DEBUG_LOG("Beginning catch %p\n", exceptionObject);
@@ -678,7 +678,7 @@ id objc_begin_catch(struct _Unwind_Exception *exceptionObject)
 	return (id)((char*)exceptionObject + sizeof(struct _Unwind_Exception));
 }
 
-void objc_end_catch(void)
+OBJC_PUBLIC void objc_end_catch(void)
 {
 	struct thread_data *td = get_thread_data_fast();
 	// If this is a boxed foreign exception then the boxing class is
@@ -724,7 +724,7 @@ void objc_end_catch(void)
 	}
 }
 
-void objc_exception_rethrow(struct _Unwind_Exception *e)
+OBJC_PUBLIC void objc_exception_rethrow(struct _Unwind_Exception *e)
 {
 	struct thread_data *td = get_thread_data_fast();
 	// If this is an Objective-C exception, then 
