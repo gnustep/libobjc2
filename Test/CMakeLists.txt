@@ -27,6 +27,7 @@ set(TESTS
 	Category.m
 	ExceptionTest.m
 	FastARC.m
+	FastRefCount.m
 	Forward.m
 	ManyManySelectors.m
 	NestedExceptions.m
