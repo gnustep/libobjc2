@@ -13,6 +13,7 @@
 
 EXCEPTION_DISPOSITION _GCC_specific_handler(PEXCEPTION_RECORD, void *, PCONTEXT,
                                             PDISPATCHER_CONTEXT, void *);
+DECLARE_PERSONALITY_FUNCTION(test_eh_personality_internal);
 #endif
 
 #ifndef DEBUG_EXCEPTIONS
@@ -192,7 +193,7 @@ static void cleanup(_Unwind_Reason_Code reason, struct _Unwind_Exception *e)
 					*/
 }
 
-void objc_exception_rethrow(struct _Unwind_Exception *e);
+OBJC_PUBLIC void objc_exception_rethrow(struct _Unwind_Exception *e);
 
 /**
  * Throws an Objective-C exception.  This function is, unfortunately, used for
@@ -603,6 +604,13 @@ __gnu_objc_personality_seh0(PEXCEPTION_RECORD ms_exc, void *this_frame,
 {
 	return _GCC_specific_handler(ms_exc, this_frame, ms_orig_context, ms_disp,
 			__gnustep_objc_personality_v0);
+}
+PRIVATE EXCEPTION_DISPOSITION
+test_eh_personality(PEXCEPTION_RECORD ms_exc, void *this_frame,
+		PCONTEXT ms_orig_context, PDISPATCHER_CONTEXT ms_disp)
+{
+	return _GCC_specific_handler(ms_exc, this_frame, ms_orig_context, ms_disp,
+			test_eh_personality_internal);
 }
 #endif
 
