@@ -79,8 +79,12 @@ struct _Unwind_Exception
   {
     uint64_t exception_class;
     _Unwind_Exception_Cleanup_Fn exception_cleanup;
+#ifdef __SEH__
+    uintptr_t private_[6];
+#else
     uintptr_t private_1;
     uintptr_t private_2;
+#endif
   } __attribute__((__aligned__));
 
 extern _Unwind_Reason_Code _Unwind_RaiseException (struct _Unwind_Exception *);
@@ -164,9 +168,18 @@ _Unwind_Reason_Code name(int version,\
 
 #define CALL_PERSONALITY_FUNCTION(name) name(version, actions, exceptionClass, exceptionObject, context)
 
+#ifdef __SEH__
 #define COPY_EXCEPTION(dst, src) \
-  (dst)->private_1 = (src)->private_1; \
-  (dst)->private_2 = (src)->private_2;
+  do {                                                                 \
+    memcpy((dst)->private_, (src)->private_, sizeof((src)->private_)); \
+  } while(0)
+#else
+#define COPY_EXCEPTION(dst, src) \
+  do {                                   \
+    (dst)->private_1 = (src)->private_1; \
+    (dst)->private_2 = (src)->private_2; \
+  } while(0)
+#endif
 
 #ifdef __cplusplus
 }

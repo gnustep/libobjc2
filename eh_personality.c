@@ -400,7 +400,10 @@ static inline _Unwind_Reason_Code internal_objc_personality(int version,
 #ifndef NO_OBJCXX
 	if (cxx_exception_class == 0)
 	{
+#ifndef __SEH__
+		// FIXME: This is currently broken with MinGW
 		test_cxx_eh_implementation();
+#endif
 	}
 
 	if (exceptionClass == cxx_exception_class)
@@ -582,11 +585,11 @@ BEGIN_PERSONALITY_FUNCTION(__gnustep_objcxx_personality_v0)
 		}
 		// We now have two copies of the _Unwind_Exception object (which stores
 		// state for the unwinder) in flight.  Make sure that they're in sync.
-		COPY_EXCEPTION(ex->cxx_exception, exceptionObject)
+		COPY_EXCEPTION(ex->cxx_exception, exceptionObject);
 		exceptionObject = ex->cxx_exception;
 		exceptionClass = cxx_exception_class;
 		int ret = CALL_PERSONALITY_FUNCTION(__gxx_personality_v0);
-		COPY_EXCEPTION(exceptionObject, ex->cxx_exception)
+		COPY_EXCEPTION(exceptionObject, ex->cxx_exception);
 		if (ret == _URC_INSTALL_CONTEXT)
 		{
 			get_thread_data()->cxxCaughtException = YES;
