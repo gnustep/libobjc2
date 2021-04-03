@@ -222,7 +222,7 @@ namespace gnustep
 		/**
 		 * Superclass for the type info for Objective-C exceptions.
 		 */
-		struct __objc_type_info : std::type_info
+		struct OBJC_PUBLIC __objc_type_info : std::type_info
 		{
 			/**
 			 * Constructor that sets the name.
@@ -270,7 +270,7 @@ namespace gnustep
 		/**
 		 * Singleton type info for the `id` type.
 		 */
-		struct __objc_id_type_info : __objc_type_info
+		struct OBJC_PUBLIC __objc_id_type_info : __objc_type_info
 		{
 			/**
 			 * The `id` type is mangled to `@id`, which is not a valid mangling
@@ -282,7 +282,7 @@ namespace gnustep
 			                        void **obj,
 			                        unsigned outer) const;
 		};
-		struct __objc_class_type_info : __objc_type_info
+		struct OBJC_PUBLIC __objc_class_type_info : __objc_type_info
 		{
 			virtual ~__objc_class_type_info();
 			virtual bool __do_catch(const type_info *thrownType,
@@ -452,7 +452,11 @@ PRIVATE void cxx_throw()
  */
 extern "C"
 PRIVATE
+#ifdef __SEH__
+BEGIN_PERSONALITY_FUNCTION(test_eh_personality_internal)
+#else
 BEGIN_PERSONALITY_FUNCTION(test_eh_personality)
+#endif
 	// Don't bother with a mutex here.  It doesn't matter if two threads set
 	// these values at the same time.
 	if (!done_setup)

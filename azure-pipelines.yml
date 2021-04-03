@@ -121,49 +121,94 @@ jobs:
       inputs:
           testResultsFormat: cTest
           testResultsFiles: build/Testing/*/Test.xml
+
   - job: Windows
     displayName: Windows-2016
     pool:
       vmImage: vs2017-win2016
     strategy:
       matrix:
-        Debug-32:
+        MSVC-Debug-32:
           BuildType: Debug
           Arch: x64_x86
           Flags: -m32
-        Release-32:
+        MSVC-Release-32:
           BuildType: Release
           Arch: x64_x86
           Flags: -m32
-        Debug-64:
+        MSVC-Debug-64:
           BuildType: Debug
           Arch: x64
           Flags: -m64
-        Release-64:
+        MSVC-Release-64:
           BuildType: Release
           Arch: x64
           Flags: -m64
+        MinGW-Debug-32:
+          BuildType: Debug
+          Arch: i686
+          MSYSTEM: mingw32
+          LinkerFlags: -fuse-ld=lld
+        MinGW-Release-32:
+          BuildType: Release
+          Arch: i686
+          MSYSTEM: mingw32
+          LinkerFlags: -fuse-ld=lld
+        MinGW-Debug-64:
+          BuildType: Debug
+          Arch: x86_64
+          MSYSTEM: mingw64
+          LinkerFlags: -fuse-ld=lld
+        MinGW-Release-64:
+          BuildType: Release
+          Arch: x86_64
+          MSYSTEM: mingw64
+          LinkerFlags: -fuse-ld=lld
+    variables:
+      Flags:
+      LinkerFlags:
+      MSYS2_ROOT: $(System.Workfolder)\msys64
+      MinGW_Shell: '%MSYS2_ROOT%\msys2_shell.cmd -defterm -no-start -%MSYSTEM% -full-path -here -c'
     steps:
     - checkout: self
       submodules: true
     - script: |
-        choco.exe install ninja
-        choco.exe install llvm
-
-
+        IF DEFINED MSYSTEM (
+          echo Installing MSYS2...
+          choco.exe install --no-progress --params="/InstallDir:$(MSYS2_ROOT)" msys2
+          echo Installing packages...
+          $(MSYS2_ROOT)\usr\bin\pacman --noconfirm --needed -S ^
+            mingw-w64-$(Arch)-cmake ^
+            mingw-w64-$(Arch)-ninja ^
+            mingw-w64-$(Arch)-clang ^
+            mingw-w64-$(Arch)-lld
+          echo Setting PATH for subsequent tasks...
+          echo "##vso[task.setvariable variable=PATH]$(MSYS2_ROOT)\$(MSYSTEM)\bin;%PATH%"
+        ) else (
+          choco.exe install --no-progress ninja
+          choco.exe install --no-progress llvm
+        )
+      displayName: 'Install Dependencies'
 
     - script: |
         echo Creating build directory...
         mkdir build
         cd build
-        echo Importing visual studio environment variables...
-        call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvars64.bat" $(Arch)
-        echo Checking that we're calling the correct link.exe
-        where link.exe
+        IF DEFINED MSYSTEM (
+          set CC=clang
+          set CXX=clang++
+        ) else (
+          echo Importing visual studio environment variables...
+          call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvars64.bat" $(Arch)
+          echo Checking that we're calling the correct link.exe
+          where link.exe
+          set "CC=C:/Program Files/LLVM/bin/clang-cl.exe"
+          set "CXX=C:/Program Files/LLVM/bin/clang-cl.exe"
+        )
         set CFLAGS=$(Flags)
         set CXXFLAGS=$(Flags)
         echo Running cmake...
-        cmake .. -G Ninja -DTESTS=ON -DCMAKE_C_COMPILER="c:/Program Files/LLVM/bin/clang-cl.exe" -DCMAKE_CXX_COMPILER="c:/Program Files/LLVM/bin/clang-cl.exe" -DCMAKE_BUILD_TYPE=$(BuildType)
+        cmake .. -G Ninja -DTESTS=ON -DCMAKE_C_COMPILER="%CC%" -DCMAKE_CXX_COMPILER="%CXX%" -DCMAKE_BUILD_TYPE=$(BuildType) -DCMAKE_SHARED_LINKER_FLAGS=$(LinkerFlags) -DCMAKE_EXE_LINKER_FLAGS=$(LinkerFlags)
         echo CMake completed.
 
       failOnStderr: false
@@ -171,11 +216,16 @@ jobs:
 
     - script: |
         cd build
-        echo Importing visual studio environment variables...
-        call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvars64.bat" $(Arch)
-        set CCC_OVERRIDE_OPTIONS=x-TC x-TP x/TC x/TP
-        echo Running ninja...
-        ninja
+        IF DEFINED MSYSTEM (
+          echo Running ninja...
+          $(MinGW_Shell) "ninja"
+        ) else (
+          echo Importing visual studio environment variables...
+          call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvars64.bat" $(Arch)
+          set CCC_OVERRIDE_OPTIONS=x-TC x-TP x/TC x/TP
+          echo Running ninja...
+          ninja
+        )
         echo Ninja completed.
 
       failOnStderr: false

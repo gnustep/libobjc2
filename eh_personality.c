@@ -7,6 +7,15 @@
 #include "class.h"
 #include "objcxx_eh.h"
 
+#if defined(__SEH__) && !defined(__USING_SJLJ_EXCEPTIONS__)
+#include <windows.h>
+#include <winnt.h>
+
+EXCEPTION_DISPOSITION _GCC_specific_handler(PEXCEPTION_RECORD, void *, PCONTEXT,
+                                            PDISPATCHER_CONTEXT, void *);
+DECLARE_PERSONALITY_FUNCTION(test_eh_personality_internal);
+#endif
+
 #ifndef DEBUG_EXCEPTIONS
 #define DEBUG_LOG(...)
 #else
@@ -184,14 +193,14 @@ static void cleanup(_Unwind_Reason_Code reason, struct _Unwind_Exception *e)
 					*/
 }
 
-void objc_exception_rethrow(struct _Unwind_Exception *e);
+OBJC_PUBLIC void objc_exception_rethrow(struct _Unwind_Exception *e);
 
 /**
  * Throws an Objective-C exception.  This function is, unfortunately, used for
  * rethrowing caught exceptions too, even in @finally() blocks.  Unfortunately,
  * this means that we have some problems if the exception is boxed.
  */
-void objc_exception_throw(id object)
+OBJC_PUBLIC void objc_exception_throw(id object)
 {
 	struct thread_data *td = get_thread_data();
 	DEBUG_LOG("Throwing %p, in flight exception: %p\n", object, td->lastThrownObject);
@@ -391,7 +400,10 @@ static inline _Unwind_Reason_Code internal_objc_personality(int version,
 #ifndef NO_OBJCXX
 	if (cxx_exception_class == 0)
 	{
+#ifndef __SEH__
+		// FIXME: This is currently broken with MinGW
 		test_cxx_eh_implementation();
+#endif
 	}
 
 	if (exceptionClass == cxx_exception_class)
@@ -535,9 +547,9 @@ static inline _Unwind_Reason_Code internal_objc_personality(int version,
 		}
 	}
 
-	_Unwind_SetIP(context, (unsigned long)action.landing_pad);
+	_Unwind_SetIP(context, (uintptr_t)action.landing_pad);
 	_Unwind_SetGR(context, __builtin_eh_return_data_regno(0), 
-			(unsigned long)(isNew ? exceptionObject : object));
+			(uintptr_t)(isNew ? exceptionObject : object));
 	_Unwind_SetGR(context, __builtin_eh_return_data_regno(1), selector);
 
 	DEBUG_LOG("Installing context, selector %d\n", (int)selector);
@@ -545,15 +557,19 @@ static inline _Unwind_Reason_Code internal_objc_personality(int version,
 	return _URC_INSTALL_CONTEXT;
 }
 
+OBJC_PUBLIC
 BEGIN_PERSONALITY_FUNCTION(__gnu_objc_personality_v0)
 	return internal_objc_personality(version, actions, exceptionClass,
 			exceptionObject, context, NO);
 }
+
+OBJC_PUBLIC
 BEGIN_PERSONALITY_FUNCTION(__gnustep_objc_personality_v0)
 	return internal_objc_personality(version, actions, exceptionClass,
 			exceptionObject, context, YES);
 }
 
+OBJC_PUBLIC
 BEGIN_PERSONALITY_FUNCTION(__gnustep_objcxx_personality_v0)
 #ifndef NO_OBJCXX
 	if (cxx_exception_class == 0)
@@ -569,11 +585,11 @@ BEGIN_PERSONALITY_FUNCTION(__gnustep_objcxx_personality_v0)
 		}
 		// We now have two copies of the _Unwind_Exception object (which stores
 		// state for the unwinder) in flight.  Make sure that they're in sync.
-		COPY_EXCEPTION(ex->cxx_exception, exceptionObject)
+		COPY_EXCEPTION(ex->cxx_exception, exceptionObject);
 		exceptionObject = ex->cxx_exception;
 		exceptionClass = cxx_exception_class;
 		int ret = CALL_PERSONALITY_FUNCTION(__gxx_personality_v0);
-		COPY_EXCEPTION(exceptionObject, ex->cxx_exception)
+		COPY_EXCEPTION(exceptionObject, ex->cxx_exception);
 		if (ret == _URC_INSTALL_CONTEXT)
 		{
 			get_thread_data()->cxxCaughtException = YES;
@@ -584,7 +600,24 @@ BEGIN_PERSONALITY_FUNCTION(__gnustep_objcxx_personality_v0)
 	return CALL_PERSONALITY_FUNCTION(__gxx_personality_v0);
 }
 
-id objc_begin_catch(struct _Unwind_Exception *exceptionObject)
+#if defined(__SEH__) && !defined(__USING_SJLJ_EXCEPTIONS__)
+OBJC_PUBLIC EXCEPTION_DISPOSITION
+__gnu_objc_personality_seh0(PEXCEPTION_RECORD ms_exc, void *this_frame,
+		PCONTEXT ms_orig_context, PDISPATCHER_CONTEXT ms_disp)
+{
+	return _GCC_specific_handler(ms_exc, this_frame, ms_orig_context, ms_disp,
+			__gnustep_objc_personality_v0);
+}
+PRIVATE EXCEPTION_DISPOSITION
+test_eh_personality(PEXCEPTION_RECORD ms_exc, void *this_frame,
+		PCONTEXT ms_orig_context, PDISPATCHER_CONTEXT ms_disp)
+{
+	return _GCC_specific_handler(ms_exc, this_frame, ms_orig_context, ms_disp,
+			test_eh_personality_internal);
+}
+#endif
+
+OBJC_PUBLIC id objc_begin_catch(struct _Unwind_Exception *exceptionObject)
 {
 	struct thread_data *td = get_thread_data();
 	DEBUG_LOG("Beginning catch %p\n", exceptionObject);
@@ -656,7 +689,7 @@ id objc_begin_catch(struct _Unwind_Exception *exceptionObject)
 	return (id)((char*)exceptionObject + sizeof(struct _Unwind_Exception));
 }
 
-void objc_end_catch(void)
+OBJC_PUBLIC void objc_end_catch(void)
 {
 	struct thread_data *td = get_thread_data_fast();
 	// If this is a boxed foreign exception then the boxing class is
@@ -702,7 +735,7 @@ void objc_end_catch(void)
 	}
 }
 
-void objc_exception_rethrow(struct _Unwind_Exception *e)
+OBJC_PUBLIC void objc_exception_rethrow(struct _Unwind_Exception *e)
 {
 	struct thread_data *td = get_thread_data_fast();
 	// If this is an Objective-C exception, then 
