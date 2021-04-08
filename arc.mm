@@ -221,10 +221,6 @@ static IMP NewAutoreleasePool;
 static IMP DeleteAutoreleasePool;
 static IMP AutoreleaseAdd;
 
-extern BOOL FastARCRetain;
-extern BOOL FastARCRelease;
-extern BOOL FastARCAutorelease;
-
 static BOOL useARCAutoreleasePool;
 
 static const long refcount_shift = 1;
