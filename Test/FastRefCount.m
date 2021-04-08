@@ -2,6 +2,20 @@
 
 void direct_saturation_test();
 
+@interface TestWithDelloc : Test
+@end
+
+@implementation TestWithDelloc
+- (void)dealloc
+{
+	id obj = nil;
+	objc_storeStrong(&obj, self);
+	assert(obj == self);
+	assert(object_getRetainCount_np(obj) == 0);
+	[super dealloc];
+}
+@end
+
 int main()
 {
 	id obj = [Test new];
@@ -27,7 +41,7 @@ int main()
 		// Final release should prevent further retains and releases.
 		assert(objc_release_fast_no_destroy_np(obj) == YES);
 		assert(object_getRetainCount_np(obj) == 0);
-		assert(objc_retain_fast_np(obj) == nil);
+		assert(objc_retain_fast_np(obj) == obj);
 		assert(object_getRetainCount_np(obj) == 0);
 		assert(objc_release_fast_no_destroy_np(obj) == NO);
 		assert(object_getRetainCount_np(obj) == 0);
@@ -54,7 +68,11 @@ int main()
 		assert(objc_delete_weak_refs(obj) == YES);
 	}
 	
-	obj = object_dispose(obj);
+	object_dispose(obj);
+	// Check we can use strong references inside a dealloc method.
+	obj = [TestWithDelloc new];
+	[obj release];
+	obj = nil;
 	
 	direct_saturation_test();
 	return 0;

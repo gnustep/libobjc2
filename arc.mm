@@ -244,7 +244,7 @@ extern "C" OBJC_PUBLIC size_t object_getRetainCount_np(id obj)
 	return realCount == refcount_mask ? 0 : realCount + 1;
 }
 
-extern "C" OBJC_PUBLIC id objc_retain_fast_np(id obj)
+static id retain_fast(id obj, BOOL isWeak)
 {
 	uintptr_t *refCount = ((uintptr_t*)obj) - 1;
 	uintptr_t refCountVal = __sync_fetch_and_add(refCount, 0);
@@ -268,7 +268,7 @@ extern "C" OBJC_PUBLIC id objc_retain_fast_np(id obj)
 		// this and we don't zero the references or deallocate.
 		if (realCount == refcount_mask)
 		{
-			return nil;
+			return isWeak ? nil : obj;
 		}
 		// If the reference count is saturated, don't increment it.
 		if (realCount == refcount_max)
@@ -281,6 +281,11 @@ extern "C" OBJC_PUBLIC id objc_retain_fast_np(id obj)
 		newVal = __sync_val_compare_and_swap(refCount, refCountVal, updated);
 	} while (newVal != refCountVal);
 	return obj;
+}
+
+extern "C" OBJC_PUBLIC id objc_retain_fast_np(id obj)
+{
+	return retain_fast(obj, NO);
 }
 
 __attribute__((always_inline))
@@ -301,7 +306,7 @@ static inline BOOL isPersistentObject(id obj)
 	return objc_test_class_flag(obj->isa, objc_class_flag_permanent_instances);
 }
 
-static inline id retain(id obj)
+static inline id retain(id obj, BOOL isWeak)
 {
 	if (isPersistentObject(obj)) { return obj; }
 	Class cls = obj->isa;
@@ -312,7 +317,7 @@ static inline id retain(id obj)
 	}
 	if (objc_test_class_flag(cls, objc_class_flag_fast_arc))
 	{
-		return objc_retain_fast_np(obj);
+		return retain_fast(obj, isWeak);
 	}
 	return [obj retain];
 }
@@ -593,7 +598,7 @@ extern "C" OBJC_PUBLIC id objc_retainAutoreleasedReturnValue(id obj)
 extern "C" OBJC_PUBLIC id objc_retain(id obj)
 {
 	if (nil == obj) { return nil; }
-	return retain(obj);
+	return retain(obj, NO);
 }
 
 extern "C" OBJC_PUBLIC id objc_retainAutorelease(id obj)
@@ -604,7 +609,7 @@ extern "C" OBJC_PUBLIC id objc_retainAutorelease(id obj)
 extern "C" OBJC_PUBLIC id objc_retainAutoreleaseReturnValue(id obj)
 {
 	if (nil == obj) { return obj; }
-	return objc_autoreleaseReturnValue(retain(obj));
+	return objc_autoreleaseReturnValue(retain(obj, NO));
 }
 
 
@@ -912,7 +917,9 @@ extern "C" OBJC_PUBLIC id objc_loadWeakRetained(id* addr)
 	{
 		obj = _objc_weak_load(obj);
 	}
-	return objc_retain(obj);
+	// block_load_weak() or _objc_weak_load() can return nil
+	if (obj == nil) { return nil; }
+	return retain(obj, YES);
 }
 
 extern "C" OBJC_PUBLIC id objc_loadWeak(id* object)
