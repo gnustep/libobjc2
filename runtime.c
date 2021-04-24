@@ -244,8 +244,13 @@ Ivar * class_copyIvarList(Class cls, unsigned int *outCount)
 
 Method * class_copyMethodList(Class cls, unsigned int *outCount)
 {
+        if (outCount != NULL)
+                *outCount = 0x0;
+
 	CHECK_ARG(cls);
+
 	unsigned int count = 0;
+
 	Method *list;
 	struct objc_method_list *methods;
 
@@ -256,10 +261,12 @@ Method * class_copyMethodList(Class cls, unsigned int *outCount)
 			count += methods->count;
 		}
 	}
+
 	if (outCount != NULL)
 	{
 		*outCount = count;
 	}
+
 	if (count == 0)
 	{
 		return NULL;
