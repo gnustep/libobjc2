@@ -208,6 +208,11 @@ BOOL class_addProtocol(Class cls, Protocol *protocol)
 
 Ivar * class_copyIvarList(Class cls, unsigned int *outCount)
 {
+    if (outCount != NULL)
+    {
+        *outCount = 0x0;
+    }
+
 	CHECK_ARG(cls);
 	struct objc_ivar_list *ivarlist = NULL;
 	unsigned int count = 0;
@@ -244,13 +249,13 @@ Ivar * class_copyIvarList(Class cls, unsigned int *outCount)
 
 Method * class_copyMethodList(Class cls, unsigned int *outCount)
 {
-        if (outCount != NULL)
-                *outCount = 0x0;
+    if (outCount != NULL)
+    {
+        *outCount = 0x0;
+    }
 
 	CHECK_ARG(cls);
-
 	unsigned int count = 0;
-
 	Method *list;
 	struct objc_method_list *methods;
 
@@ -289,6 +294,11 @@ Method * class_copyMethodList(Class cls, unsigned int *outCount)
 
 Protocol*__unsafe_unretained* class_copyProtocolList(Class cls, unsigned int *outCount)
 {
+    if (outCount != NULL)
+    {
+        *outCount = 0x0;
+    }
+
 	CHECK_ARG(cls);
 	struct objc_protocol_list *protocolList = NULL;
 	struct objc_protocol_list *list;
