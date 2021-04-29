@@ -125,10 +125,6 @@ std::atomic<bool> done_setup;
  */
 std::atomic<ptrdiff_t> type_info_offset;
 /**
- * The offset of the reference count in a
- */
-std::atomic<ptrdiff_t> refcount_offset;
-/**
  * The size of the `_Unwind_Exception` (including padding) in a
  * `__cxa_exception`.
  */
@@ -459,32 +455,6 @@ BEGIN_PERSONALITY_FUNCTION(test_eh_personality)
 	{
 		uint64_t cls = __builtin_bswap64(exceptionClass);
 		type_info_offset = find_backwards(exceptionObject, &typeid(MagicValueHolder));
-#ifdef __LP64__
-		// On 64-bit platforms, the refcount is added to the front of the
-		// structure.
-		ptrdiff_t refcount_backwards_offset = type_info_offset - sizeof(uintptr_t);
-#else
-		// On 32-bit platforms, this should be immediately before the
-		// _Unwind_Exception in some spare padding, but libsupc++ puts it in
-		// the same place as for 64-bit.  Try the one that's definitely in the
-		// object first and then fall back to the other...
-		ptrdiff_t refcount_backwards_offset = -sizeof(uint32_t);
-		auto read_offset = [](void *obj, ptrdiff_t offset)
-			{
-				char *addr = reinterpret_cast<char*>(obj) + offset;
-				uintptr_t v = *reinterpret_cast<uintptr_t*>(addr);
-				return v;
-			};
-		if (read_offset(exceptionObject, refcount_backwards_offset) != 1)
-		{
-			refcount_backwards_offset = type_info_offset - sizeof(uintptr_t);
-		}
-		if (read_offset(exceptionObject, refcount_backwards_offset) != 1)
-		{
-			fprintf(stderr, "Unable to find refcount field\n");
-			abort();
-		}
-#endif
 		exception_struct_size = find_forwards(exceptionObject, MagicValueHolder::magic);
 		cxx_exception_class = exceptionClass;
 		done_setup = true;
