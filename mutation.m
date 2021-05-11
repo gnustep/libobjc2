@@ -7,7 +7,7 @@
 OBJC_PUBLIC
 void __attribute__((weak)) objc_enumerationMutation(id obj)
 {
-	fprintf(stderr, "Mutation occured during enumeration.");
+	fprintf(stderr, "Mutation occurred during enumeration.");
 	abort();
 }
 
