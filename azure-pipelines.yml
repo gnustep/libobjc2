@@ -144,30 +144,29 @@ jobs:
           BuildType: Release
           Arch: x64
           Flags: -m64
-        MinGW-Debug-32:
-          BuildType: Debug
-          Arch: i686
-          MSYSTEM: mingw32
-          LinkerFlags: -fuse-ld=lld
-        MinGW-Release-32:
-          BuildType: Release
-          Arch: i686
-          MSYSTEM: mingw32
-          LinkerFlags: -fuse-ld=lld
-        MinGW-Debug-64:
+        MSYS2-CLANG64-Debug-32:
           BuildType: Debug
           Arch: x86_64
-          MSYSTEM: mingw64
-          LinkerFlags: -fuse-ld=lld
-        MinGW-Release-64:
+          Flags: -m32
+          MSYSTEM: clang64
+        MSYS2-CLANG64-Release-32:
           BuildType: Release
           Arch: x86_64
-          MSYSTEM: mingw64
-          LinkerFlags: -fuse-ld=lld
+          Flags: -m32
+          MSYSTEM: clang64
+        MSYS2-CLANG64-Debug-64:
+          BuildType: Debug
+          Arch: x86_64
+          Flags: -m64
+          MSYSTEM: clang64
+        MSYS2-CLANG64-Release-64:
+          BuildType: Release
+          Arch: x86_64
+          Flags: -m64
+          MSYSTEM: clang64
     variables:
       Flags:
-      LinkerFlags:
-      MSYS2_ROOT: $(System.Workfolder)\msys64
+      MSYS2_ROOT: $(System.Workfolder)\msys2
       MinGW_Shell: '%MSYS2_ROOT%\msys2_shell.cmd -defterm -no-start -%MSYSTEM% -full-path -here -c'
     steps:
     - checkout: self
@@ -178,10 +177,9 @@ jobs:
           choco.exe install --no-progress --params="/InstallDir:$(MSYS2_ROOT)" msys2
           echo Installing packages...
           $(MSYS2_ROOT)\usr\bin\pacman --noconfirm --needed -S ^
-            mingw-w64-$(Arch)-cmake ^
-            mingw-w64-$(Arch)-ninja ^
-            mingw-w64-$(Arch)-clang ^
-            mingw-w64-$(Arch)-lld
+            mingw-w64-clang-$(Arch)-cmake ^
+            mingw-w64-clang-$(Arch)-ninja ^
+            mingw-w64-clang-$(Arch)-toolchain
           echo Setting PATH for subsequent tasks...
           echo "##vso[task.setvariable variable=PATH]$(MSYS2_ROOT)\$(MSYSTEM)\bin;%PATH%"
         ) else (
@@ -208,7 +206,7 @@ jobs:
         set CFLAGS=$(Flags)
         set CXXFLAGS=$(Flags)
         echo Running cmake...
-        cmake .. -G Ninja -DTESTS=ON -DCMAKE_C_COMPILER="%CC%" -DCMAKE_CXX_COMPILER="%CXX%" -DCMAKE_BUILD_TYPE=$(BuildType) -DCMAKE_SHARED_LINKER_FLAGS=$(LinkerFlags) -DCMAKE_EXE_LINKER_FLAGS=$(LinkerFlags)
+        cmake .. -G Ninja -DTESTS=ON -DCMAKE_C_COMPILER="%CC%" -DCMAKE_CXX_COMPILER="%CXX%" -DCMAKE_BUILD_TYPE=$(BuildType)
         echo CMake completed.
 
       failOnStderr: false
