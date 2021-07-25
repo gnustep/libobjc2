@@ -448,7 +448,7 @@ PRIVATE void cxx_throw()
  */
 extern "C"
 PRIVATE
-#ifdef __SEH__
+#if defined(__SEH__) && !defined(__USING_SJLJ_EXCEPTIONS__)
 BEGIN_PERSONALITY_FUNCTION(test_eh_personality_internal)
 #else
 BEGIN_PERSONALITY_FUNCTION(test_eh_personality)
