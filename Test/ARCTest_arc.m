@@ -60,6 +60,17 @@ id __weak var;
 }
 @end
 
+static __weak id weakRef;
+
+@interface CheckDeallocWeakRef : Test
+@end
+@implementation CheckDeallocWeakRef
+- (void)dealloc
+{
+	weakRef = self;
+}
+@end
+
 
 int main(void)
 {
@@ -115,5 +126,10 @@ int main(void)
 		[obj setWeak: x];
 	}
 	assert([obj loadWeak] != nil);
+	// Check setting weak references during dealloc
+	{
+		[CheckDeallocWeakRef new];
+	}
+	assert(weakRef == nil);
 	return 0;
 }
