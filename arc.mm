@@ -838,6 +838,12 @@ extern "C" OBJC_PUBLIC id objc_storeWeak(id *addr, id obj)
 		*addr = obj;
 		return obj;
 	}
+	// If the object is being deallocated return nil.
+	if (object_getRetainCount_np(obj) == 0)
+	{
+		*addr = nil;
+		return nil;
+	}
 	if (nil != obj)
 	{
 		*addr = (id)incrementWeakRefCount(obj);
@@ -990,6 +996,12 @@ extern "C" OBJC_PUBLIC id objc_initWeak(id *addr, id obj)
 		// this a strong reference.
 		*addr = obj;
 		return obj;
+	}
+	// If the object is being deallocated return nil.
+	if (object_getRetainCount_np(obj) == 0)
+	{
+		*addr = nil;
+		return nil;
 	}
 	if (nil != obj)
 	{
