@@ -169,28 +169,28 @@ static void emptyPool(struct arc_tls *tls, void *stop)
 			stopPool = stopPool->previous;
 		}
 	}
-	while (tls->pool != stopPool)
-	{
-		while (tls->pool->insert > tls->pool->pool)
+	do {
+		while (tls->pool != stopPool)
 		{
-			tls->pool->insert--;
-			// This may autorelease some other objects, so we have to work in
-			// the case where the autorelease pool is extended during a -release.
-			release(*tls->pool->insert);
+			while (tls->pool->insert > tls->pool->pool)
+			{
+				tls->pool->insert--;
+				// This may autorelease some other objects, so we have to work in
+				// the case where the autorelease pool is extended during a -release.
+				release(*tls->pool->insert);
+			}
+			void *old = tls->pool;
+			tls->pool = tls->pool->previous;
+			free(old);
 		}
-		void *old = tls->pool;
-		tls->pool = tls->pool->previous;
-		free(old);
-	}
-	if (NULL != tls->pool)
-	{
+		if (NULL == tls->pool) break;
 		while ((stop == NULL || (tls->pool->insert > stop)) &&
 		       (tls->pool->insert > tls->pool->pool))
 		{
 			tls->pool->insert--;
 			release(*tls->pool->insert);
 		}
-	}
+	} while (tls->pool != stopPool);
 	//fprintf(stderr, "New insert: %p.  Stop: %p\n", tls->pool->insert, stop);
 }
 
