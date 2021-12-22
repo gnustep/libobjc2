@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "objc/runtime.h"
+#include "objc/hooks.h"
 #include "visibility.h"
 
 #include <windows.h>
@@ -18,6 +19,10 @@
 #if !__has_builtin(__builtin_unreachable)
 #define __builtin_unreachable abort
 #endif
+
+#define EH_EXCEPTION_NUMBER ('msc' | 0xE0000000)
+#define EH_MAGIC_NUMBER1 0x19930520
+#define EXCEPTION_NONCONTINUABLE 0x1
 
 struct _MSVC_TypeDescriptor
 {
@@ -50,6 +55,9 @@ struct _MSVC_ThrowInfo
 	unsigned long pfnForwardCompat;
 	unsigned long pCatchableTypeArray;
 };
+
+static LPTOP_LEVEL_EXCEPTION_FILTER originalUnhandledExceptionFilter = nullptr;
+LONG WINAPI _objc_unhandled_exception_filter(struct _EXCEPTION_POINTERS* exceptionInfo);
 
 #if defined(_WIN64)
 #define IMAGE_RELATIVE(ptr, base) (static_cast<unsigned long>((ptr ? ((uintptr_t)ptr - (uintptr_t)base) : (uintptr_t)nullptr)))
@@ -175,9 +183,6 @@ OBJC_PUBLIC extern "C" void objc_exception_throw(id object)
 		0, // pfnForwardCompat
 		IMAGE_RELATIVE(exceptTypes, &x) // pCatchableTypeArray
 	};
-#	define EH_EXCEPTION_NUMBER ('msc' | 0xE0000000)
-#	define EH_MAGIC_NUMBER1 0x19930520
-#	define EXCEPTION_NONCONTINUABLE 0x1
 	EXCEPTION_RECORD  exception;
 	exception.ExceptionCode = EH_EXCEPTION_NUMBER;
 	exception.ExceptionFlags = EXCEPTION_NONCONTINUABLE;
@@ -192,6 +197,17 @@ OBJC_PUBLIC extern "C" void objc_exception_throw(id object)
 	exception.ExceptionInformation[2] = reinterpret_cast<ULONG_PTR>(&ti);
 	exception.ExceptionInformation[3] = reinterpret_cast<ULONG_PTR>(&x);
 
+	// Set unhandled exception filter to support _objc_unexpected_exception hook.
+	// Unfortunately there doesn't seem to be a better place to call this, as
+	// installing it at construction time means that it will get overwritten by
+	// the handler installed by the VC runtime. This way it works, but as a side
+	// effect throwing exceptions will overwrite any previously installed handler,
+	// so we save it and call it as part of our handler.
+	LPTOP_LEVEL_EXCEPTION_FILTER previousExceptionFilter = SetUnhandledExceptionFilter(&_objc_unhandled_exception_filter);
+	if (previousExceptionFilter != &_objc_unhandled_exception_filter) {
+		originalUnhandledExceptionFilter = previousExceptionFilter;
+	}
+
 #ifdef _WIN64
  	RtlRaiseException(&exception);
 #else
@@ -203,10 +219,66 @@ OBJC_PUBLIC extern "C" void objc_exception_throw(id object)
 	__builtin_unreachable();
 }
 
-
 OBJC_PUBLIC extern "C" void objc_exception_rethrow(void* exc)
 {
 	_CxxThrowException(nullptr, nullptr);
 	__builtin_unreachable();
 }
 
+// rebase_and_cast adds a constant offset to a U value, converting it into a T
+template <typename T, typename U>
+static std::add_const_t<std::decay_t<T>> rebase_and_cast(intptr_t base, U value) {
+	// U value -> const T* (base+value)
+	return reinterpret_cast<std::add_const_t<std::decay_t<T>>>(base + (long)(value));
+}
+
+/**
+ * Unhandled exception filter that we install to get called when an exception is
+ * not otherwise handled in a process that is not being debugged. In here we
+ * check if the exception is an Objective C exception raised by
+ * objc_exception_throw() above, and if so call the _objc_unexpected_exception
+ * hook with the Objective-C exception object.
+ *
+ * https://docs.microsoft.com/en-us/windows/win32/api/errhandlingapi/nf-errhandlingapi-setunhandledexceptionfilter
+ */
+LONG WINAPI _objc_unhandled_exception_filter(struct _EXCEPTION_POINTERS* exceptionInfo)
+{
+	const EXCEPTION_RECORD* ex = exceptionInfo->ExceptionRecord;
+
+	if (_objc_unexpected_exception != 0
+		&& ex->ExceptionCode == EH_EXCEPTION_NUMBER
+		&& ex->ExceptionInformation[0] == EH_MAGIC_NUMBER1
+		&& ex->NumberParameters >= 3)
+	{
+		// On 64-bit platforms, thrown exception catch data are relative virtual addresses off the module base.
+		intptr_t imageBase = ex->NumberParameters >= 4 ? (intptr_t)(ex->ExceptionInformation[3]) : 0;
+
+		auto throwInfo = reinterpret_cast<_MSVC_ThrowInfo*>(ex->ExceptionInformation[2]);
+		if (throwInfo && throwInfo->pCatchableTypeArray) {
+			auto catchableTypes = rebase_and_cast<_MSVC_CatchableTypeArray*>(imageBase, throwInfo->pCatchableTypeArray);
+			bool foundobjc_object = false;
+			for (int i = 0; i < catchableTypes->count; ++i) {
+				const _MSVC_CatchableType* catchableType = rebase_and_cast<_MSVC_CatchableType*>(imageBase, catchableTypes->types[i]);
+				const _MSVC_TypeDescriptor* typeDescriptor = rebase_and_cast<_MSVC_TypeDescriptor*>(imageBase, catchableType->type);
+				if (strcmp(typeDescriptor->name, mangleObjcObject().c_str()) == 0) {
+					foundobjc_object = true;
+					break;
+				}
+			}
+
+			if (foundobjc_object) {
+				id exception = *reinterpret_cast<id*>(ex->ExceptionInformation[1]);
+				_objc_unexpected_exception(exception);
+			}
+		}
+	}
+
+	// call original exception filter if any
+	if (originalUnhandledExceptionFilter) {
+		return originalUnhandledExceptionFilter(exceptionInfo);
+	}
+
+	// EXCEPTION_CONTINUE_SEARCH instructs the exception handler to continue searching for appropriate exception handlers.
+	// Since this is the last one, it is not likely to find any more.
+	return EXCEPTION_CONTINUE_SEARCH;
+}
