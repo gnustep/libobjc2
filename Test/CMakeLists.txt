@@ -34,6 +34,7 @@ set(TESTS
 	ResurrectInDealloc_arc.m
 	RuntimeTest.m
 	SuperMethodMissing.m
+	UnexpectedException.m
 	WeakBlock_arc.m
 	WeakRefLoad.m
 	WeakReferences_arc.m
