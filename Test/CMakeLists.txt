@@ -3,10 +3,6 @@
 # the installed version
 
 
-# On Windows, CMake adds /TC to the clang-cl flags and doesn't provide a way to
-# tell it not to.  We fix this by telling clang do disregard that option,
-# unconditionally (which means that it still defaults to C for .c files).
-set(ENV{CCC_OVERRIDE_OPTIONS} "x/TC x/TP x-TC x-TP")
 set(INCREMENTAL " ")
 if (MSVC)
 	set(CMAKE_EXE_LINKER_FLAGS "/DEBUG /INCREMENTAL:NO ${CMAKE_EXE_LINKER_FLAGS}")

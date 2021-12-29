@@ -12,6 +12,12 @@ Highlights of this release include:
   The runtime now dynamically detects whether the libcxxrt, libsupc++, or
   libc++abi variant of the Itanium C++ Exception ABI is being used.  This is
   the first version to support exception interoperability with libc++abi.
+- Because we no longer need to identify the specific C++ runtime, we can link
+  to it indirectly via the C++ standard library, which enables more C++ to be
+  used in the Objective-C runtime.
+- The minimum CMake version has been bumped to 3.16, which supports
+  Objective-C.  This support is now used, simplifying the build.
+- Support for GC mode is gone.  Apple dropped support for this a long time ago.
 
 
 You may obtain the code for this release from git and use the 2.2 branch:

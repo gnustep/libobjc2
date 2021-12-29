@@ -98,15 +98,17 @@ jobs:
         call "${{ matrix.vspath }}\vcvarsall.bat" ${{ matrix.arch }}
         set CFLAGS=${{ matrix.flags }}
         set CXXFLAGS=${{ matrix.flags }}
+        set OBJCFLAGS=${{ matrix.flags }}
+        set OBJCXXFLAGS=${{ matrix.flags }}
+        set ASMFLAGS=${{ matrix.flags }}
         mkdir build
         cd build
-        cmake .. -G Ninja -DTESTS=ON -DCMAKE_C_COMPILER="c:/Program Files/LLVM/bin/clang-cl.exe" -DCMAKE_CXX_COMPILER="c:/Program Files/LLVM/bin/clang-cl.exe" -DCMAKE_BUILD_TYPE=${{ matrix.build-type }}
+        cmake .. -G Ninja -DTESTS=ON -DCMAKE_C_COMPILER="c:/Program Files/LLVM/bin/clang.exe" -DCMAKE_CXX_COMPILER="c:/Program Files/LLVM/bin/clang.exe" -DCMAKE_BUILD_TYPE=${{ matrix.build-type }}
     - name: Build
       shell: cmd
       working-directory: build
       run: |
         call "${{ matrix.vspath }}\vcvarsall.bat" ${{ matrix.arch }}
-        set CCC_OVERRIDE_OPTIONS=x-TC x-TP x/TC x/TP
         ninja
     - name: Test
       shell: cmd
