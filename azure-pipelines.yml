@@ -122,9 +122,9 @@ jobs:
           testResultsFormat: cTest
           testResultsFiles: build/Testing/*/Test.xml
   - job: Windows
-    displayName: Windows-2016
+    displayName: Windows-2022
     pool:
-      vmImage: vs2017-win2016
+      vmImage: windows-2022
     strategy:
       matrix:
         Debug-32:
@@ -157,7 +157,7 @@ jobs:
         mkdir build
         cd build
         echo Importing visual studio environment variables...
-        call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvars64.bat" $(Arch)
+        call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat" $(Arch)
         echo Checking that we're calling the correct link.exe
         where link.exe
         set CFLAGS=$(Flags)
@@ -172,7 +172,7 @@ jobs:
     - script: |
         cd build
         echo Importing visual studio environment variables...
-        call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvars64.bat" $(Arch)
+        call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat" $(Arch)
         set CCC_OVERRIDE_OPTIONS=x-TC x-TP x/TC x/TP
         echo Running ninja...
         ninja
