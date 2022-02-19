@@ -27,13 +27,9 @@ set(CMAKE_CXX_STANDARD 14)
 set(libobjc_ASM_SRCS 
 	block_trampolines.S
 	objc_msgSend.S)
-
-if (MSVC)
 set(libobjc_OBJCXX_SRCS 
 	arc.mm
 	)
-endif()
-
 set(libobjc_OBJC_SRCS 
 	NSBlocks.m
 	Protocol2.m
