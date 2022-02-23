@@ -363,7 +363,7 @@ extern "C" OBJC_PUBLIC void objc_release_fast_np(id obj)
 {
 	if (objc_release_fast_no_destroy_np(obj))
 	{
-		[obj dealloc];
+		// [obj dealloc];
 	}
 }
 
@@ -385,7 +385,7 @@ static inline void release(id obj)
 		objc_release_fast_np(obj);
 		return;
 	}
-	[obj release];
+	// [obj release];
 }
 
 static inline void initAutorelease(void)
@@ -445,7 +445,7 @@ static inline id autorelease(id obj)
 		}
 		return obj;
 	}
-	return [obj autorelease];
+	return obj; // [obj autorelease];
 }
 
 extern "C" OBJC_PUBLIC unsigned long objc_arc_autorelease_count_np(void)
