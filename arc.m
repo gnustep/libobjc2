@@ -674,7 +674,7 @@ static void zeroRefs(WeakRef *ref, BOOL shouldFree)
 	}
 }
 
-void objc_delete_weak_refs(id obj)
+BOOL objc_delete_weak_refs(id obj)
 {
 	LOCK_FOR_SCOPE(&weakRefLock);
 	WeakRef *oldRef = weak_ref_table_get(weakRefs, obj);
@@ -683,6 +683,7 @@ void objc_delete_weak_refs(id obj)
 		zeroRefs(oldRef, NO);
 		weak_ref_remove(weakRefs, obj);
 	}
+	return NO;
 }
 
 id objc_loadWeakRetained(id* addr)
