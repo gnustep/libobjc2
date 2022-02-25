@@ -28,9 +28,9 @@ set(libobjc_ASM_SRCS
 	block_trampolines.S
 	objc_msgSend.S)
 set(libobjc_OBJCXX_SRCS 
-	arc.mm
 	)
-set(libobjc_OBJC_SRCS 
+set(libobjc_OBJC_SRCS
+	arc.m
 	NSBlocks.m
 	Protocol2.m
 	associate.m
