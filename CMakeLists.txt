@@ -80,7 +80,7 @@ set(libBlocksRuntime_COMPATIBILITY_HDRS
 	Block_private.h
 	)
 # Windows does not use DWARF EH
-if (WIN32)
+if (MSVC)
 	list(APPEND libobjc_CXX_SRCS eh_win32_msvc.cc)
 else ()
 	list(APPEND libobjc_C_SRCS eh_personality.c)
