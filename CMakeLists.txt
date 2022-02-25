@@ -84,7 +84,7 @@ if (MSVC)
 	list(APPEND libobjc_CXX_SRCS eh_win32_msvc.cc)
 else ()
 	list(APPEND libobjc_C_SRCS eh_personality.c)
-endif (WIN32)
+endif (MSVC)
 
 if (NOT EXISTS "${CMAKE_SOURCE_DIR}/third_party/robin-map/include/tsl/robin_map.h")
 	message(FATAL_ERROR "Git submodules not present, please run:\n\n"
