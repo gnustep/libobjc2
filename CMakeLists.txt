@@ -80,12 +80,14 @@ set(libBlocksRuntime_COMPATIBILITY_HDRS
 	Block_private.h
 	)
 # Windows does not use DWARF EH
-if (WIN32)
-	list(APPEND libobjc_CXX_SRCS eh_win32_msvc.cc)
-else ()
-	list(APPEND libobjc_C_SRCS eh_personality.c)
-endif (WIN32)
+#if (WIN32)
+#	list(APPEND libobjc_CXX_SRCS eh_win32_msvc.cc)
+#else ()
+#	list(APPEND libobjc_C_SRCS eh_personality.c)
+#endif (WIN32)
 
+        list(APPEND libobjc_CXX_SRCS eh_win32_msys2.cc)
+	
 if (NOT EXISTS "${CMAKE_SOURCE_DIR}/third_party/robin-map/include/tsl/robin_map.h")
 	message(FATAL_ERROR "Git submodules not present, please run:\n\n"
 						" $ git submodule init && git submodule update\n\n"
