@@ -390,6 +390,7 @@ static inline void release(id obj)
 
 static inline void initAutorelease(void)
 {
+/*
 	if (Nil == AutoreleasePool)
 	{
 		AutoreleasePool = objc_getClass("NSAutoreleasePool");
@@ -413,10 +414,12 @@ static inline void initAutorelease(void)
 			}
 		}
 	}
+*/	
 }
 
 static inline id autorelease(id obj)
 {
+/*
 	//fprintf(stderr, "Autoreleasing %p\n", obj);
 	if (useARCAutoreleasePool)
 	{
@@ -446,6 +449,8 @@ static inline id autorelease(id obj)
 		return obj;
 	}
 	return [obj autorelease];
+*/
+	return obj;
 }
 
 extern "C" OBJC_PUBLIC unsigned long objc_arc_autorelease_count_np(void)
@@ -462,6 +467,7 @@ extern "C" OBJC_PUBLIC unsigned long objc_arc_autorelease_count_np(void)
 	}
 	return count;
 }
+
 extern "C" OBJC_PUBLIC unsigned long objc_arc_autorelease_count_for_object_np(id obj)
 {
 	struct arc_tls* tls = getARCThreadData();
@@ -485,6 +491,7 @@ extern "C" OBJC_PUBLIC unsigned long objc_arc_autorelease_count_for_object_np(id
 
 extern "C" OBJC_PUBLIC void *objc_autoreleasePoolPush(void)
 {
+/*
 	initAutorelease();
 	struct arc_tls* tls = getARCThreadData();
 	// If there is an object in the return-retained slot, then we need to
@@ -515,9 +522,12 @@ extern "C" OBJC_PUBLIC void *objc_autoreleasePoolPush(void)
 	initAutorelease();
 	if (0 == NewAutoreleasePool) { return NULL; }
 	return NewAutoreleasePool(AutoreleasePool, SELECTOR(new));
+*/
+	return Nil;
 }
 extern "C" OBJC_PUBLIC void objc_autoreleasePoolPop(void *pool)
 {
+/*
 	if (useARCAutoreleasePool)
 	{
 		struct arc_tls* tls = getARCThreadData();
@@ -537,6 +547,7 @@ extern "C" OBJC_PUBLIC void objc_autoreleasePoolPop(void *pool)
 		release(tls->returnRetained);
 		tls->returnRetained = nil;
 	}
+*/	
 }
 
 extern "C" OBJC_PUBLIC id objc_autorelease(id obj)
