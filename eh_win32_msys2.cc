@@ -25,4 +25,3 @@ OBJC_PUBLIC extern "C" void objc_exception_throw(id object)
 OBJC_PUBLIC extern "C" void objc_exception_rethrow(void* exc)
 {
 }
-
