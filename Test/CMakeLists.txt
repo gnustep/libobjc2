@@ -144,12 +144,15 @@ addtest_variants("ForwardDeclareProtocolAccess" "ForwardDeclareProtocolAccess.m;
 if (ENABLE_OBJCXX)
 	addtest_variants(ObjCXXEHInterop "ObjCXXEHInterop.mm;ObjCXXEHInterop.m" true)
 	addtest_variants(ObjCXXEHInteropTwice "ObjCXXEHInteropTwice.mm" true)
-	# This test is failing on Win32, but not for any obvious reason.  Disable
-	# it for now to keep CI happy.
-	if (WIN32)
-	else()
-		addtest_variants(ObjCXXEHInterop_arc "ObjCXXEHInterop_arc.mm;ObjCXXEHInterop_arc.m" true)
-	endif()
+	addtest_variants(ObjCXXEHInterop_arc "ObjCXXEHInterop_arc.mm;ObjCXXEHInterop_arc.m" true)
+	# Disable the cleanup step in LLVM's CodeGen pass `WinEHPrepare` in order to
+	# workaround a bug in Clang: With ARC enabled, it accidentially truncates
+	# catch handlers by replacing calls to the objc_retain() runtime function
+	# with UnreachableInst. This is because llvm.objc_* intrinsics are lowered
+	# in an earlier pass (Pre-ISel Intrinsic Lowering) and thus `WinEHPrepare`
+	# sees them as regular functions and won't (always) reserve them.
+	target_compile_options(ObjCXXEHInterop_arc PRIVATE -mllvm --disable-cleanups)
+	target_compile_options(ObjCXXEHInterop_arc_optimised PRIVATE -mllvm --disable-cleanups)
 endif()
 
 # Some tests use enough memory that they fail on CI intermittently if they
