@@ -35,7 +35,6 @@ set(TESTS
 	PropertyAttributeTest.m
 	ProtocolExtendedProperties.m
 	PropertyIntrospectionTest.m
-	PropertyIntrospectionTest2_arc.m
 	ProtocolCreation.m
 	ResurrectInDealloc_arc.m
 	RuntimeTest.m
