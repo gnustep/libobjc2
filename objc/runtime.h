@@ -26,6 +26,12 @@ extern "C" {
 #	endif
 #endif
 
+#if __has_attribute(ns_returns_retained)
+#	define OBJC_RETURNS_RETAINED __attribute__((ns_returns_retained))
+#else
+#	define OBJC_RETURNS_RETAINED
+#endif
+
 // Make sure we get the limit macros, even in C++ mode
 #ifndef __STDC_LIMIT_MACROS                                                     
 #	define __STDC_LIMIT_MACROS 1
@@ -289,7 +295,7 @@ Protocol *__unsafe_unretained* class_copyProtocolList(Class cls, unsigned int *o
 /**
  * Creates an instance of this class, allocating memory using malloc.
  */
-OBJC_PUBLIC
+OBJC_PUBLIC OBJC_RETURNS_RETAINED
 id class_createInstance(Class cls, size_t extraBytes);
 
 /**
