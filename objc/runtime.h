@@ -26,7 +26,7 @@ extern "C" {
 #	endif
 #endif
 
-#if __has_attribute(ns_returns_retained)
+#if defined(__OBJC__) && __has_attribute(ns_returns_retained)
 #	define OBJC_RETURNS_RETAINED __attribute__((ns_returns_retained))
 #else
 #	define OBJC_RETURNS_RETAINED
