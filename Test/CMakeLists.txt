@@ -144,9 +144,10 @@ addtest_variants("ForwardDeclareProtocolAccess" "ForwardDeclareProtocolAccess.m;
 if (ENABLE_OBJCXX)
 	addtest_variants(ObjCXXEHInterop "ObjCXXEHInterop.mm;ObjCXXEHInterop.m" true)
 	addtest_variants(ObjCXXEHInteropTwice "ObjCXXEHInteropTwice.mm" true)
-	# This test is failing on Win32, but not for any obvious reason.  Disable
-	# it for now to keep CI happy.
-	if (WIN32)
+	if (WIN32 AND CMAKE_CXX_COMPILER_ID STREQUAL Clang)
+		if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 16.0.0)
+			addtest_variants(ObjCXXEHInterop_arc "ObjCXXEHInterop_arc.mm;ObjCXXEHInterop_arc.m" true)
+		endif()
 	else()
 		addtest_variants(ObjCXXEHInterop_arc "ObjCXXEHInterop_arc.mm;ObjCXXEHInterop_arc.m" true)
 	endif()
