@@ -18,7 +18,6 @@ set(TESTS
 	alias.m
 	alignTest.m
 	AllocatePair.m
-	ARCTest_arc.m
 	AssociatedObject.m
 	AssociatedObject2.m
 	BlockImpTest.m
@@ -35,7 +34,6 @@ set(TESTS
 	PropertyAttributeTest.m
 	ProtocolExtendedProperties.m
 	PropertyIntrospectionTest.m
-	PropertyIntrospectionTest2_arc.m
 	ProtocolCreation.m
 	ResurrectInDealloc_arc.m
 	RuntimeTest.m
@@ -59,7 +57,16 @@ set(TESTS
 	setSuperclass.m
 )
 
+set(ENABLE_ALL_OBJC_ARC_TESTS On)
+
 if (WIN32)
+	# On Windows these tests work only with more recent versions of Clang
+	set(ENABLE_ALL_OBJC_ARC_TESTS Off)
+	if (CMAKE_C_COMPILER_ID STREQUAL Clang)
+		if (CMAKE_C_COMPILER_VERSION VERSION_GREATER_EQUAL 16.0.0)
+			set(ENABLE_ALL_OBJC_ARC_TESTS On)
+		endif()
+	endif()
 else ()
 	# Don't run the tests that are specific to Itanium-style exceptions on
 	# Windows.
@@ -68,6 +75,13 @@ else ()
 	ForeignException.m
 	)
 endif ()
+
+if (ENABLE_ALL_OBJC_ARC_TESTS)
+	list(APPEND TESTS
+	ARCTest_arc.m
+	PropertyIntrospectionTest2_arc.m
+	)
+endif()
 
 # List of single-file tests that won't work with the legacy ABI and so
 # shouldn't be run in legacy mode.
@@ -144,9 +158,10 @@ addtest_variants("ForwardDeclareProtocolAccess" "ForwardDeclareProtocolAccess.m;
 if (ENABLE_OBJCXX)
 	addtest_variants(ObjCXXEHInterop "ObjCXXEHInterop.mm;ObjCXXEHInterop.m" true)
 	addtest_variants(ObjCXXEHInteropTwice "ObjCXXEHInteropTwice.mm" true)
-	# This test is failing on Win32, but not for any obvious reason.  Disable
-	# it for now to keep CI happy.
-	if (WIN32)
+	if (WIN32 AND CMAKE_CXX_COMPILER_ID STREQUAL Clang)
+		if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 16.0.0)
+			addtest_variants(ObjCXXEHInterop_arc "ObjCXXEHInterop_arc.mm;ObjCXXEHInterop_arc.m" true)
+		endif()
 	else()
 		addtest_variants(ObjCXXEHInterop_arc "ObjCXXEHInterop_arc.mm;ObjCXXEHInterop_arc.m" true)
 	endif()
