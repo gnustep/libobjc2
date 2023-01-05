@@ -214,7 +214,12 @@ list(APPEND libobjc_CXX_SRCS ${libobjcxx_CXX_SRCS})
 target_sources(objc PRIVATE ${libobjc_CXX_SRCS})
 
 include(FindThreads)
+# Link against ntdll.dll for RtlRaiseException
+if (WIN32)
+target_link_libraries(objc Threads::Threads ntdll.dll)
+else()
 target_link_libraries(objc Threads::Threads)
+endif()
 
 
 set_target_properties(objc PROPERTIES
