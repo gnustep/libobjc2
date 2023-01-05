@@ -1,5 +1,16 @@
 #define ARGUMENT_SPILL_SIZE (8*10 + 8*16)
-.macro MSGSEND receiver, sel
+
+#ifdef _WIN64
+#	define START_PROC(x) .seh_proc x
+#	define END_PROC(x) .seh_endproc
+#	define FRAME_OFFSET(x) .seh_stackalloc x
+#else
+#	define START_PROC(x) .cfi_startproc
+#	define END_PROC(x) .cfi_endproc
+#	define FRAME_OFFSET(x) .cfi_adjust_cfa_offset x
+#endif
+
+.macro MSGSEND fnname, receiver, sel
 	.cfi_startproc
 	cbz    \receiver, 4f                   // Skip everything if the receiver is nil
 	                                       // Jump to 6: if this is a small object
@@ -7,6 +18,8 @@
 	cbnz   x9, 6f
 
 	ldr    x9, [\receiver]                 // Load class to x9 if not a small int
+
+.align 2
 1:
 	ldr    x9, [x9, #DTABLE_OFFSET]        // Dtable -> x9
 	ldr    w10, [\sel]                     // selector->index -> x10
@@ -35,6 +48,7 @@
 	ldr    x9, [x9, #SLOT_OFFSET]          // Load the method from the slot
 	br     x9                              // Tail-call the method
 
+.align 2
 4:	                                       // Nil receiver
 	mov    x0, #0
 	mov    v0.d[0], x0
@@ -79,21 +93,45 @@
 	ldp    \receiver, x8, [sp], #(ARGUMENT_SPILL_SIZE + 16)
 	br     x9
 6:
+#if __ELF__
 	adrp   x10, :got:SmallObjectClasses
 	ldr    x10, [x10, :got_lo12:SmallObjectClasses]
 	ldr    x9, [x10, x9, lsl #3]
+#else
+  adr    x9, CDECL(SmallObjectClasses)
+#endif
 	b      1b
 	.cfi_endproc
 .endm
 
+#ifdef _WIN64
+.text
+.def objc_msgSend;
+.scl 2;
+.type 32;
+.endef
+.def objc_msgSend_fpret;
+.scl 2;
+.type 32;
+.endef
+.def objc_msgSend_stret;
+.scl 2;
+.type 32;
+.endef
+#endif
 .globl CDECL(objc_msgSend_fpret)
 TYPE_DIRECTIVE(CDECL(objc_msgSend_fpret), %function)
 .globl CDECL(objc_msgSend)
 TYPE_DIRECTIVE(CDECL(objc_msgSend), %function)
 .globl CDECL(objc_msgSend_stret)
 TYPE_DIRECTIVE(CDECL(objc_msgSend_stret), %function)
-CDECL(objc_msgSend):
 CDECL(objc_msgSend_fpret):
 CDECL(objc_msgSend_stret):
-	MSGSEND x0, x1
-
+CDECL(objc_msgSend):
+	MSGSEND objc_msgSend x0, x1
+#ifdef _WIN64
+.section        .drectve,"yn"
+.ascii  " /EXPORT:objc_msgSend"
+.ascii  " /EXPORT:objc_msgSend_fpret"
+.ascii  " /EXPORT:objc_msgSend_stret"
+#endif
