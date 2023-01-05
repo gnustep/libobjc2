@@ -353,7 +353,12 @@ endif()
 # threading implementation (we do for everything except thread-local storage)
 set(CMAKE_THREAD_PREFER_PTHREAD)
 include(FindThreads)
+# Link against ntdll.dll for RtlRaiseException
+if (WIN32)
+target_link_libraries(objc Threads::Threads ntdll.dll)
+else()
 target_link_libraries(objc Threads::Threads)
+endif()
 
 
 
