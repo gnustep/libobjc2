@@ -177,7 +177,12 @@ static struct trampoline_set *alloc_trampolines(char *start, char *end)
 	}
 	metadata->buffers->headers[HEADERS_PER_PAGE-1].block = NULL;
 	mprotect(metadata->buffers->rx_buffer, PAGE_SIZE, PROT_READ | PROT_EXEC);
+#if defined(_WIN32) && (defined(__arm__) || defined(__aarch64__))
+  FlushInstructionCache(GetCurrentProcess(), start, end - start);
+#else
 	clear_cache(metadata->buffers->rx_buffer, &metadata->buffers->rx_buffer[PAGE_SIZE]);
+#endif
+
 	return metadata;
 }
 
