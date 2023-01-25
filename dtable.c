@@ -683,13 +683,6 @@ PRIVATE void objc_send_initialize(id object)
 		objc_send_initialize((id)class->super_class);
 	}
 
-	// Lock the runtime while we're creating dtables and before we acquire any
-	// other locks.  This prevents a lock-order reversal when
-	// dtable_for_class is called from something holding the runtime lock while
-	// we're still holding the initialize lock.  We should ensure that we never
-	// acquire the runtime lock after acquiring the initialize lock.
-	LOCK_RUNTIME();
-
 	// Superclass +initialize might possibly send a message to this class, in
 	// which case this method would be called again.  See NSObject and
 	// NSAutoreleasePool +initialize interaction in GNUstep.
@@ -697,10 +690,7 @@ PRIVATE void objc_send_initialize(id object)
 	{
 		// We know that initialization has started because the flag is set.
 		// Check that it's finished by grabbing the class lock.  This will be
-		// released once the class has been fully initialized. The runtime
-		// lock needs to be released first to prevent a deadlock between the
-		// runtime lock and the class-specific lock.
-		UNLOCK_RUNTIME();
+		// released once the class has been fully initialized.
 
 		objc_sync_enter((id)meta);
 		objc_sync_exit((id)meta);
@@ -708,7 +698,21 @@ PRIVATE void objc_send_initialize(id object)
 		return;
 	}
 
+	// We should try to acquire the class lock before any runtime/init locks.
+	// If another thread is in the middle of running `allocateHiddenClass()` it 
+	// has acquired a spinlock and will be trying to acquire the runtime lock. 
+	// When this happens there is a small chance we could hit the same spinlock
+	// and deadlock the process (as any further attempts to acquire the runtime 
+	// will also block forever).
 	LOCK_OBJECT_FOR_SCOPE((id)meta);
+
+	// Lock the runtime while we're creating dtables and before we acquire the
+	// init lock.  This prevents a lock-order reversal when dtable_for_class is
+	// called from something holding the runtime lock while we're still holding
+	// the initialize lock.  We should ensure that we never acquire the runtime
+	// lock after acquiring the initialize lock.
+	LOCK_RUNTIME();
+
 	LOCK(&initialize_lock);
 	if (objc_test_class_flag(class, objc_class_flag_initialized))
 	{
