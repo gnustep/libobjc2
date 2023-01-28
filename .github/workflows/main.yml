@@ -1,0 +1,126 @@
+name: Libobjc2 CI
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push or pull request events but only for the master branch
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  ubuntu:
+    strategy:
+      matrix:
+        # Build each combination of OS and release/debug variants
+        os: [ "ubuntu-22.04", "ubuntu-20.04" ]
+        build-type: [ Release, Debug ]
+        cxxlib: [ "libc++", "libstdc++" ]
+        llvm-version: [10, 11, 12, 13, 14]
+        # Don't bother testing the LLVM versions that aren't in the default image for the different platforms
+        exclude:
+          - os: "ubuntu-22.04"
+            llvm-version: 10
+          - os: "ubuntu-22.04"
+            llvm-version: 11
+          - os: "ubuntu-20.04"
+            llvm-version: 11
+          - os: "ubuntu-20.04"
+            llvm-version: 13
+          - os: "ubuntu-20.04"
+            llvm-version: 14
+      # Don't abort runners if a single one fails
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.os }} ${{ matrix.build-type }} LLVM-${{ matrix.llvm-version }} ${{ matrix.cxxlib }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+      - name: Install dependencies 
+        run: |
+          sudo apt install ninja-build
+          if [ "${{ matrix.cxxlib }}" = "libc++" ]; then
+            sudo apt remove -y 'libc++*'
+            apt search libunwind
+            sudo apt install libc++-${{matrix.llvm-version}}-dev libc++abi-${{matrix.llvm-version}}-dev 
+            sudo apt install libunwind-${{matrix.llvm-version}}-dev || true
+          fi
+      - name: Configure CMake
+        run: |
+          export LDFLAGS=-L/usr/lib/llvm-${{ matrix.llvm-version }}/lib/
+          ls -lahR /usr/lib/llvm-${{ matrix.llvm-version }}/lib/
+          cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -G Ninja -DCMAKE_C_COMPILER=clang-${{matrix.llvm-version}} -DCMAKE_ASM_COMPILER=clang-${{matrix.llvm-version}} -DCMAKE_CXX_COMPILER=clang++-${{matrix.llvm-version}} -DCMAKE_CXX_FLAGS="-stdlib=${{matrix.cxxlib}}"
+        # Build with a nice ninja status line
+      - name: Build
+        working-directory: ${{github.workspace}}/build
+        run: |
+          NINJA_STATUS="%p [%f:%s/%t] %o/s, %es" ninja
+      - name: Test
+        working-directory: ${{github.workspace}}/build
+        run: |
+          ctest --output-on-failure -j 4
+
+  windows:
+    strategy:
+      matrix:
+        # Build each combination of OS and release/debug variants
+        os: [ windows-2022, windows-2019 ]
+        build-type: [ Release, Debug ]
+        arch: [ x64_x86, x64 ]
+        include:
+          - arch: x64_x86
+            flags: -m32
+          - arch: x64
+            flags: -m64
+          - os: windows-2022
+            vspath: C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build
+          - os: windows-2019
+            vspath: C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build
+      # Don't abort runners if a single one fails
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.os }} ${{ matrix.build-type }} ${{ matrix.arch }}
+    steps:
+    - name: look at VS install
+      shell: cmd
+      run: |
+        dir "${{ matrix.vspath }}"
+    - uses: actions/checkout@v3
+      with:
+        submodules: true
+    - name: Install dependencies
+      run: |
+        choco.exe install ninja
+    - name: Configure CMake
+      shell: cmd
+      run: |
+        call "${{ matrix.vspath }}\vcvarsall.bat" ${{ matrix.arch }}
+        set CFLAGS=${{ matrix.flags }}
+        set CXXFLAGS=${{ matrix.flags }}
+        mkdir build
+        cd build
+        cmake .. -G Ninja -DTESTS=ON -DCMAKE_C_COMPILER="c:/Program Files/LLVM/bin/clang-cl.exe" -DCMAKE_CXX_COMPILER="c:/Program Files/LLVM/bin/clang-cl.exe" -DCMAKE_BUILD_TYPE=${{ matrix.build-type }}
+    - name: Build
+      shell: cmd
+      working-directory: build
+      run: |
+        call "${{ matrix.vspath }}\vcvarsall.bat" ${{ matrix.arch }}
+        set CCC_OVERRIDE_OPTIONS=x-TC x-TP x/TC x/TP
+        ninja
+    - name: Test
+      shell: cmd
+      working-directory: build
+      run: |
+        copy /y objc.dll Test
+        ctest -j 4 --output-on-failure -T test
+
+
+  # Fake check that can be used as a branch-protection rule.
+  all-checks:
+    needs: [ubuntu, windows]
+    runs-on: ubuntu-latest
+    steps:
+    - name: Dummy step
+      run: true
+

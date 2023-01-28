@@ -1,8 +1,12 @@
 #define _LIBCPP_NO_EXCEPTIONS 1
 #define TSL_NO_EXCEPTIONS 1
+// Libc++ < 13 requires this for <vector> to be header only.  It is ignored in
+// libc++ >= 14
+#define _LIBCPP_DISABLE_EXTERN_TEMPLATE  1
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <vector>
 #include "third_party/robin-map/include/tsl/robin_map.h"
 #import "lock.h"
 #import "objc/runtime.h"
@@ -109,19 +113,6 @@ static inline T* new_zeroed()
 {
 	return static_cast<T*>(calloc(sizeof(T), 1));
 }
-
-#ifdef _LIBCPP_BEGIN_NAMESPACE_STD
-_LIBCPP_BEGIN_NAMESPACE_STD
-/**
- * If we're compiling with libc++, we need to instantiate the vector base class
- * to avoid linker errors.  Libc++ defines the functions that throw exceptions
- * in the headers but makes them extern templates to avoid code duplication in
- * the slow paths.
- */
-template class __attribute__((visibility("hidden")))  __vector_base_common<true>;
-_LIBCPP_END_NAMESPACE_STD
-#endif
-
 
 static inline struct arc_tls* getARCThreadData(void)
 {

@@ -1,8 +1,16 @@
 freebsd_instance:
-  image: freebsd-12-1-release-amd64
+  image: freebsd-12-3-release-amd64
 
 libcxxrt_freebsd_task:
-  install_script: pkg install -y cmake ninja llvm80 git
+  matrix:
+  - freebsd_instance:
+     image_family: freebsd-13-1
+  - freebsd_instance:
+     image_family: freebsd-12-3
+  - freebsd_instance:
+     image_family: freebsd-14-0-snap
+
+  install_script: pkg install -y cmake ninja git
 
   clone_script: |
     if [ -z "$CIRRUS_PR" ]; then
@@ -19,13 +27,13 @@ libcxxrt_freebsd_task:
   build_script: |
       mkdir Build
       cd Build
-      cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang80 -DCMAKE_CXX_COMPILER=clang++80
+      cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
       ninja
 
   test_script: cd Build && ctest -j4
 
 libcxxrt_master_task:
-  install_script: pkg install -y cmake ninja llvm80 git
+  install_script: pkg install -y cmake ninja git
 
   clone_script: |
     if [ -z "$CIRRUS_PR" ]; then
@@ -43,14 +51,14 @@ libcxxrt_master_task:
       git clone https://github.com/libcxxrt/libcxxrt.git
       mkdir -p libcxxrt/Build
       cd libcxxrt/Build
-      cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang80 -DCMAKE_CXX_COMPILER=clang++80
+      cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
       ninja
       cp lib/libcxxrt.so /usr/local/lib
 
   build_script: |
       mkdir Build
       cd Build
-      cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang80 -DCMAKE_CXX_COMPILER=clang++80
+      cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
       ninja
 
   test_script: cd Build && ctest -j4

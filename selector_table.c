@@ -318,6 +318,10 @@ static inline void add_selector_to_table(SEL aSel, int32_t uid, uint32_t idx)
  */
 static inline void register_selector_locked(SEL aSel)
 {
+	if (aSel->name == NULL)
+	{
+		return;
+	}
 	uintptr_t idx = selector_count++;
 	if (NULL == aSel->types)
 	{
@@ -417,11 +421,22 @@ static SEL objc_register_selector_copy(SEL aSel, BOOL copyArgs)
 		else
 		{
 			copy->name = strdup(aSel->name);
+			if (copy->name == NULL)
+			{
+				fprintf(stderr, "Failed to allocate memory for selector %s\n", aSel->name);
+				abort();
+			}
+			assert(copy->name);
 			selector_name_copies += strlen(copy->name);
 		}
 		if (copy->types != NULL)
 		{
 			copy->types = strdup(copy->types);
+			if (copy->name == NULL)
+			{
+				fprintf(stderr, "Failed to allocate memory for selector %s\n", aSel->name);
+				abort();
+			}
 			selector_name_copies += strlen(copy->types);
 		}
 	}
