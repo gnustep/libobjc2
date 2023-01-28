@@ -48,7 +48,10 @@ int main()
 	free(properties);
 
 	Method* methods = class_copyMethodList([helloclass class], &outCount);
+	// This metadata was buggy in clang versions prior to clang 11.
+#if __clang_major__ > 10
 	assert(outCount == 2);
+#endif
 	free(methods);
 
 	objc_property_attribute_t a = { "V", "varName" };
