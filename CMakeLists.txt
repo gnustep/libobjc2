@@ -370,21 +370,35 @@ set_property(TARGET PROPERTY NO_SONAME true)
 set(BUILD_STATIC_LIBOBJC false CACHE BOOL
 	"Build the static version of libobjc")
 if (BUILD_STATIC_LIBOBJC)
-	add_library(objc-static STATIC ${libobjc_C_SRCS} ${libobjc_ASM_SRCS} ${libobjc_OBJC_SRCS} ${libobjc_CXX_SRCS})
+	add_library(objc-static STATIC ${libobjc_C_SRCS} ${libobjc_ASM_SRCS} ${libobjc_OBJC_SRCS} ${libobjc_OBJCXX_SRCS} ${libobjc_ASM_OBJS})
 	set_target_properties(objc-static PROPERTIES
+		LINKER_LANGUAGE C
 		POSITION_INDEPENDENT_CODE true
-		OUTPUT_NAME ${LIBOBJC_NAME})
+		OUTPUT_NAME ${LIBOBJC_NAME}
+		LINK_FLAGS "${objc_LINK_FLAGS}")
 	list(APPEND INSTALL_TARGETS objc-static)
+	if (ENABLE_OBJCXX)
+		if (NOT CXXRT_IS_STDLIB)
+			target_link_libraries(objc-static ${CXX_RUNTIME})
+		endif()
+		target_sources(objc-static PRIVATE ${libobjc_CXX_SRCS})
+	endif()
 endif ()
 
 # Explicitly link libgc if we are compiling with gc support.
 if (LIBGC)
 	target_link_libraries(objc ${LIBGC})
+	if (BUILD_STATIC_LIBOBJC)
+		target_link_libraries(objc-static ${LIBGC})
+	endif ()
 endif ()
 
 # Explicitly link libm, as an implicit dependency of the C++ runtime
 if (M_LIBRARY)
 	target_link_libraries(objc ${M_LIBRARY})
+	if (BUILD_STATIC_LIBOBJC)
+		target_link_libraries(objc-static ${M_LIBRARY})
+	endif ()
 endif ()
 
 # Make weak symbols work on OS X
