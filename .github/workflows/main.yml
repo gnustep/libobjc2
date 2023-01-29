@@ -50,7 +50,7 @@ jobs:
         run: |
           export LDFLAGS=-L/usr/lib/llvm-${{ matrix.llvm-version }}/lib/
           ls -lahR /usr/lib/llvm-${{ matrix.llvm-version }}/lib/
-          cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -G Ninja -DTESTS=ON -DCMAKE_C_COMPILER=clang-${{matrix.llvm-version}} -DCMAKE_ASM_COMPILER=clang-${{matrix.llvm-version}} -DCMAKE_CXX_COMPILER=clang++-${{matrix.llvm-version}} -DCMAKE_CXX_FLAGS="-stdlib=${{matrix.cxxlib}}"
+          cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -G Ninja -DTESTS=ON -DCMAKE_C_COMPILER=clang-${{matrix.llvm-version}} -DCMAKE_OBJC_COMPILER=clang-${{matrix.llvm-version}} -DCMAKE_ASM_COMPILER=clang-${{matrix.llvm-version}} -DCMAKE_CXX_COMPILER=clang++-${{matrix.llvm-version}} -DCMAKE_OBJCXX_COMPILER=clang++-${{matrix.llvm-version}} -DCMAKE_CXX_FLAGS="-stdlib=${{matrix.cxxlib}}"
         # Build with a nice ninja status line
       - name: Build
         working-directory: ${{github.workspace}}/build
@@ -60,6 +60,61 @@ jobs:
         working-directory: ${{github.workspace}}/build
         run: |
           ctest --output-on-failure -j 4
+
+  qemu-crossbuild:
+    strategy:
+      matrix:
+        build-type: [ Release, Debug ]
+        llvm-version: [13, 14]
+        arch:
+          - name: armhf
+            system-processor: arm
+            triple: arm-linux-gnueabihf
+            rtld: ld-linux-armhf.so.3
+            # The C++ exception tests are failing, disable them until they are debugged.
+            unsupported: -E CXX
+          - name: arm64
+            system-processor: aarch64
+            triple: aarch64-linux-gnu
+            rtld: ld-linux-aarch64.so.1
+      # Don't abort runners if a single one fails
+      fail-fast: false
+    runs-on: ubuntu-latest
+    name: Cross-build for ${{ matrix.arch.triple }} LLVM-${{ matrix.llvm-version}} ${{ matrix.build-type }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+      - name: Install cross-compile toolchain and QEMU
+        run: |
+          sudo apt update
+          sudo apt install libstdc++-9-dev-${{ matrix.arch.name }}-cross qemu-user ninja-build
+      - name: Configure CMake
+        run: |
+          export LDFLAGS="-L/usr/lib/llvm-${{ matrix.llvm-version }}/lib/ -fuse-ld=lld -Wl,--dynamic-linker=/usr/${{ matrix.arch.triple }}/lib/${{ matrix.arch.rtld }},-rpath,/usr/${{ matrix.arch.triple }}/lib"
+          cmake -B ${{github.workspace}}/build \
+            -DCMAKE_SYSTEM_NAME=Linux \
+            -DCMAKE_SYSTEM_PROCESSOR=${{ matrix.arch.system-processor }} \
+            -DCMAKE_C_COMPILER=clang-${{ matrix.llvm-version }} \
+            -DCMAKE_CXX_COMPILER=clang++-${{ matrix.llvm-version }} \
+            -DCMAKE_ASM_COMPILER=clang-${{ matrix.llvm-version }} \
+            -DCMAKE_C_COMPILER_TARGET=${{ matrix.arch.triple }} \
+            -DCMAKE_CXX_COMPILER_TARGET=${{ matrix.arch.triple }} \
+            -DCMAKE_OBJC_COMPILER_TARGET=${{ matrix.arch.triple }} \
+            -DCMAKE_OBJCXX_COMPILER_TARGET=${{ matrix.arch.triple }} \
+            -DCMAKE_ASM_COMPILER_TARGET=${{ matrix.arch.triple }} \
+            -DCMAKE_BUILD_TYPE=${{matrix.build-type}} \
+            -DTESTS=ON \
+            -G Ninja \
+        # Build with a nice ninja status line
+      - name: Build
+        working-directory: ${{github.workspace}}/build
+        run: |
+          NINJA_STATUS="%p [%f:%s/%t] %o/s, %es" ninja -v
+      - name: Test
+        working-directory: ${{github.workspace}}/build
+        run: |
+          ctest --output-on-failure -j 4 ${{ matrix.arch.unsupported }}
 
   windows:
     strategy:
@@ -120,7 +175,7 @@ jobs:
 
   # Fake check that can be used as a branch-protection rule.
   all-checks:
-    needs: [ubuntu, windows]
+    needs: [ubuntu, windows, qemu-crossbuild]
     runs-on: ubuntu-latest
     steps:
     - name: Dummy step

@@ -1,7 +1,7 @@
 GNUstep Objective-C Runtime
 ===========================
 
-Linux and Windows CI: [![Build Status](https://dev.azure.com/gnustep/libobjc2/_apis/build/status/gnustep.libobjc2?branchName=master)](https://dev.azure.com/gnustep/libobjc2/_build/latest?definitionId=1&branchName=master)
+Linux and Windows CI: [![Libobjc2 CI](https://github.com/gnustep/libobjc2/actions/workflows/main.yml/badge.svg)](https://github.com/gnustep/libobjc2/actions/workflows/main.yml)
 
 FreeBSD CI: [![Build Status](https://api.cirrus-ci.com/github/gnustep/libobjc2.svg)](https://cirrus-ci.com/github/gnustep/libobjc2)
 
