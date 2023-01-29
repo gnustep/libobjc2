@@ -2,6 +2,7 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
+#include "../selector.h"
 
 #include <sys/types.h>
 
@@ -31,9 +32,10 @@ int main(void)
 	{
 		snprintf(selBuffer, sizeof(selBuffer), "%" PRId32 "selector%" PRIx32, i, i);
 		nextSel = sel_registerName(selBuffer);
-		if (strcmp(selBuffer, sel_getName(nextSel)) != 0)
+		char *registeredName = sel_getName(nextSel);
+		if (strcmp(selBuffer, registeredName) != 0)
 		{
-			fprintf(stderr, "'%s' != '%s'\n", selBuffer, sel_getName(nextSel));
+			fprintf(stderr, "'%s' != '%s' (%p)\n", selBuffer, registeredName, nextSel->index);
 		}
 		assert(strcmp(selBuffer, sel_getName(nextSel)) == 0);
 		sel_size += strlen(selBuffer);
