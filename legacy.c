@@ -361,6 +361,10 @@ PRIVATE Class objc_upgrade_class(struct objc_class_gsv1 *oldClass)
 		cls->isa = objc_upgrade_class((struct objc_class_gsv1*)cls->isa);
 		objc_setAssociatedObject((id)cls, &legacy_key, (id)oldClass, OBJC_ASSOCIATION_ASSIGN);
 	}
+	else
+	{
+		cls->instance_size = sizeof(struct objc_class);
+	}
 	return cls;
 }
 PRIVATE struct objc_category *objc_upgrade_category(struct objc_category_gcc *old)
