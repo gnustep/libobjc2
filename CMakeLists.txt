@@ -1,16 +1,30 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.16)
 
 project(libobjc C ASM CXX)
 
-INCLUDE (CheckCXXSourceCompiles)
+if (NOT "${CMAKE_C_COMPILER_ID}" MATCHES Clang*)
+	message(WARNING "WARNING: It is strongly recommended that you compile with clang")
+elseif (WIN32 AND "${CMAKE_C_COMPILER_FRONTEND_VARIANT}" STREQUAL "MSVC")
+	message(WARNING "WARNING: It is strongly recommended that you compile with clang (clang-cl is not supported)")
+endif()
 
-set(CMAKE_C_FLAGS_DEBUG "-O0 -Xclang -fno-inline ${CMAKE_C_FLAGS_DEBUG}")
-set(CMAKE_C_FLAGS_RELEASE "-O3 ${CMAKE_C_FLAGS_RELEASE}")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+# fix up CMake Objective-C compiler detection on Windows before enabling languages below
+if (WIN32)
+	foreach(lang IN ITEMS C CXX)
+		set(CMAKE_OBJ${lang}_COMPILER_FORCED ON)
+		foreach(runtimeLibrary IN ITEMS MultiThreaded MultiThreadedDLL MultiThreadedDebug MultiThreadedDebugDLL)
+			set(CMAKE_OBJ${lang}_COMPILE_OPTIONS_MSVC_RUNTIME_LIBRARY_${runtimeLibrary} ${CMAKE_${lang}_COMPILE_OPTIONS_MSVC_RUNTIME_LIBRARY_${runtimeLibrary}})
+		endforeach()
+	endforeach()
+endif()
+
+enable_language(OBJC OBJCXX)
+
+INCLUDE (CheckCXXSourceCompiles)
 
 set(libobjc_VERSION 4.6)
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Xclang -fexceptions -Xclang -fobjc-exceptions")
+
 if (MSVC)
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /EHas")
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHas")
@@ -19,10 +33,11 @@ if (MSVC)
 	set(CMAKE_EXE_LINKER_FLAGS "/DEBUG /INCREMENTAL:NO ${CMAKE_EXE_LINKER_FLAGS}")
 	set(objc_LINK_FLAGS "/DEBUG /INCREMENTAL:NO ${objc_LINK_FLAGS}")
 endif()
-# Build configuration
-add_definitions( -DGNUSTEP -D__OBJC_RUNTIME_INTERNAL__=1)
 
-set(CMAKE_CXX_STANDARD 14)
+# Build configuration
+add_compile_definitions(GNUSTEP __OBJC_RUNTIME_INTERNAL__=1)
+
+set(CMAKE_CXX_STANDARD 17)
 
 set(libobjc_ASM_SRCS 
 	block_trampolines.S
@@ -44,6 +59,7 @@ set(libobjc_C_SRCS
 	class_table.c
 	dtable.c
 	encoding2.c
+	gc_none.c
 	hooks.c
 	ivar.c
 	loader.c
@@ -94,47 +110,6 @@ if (NOT EXISTS "${CMAKE_SOURCE_DIR}/third_party/robin-map/include/tsl/robin_map.
 						"https://github.com/Tessil/robin-map/")
 endif ()
 
-# For release builds, we disable spamming the terminal with warnings about
-# selector type mismatches
-if (CMAKE_BUILD_TYPE STREQUAL Release)
-	add_definitions(-DNO_SELECTOR_MISMATCH_WARNINGS)
-else ()
-	add_definitions(-DGC_DEBUG)
-endif ()
-
-set(TYPE_DEPENDENT_DISPATCH TRUE CACHE BOOL
-	"Enable type-dependent dispatch")
-if (TYPE_DEPENDENT_DISPATCH)
-	add_definitions(-DTYPE_DEPENDENT_DISPATCH)
-endif ()
-set(ENABLE_TRACING FALSE CACHE BOOL
-	"Enable tracing support (slower, not recommended for deployment)")
-if (ENABLE_TRACING)
-	add_definitions(-DWITH_TRACING=1)
-endif (ENABLE_TRACING)
-
-set(BOEHM_GC FALSE CACHE BOOL
-	"Enable garbage collection support (not recommended)")
-if (BOEHM_GC)
-	include(FindPkgConfig)
-	pkg_check_modules(GC REQUIRED bdw-gc)
-	link_directories(${GC_LIBRARY_DIRS})
-	# If there's a threaded version, use it
-	find_library(LIBGC gc-threaded PATHS "${GC_LIBRARY_DIRS}")
-	if (LIBGC)
-	else ()
-		find_library(LIBGC gc PATHS GC_LIBRARY_DIRS)
-	endif ()
-	message(STATUS "Using Boehm GC library: ${LIBGC}")
-	include_directories(GC_INCLUDE_DIRS)
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${GC_CFLAGS}")
-	set(CMAKE_OBJC_FLAGS "${CMAKE_OBJC_FLAGS} -fobjc-gc")
-	set(objc_LINK_FLAGS "${objc_LINK_FLAGS} ${GC_CFLAGS}")
-	add_definitions(-DENABLE_GC)
-	list(APPEND libobjc_OBJC_SRCS gc_boehm.c)
-else ()
-	list(APPEND libobjc_OBJC_SRCS gc_none.c)
-endif ()
 
 if (WIN32)
 	set(OLD_ABI_COMPAT_DEFAULT false)
@@ -142,18 +117,25 @@ else()
 	set(OLD_ABI_COMPAT_DEFAULT true)
 endif()
 
-set(OLDABI_COMPAT ${OLD_ABI_COMPAT_DEFAULT} CACHE BOOL
-	"Enable compatibility with GCC and old GNUstep ABIs")
+option(TYPE_DEPENDENT_DISPATCH "Enable type-dependent dispatch" ON)
+option(ENABLE_TRACING 
+	"Enable tracing support (slower, not recommended for deployment)" OFF)
+option(OLDABI_COMPAT 
+	"Enable compatibility with GCC and old GNUstep ABIs"
+	${OLD_ABI_COMPAT_DEFAULT})
+option(LEGACY_COMPAT "Enable legacy compatibility features" OFF)
+option(DEBUG_ARC_COMPAT
+	"Log warnings for classes that don't hit ARC fast paths" OFF)
+option(ENABLE_OBJCXX "Enable support for Objective-C++" ON)
+option(TESTS "Enable building the tests")
 
-set(LEGACY_COMPAT FALSE CACHE BOOL
-	"Enable legacy compatibility features")
 
-set(DEBUG_ARC_COMPAT FALSE CACHE BOOL
-	"Log warnings for classes that don't hit ARC fast paths")
-
-if (DEBUG_ARC_COMPAT)
-	add_definitions(-DDEBUG_ARC_COMPAT)
-endif()
+# For release builds, we disable spamming the terminal with warnings about
+# selector type mismatches
+add_compile_definitions($<$<CONFIG:Release>:NO_SELECTOR_MISMATCH_WARNINGS>)
+add_compile_definitions($<$<BOOL:${TYPE_DEPENDENT_DISPATCH}>:TYPE_DEPENDENT_DISPATCH>)
+add_compile_definitions($<$<BOOL:${ENABLE_TRACING}>:WITH_TRACING=1>)
+add_compile_definitions($<$<BOOL:${DEBUG_ARC_COMPAT}>:DEBUG_ARC_COMPAT>)
 
 if (OLDABI_COMPAT)
 	list(APPEND libobjc_C_SRCS legacy.c abi_version.c statics_loader.c)
@@ -172,81 +154,10 @@ set(LIBOBJC_NAME "objc" CACHE STRING
 set(INCLUDE_DIRECTORY "objc" CACHE STRING 
 	"Subdirectory of the include path to install the headers.")
 
-
-if (${CMAKE_C_COMPILER_ID} MATCHES Clang*)
-	set(CMAKE_OBJC_FLAGS "${CMAKE_OBJC_FLAGS} -Wno-deprecated-objc-isa-usage -Wno-objc-root-class")
-	if (${CMAKE_C_COMPILER_VERSION} VERSION_GREATER 3.1)
-		set(CMAKE_OBJC_FLAGS "${CMAKE_OBJC_FLAGS} -fobjc-runtime=gnustep-2.0")
-	endif ()
-else (${CMAKE_C_COMPILER_ID} MATCHES Clang*)
-	MESSAGE("WARNING: It is strongly recommended that you compile with clang")
-endif (${CMAKE_C_COMPILER_ID} MATCHES Clang*)
-
-if (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "i686")
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -march=i586")
-endif ()
+add_compile_options("$<$<OR:$<COMPILE_LANGUAGE:OBJC>,$<COMPILE_LANGUAGE:OBJCXX>>:-Wno-deprecated-objc-isa-usage;-Wno-objc-root-class;-fobjc-runtime=gnustep-2.0>$<$<COMPILE_LANGUAGE:C>:-Xclang;-fexceptions>")
+add_compile_options($<$<STREQUAL:${CMAKE_SYSTEM_PROCESSOR},i686>:-march=i586>)
 
 set(INSTALL_TARGETS objc)
-
-# On Windows, CMake adds /TC to the clang-cl flags and doesn't provide a way to
-# tell it not to.  We fix this by telling clang do disregard that option,
-# unconditionally (which means that it still defaults to C for .c files).
-set(ENV{CCC_OVERRIDE_OPTIONS} "x/TC x/Gm-")
-
-set_source_files_properties(
-	${libobjc_ASM_SRCS}
-	LANGUAGE C
-	COMPILE_FLAGS "${CMAKE_OBJC_FLAGS} -Xclang -x -Xclang assembler-with-cpp"
-)
-
-set_source_files_properties(
-	${libobjc_CXX_SRCS}
-	LANGUAGE CXX
-	COMPILE_FLAGS "${CMAKE_CXX_FLAGS}"
-)
-
-set_source_files_properties(
-	${libobjc_OBJC_SRCS}
-	COMPILE_FLAGS "${CMAKE_OBJC_FLAGS} -Xclang -x -Xclang objective-c"
-)
-
-set_source_files_properties(
-	${libobjc_OBJCXX_SRCS}
-	COMPILE_FLAGS "${CMAKE_OBJC_FLAGS} -Xclang -x -Xclang objective-c++"
-)
-
-
-#
-# C++ Runtime interaction
-#
-
-
-function(test_cxx CXX_RUNTIME_NAME IS_STDLIB)
-	set(CXX_RUNTIME_NAME_FULL "${CMAKE_SHARED_LIBRARY_PREFIX}${CXX_RUNTIME_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX}")
-	find_library(CXX_RUNTIME_LIB NAMES ${CXX_RUNTIME_NAME_FULL} ${CXX_RUNTIME_NAME})
-	if (CXX_RUNTIME_LIB)
-		message(STATUS "Testing ${CXX_RUNTIME_LIB} as the C++ runtime library")
-		if (ANDROID)
-			# pass on Android toolchain flags
-			set(CXX_RUNTIME_FLAGS "-DANDROID_NDK=${ANDROID_NDK}" "-DANDROID_ABI=${ANDROID_ABI}" "-DANDROID_ARM_MODE=${ANDROID_ARM_MODE}" "-DANDROID_LD=${ANDROID_LD}" "-DANDROID_PLATFORM=${ANDROID_PLATFORM}" "-DANDROID_STL=${ANDROID_STL}")
-		endif()
-		try_compile(USERUNTIME 
-			"${CMAKE_BINARY_DIR}/CMake"
-			"${CMAKE_CURRENT_LIST_DIR}/CMake"
-			test_cxx_runtime
-			CMAKE_FLAGS "-DCXX_RUNTIME=${CXX_RUNTIME_LIB}" ${CXX_RUNTIME_FLAGS})
-		if (USERUNTIME)
-			set(CXX_RUNTIME ${CXX_RUNTIME_LIB} PARENT_SCOPE)
-		else ()
-			unset(CXX_RUNTIME_LIB CACHE)
-		endif()
-	endif()
-endfunction()
-
-set(ENABLE_OBJCXX true CACHE BOOL
-	"Enable support for Objective-C++")
-
-set(CXXRT_IS_STDLIB false)
 
 if(WIN32)
 	if(CMAKE_SIZEOF_VOID_P EQUAL 8)
@@ -278,84 +189,29 @@ endif()
 
 
 
-if (ENABLE_OBJCXX)
-	if (WIN32)
-		message(STATUS "Using MSVC-compatible exception model")
-	else ()
-		message(STATUS "Testing C++ interop")
-		# Try to find libcxxrt.so.  We can link to this to provide the C++ ABI
-		# layer, if it exists.
-		test_cxx(cxxrt false)
-		# If it doesn't, then look for GNU libsupc++.so instead (either works,
-		# they're ABI compatible).
-		if (NOT CXX_RUNTIME)
-			test_cxx(supc++ false)
-		endif (NOT CXX_RUNTIME)
-		if (NOT CXX_RUNTIME)
-			list (FIND CMAKE_CXX_IMPLICIT_LINK_LIBRARIES "c++" _libcxx_index)
-			if (${_libcxx_index} GREATER -1)
-				test_cxx(c++abi false)
-			endif()
-		endif (NOT CXX_RUNTIME)
-
-		# If we have a C++ ABI library, then we can produce a single libobjc that
-		# works for Objective-C and Objective-C++.  If not, then we need to provide
-		# a separate libobjcxx.
-		if (CXX_RUNTIME)
-			message(STATUS "Using ${CXX_RUNTIME} as the C++ runtime library")
-		else()
-			message(STATUS "Testing C++ standard library")
-			message(STATUS "Using ${CMAKE_C_COMPILER}")
-			try_compile(USERUNTIME 
-				"${CMAKE_BINARY_DIR}/CMake"
-				"${CMAKE_CURRENT_LIST_DIR}/CMake"
-				test_cxx_stdlib)
-			if (${USERUNTIME})
-				message(STATUS "libobjc will depend on C++ standard library")
-				set(CXXRT_IS_STDLIB true)
-			else()
-				message(STATUS "No useable C++ runtime found")
-				set(ENABLE_OBJCXX false)
-			endif()
-		endif ()
-		separate_arguments(EH_PERSONALITY_FLAGS NATIVE_COMMAND ${CMAKE_CXX_FLAGS})
-		if (CMAKE_CXX_COMPILER_TARGET)
-			list(APPEND EH_PERSONALITY_FLAGS "${CMAKE_CXX_COMPILE_OPTIONS_TARGET}${CMAKE_CXX_COMPILER_TARGET}")
-		endif ()
-		add_custom_command(OUTPUT eh_trampoline.s
-			COMMAND ${CMAKE_CXX_COMPILER} ARGS ${EH_PERSONALITY_FLAGS} -fPIC -S "${CMAKE_SOURCE_DIR}/eh_trampoline.cc" -o - -fexceptions -fno-inline | sed "s/__gxx_personality_v0/test_eh_personality/g" > "${CMAKE_BINARY_DIR}/eh_trampoline.s"
-			MAIN_DEPENDENCY eh_trampoline.cc)
-		list(APPEND libobjc_ASM_SRCS eh_trampoline.s)
-		list(APPEND libobjc_CXX_SRCS objcxx_eh.cc)
-
-		# Find libm for linking, as some versions of libc++ don't link against it
-		find_library(M_LIBRARY m)
+if (WIN32)
+	message(STATUS "Using MSVC-compatible exception model")
+else ()
+	separate_arguments(EH_PERSONALITY_FLAGS NATIVE_COMMAND ${CMAKE_CXX_FLAGS})
+	if (CMAKE_CXX_COMPILER_TARGET)
+		list(APPEND EH_PERSONALITY_FLAGS "${CMAKE_CXX_COMPILE_OPTIONS_TARGET}${CMAKE_CXX_COMPILER_TARGET}")
 	endif ()
-endif (ENABLE_OBJCXX)
+	add_custom_command(OUTPUT eh_trampoline.S
+		COMMAND ${CMAKE_CXX_COMPILER} ARGS ${EH_PERSONALITY_FLAGS} -fPIC -S "${CMAKE_SOURCE_DIR}/eh_trampoline.cc" -o - -fexceptions -fno-inline | sed "s/__gxx_personality_v0/test_eh_personality/g" > "${CMAKE_BINARY_DIR}/eh_trampoline.S"
+		MAIN_DEPENDENCY eh_trampoline.cc)
+	list(APPEND libobjc_ASM_SRCS eh_trampoline.S)
+	list(APPEND libobjc_CXX_SRCS objcxx_eh.cc)
+	# Find libm for linking, as some versions of libc++ don't link against it
+	find_library(M_LIBRARY m)
+endif ()
 
 add_library(objc SHARED ${libobjc_C_SRCS} ${libobjc_ASM_SRCS} ${libobjc_OBJC_SRCS} ${libobjc_OBJCXX_SRCS} ${libobjc_ASM_OBJS})
 
-if (ENABLE_OBJCXX)
-	if (NOT CXXRT_IS_STDLIB)
-		# We don't want to link the STL implementation (e.g. libstdc++) if
-		# we have a separate C++ runtime.
-		set(CMAKE_CXX_IMPLICIT_LINK_LIBRARIES "")
-		target_link_libraries(objc ${CXX_RUNTIME})
-	endif()
-	list(APPEND libobjc_CXX_SRCS ${libobjcxx_CXX_SRCS})
-	target_sources(objc PRIVATE ${libobjc_CXX_SRCS})
-else()
-	add_definitions(-DNO_OBJCXX)
-endif()
+list(APPEND libobjc_CXX_SRCS ${libobjcxx_CXX_SRCS})
+target_sources(objc PRIVATE ${libobjc_CXX_SRCS})
 
-
-# Currently, we actually need pthreads, but we should use the platform's native
-# threading implementation (we do for everything except thread-local storage)
-set(CMAKE_THREAD_PREFER_PTHREAD)
 include(FindThreads)
 target_link_libraries(objc Threads::Threads)
-
-
 
 
 set_target_properties(objc PROPERTIES
@@ -367,19 +223,13 @@ set_target_properties(objc PROPERTIES
 
 set_property(TARGET PROPERTY NO_SONAME true)
 
-set(BUILD_STATIC_LIBOBJC false CACHE BOOL
-	"Build the static version of libobjc")
+option(BUILD_STATIC_LIBOBJC "Build the static version of libobjc" OFF)
 if (BUILD_STATIC_LIBOBJC)
 	add_library(objc-static STATIC ${libobjc_C_SRCS} ${libobjc_ASM_SRCS} ${libobjc_OBJC_SRCS} ${libobjc_CXX_SRCS})
 	set_target_properties(objc-static PROPERTIES
 		POSITION_INDEPENDENT_CODE true
 		OUTPUT_NAME ${LIBOBJC_NAME})
 	list(APPEND INSTALL_TARGETS objc-static)
-endif ()
-
-# Explicitly link libgc if we are compiling with gc support.
-if (LIBGC)
-	target_link_libraries(objc ${LIBGC})
 endif ()
 
 # Explicitly link libm, as an implicit dependency of the C++ runtime
@@ -455,7 +305,7 @@ set(CPACK_PACKAGE_VENDOR "The GNUstep Project")
 set(CPACK_PACKAGE_DESCRIPTION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/COPYING")
 set(CPACK_PACKAGE_VERSION_MAJOR "2")
-set(CPACK_PACKAGE_VERSION_MINOR "0")
+set(CPACK_PACKAGE_VERSION_MINOR "2")
 set(CPACK_PACKAGE_VERSION_PATCH "0")
 set(CPACK_PACKAGE_CONTACT "GNUstep Developer <gnustep-dev@gnu.org>")
 set(CPACK_PACKAGE_INSTALL_DIRECTORY "CMake ${CMake_VERSION_MAJOR}.${CMake_VERSION_MINOR}")
@@ -466,22 +316,13 @@ include (CPack)
 
 # pkg-config descriptor
 
-if (BOEHM_GC)
-	set(PC_REQUIRES_PRIVATE_BOEHM_GC "Requires.private: bdw-gc")
+set(PC_LIBS_PRIVATE ${CMAKE_CXX_IMPLICIT_LINK_LIBRARIES})
+if (M_LIBRARY)
+	list(APPEND PC_LIBS_PRIVATE ${M_LIBRARY})
 endif ()
-if (ENABLE_OBJCXX)
-	if (CXXRT_IS_STDLIB)
-		set(PC_LIBS_PRIVATE ${CMAKE_CXX_IMPLICIT_LINK_LIBRARIES})
-	else()
-		list(APPEND PC_LIBS_PRIVATE ${CXX_RUNTIME})
-		if (M_LIBRARY)
-			list(APPEND PC_LIBS_PRIVATE ${M_LIBRARY})
-		endif ()
-	endif()
-	list(REMOVE_DUPLICATES PC_LIBS_PRIVATE)
-	string(REPLACE  ";" " -l" PC_LIBS_PRIVATE "${PC_LIBS_PRIVATE}")
-	set(PC_LIBS_PRIVATE "Libs.private: -l${PC_LIBS_PRIVATE}")
-endif()
+list(REMOVE_DUPLICATES PC_LIBS_PRIVATE)
+string(REPLACE  ";" " -l" PC_LIBS_PRIVATE "${PC_LIBS_PRIVATE}")
+set(PC_LIBS_PRIVATE "Libs.private: -l${PC_LIBS_PRIVATE}")
 
 configure_file("libobjc.pc.in" "libobjc.pc" @ONLY)
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/libobjc.pc"
@@ -499,8 +340,6 @@ add_custom_target(uninstall
 	COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
 
 
-set(TESTS TRUE CACHE BOOL
-	"Enable building the tests")
 
 if (TESTS)
 	enable_testing()
@@ -516,8 +355,4 @@ CHECK_CXX_SOURCE_COMPILES("
 	#include <exception>
 	int main() { return 0; }" CXA_ALLOCATE_EXCEPTION_NOEXCEPT_COMPILES)
 
-if (CXA_ALLOCATE_EXCEPTION_NOEXCEPT_COMPILES)
-	add_definitions(-DCXA_ALLOCATE_EXCEPTION_SPECIFIER=noexcept)
-else ()
-	add_definitions(-DCXA_ALLOCATE_EXCEPTION_SPECIFIER=)
-endif ()
+add_compile_definitions($<IF:$<BOOL:${CXA_ALLOCATE_EXCEPTION_NOEXCEPT_COMPILES}>,CXA_ALLOCATE_EXCEPTION_SPECIFIER=noexcept,CXA_ALLOCATE_EXCEPTION_SPECIFIER>)
