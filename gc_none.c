@@ -48,18 +48,6 @@ PRIVATE struct gc_ops gc_ops_none =
 };
 PRIVATE struct gc_ops *gc = &gc_ops_none;
 
-PRIVATE BOOL isGCEnabled = NO;
-
-#ifndef ENABLE_GC
-PRIVATE void enableGC(BOOL exclusive)
-{
-	fprintf(stderr, "Attempting to enable garbage collection, but your"
-			"Objective-C runtime was built without garbage collection"
-			"support\n");
-	abort();
-}
-#endif
-
 void objc_set_collection_threshold(size_t threshold) {}
 void objc_set_collection_ratio(size_t ratio) {}
 void objc_collect(unsigned long options) {}

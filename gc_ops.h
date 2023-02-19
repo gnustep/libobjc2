@@ -30,14 +30,6 @@ struct gc_ops
 };
 
 /**
- * Enables garbage collection, if it isn't already enabled.
- *
- * If the exclusive flag is set, then this will ensure that all -retain /
- * -release / -autorelease messages become no-ops.
- */
-void enableGC(BOOL exclusive);
-
-/**
  * The mode for garbage collection
  */
 enum objc_gc_mode
@@ -62,18 +54,7 @@ enum objc_gc_mode
 };
 
 /**
- * The current Objective-C garbage collection mode.
- */
-extern enum objc_gc_mode current_gc_mode;
-/**
- * Have we loaded any code that triggers the ObjC GC support?
- */
-extern BOOL isGCEnabled;
-
-/**
  * The current set of garbage collector operations to use.
  */
 extern struct gc_ops *gc;
 
-extern struct gc_ops gc_ops_boehm;
-extern struct gc_ops gc_ops_none;

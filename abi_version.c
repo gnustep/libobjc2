@@ -61,8 +61,6 @@ static int known_abi_count =
 	}\
 } while(0)
 
-PRIVATE enum objc_gc_mode current_gc_mode = GC_Optional;
-
 static BOOL endsWith(const char *string, const char *suffix)
 {
 	if (NULL == string) { return NO; }
@@ -125,19 +123,8 @@ PRIVATE BOOL objc_check_abi_version(struct objc_module_abi_8 *module)
 		max_loaded_version = version;
 	}
 
-	// If we're currently in GC-optional mode, then fall to one side or the
-	// other if this module requires / doesn't support GC
-	if (current_gc_mode == GC_Optional)
-	{
-		current_gc_mode = gc_mode;
-		if (gc_mode == GC_Required)
-		{
-			enableGC(NO);
-		}
-	}
 	// We can't mix GC_None and GC_Required code, but we can mix any other
 	// combination
-	FAIL_IF((gc_mode == GC_Required) && (gc_mode != current_gc_mode),
-	        "Attempting to mix GC and non-GC code!");
+	FAIL_IF((gc_mode == GC_Required), "GC code is no longer supported!");
 	return YES;
 }

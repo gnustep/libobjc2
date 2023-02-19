@@ -23,10 +23,6 @@ id objc_getProperty(id obj, SEL _cmd, ptrdiff_t offset, BOOL isAtomic)
 	if (nil == obj) { return nil; }
 	char *addr = (char*)obj;
 	addr += offset;
-	if (isGCEnabled)
-	{
-		return *(id*)addr;
-	}
 	id ret;
 	if (isAtomic)
 	{
@@ -52,15 +48,6 @@ void objc_setProperty(id obj, SEL _cmd, ptrdiff_t offset, id arg, BOOL isAtomic,
 	char *addr = (char*)obj;
 	addr += offset;
 
-	if (isGCEnabled)
-	{
-		if (isCopy)
-		{
-			arg = [arg copy];
-		}
-		*(id*)addr = arg;
-		return;
-	}
 	if (isCopy)
 	{
 		arg = [arg copy];
