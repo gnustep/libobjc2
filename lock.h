@@ -78,4 +78,37 @@ extern mutex_t runtime_mutex;
 #define UNLOCK_RUNTIME() UNLOCK(&runtime_mutex)
 #define LOCK_RUNTIME_FOR_SCOPE() LOCK_FOR_SCOPE(&runtime_mutex)
 
+#ifdef __cplusplus
+/**
+ * C++ wrapper around our mutex, for use with std::lock_guard and friends.
+ */
+class RecursiveMutex
+{
+	/// The underlying mutex
+	mutex_t mutex;
+
+	public:
+	/**
+	 * Explicit initialisation of the underlying lock, so that this can be a
+	 * global.
+	 */
+	void init()
+	{
+		INIT_LOCK(mutex);
+	}
+
+	/// Acquire the lock.
+	void lock()
+	{
+		LOCK(&mutex);
+	}
+
+	/// Release the lock.
+	void unlock()
+	{
+		UNLOCK(&mutex);
+	}
+};
+#endif
+
 #endif // __LIBOBJC_LOCK_H_INCLUDED__

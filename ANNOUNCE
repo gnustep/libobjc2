@@ -31,10 +31,10 @@ https://github.com/gnustep/libobjc2/archive/v2.2.tar.gz
 
 The submodule is available from:
 
-https://github.com/Tessil/robin-map/archive/757de82.zip
-https://github.com/Tessil/robin-map/archive/757de82.tar.gz
+https://github.com/Tessil/robin-map/archive/d37a410.zip
+https://github.com/Tessil/robin-map/archive/d37a410.tar.gz
 
-This will extract as robin-map-757de829927489bee55ab02147484850c687b620.
+This will extract as robin-map-d37a41003bfbc7e12e34601f93c18ca2ff6d7c07.
 You must move the contents of that directory into third_party/robin_map in the
 libobjc2 tree.
 

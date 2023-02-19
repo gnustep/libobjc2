@@ -50,7 +50,7 @@ jobs:
         run: |
           export LDFLAGS=-L/usr/lib/llvm-${{ matrix.llvm-version }}/lib/
           ls -lahR /usr/lib/llvm-${{ matrix.llvm-version }}/lib/
-          cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -G Ninja -DCMAKE_C_COMPILER=clang-${{matrix.llvm-version}} -DCMAKE_ASM_COMPILER=clang-${{matrix.llvm-version}} -DCMAKE_CXX_COMPILER=clang++-${{matrix.llvm-version}} -DCMAKE_CXX_FLAGS="-stdlib=${{matrix.cxxlib}}"
+          cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -G Ninja -DTESTS=ON -DCMAKE_C_COMPILER=clang-${{matrix.llvm-version}} -DCMAKE_ASM_COMPILER=clang-${{matrix.llvm-version}} -DCMAKE_CXX_COMPILER=clang++-${{matrix.llvm-version}} -DCMAKE_CXX_FLAGS="-stdlib=${{matrix.cxxlib}}"
         # Build with a nice ninja status line
       - name: Build
         working-directory: ${{github.workspace}}/build

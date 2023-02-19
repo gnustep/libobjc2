@@ -72,9 +72,9 @@ static void init_runtime(void)
 		INIT_LOCK(runtime_mutex);
 		// Create the various tables that the runtime needs.
 		init_selector_tables();
+		init_dispatch_tables();
 		init_protocol_table();
 		init_class_tables();
-		init_dispatch_tables();
 		init_alias_table();
 		init_arc();
 		init_trampolines();

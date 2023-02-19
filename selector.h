@@ -1,21 +1,5 @@
 #ifndef OBJC_SELECTOR_H_INCLUDED
 #define OBJC_SELECTOR_H_INCLUDED
-/**
- * Structure used to store the types for a selector.  This allows for a quick
- * test to see whether a selector is polymorphic and allows enumeration of all
- * type encodings for a given selector.
- *
- * This is the same size as an objc_selector, so we can allocate them from the
- * objc_selector pool.
- *
- * Note: For ABI v10, we can probably do something a bit more sensible here and
- * make selectors into a linked list.
- */
-struct sel_type_list
-{
-	const char *value;
-	struct sel_type_list *next;
-};
 
 /**
  * Structure used to store selectors in the list.
@@ -60,16 +44,19 @@ static SEL sel_getUntyped(SEL aSel)
 	return sel_registerTypedName_np(sel_getName(aSel), 0);
 }
 
-/**
- * Returns whether a selector is mapped.  
- */
-BOOL isSelRegistered(SEL sel);
-
+#ifdef __cplusplus
+extern "C"
+{
+#endif
 /**
  * Registers the selector.  This selector may be returned later, so it must not
  * be freed.
  */
 SEL objc_register_selector(SEL aSel);
+
+#ifdef __cplusplus
+}
+#endif
 
 /**
  * SELECTOR() macro to work around the fact that GCC hard-codes the type of
