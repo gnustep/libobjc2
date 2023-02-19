@@ -67,7 +67,6 @@ set(libobjc_C_SRCS
 	protocol.c
 	runtime.c
 	sarray2.c
-	selector_table.c
 	sendmsg2.c
 	)
 set(libobjc_HDRS
@@ -94,6 +93,9 @@ set(libobjc_HDRS
 set(libBlocksRuntime_COMPATIBILITY_HDRS
 	Block.h
 	Block_private.h
+	)
+set(libobjc_CXX_SRCS
+	selector_table.cc
 	)
 # Windows does not use DWARF EH
 if (WIN32)

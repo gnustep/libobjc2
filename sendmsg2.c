@@ -116,13 +116,6 @@ retry:;
 		}
 		if (0 == result)
 		{
-			if (!isSelRegistered(selector))
-			{
-				objc_register_selector(selector);
-				// This should be a tail call, but GCC is stupid and won't let
-				// us tail call an always_inline function.
-				goto retry;
-			}
 			if ((result = objc_dtable_lookup(dtable, get_untyped_idx(selector))))
 			{
 				if (version)
@@ -378,11 +371,6 @@ struct objc_slot2 *objc_get_slot2(Class cls, SEL selector, uint64_t *version)
 		}
 		if (NULL == result)
 		{
-			if (!isSelRegistered(selector))
-			{
-				objc_register_selector(selector);
-				return objc_get_slot2(cls, selector, version);
-			}
 			if ((result = objc_dtable_lookup(dtable, get_untyped_idx(selector))))
 			{
 				if (version)
