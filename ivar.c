@@ -66,7 +66,7 @@ PRIVATE void objc_compute_ivar_offsets(Class class)
 			long last_offset = LONG_MIN;
 			long last_size = 0;
 			long last_computed_offset = -1;
-			size_t refcount_size = isGCEnabled ? 0 : sizeof(uintptr_t);
+			size_t refcount_size = sizeof(uintptr_t);
 			for (i = 0 ; i < class->ivars->count ; i++)
 			{
 				struct objc_ivar *ivar = ivar_at_index(class->ivars, i);

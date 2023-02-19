@@ -185,10 +185,7 @@ OBJC_PUBLIC void _Block_object_assign(void *destAddr, const void *object, const 
 			id src = (id)object;
 			void **dst = destAddr;
 			*dst = src;
-			if (!isGCEnabled)
-			{
-				*dst = objc_retain(src);
-			}
+			*dst = objc_retain(src);
 		}
 	}
 }
@@ -234,10 +231,7 @@ OBJC_PUBLIC void _Block_object_dispose(const void *object, const int flags)
 		         !IS_SET(flags, BLOCK_BYREF_CALLER))
 		{
 			id src = (id)object;
-			if (!isGCEnabled)
-			{
-				objc_release(src);
-			}
+			objc_release(src);
 		}
 	}
 }
