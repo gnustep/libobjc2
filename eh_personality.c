@@ -4,6 +4,7 @@
 #include "dwarf_eh.h"
 #include "objc/runtime.h"
 #include "objc/hooks.h"
+#include "objc/objc-exception.h"
 #include "class.h"
 #include "objcxx_eh.h"
 
@@ -759,4 +760,9 @@ void objc_exception_rethrow(struct _Unwind_Exception *e)
 	assert(e == (struct _Unwind_Exception*)td->caughtExceptions);
 	_Unwind_Resume_or_Rethrow(e);
 	abort();
+}
+
+objc_uncaught_exception_handler objc_setUncaughtExceptionHandler(objc_uncaught_exception_handler handler)
+{
+	return __atomic_exchange_n(&_objc_unexpected_exception, handler, __ATOMIC_SEQ_CST);
 }

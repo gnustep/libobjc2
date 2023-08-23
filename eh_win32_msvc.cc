@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "objc/runtime.h"
-#include "objc/hooks.h"
+#include "objc/objc-exception.h"
 #include "visibility.h"
 
 #include <windows.h>
@@ -57,6 +57,7 @@ struct _MSVC_ThrowInfo
 };
 
 static LPTOP_LEVEL_EXCEPTION_FILTER originalUnhandledExceptionFilter = nullptr;
+void (*_objc_unexpected_exception)(id exception);
 LONG WINAPI _objc_unhandled_exception_filter(struct _EXCEPTION_POINTERS* exceptionInfo);
 
 #if defined(_WIN64)
@@ -197,17 +198,6 @@ OBJC_PUBLIC extern "C" void objc_exception_throw(id object)
 	exception.ExceptionInformation[2] = reinterpret_cast<ULONG_PTR>(&ti);
 	exception.ExceptionInformation[3] = reinterpret_cast<ULONG_PTR>(&x);
 
-	// Set unhandled exception filter to support _objc_unexpected_exception hook.
-	// Unfortunately there doesn't seem to be a better place to call this, as
-	// installing it at construction time means that it will get overwritten by
-	// the handler installed by the VC runtime. This way it works, but as a side
-	// effect throwing exceptions will overwrite any previously installed handler,
-	// so we save it and call it as part of our handler.
-	LPTOP_LEVEL_EXCEPTION_FILTER previousExceptionFilter = SetUnhandledExceptionFilter(&_objc_unhandled_exception_filter);
-	if (previousExceptionFilter != &_objc_unhandled_exception_filter) {
-		originalUnhandledExceptionFilter = previousExceptionFilter;
-	}
-
 #ifdef _WIN64
  	RtlRaiseException(&exception);
 #else
@@ -281,4 +271,17 @@ LONG WINAPI _objc_unhandled_exception_filter(struct _EXCEPTION_POINTERS* excepti
 	// EXCEPTION_CONTINUE_SEARCH instructs the exception handler to continue searching for appropriate exception handlers.
 	// Since this is the last one, it is not likely to find any more.
 	return EXCEPTION_CONTINUE_SEARCH;
+}
+
+OBJC_PUBLIC extern "C" objc_uncaught_exception_handler objc_setUncaughtExceptionHandler(objc_uncaught_exception_handler handler)
+{
+	objc_uncaught_exception_handler previousHandler = __atomic_exchange_n(&_objc_unexpected_exception, handler, __ATOMIC_SEQ_CST);
+
+	// set unhandled exception filter to support hook
+	LPTOP_LEVEL_EXCEPTION_FILTER previousExceptionFilter = SetUnhandledExceptionFilter(&_objc_unhandled_exception_filter);
+	if (previousExceptionFilter != &_objc_unhandled_exception_filter) {
+		originalUnhandledExceptionFilter = previousExceptionFilter;
+	}
+
+	return previousHandler;
 }
