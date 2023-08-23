@@ -34,7 +34,7 @@ int main(void)
 	SetUnhandledExceptionFilter(&_UnhandledExceptionFilter);
 #endif
 
-	_objc_unexpected_exception = _UncaughtExceptionHandler;
+	objc_setUncaughtExceptionHandler(_UncaughtExceptionHandler);
 	@throw exceptionObj;
 	assert(0 && "should not be reached!");
 

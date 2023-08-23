@@ -84,6 +84,7 @@ set(libobjc_HDRS
 	objc/objc-arc.h
 	objc/objc-auto.h
 	objc/objc-class.h
+	objc/objc-exception.h
 	objc/objc-runtime.h
 	objc/objc-visibility.h
 	objc/objc.h
