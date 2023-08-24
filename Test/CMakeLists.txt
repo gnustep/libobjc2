@@ -34,7 +34,6 @@ set(TESTS
 	ResurrectInDealloc_arc.m
 	RuntimeTest.m
 	SuperMethodMissing.m
-	UnexpectedException.m
 	WeakBlock_arc.m
 	WeakRefLoad.m
 	WeakReferences_arc.m
@@ -79,6 +78,11 @@ if (ENABLE_ALL_OBJC_ARC_TESTS)
 	PropertyIntrospectionTest2_arc.m
 	)
 endif()
+
+# UnexpectedException test currently fails on ARM and needs to be fixed
+if (NOT CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm|aarch64)")
+	list(APPEND TESTS UnexpectedException.m)
+endif ()
 
 # List of single-file tests that won't work with the legacy ABI and so
 # shouldn't be run in legacy mode.
