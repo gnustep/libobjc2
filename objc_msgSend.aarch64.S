@@ -93,13 +93,12 @@
 	ldp    \receiver, x8, [sp], #(ARGUMENT_SPILL_SIZE + 16)
 	br     x9
 6:
-#if __ELF__
-	adrp   x10, :got:SmallObjectClasses
-	ldr    x10, [x10, :got_lo12:SmallObjectClasses]
+	// Load 63:12 of SmallObjectClasses address
+	adrp   x10, CDECL(SmallObjectClasses)
+	// Add lower 12-bits of SmallObjectClasses address to x10
+	add    x10, x10, :lo12:CDECL(SmallObjectClasses)
 	ldr    x9, [x10, x9, lsl #3]
-#else
-  adr    x9, CDECL(SmallObjectClasses)
-#endif
+
 	b      1b
 	.cfi_endproc
 .endm
@@ -119,6 +118,7 @@
 .type 32;
 .endef
 #endif
+
 .globl CDECL(objc_msgSend_fpret)
 TYPE_DIRECTIVE(CDECL(objc_msgSend_fpret), %function)
 .globl CDECL(objc_msgSend)
@@ -129,6 +129,7 @@ CDECL(objc_msgSend_fpret):
 CDECL(objc_msgSend_stret):
 CDECL(objc_msgSend):
 	MSGSEND objc_msgSend x0, x1
+
 #ifdef _WIN64
 .section        .drectve,"yn"
 .ascii  " /EXPORT:objc_msgSend"
