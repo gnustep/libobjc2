@@ -11,7 +11,7 @@
 #endif
 
 .macro MSGSEND fnname, receiver, sel
-	.cfi_startproc
+	START_PROC(\fnname)
 	cbz    \receiver, 4f                   // Skip everything if the receiver is nil
 	                                       // Jump to 6: if this is a small object
 	ubfx    x9, \receiver, #0, #SMALLOBJ_BITS
@@ -56,7 +56,10 @@
 	br     lr
 5:                                        // Slow lookup
 	                                      // Save anything that will be clobbered by
-	                                      // the call
+	                                      // the call.
+										  // Note that we pre-index (see "!"), meaning
+										  // that we adjust the sp before storing the pair
+										  // of registers.
 	stp    x0, x1, [sp, #-(ARGUMENT_SPILL_SIZE)]!
 	stp    x2, x3, [sp, #16]              // The order is arbitrary, except that
 	stp    x4, x5, [sp, #32]              // fp and lr must be spilled together and
@@ -66,11 +69,14 @@
 	stp    q4, q5, [sp, #128]
 	stp    q6, q7, [sp, #160]
 	stp    fp, lr, [sp, #192]
-	add    fp, sp, 192
-	stp    \receiver, x8, [sp, #-16]!
+	add    fp, sp, 192					  // Adjust frame pointer
+	stp    \receiver, x8, [sp, #-16]!     // Pre-index by sp-16
+
+	// FIXME: Conditionally use SEH directives
 	.cfi_def_cfa fp, 16
 	.cfi_offset fp, -16
 	.cfi_offset lr, -8
+	
 	                                      // We now have all argument registers, the link
 	                                      // register and the receiver spilled on the
 	                                      // stack, with sp containing
@@ -93,14 +99,17 @@
 	ldp    \receiver, x8, [sp], #(ARGUMENT_SPILL_SIZE + 16)
 	br     x9
 6:
-	// Load 63:12 of SmallObjectClasses address
-	adrp   x10, CDECL(SmallObjectClasses)
-	// Add lower 12-bits of SmallObjectClasses address to x10
+										  // Load 63:12 of SmallObjectClasses address
+										  // We use the CDECL macro as Windows prefixes
+										  // cdecl conforming symbols with "_".
+	adrp   x10, CDECL(SmallObjectClasses) // The macro handles this transparently.
+
+										  // Add lower 12-bits of SmallObjectClasses address to x10
 	add    x10, x10, :lo12:CDECL(SmallObjectClasses)
 	ldr    x9, [x10, x9, lsl #3]
 
 	b      1b
-	.cfi_endproc
+	END_PROC(\fnname)
 .endm
 
 #ifdef _WIN64
