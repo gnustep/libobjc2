@@ -61,6 +61,8 @@
 										  // that we adjust the sp before storing the pair
 										  // of registers.
 	stp    x0, x1, [sp, #-(ARGUMENT_SPILL_SIZE)]!
+	.seh_stackalloc (ARGUMENT_SPILL_SIZE)
+
 	stp    x2, x3, [sp, #16]              // The order is arbitrary, except that
 	stp    x4, x5, [sp, #32]              // fp and lr must be spilled together and
 	stp    x6, x7, [sp, #48]              // it's convenient if \receiver is spilled at sp
@@ -69,13 +71,19 @@
 	stp    q4, q5, [sp, #128]
 	stp    q6, q7, [sp, #160]
 	stp    fp, lr, [sp, #192]
+	.seh_save_fplr	192
+
 	add    fp, sp, 192					  // Adjust frame pointer
+	.seh_add_fp	192
 	stp    \receiver, x8, [sp, #-16]!     // Pre-index by sp-16
+	.seh_stackalloc 16
 
 	// FIXME: Conditionally use SEH directives
+	/*
 	.cfi_def_cfa fp, 16
 	.cfi_offset fp, -16
 	.cfi_offset lr, -8
+	*/
 	
 	                                      // We now have all argument registers, the link
 	                                      // register and the receiver spilled on the
@@ -96,7 +104,12 @@
 	ldp    q4, q5, [sp, #144]
 	ldp    q6, q7, [sp, #176]
 	ldp    fp, lr, [sp, #208]
+	.seh_save_fplr 208
+
+										  // Post-increment sp += ARGUMENT_SPILL_SIZE +16
 	ldp    \receiver, x8, [sp], #(ARGUMENT_SPILL_SIZE + 16)
+	.seh_stackalloc  (ARGUMENT_SPILL_SIZE + 16)
+
 	br     x9
 6:
 										  // Load 63:12 of SmallObjectClasses address
