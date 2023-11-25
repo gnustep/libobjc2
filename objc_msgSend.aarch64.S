@@ -1,15 +1,36 @@
 #define ARGUMENT_SPILL_SIZE (8*10 + 8*16)
 
 #ifdef _WIN64
-#	define END_PROC(x) .seh_endproc
-#	define FRAME_OFFSET(x) .seh_stackalloc x
+#   define EH_START(x)
+#   define EH_END(x)
+#   define EH_START_AT_OFFSET(x) .seh_proc x
+#   define EH_END_AT_OFFSET(x) .seh_endproc x
+#   define EH_END_PROLOGUE .seh_endprologue
+#   define EH_START_EPILOGUE .seh_startepilogue
+#   define EH_END_EPILOGUE .seh_endepilogue
+#   define EH_SAVE_FP_LR(x) .seh_save_fplr x
+#   define EH_STACK_ALLOC(x) .seh_stackalloc x
+#   define EH_ADD_FP(x) .seh_add_fp	x
+#   define EH_NOP .seh_nop
 #else
-#	define END_PROC(x) .cfi_endproc
-#	define FRAME_OFFSET(x) .cfi_adjust_cfa_offset x
+#   define EH_START(x) .cfi_startproc
+#   define EH_END(x) .cfi_endproc
+
+// The following directives are either not
+// needed or not available with CFI
+#   define EH_START_AT_OFFSET(x)
+#   define EH_END_AT_OFFSET(x)
+#   define EH_END_PROLOGUE
+#   define EH_START_EPILOGUE
+#   define EH_END_EPILOGUE
+#   define EH_SAVE_FP_LR(x)
+#   define EH_STACK_ALLOC(x)
+#   define EH_ADD_FP(x)
+#   define EH_NOP
 #endif
 
 .macro MSGSEND fnname, receiver, sel
-	//.cfi_startproc
+	EH_START(\fnname)
 
 	cbz    \receiver, 4f                   // Skip everything if the receiver is nil
 	                                       // Jump to 6: if this is a small object
@@ -52,7 +73,7 @@
 	mov    v0.d[1], x0
 	br     lr
 5:                                        // Slow lookup
-	.seh_proc \fnname
+	EH_START_AT_OFFSET(\fnname)
 
 	                                      // Save anything that will be clobbered by
 	                                      // the call.
@@ -60,37 +81,37 @@
 										  // that we adjust the sp before storing the pair
 										  // of registers.
 	stp    x0, x1, [sp, #-(ARGUMENT_SPILL_SIZE)]!
-	.seh_stackalloc (ARGUMENT_SPILL_SIZE)
+	EH_STACK_ALLOC((ARGUMENT_SPILL_SIZE))
 
 	stp    x2, x3, [sp, #16]              // The order is arbitrary, except that
-	.seh_nop
+	EH_NOP
 	stp    x4, x5, [sp, #32]              // fp and lr must be spilled together and
-	.seh_nop
+	EH_NOP
 	stp    x6, x7, [sp, #48]              // it's convenient if \receiver is spilled at sp
-	.seh_nop
+	EH_NOP
 	stp    q0, q1, [sp, #64]
-	.seh_nop
+	EH_NOP
 	stp    q2, q3, [sp, #96]
-	.seh_nop
+	EH_NOP
 	stp    q4, q5, [sp, #128]
-	.seh_nop
+	EH_NOP
 	stp    q6, q7, [sp, #160]
-	.seh_nop
+	EH_NOP
 	stp    fp, lr, [sp, #192]
-	.seh_save_fplr	192
+	EH_SAVE_FP_LR(192)
 
 	add    fp, sp, 192					  // Adjust frame pointer
-	.seh_add_fp	192
+	EH_ADD_FP(192)
 	stp    \receiver, x8, [sp, #-16]!     // Pre-index by sp-16
-	.seh_stackalloc 16
+	EH_STACK_ALLOC(16)
 
-	.seh_endprologue
+	EH_END_PROLOGUE
 
-/*
+	#ifndef _WIN64
 	.cfi_def_cfa fp, 16
 	.cfi_offset fp, -16
 	.cfi_offset lr, -8
-*/
+	#endif
 	
 	                                      // We now have all argument registers, the link
 	                                      // register and the receiver spilled on the
@@ -103,32 +124,33 @@
 	                                      // have to be accurate...
 	mov    x9, x0                         // IMP -> x9
 
-	.seh_startepilogue
+	EH_START_EPILOGUE
 	ldp    x0, x1, [sp, #16]              // Reload spilled argument registers
-	.seh_nop
+	EH_NOP
 	ldp    x2, x3, [sp, #32]
-	.seh_nop
+	EH_NOP
 	ldp    x4, x5, [sp, #64]
-	.seh_nop
+	EH_NOP
 	ldp    x6, x7, [sp, #64]
-	.seh_nop
+	EH_NOP
 	ldp    q0, q1, [sp, #80]
-	.seh_nop
+	EH_NOP
 	ldp    q2, q3, [sp, #112]
-	.seh_nop
+	EH_NOP
 	ldp    q4, q5, [sp, #144]
-	.seh_nop
+	EH_NOP
 	ldp    q6, q7, [sp, #176]
-	.seh_nop
+	EH_NOP
 	ldp    fp, lr, [sp, #208]
-	.seh_save_fplr 208
+	EH_SAVE_FP_LR(208)
 
 										  // Post-increment sp += ARGUMENT_SPILL_SIZE +16
 	ldp    \receiver, x8, [sp], #(ARGUMENT_SPILL_SIZE + 16)
-	.seh_stackalloc  (ARGUMENT_SPILL_SIZE + 16)
+	EH_STACK_ALLOC((ARGUMENT_SPILL_SIZE + 16))
 
-	.seh_endepilogue
-	.seh_endproc
+	EH_END_EPILOGUE
+
+	EH_END_AT_OFFSET(\fnname)
 
 	br     x9
 6:
@@ -142,7 +164,7 @@
 	ldr    x9, [x10, x9, lsl #3]
 
 	b      1b
-	//.cfi_endproc
+	EH_END(\fnname)
 .endm
 
 #ifdef _WIN64
