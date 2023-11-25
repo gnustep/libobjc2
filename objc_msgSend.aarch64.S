@@ -86,9 +86,11 @@
 
 	.seh_endprologue
 
+/*
 	.cfi_def_cfa fp, 16
 	.cfi_offset fp, -16
 	.cfi_offset lr, -8
+*/
 	
 	                                      // We now have all argument registers, the link
 	                                      // register and the receiver spilled on the
@@ -126,10 +128,9 @@
 	.seh_stackalloc  (ARGUMENT_SPILL_SIZE + 16)
 
 	.seh_endepilogue
+	.seh_endproc
 
 	br     x9
-
-	.seh_endproc
 6:
 										  // Load 63:12 of SmallObjectClasses address
 										  // We use the CDECL macro as Windows prefixes
