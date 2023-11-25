@@ -1,5 +1,6 @@
 #include "Test.h"
 #include "../objc/hooks.h"
+#include "../objc/objc-exception.h"
 
 #include <stdlib.h>
 
