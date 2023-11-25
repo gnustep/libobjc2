@@ -1,18 +1,52 @@
 #define ARGUMENT_SPILL_SIZE (8*10 + 8*16)
 
+/* Windows ARM64 Exception Handling
+ *
+ * Structured Exception Handling (SEH) on Windows ARM64 differs from the x64
+ * implementation. Functions consist of a single prologue and zero or more
+ * epilogues. Instead of using offsets for the .seh* directives to manipulate the
+ * stack frame, each directive corresponds to a single instruction.
+ *
+ * This presents a challenge for our objc_msgSend function, which only modifies
+ * the stack when a slow lookup is needed (see label "5").
+ *
+ * To address this, we move the directive marking the start of a function deep
+ * into the msgSend body to prevent marking every instruction as ".seh_nop."
+ *
+ *   For 64-bit Windows (_WIN64):
+ *  - EH_START(x): Start of function (no effect on Windows)
+ *  - EH_END(x): End of function (no effect on Windows)
+ *  - EH_START_AT_OFFSET(x): Mark Start of function (Delayed)
+ *  - EH_END_AT_OFFSET(x): Mark End of function (Delayed)
+ *  - EH_END_PROLOGUE: End of function prologue
+ *  - EH_START_EPILOGUE: Start of function epilogue
+ *  - EH_END_EPILOGUE: End of function epilogue
+ *  - EH_SAVE_FP_LR(x): Save Frame Pointer and Link Register
+ *  - EH_STACK_ALLOC(x): Stack allocation (inside prologue)
+ *  - EH_ADD_FP(x): Add to Frame Pointer
+ *  - EH_NOP: Mark instruction with no unwinding relevance
+ *
+ * For non-64-bit Windows systems or other platforms, these macros have no effect and can be used without causing issues.
+ */
+
 #ifdef _WIN64
 #   define EH_START(x)
 #   define EH_END(x)
+
 #   define EH_START_AT_OFFSET(x) .seh_proc x
 #   define EH_END_AT_OFFSET(x) .seh_endproc x
+
 #   define EH_END_PROLOGUE .seh_endprologue
 #   define EH_START_EPILOGUE .seh_startepilogue
 #   define EH_END_EPILOGUE .seh_endepilogue
+
 #   define EH_SAVE_FP_LR(x) .seh_save_fplr x
 #   define EH_STACK_ALLOC(x) .seh_stackalloc x
 #   define EH_ADD_FP(x) .seh_add_fp	x
+
 #   define EH_NOP .seh_nop
 #else
+// Marks the real start and end of the function
 #   define EH_START(x) .cfi_startproc
 #   define EH_END(x) .cfi_endproc
 
@@ -83,11 +117,11 @@
 	stp    x0, x1, [sp, #-(ARGUMENT_SPILL_SIZE)]!
 	EH_STACK_ALLOC((ARGUMENT_SPILL_SIZE))
 
-	stp    x2, x3, [sp, #16]              // The order is arbitrary, except that
+	stp    x2, x3, [sp, #16]
+	EH_NOP                                // The following instructions can be ignored by SEH
+	stp    x4, x5, [sp, #32]
 	EH_NOP
-	stp    x4, x5, [sp, #32]              // fp and lr must be spilled together and
-	EH_NOP
-	stp    x6, x7, [sp, #48]              // it's convenient if \receiver is spilled at sp
+	stp    x6, x7, [sp, #48]
 	EH_NOP
 	stp    q0, q1, [sp, #64]
 	EH_NOP
@@ -97,13 +131,13 @@
 	EH_NOP
 	stp    q6, q7, [sp, #160]
 	EH_NOP
-	stp    fp, lr, [sp, #192]
-	EH_SAVE_FP_LR(192)
+	stp    fp, lr, [sp, #192]             // The order is arbitrary, except that
+	EH_SAVE_FP_LR(192)                    // fp and lr must be spilled together
 
 	add    fp, sp, 192					  // Adjust frame pointer
 	EH_ADD_FP(192)
-	stp    \receiver, x8, [sp, #-16]!     // Pre-index by sp-16
-	EH_STACK_ALLOC(16)
+	stp    \receiver, x8, [sp, #-16]!     // it's convenient if \receiver is spilled at sp
+	EH_STACK_ALLOC(16)					  // stp performed pre-indexing by sp-16
 
 	EH_END_PROLOGUE
 
@@ -112,7 +146,6 @@
 	.cfi_offset fp, -16
 	.cfi_offset lr, -8
 	#endif
-	
 	                                      // We now have all argument registers, the link
 	                                      // register and the receiver spilled on the
 	                                      // stack, with sp containing
@@ -120,7 +153,7 @@
 
 	mov    x0, sp                         // &self, _cmd in arguments
 	mov    x1, \sel
-	bl     CDECL(slowMsgLookup)           // This is the only place where the CFI directives
+	bl     CDECL(slowMsgLookup)           // This is the only place where the EH directives
 	                                      // have to be accurate...
 	mov    x9, x0                         // IMP -> x9
 
@@ -149,7 +182,6 @@
 	EH_STACK_ALLOC((ARGUMENT_SPILL_SIZE + 16))
 
 	EH_END_EPILOGUE
-
 	EH_END_AT_OFFSET(\fnname)
 
 	br     x9
