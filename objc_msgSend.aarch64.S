@@ -1,17 +1,16 @@
 #define ARGUMENT_SPILL_SIZE (8*10 + 8*16)
 
 #ifdef _WIN64
-#	define START_PROC(x) .seh_proc x
 #	define END_PROC(x) .seh_endproc
 #	define FRAME_OFFSET(x) .seh_stackalloc x
 #else
-#	define START_PROC(x) .cfi_startproc
 #	define END_PROC(x) .cfi_endproc
 #	define FRAME_OFFSET(x) .cfi_adjust_cfa_offset x
 #endif
 
 .macro MSGSEND fnname, receiver, sel
-	START_PROC(\fnname)
+	//.cfi_startproc
+
 	cbz    \receiver, 4f                   // Skip everything if the receiver is nil
 	                                       // Jump to 6: if this is a small object
 	ubfx    x9, \receiver, #0, #SMALLOBJ_BITS
@@ -19,7 +18,6 @@
 
 	ldr    x9, [\receiver]                 // Load class to x9 if not a small int
 
-.align 2
 1:
 	ldr    x9, [x9, #DTABLE_OFFSET]        // Dtable -> x9
 	ldr    w10, [\sel]                     // selector->index -> x10
@@ -48,13 +46,14 @@
 	ldr    x9, [x9, #SLOT_OFFSET]          // Load the method from the slot
 	br     x9                              // Tail-call the method
 
-.align 2
 4:	                                       // Nil receiver
 	mov    x0, #0
 	mov    v0.d[0], x0
 	mov    v0.d[1], x0
 	br     lr
 5:                                        // Slow lookup
+	.seh_proc \fnname
+
 	                                      // Save anything that will be clobbered by
 	                                      // the call.
 										  // Note that we pre-index (see "!"), meaning
@@ -64,12 +63,19 @@
 	.seh_stackalloc (ARGUMENT_SPILL_SIZE)
 
 	stp    x2, x3, [sp, #16]              // The order is arbitrary, except that
+	.seh_nop
 	stp    x4, x5, [sp, #32]              // fp and lr must be spilled together and
+	.seh_nop
 	stp    x6, x7, [sp, #48]              // it's convenient if \receiver is spilled at sp
+	.seh_nop
 	stp    q0, q1, [sp, #64]
+	.seh_nop
 	stp    q2, q3, [sp, #96]
+	.seh_nop
 	stp    q4, q5, [sp, #128]
+	.seh_nop
 	stp    q6, q7, [sp, #160]
+	.seh_nop
 	stp    fp, lr, [sp, #192]
 	.seh_save_fplr	192
 
@@ -78,12 +84,11 @@
 	stp    \receiver, x8, [sp, #-16]!     // Pre-index by sp-16
 	.seh_stackalloc 16
 
-	// FIXME: Conditionally use SEH directives
-	/*
+	.seh_endprologue
+
 	.cfi_def_cfa fp, 16
 	.cfi_offset fp, -16
 	.cfi_offset lr, -8
-	*/
 	
 	                                      // We now have all argument registers, the link
 	                                      // register and the receiver spilled on the
@@ -95,14 +100,24 @@
 	bl     CDECL(slowMsgLookup)           // This is the only place where the CFI directives
 	                                      // have to be accurate...
 	mov    x9, x0                         // IMP -> x9
+
+	.seh_startepilogue
 	ldp    x0, x1, [sp, #16]              // Reload spilled argument registers
+	.seh_nop
 	ldp    x2, x3, [sp, #32]
+	.seh_nop
 	ldp    x4, x5, [sp, #64]
+	.seh_nop
 	ldp    x6, x7, [sp, #64]
+	.seh_nop
 	ldp    q0, q1, [sp, #80]
+	.seh_nop
 	ldp    q2, q3, [sp, #112]
+	.seh_nop
 	ldp    q4, q5, [sp, #144]
+	.seh_nop
 	ldp    q6, q7, [sp, #176]
+	.seh_nop
 	ldp    fp, lr, [sp, #208]
 	.seh_save_fplr 208
 
@@ -110,7 +125,11 @@
 	ldp    \receiver, x8, [sp], #(ARGUMENT_SPILL_SIZE + 16)
 	.seh_stackalloc  (ARGUMENT_SPILL_SIZE + 16)
 
+	.seh_endepilogue
+
 	br     x9
+
+	.seh_endproc
 6:
 										  // Load 63:12 of SmallObjectClasses address
 										  // We use the CDECL macro as Windows prefixes
@@ -122,7 +141,7 @@
 	ldr    x9, [x10, x9, lsl #3]
 
 	b      1b
-	END_PROC(\fnname)
+	//.cfi_endproc
 .endm
 
 #ifdef _WIN64
