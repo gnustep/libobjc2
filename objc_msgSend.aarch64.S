@@ -13,7 +13,7 @@
  * To address this, we move the directive marking the start of a function deep
  * into the msgSend body to prevent marking every instruction as ".seh_nop."
  *
- *   For 64-bit Windows (_WIN64):
+ *   For Windows:
  *  - EH_START(x): Start of function (no effect on Windows)
  *  - EH_END(x): End of function (no effect on Windows)
  *  - EH_START_AT_OFFSET(x): Mark Start of function (Delayed)
@@ -29,9 +29,9 @@
  * For non-64-bit Windows systems or other platforms, these macros have no effect and can be used without causing issues.
  */
 
-#ifdef _WIN64
-#   define EH_START(x)
-#   define EH_END(x)
+#ifdef _WIN32
+#   define EH_START
+#   define EH_END
 
 #   define EH_START_AT_OFFSET(x) .seh_proc x
 #   define EH_END_AT_OFFSET(x) .seh_endproc x
@@ -47,8 +47,8 @@
 #   define EH_NOP .seh_nop
 #else
 // Marks the real start and end of the function
-#   define EH_START(x) .cfi_startproc
-#   define EH_END(x) .cfi_endproc
+#   define EH_START .cfi_startproc
+#   define EH_END .cfi_endproc
 
 // The following directives are either not
 // needed or not available with CFI
@@ -64,7 +64,7 @@
 #endif
 
 .macro MSGSEND fnname, receiver, sel
-	EH_START(\fnname)
+	EH_START
 
 	cbz    \receiver, 4f                   // Skip everything if the receiver is nil
 	                                       // Jump to 6: if this is a small object
@@ -195,7 +195,7 @@
 	ldr    x9, [x10, x9, lsl #3]
 
 	b      1b
-	EH_END(\fnname)
+	EH_END
 .endm
 
 #ifdef _WIN64
@@ -220,9 +220,9 @@ TYPE_DIRECTIVE(CDECL(objc_msgSend_fpret), %function)
 TYPE_DIRECTIVE(CDECL(objc_msgSend), %function)
 .globl CDECL(objc_msgSend_stret)
 TYPE_DIRECTIVE(CDECL(objc_msgSend_stret), %function)
+CDECL(objc_msgSend):
 CDECL(objc_msgSend_fpret):
 CDECL(objc_msgSend_stret):
-CDECL(objc_msgSend):
 	MSGSEND objc_msgSend x0, x1
 
 #ifdef _WIN64
