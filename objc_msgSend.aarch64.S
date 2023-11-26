@@ -72,7 +72,6 @@
 	cbnz   x9, 6f
 
 	ldr    x9, [\receiver]                 // Load class to x9 if not a small int
-
 1:
 	ldr    x9, [x9, #DTABLE_OFFSET]        // Dtable -> x9
 	ldr    w10, [\sel]                     // selector->index -> x10
