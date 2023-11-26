@@ -12,6 +12,8 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/mman.h>
+#else
+#include "safewindows.h"
 #endif
 #include "objc/runtime.h"
 #include "objc/blocks_runtime.h"
@@ -22,11 +24,17 @@
 #ifndef __has_builtin
 #define __has_builtin(x) 0
 #endif
-#if __has_builtin(__builtin___clear_cache)
-#	define clear_cache __builtin___clear_cache
+
+#if defined(_WIN32) && (defined(__arm__) || defined(__aarch64__))
+    static inline void __clear_cache(void* start, void* end) {
+        FlushInstructionCache(GetCurrentProcess(), start, end - start);
+    }
+    #define clear_cache __clear_cache
+#elif __has_builtin(__builtin___clear_cache)
+    #define clear_cache __builtin___clear_cache
 #else
-void __clear_cache(void* start, void* end);
-#	define clear_cache __clear_cache
+    void __clear_cache(void* start, void* end);
+    #define clear_cache __clear_cache
 #endif
 
 
@@ -36,7 +44,6 @@ void __clear_cache(void* start, void* end);
 #endif
 
 #ifdef _WIN32
-#include "safewindows.h"
 #if defined(WINAPI_FAMILY) && WINAPI_FAMILY != WINAPI_FAMILY_DESKTOP_APP && _WIN32_WINNT >= 0x0A00
 // Prefer the *FromApp versions when we're being built in a Windows Store App context on
 // Windows >= 10. *FromApp require the application to be manifested for "codeGeneration".
@@ -177,11 +184,7 @@ static struct trampoline_set *alloc_trampolines(char *start, char *end)
 	}
 	metadata->buffers->headers[HEADERS_PER_PAGE-1].block = NULL;
 	mprotect(metadata->buffers->rx_buffer, PAGE_SIZE, PROT_READ | PROT_EXEC);
-#if defined(_WIN32) && (defined(__arm__) || defined(__aarch64__))
-  FlushInstructionCache(GetCurrentProcess(), start, end - start);
-#else
 	clear_cache(metadata->buffers->rx_buffer, &metadata->buffers->rx_buffer[PAGE_SIZE]);
-#endif
 
 	return metadata;
 }
