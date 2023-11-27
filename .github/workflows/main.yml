@@ -7,6 +7,11 @@ on:
     branches: [ master ]
   pull_request:
     branches: [ master ]
+  # Automatically run the workflow once a month
+  schedule:
+    - cron: '0 4 1 * *'
+  # Allow running the workflow manually
+  workflow_dispatch:
 
 jobs:
   ubuntu:
