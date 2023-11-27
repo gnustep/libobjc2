@@ -33,8 +33,8 @@
 #   define EH_START
 #   define EH_END
 
-#   define EH_START_AT_OFFSET(x) .seh_proc x
-#   define EH_END_AT_OFFSET(x) .seh_endproc x
+#   define EH_START_AT_OFFSET .seh_proc objc_msgSend
+#   define EH_END_AT_OFFSET .seh_endproc objc_msgSend
 
 #   define EH_END_PROLOGUE .seh_endprologue
 #   define EH_START_EPILOGUE .seh_startepilogue
@@ -63,18 +63,26 @@
 #   define EH_NOP
 #endif
 
-.macro MSGSEND fnname, receiver, sel
+.globl CDECL(objc_msgSend_fpret)
+TYPE_DIRECTIVE(CDECL(objc_msgSend_fpret), %function)
+.globl CDECL(objc_msgSend)
+TYPE_DIRECTIVE(CDECL(objc_msgSend), %function)
+.globl CDECL(objc_msgSend_stret)
+TYPE_DIRECTIVE(CDECL(objc_msgSend_stret), %function)
+CDECL(objc_msgSend):
+CDECL(objc_msgSend_fpret):
+CDECL(objc_msgSend_stret):
 	EH_START
 
-	cbz    \receiver, 4f                   // Skip everything if the receiver is nil
+	cbz    x0, 4f                   // Skip everything if the receiver is nil
 	                                       // Jump to 6: if this is a small object
-	ubfx    x9, \receiver, #0, #SMALLOBJ_BITS
+	ubfx    x9, x0, #0, #SMALLOBJ_BITS
 	cbnz   x9, 6f
 
-	ldr    x9, [\receiver]                 // Load class to x9 if not a small int
+	ldr    x9, [x0]                 // Load class to x9 if not a small int
 1:
 	ldr    x9, [x9, #DTABLE_OFFSET]        // Dtable -> x9
-	ldr    w10, [\sel]                     // selector->index -> x10
+	ldr    w10, [x1]                     // selector->index -> x10
 	ldr    w11, [x9, #SHIFT_OFFSET]        // dtable->shift -> x11
 	
 	cmp    x11, #8                         // If this is a small dtable, jump to the
@@ -106,7 +114,7 @@
 	mov    v0.d[1], x0
 	br     lr
 5:                                        // Slow lookup
-	EH_START_AT_OFFSET(\fnname)
+	EH_START_AT_OFFSET
 
 	                                      // Save anything that will be clobbered by
 	                                      // the call.
@@ -135,12 +143,12 @@
 
 	add    fp, sp, 192					  // Adjust frame pointer
 	EH_ADD_FP(192)
-	stp    \receiver, x8, [sp, #-16]!     // it's convenient if \receiver is spilled at sp
+	stp    x0, x8, [sp, #-16]!     // it's convenient if x0 is spilled at sp
 	EH_STACK_ALLOC(16)					  // stp performed pre-indexing by sp-16
 
 	EH_END_PROLOGUE
 
-	#ifndef _WIN64
+	#ifndef _WIN32
 	.cfi_def_cfa fp, 16
 	.cfi_offset fp, -16
 	.cfi_offset lr, -8
@@ -151,7 +159,7 @@
 	                                      // the address of the receiver
 
 	mov    x0, sp                         // &self, _cmd in arguments
-	mov    x1, \sel
+	mov    x1, x1
 	bl     CDECL(slowMsgLookup)           // This is the only place where the EH directives
 	                                      // have to be accurate...
 	mov    x9, x0                         // IMP -> x9
@@ -177,11 +185,11 @@
 	EH_SAVE_FP_LR(208)
 
 										  // Post-increment sp += ARGUMENT_SPILL_SIZE +16
-	ldp    \receiver, x8, [sp], #(ARGUMENT_SPILL_SIZE + 16)
+	ldp    x0, x8, [sp], #(ARGUMENT_SPILL_SIZE + 16)
 	EH_STACK_ALLOC((ARGUMENT_SPILL_SIZE + 16))
 
 	EH_END_EPILOGUE
-	EH_END_AT_OFFSET(\fnname)
+	EH_END_AT_OFFSET
 
 	br     x9
 6:
@@ -196,9 +204,8 @@
 
 	b      1b
 	EH_END
-.endm
 
-#ifdef _WIN64
+#ifdef _WIN32
 .text
 .def objc_msgSend;
 .scl 2;
@@ -212,20 +219,7 @@
 .scl 2;
 .type 32;
 .endef
-#endif
 
-.globl CDECL(objc_msgSend_fpret)
-TYPE_DIRECTIVE(CDECL(objc_msgSend_fpret), %function)
-.globl CDECL(objc_msgSend)
-TYPE_DIRECTIVE(CDECL(objc_msgSend), %function)
-.globl CDECL(objc_msgSend_stret)
-TYPE_DIRECTIVE(CDECL(objc_msgSend_stret), %function)
-CDECL(objc_msgSend):
-CDECL(objc_msgSend_fpret):
-CDECL(objc_msgSend_stret):
-	MSGSEND objc_msgSend x0, x1
-
-#ifdef _WIN64
 .section        .drectve,"yn"
 .ascii  " /EXPORT:objc_msgSend"
 .ascii  " /EXPORT:objc_msgSend_fpret"
