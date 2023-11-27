@@ -52,8 +52,8 @@
 
 // The following directives are either not
 // needed or not available with CFI
-#   define EH_START_AT_OFFSET(x)
-#   define EH_END_AT_OFFSET(x)
+#   define EH_START_AT_OFFSET
+#   define EH_END_AT_OFFSET
 #   define EH_END_PROLOGUE
 #   define EH_START_EPILOGUE
 #   define EH_END_EPILOGUE
