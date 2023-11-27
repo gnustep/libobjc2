@@ -21,19 +21,23 @@ jobs:
         os: [ "ubuntu-22.04", "ubuntu-20.04" ]
         build-type: [ Release, Debug ]
         cxxlib: [ "libc++", "libstdc++" ]
-        llvm-version: [10, 11, 12, 13, 14]
+        llvm-version: [10, 11, 12, 13, 14, 15]
         # Don't bother testing the LLVM versions that aren't in the default image for the different platforms
         exclude:
           - os: "ubuntu-22.04"
             llvm-version: 10
           - os: "ubuntu-22.04"
             llvm-version: 11
+          - os: "ubuntu-22.04"
+            llvm-version: 12
           - os: "ubuntu-20.04"
             llvm-version: 11
           - os: "ubuntu-20.04"
             llvm-version: 13
           - os: "ubuntu-20.04"
             llvm-version: 14
+          - os: "ubuntu-20.04"
+            llvm-version: 15
       # Don't abort runners if a single one fails
       fail-fast: false
     runs-on: ${{ matrix.os }}
