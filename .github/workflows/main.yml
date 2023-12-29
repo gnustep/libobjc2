@@ -174,7 +174,6 @@ jobs:
       shell: cmd
       working-directory: build
       run: |
-        copy /y objc.dll Test
         ctest -j 4 --output-on-failure -T test
 
 
