@@ -44,8 +44,6 @@ jobs:
     name: ${{ matrix.os }} ${{ matrix.build-type }} LLVM-${{ matrix.llvm-version }} ${{ matrix.cxxlib }}
     steps:
       - uses: actions/checkout@v3
-        with:
-          submodules: true
       - name: Install dependencies 
         run: |
           sudo apt install ninja-build
@@ -92,8 +90,6 @@ jobs:
     name: Cross-build for ${{ matrix.arch.triple }} LLVM-${{ matrix.llvm-version}} ${{ matrix.build-type }}
     steps:
       - uses: actions/checkout@v3
-        with:
-          submodules: true
       - name: Install cross-compile toolchain and QEMU
         run: |
           sudo apt update

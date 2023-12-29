@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <vector>
-#include "third_party/robin-map/include/tsl/robin_map.h"
+#include <tsl/robin_map.h>
 #import "lock.h"
 #import "objc/runtime.h"
 #import "objc/blocks_runtime.h"

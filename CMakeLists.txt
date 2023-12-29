@@ -21,6 +21,7 @@ endif()
 enable_language(OBJC OBJCXX)
 
 INCLUDE (CheckCXXSourceCompiles)
+INCLUDE (FetchContent)
 
 set(libobjc_VERSION 4.6)
 
@@ -126,7 +127,7 @@ if (NOT tls-robin-map_FOUND)
 	FetchContent_Declare(
 		robinmap
 		GIT_REPOSITORY https://github.com/Tessil/robin-map/
-		GIT_TAG        7d37a41003bfbc7e12e34601f93c18ca2ff6d7c07)
+		GIT_TAG        v1.2.1)
 
 	FetchContent_MakeAvailable(robinmap)
 endif()
