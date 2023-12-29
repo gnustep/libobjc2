@@ -120,9 +120,11 @@ else ()
 	list(APPEND libobjc_C_SRCS eh_personality.c)
 endif (WIN32)
 
-find_path(ROBIN_MAP_HEADER NAMES "tsl/robin_map.h")
+find_package(tsl-robin-map)
 
-if (NOT ROBIN_MAP_HEADER)
+if (tsl-robin-map_FOUND)
+	include_directories("${tsl-robin-map_INCLUDE_DIRS}")
+else ()
 	if (NOT EXISTS "${CMAKE_SOURCE_DIR}/third_party/robin-map/include/tsl/robin_map.h")
 		message(FATAL_ERROR "Git submodules not present, please run:\n\n"
 							" $ git submodule init && git submodule update\n\n"
