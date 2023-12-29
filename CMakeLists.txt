@@ -114,12 +114,12 @@ set(libBlocksRuntime_COMPATIBILITY_HDRS
 set(libobjc_CXX_SRCS
 	selector_table.cc
 	)
-# Windows does not use DWARF EH
-if (WIN32)
+# Windows does not use DWARF EH, except when using the GNU ABI (MinGW)
+if (WIN32 AND NOT MINGW)
 	list(APPEND libobjc_CXX_SRCS eh_win32_msvc.cc)
 else ()
 	list(APPEND libobjc_C_SRCS eh_personality.c)
-endif (WIN32)
+endif (WIN32 AND NOT MINGW)
 
 find_package(tsl-robin-map)
 
@@ -132,7 +132,7 @@ if (NOT tls-robin-map_FOUND)
 	FetchContent_MakeAvailable(robinmap)
 endif()
 
-if (WIN32)
+if (WIN32 AND NOT MINGW)
 	set(OLD_ABI_COMPAT_DEFAULT false)
 else()
 	set(OLD_ABI_COMPAT_DEFAULT true)
@@ -189,7 +189,7 @@ if(WIN32)
 endif()
 
 
-if (MSVC)
+if (WIN32 AND NOT MINGW)
 	set(ASSEMBLER ${CMAKE_ASM_COMPILER} CACHE STRING "Assembler to use with Visual Studio (must be gcc / clang!)")
 	message(STATUS "Using custom build commands to work around CMake bugs")
 	message(STATUS "ASM compiler: ${ASSEMBLER}")
@@ -210,7 +210,7 @@ endif()
 
 
 
-if (WIN32)
+if (WIN32 AND NOT MINGW)
 	message(STATUS "Using MSVC-compatible exception model")
 else ()
 	separate_arguments(EH_PERSONALITY_FLAGS NATIVE_COMMAND ${CMAKE_CXX_FLAGS})
@@ -234,7 +234,7 @@ target_sources(objc PRIVATE ${libobjc_CXX_SRCS})
 include(FindThreads)
 target_link_libraries(objc Threads::Threads)
 # Link against ntdll.dll for RtlRaiseException
-if (WIN32)
+if (WIN32 AND NOT MINGW)
 	target_link_libraries(objc ntdll.dll)
 endif()
 

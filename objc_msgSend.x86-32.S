@@ -37,7 +37,7 @@
 	test  %eax, %eax
 	jz    5f                             # Nil slot - invoke some kind of forwarding mechanism
 	mov   SLOT_OFFSET(%eax), %ecx
-#ifdef _WIN32
+#ifdef _MSC_VER
 	call  *CDECL(__guard_check_icall_fptr)
 #endif
 	jmp   *%ecx
@@ -62,7 +62,7 @@
 	add   $12, %esp                      # restore the stack
 
 
-#ifdef _WIN32
+#ifdef _MSC_VER
 	mov    %eax, %ecx
 	call  *CDECL(__guard_check_icall_fptr)
 	jmp   *%ecx
@@ -126,7 +126,7 @@ CDECL(objc_msgSend_stret):
 
 #ifdef _WIN32
         .section        .drectve,"yn"
-        .ascii  " /EXPORT:_objc_msgSend"
-        .ascii  " /EXPORT:_objc_msgSend_stret"
-        .ascii  " /EXPORT:_objc_msgSend_fpret"
+		EXPORT_SYMBOL(objc_msgSend)
+		EXPORT_SYMBOL(objc_msgSend_stret)
+		EXPORT_SYMBOL(objc_msgSend_fpret)
 #endif

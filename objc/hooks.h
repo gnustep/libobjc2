@@ -47,7 +47,7 @@ OBJC_PUBLIC extern struct objc_slot *(*__objc_msg_forward3)(id, SEL) OBJC_DEPREC
  */
 OBJC_PUBLIC extern IMP (*__objc_msg_forward2)(id, SEL);
 
-#ifndef _WIN32
+#ifndef _MSC_VER
 /**
  * Hook defined for handling unhandled exceptions.  If the unwind library
  * reaches the end of the stack without finding a handler then this hook is
