@@ -122,18 +122,13 @@ endif (WIN32)
 
 find_package(tsl-robin-map)
 
-if (tsl-robin-map_FOUND)
-	include_directories("${tsl-robin-map_INCLUDE_DIRS}")
-else ()
-	if (NOT EXISTS "${CMAKE_SOURCE_DIR}/third_party/robin-map/include/tsl/robin_map.h")
-		message(FATAL_ERROR "Git submodules not present, please run:\n\n"
-							" $ git submodule init && git submodule update\n\n"
-							"If you did not checkout via git, you will need to"
-							"fetch the submodule's contents from"
-							"https://github.com/Tessil/robin-map/")
-	endif ()
+if (NOT tls-robin-map_FOUND)
+	FetchContent_Declare(
+		robinmap
+		GIT_REPOSITORY https://github.com/Tessil/robin-map/
+		GIT_TAG        7d37a41003bfbc7e12e34601f93c18ca2ff6d7c07)
 
-	include_directories("${CMAKE_SOURCE_DIR}/third_party/robin-map/include/")
+	FetchContent_MakeAvailable(robinmap)
 endif()
 
 if (WIN32)
@@ -242,6 +237,7 @@ if (WIN32)
 	target_link_libraries(objc ntdll.dll)
 endif()
 
+target_link_libraries(objc tsl::robin_map)
 
 set_target_properties(objc PROPERTIES
 	LINKER_LANGUAGE C
