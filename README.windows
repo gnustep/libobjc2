@@ -9,9 +9,3 @@ The runtime can build on Windows with Ninja:
 > cmake .. -G Ninja -DCMAKE_C_COMPILER=path/to/clang.exe -DCMAKE_CXX_COMPILER=path/to/clang.exe
 > ninja
 ```
-
-Debugging
----------
-
-The tests will all fail on Windows because they will not find objc.dll.
-To fix this, copy objc.dll into the `Tests` build directory.

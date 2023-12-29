@@ -127,6 +127,9 @@ function(addtest_flags TEST_NAME FLAGS TEST_SOURCE)
 	set_property(TEST ${TEST_NAME} PROPERTY
 		ENVIRONMENT "LD_LIBRARY_PATH=" "LLVM_PROFILE_FILE=${TEST_NAME}.profraw"
 	)
+	if(WIN32)
+		set_property(TEST ${TEST_NAME} PROPERTY ENVIRONMENT_MODIFICATION "PATH=path_list_append:${CMAKE_BINARY_DIR}")
+	endif()
 	target_link_libraries(${TEST_NAME} objc)
 endfunction(addtest_flags)
 
