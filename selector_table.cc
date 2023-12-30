@@ -11,7 +11,7 @@
 #include <vector>
 #include <mutex>
 #include <forward_list>
-#include "third_party/robin-map/include/tsl/robin_set.h"
+#include <tsl/robin_set.h>
 #include "class.h"
 #include "lock.h"
 #include "method.h"
