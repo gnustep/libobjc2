@@ -92,6 +92,13 @@ set(NEW_TESTS
 
 remove_definitions(-D__OBJC_RUNTIME_INTERNAL__=1)
 
+add_library(test_runtime_gcc OBJECT Test.m)
+set_target_properties(test_runtime_gcc PROPERTIES
+	INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}"
+	COMPILE_FLAGS "-Xclang -fblocks -fobjc-runtime=gcc"
+	LINKER_LANGUAGE C
+)
+
 add_library(test_runtime_legacy OBJECT Test.m)
 set_target_properties(test_runtime_legacy PROPERTIES
 	INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}"
@@ -143,6 +150,13 @@ function(addtest_variants TEST TEST_SOURCE LEGACY)
 		target_sources("${TEST}_legacy" PRIVATE $<TARGET_OBJECTS:test_runtime_legacy>)
 		addtest_flags("${TEST}_legacy_optimised" "-O3 -fobjc-runtime=gnustep-1.7 -UNDEBUG" "${TEST_SOURCE}")
 		target_sources("${TEST}_legacy_optimised" PRIVATE $<TARGET_OBJECTS:test_runtime_legacy>)
+		
+		if (NOT ${TEST} MATCHES "PropertyIntrospectionTest")
+			addtest_flags("${TEST}_gcc" "-O0 -fobjc-runtime=gcc -UNDEBUG" "${TEST_SOURCE}")
+			target_sources("${TEST}_gcc" PRIVATE $<TARGET_OBJECTS:test_runtime_gcc>)
+			addtest_flags("${TEST}_gcc_optimised" "-O3 -fobjc-runtime=gcc -UNDEBUG" "${TEST_SOURCE}")
+			target_sources("${TEST}_gcc_optimised" PRIVATE $<TARGET_OBJECTS:test_runtime_gcc>)
+		endif()
 	endif()
 endfunction(addtest_variants)
 
