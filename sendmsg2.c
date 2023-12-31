@@ -303,6 +303,7 @@ struct objc_slot2 *objc_slot_lookup_super2(struct objc_super *super, SEL selecto
 	return (struct objc_slot2*)&nil_slot;
 }
 
+OBJC_PUBLIC
 struct objc_slot *objc_slot_lookup_super(struct objc_super *super, SEL selector)
 {
 	id receiver = super->receiver;
