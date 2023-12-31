@@ -1,6 +1,3 @@
-freebsd_instance:
-  image: freebsd-12-3-release-amd64
-
 libcxxrt_freebsd_task:
   matrix:
   - freebsd_instance:
