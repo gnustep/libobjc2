@@ -8,7 +8,7 @@
 #include "class.h"
 #include "objcxx_eh.h"
 
-#if defined(__SEH__) && !defined(__USING_SJLJ_EXCEPTIONS__)
+#if defined(__SEH__)
 #include <windows.h>
 #include <winnt.h>
 
@@ -415,7 +415,7 @@ static inline _Unwind_Reason_Code internal_objc_personality(int version,
 #ifndef NO_OBJCXX
 	if (cxx_exception_class == 0)
 	{
-#ifndef __SEH__
+#ifndef __MINGW32__
 		// FIXME: This is currently broken with MinGW
 		test_cxx_eh_implementation();
 #endif
@@ -578,11 +578,18 @@ BEGIN_PERSONALITY_FUNCTION(__gnu_objc_personality_v0)
 			exceptionObject, context, NO);
 }
 
+#ifndef __MINGW32__
 OBJC_PUBLIC
 BEGIN_PERSONALITY_FUNCTION(__gnustep_objc_personality_v0)
 	return internal_objc_personality(version, actions, exceptionClass,
 			exceptionObject, context, YES);
 }
+#else
+BEGIN_PERSONALITY_FUNCTION(__gnustep_objc_personality_v0_internal)
+	return internal_objc_personality(version, actions, exceptionClass,
+			exceptionObject, context, YES);
+}
+#endif
 
 OBJC_PUBLIC
 BEGIN_PERSONALITY_FUNCTION(__gnustep_objcxx_personality_v0)
@@ -615,13 +622,28 @@ BEGIN_PERSONALITY_FUNCTION(__gnustep_objcxx_personality_v0)
 	return CALL_PERSONALITY_FUNCTION(__gxx_personality_v0);
 }
 
-#if defined(__SEH__) && !defined(__USING_SJLJ_EXCEPTIONS__)
+#if defined(__SEH__)
+
+#if defined(__MINGW32__)
+OBJC_PUBLIC EXCEPTION_DISPOSITION
+__gnustep_objc_personality_v0(PEXCEPTION_RECORD ms_exc, void *this_frame,
+		PCONTEXT ms_orig_context, PDISPATCHER_CONTEXT ms_disp)
+{
+	return _GCC_specific_handler(ms_exc, this_frame, ms_orig_context, ms_disp,
+			__gnustep_objc_personality_v0_internal);
+}
+#endif
+
 OBJC_PUBLIC EXCEPTION_DISPOSITION
 __gnu_objc_personality_seh0(PEXCEPTION_RECORD ms_exc, void *this_frame,
 		PCONTEXT ms_orig_context, PDISPATCHER_CONTEXT ms_disp)
 {
 	return _GCC_specific_handler(ms_exc, this_frame, ms_orig_context, ms_disp,
+#if !defined(__MINGW_32)
 			__gnustep_objc_personality_v0);
+#else
+			__gnustep_objc_personality_v0_internal);
+#endif
 }
 PRIVATE EXCEPTION_DISPOSITION
 test_eh_personality(PEXCEPTION_RECORD ms_exc, void *this_frame,
