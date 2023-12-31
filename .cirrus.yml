@@ -3,7 +3,7 @@ libcxxrt_freebsd_task:
   - freebsd_instance:
      image_family: freebsd-13-2
   - freebsd_instance:
-     image_family: freebsd-12-4
+     image_family: freebsd-15-0-snap
   - freebsd_instance:
      image_family: freebsd-14-0
 
