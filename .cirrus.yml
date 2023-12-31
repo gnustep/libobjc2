@@ -1,14 +1,12 @@
 freebsd_instance:
-  image: freebsd-12-3-release-amd64
+  image: freebsd-13-2-release-amd64
 
 libcxxrt_freebsd_task:
   matrix:
   - freebsd_instance:
-     image_family: freebsd-13-1
+     image_family: freebsd-13-2
   - freebsd_instance:
-     image_family: freebsd-12-3
-  - freebsd_instance:
-     image_family: freebsd-14-0-snap
+     image_family: freebsd-14-0
 
   install_script: pkg install -y cmake ninja git
 
