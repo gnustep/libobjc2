@@ -415,10 +415,7 @@ static inline _Unwind_Reason_Code internal_objc_personality(int version,
 #ifndef NO_OBJCXX
 	if (cxx_exception_class == 0)
 	{
-#ifndef __MINGW32__
-		// FIXME: This is currently broken with MinGW
 		test_cxx_eh_implementation();
-#endif
 	}
 
 	if (exceptionClass == cxx_exception_class)

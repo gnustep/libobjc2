@@ -138,6 +138,12 @@ else()
 	set(OLD_ABI_COMPAT_DEFAULT true)
 endif()
 
+if (MINGW)
+	set(ENABLE_OBJCXX_DEFAULT false)
+else()
+	set(ENABLE_OBJCXX_DEFAULT true)
+endif()
+
 option(TYPE_DEPENDENT_DISPATCH "Enable type-dependent dispatch" ON)
 option(ENABLE_TRACING 
 	"Enable tracing support (slower, not recommended for deployment)" OFF)
@@ -147,7 +153,8 @@ option(OLDABI_COMPAT
 option(LEGACY_COMPAT "Enable legacy compatibility features" OFF)
 option(DEBUG_ARC_COMPAT
 	"Log warnings for classes that don't hit ARC fast paths" OFF)
-option(ENABLE_OBJCXX "Enable support for Objective-C++" ON)
+option(ENABLE_OBJCXX "Enable support for Objective-C++"
+	${ENABLE_OBJCXX_DEFAULT})
 option(TESTS "Enable building the tests")
 
 
@@ -157,6 +164,10 @@ add_compile_definitions($<$<CONFIG:Release>:NO_SELECTOR_MISMATCH_WARNINGS>)
 add_compile_definitions($<$<BOOL:${TYPE_DEPENDENT_DISPATCH}>:TYPE_DEPENDENT_DISPATCH>)
 add_compile_definitions($<$<BOOL:${ENABLE_TRACING}>:WITH_TRACING=1>)
 add_compile_definitions($<$<BOOL:${DEBUG_ARC_COMPAT}>:DEBUG_ARC_COMPAT>)
+
+if (ENABLE_OBJCXX AND MINGW)
+	message(FATAL_ERROR "Objective-C++ is not supported on MinGW.")
+endif()
 
 if (OLDABI_COMPAT)
 	list(APPEND libobjc_C_SRCS legacy.c abi_version.c statics_loader.c)
