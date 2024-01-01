@@ -72,7 +72,7 @@ jobs:
     strategy:
       matrix:
         build-type: [ Release, Debug ]
-        llvm-version: [13, 14]
+        llvm-version: [13, 14, 15]
         arch:
           - name: armhf
             system-processor: arm
@@ -84,6 +84,18 @@ jobs:
             system-processor: aarch64
             triple: aarch64-linux-gnu
             rtld: ld-linux-aarch64.so.1
+          - name: riscv64
+            system-processor: riscv64
+            triple: riscv64-linux-gnu
+            rtld: ld-linux-riscv64-lp64d.so.1
+        # lld versions prior to 15 do not support R_RISCV_ALIGN relocations
+        exclude:
+          - llvm-version: 13
+            arch:
+              name: riscv64
+          - llvm-version: 14
+            arch:
+              name: riscv64
       # Don't abort runners if a single one fails
       fail-fast: false
     runs-on: ubuntu-latest

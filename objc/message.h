@@ -6,8 +6,11 @@
 #ifndef _OBJC_MESSAGE_H_
 #define _OBJC_MESSAGE_H_
 
-#if defined(__x86_64) || defined(__i386) || defined(__arm__) || \
-	defined(__mips_n64) || defined(__mips_n32) || defined(__ARM_ARCH_ISA_A64)
+#if defined(__x86_64) || defined(__i386) || defined(__arm__) ||                \
+    defined(__mips_n64) || defined(__mips_n32) ||                              \
+    defined(__ARM_ARCH_ISA_A64) ||                                             \
+    (defined(__riscv) && __riscv_xlen == 64 &&                                 \
+     defined(__riscv_float_abi_double))
 /**
  * Standard message sending function.  This function must be cast to the
  * correct types for the function before use.  The first argument is the
@@ -41,7 +44,7 @@ id objc_msgSend(id self, SEL _cmd, ...);
  * integer) structures.
  */
 OBJC_PUBLIC
-#ifdef __cplusplus 
+#ifdef __cplusplus
 id objc_msgSend_stret(id self, SEL _cmd, ...);
 #else
 void objc_msgSend_stret(id self, SEL _cmd, ...);
