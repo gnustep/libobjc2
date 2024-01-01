@@ -72,7 +72,7 @@ jobs:
     strategy:
       matrix:
         build-type: [ Release, Debug ]
-        llvm-version: [13, 14, 16]
+        llvm-version: [13, 14, 15]
         arch:
           - name: armhf
             system-processor: arm
