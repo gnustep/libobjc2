@@ -72,7 +72,7 @@ jobs:
     strategy:
       matrix:
         build-type: [ Release, Debug ]
-        llvm-version: [13, 14]
+        llvm-version: [13, 14, 16]
         arch:
           - name: armhf
             system-processor: arm
@@ -86,7 +86,7 @@ jobs:
             rtld: ld-linux-aarch64.so.1
           - name: riscv64
             system-processor: riscv64
-            triple: riscv64-linux-gnu
+            triple: riscv64-unknown-linux-gnu
             rtld: ld-linux-riscv64-lp64d.so.1
       # Don't abort runners if a single one fails
       fail-fast: false
