@@ -8,6 +8,11 @@ programs.
 
 Highlights of this release include:
 
+- Initial support for RISC-V 64-bit (rv64) including an architecture-specific
+  objc_msgSend, and block trampoline implementation. Please note that
+  double-precision floating-point support (rv64d) is required for the
+  objc_msgSend implementation.
+- Initial support for Windows on ARM64 with fast-path objc_msgSend.
 - Numerous improvements to the Objective-C++ exception interoperation code.
   The runtime now dynamically detects whether the libcxxrt, libsupc++, or
   libc++abi variant of the Itanium C++ Exception ABI is being used.  This is
