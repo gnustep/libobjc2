@@ -72,26 +72,29 @@ jobs:
     strategy:
       matrix:
         build-type: [ Release, Debug ]
-        llvm-version: [13, 14, 15]
         arch:
           - name: armhf
             system-processor: arm
             triple: arm-linux-gnueabihf
+            llvm-version: [13, 14, 15]
             rtld: ld-linux-armhf.so.3
             # The C++ exception tests are failing, disable them until they are debugged.
             unsupported: -E CXX
           - name: arm64
             system-processor: aarch64
             triple: aarch64-linux-gnu
+            llvm-version: [13, 14, 15]
             rtld: ld-linux-aarch64.so.1
           - name: riscv64
             system-processor: riscv64
-            triple: riscv64-unknown-linux-gnu
+            triple: riscv64-linux-gnu
+            # Previous lld versions do not support R_RISCV_ALIGN relocations
+            llvm-version: [15]
             rtld: ld-linux-riscv64-lp64d.so.1
       # Don't abort runners if a single one fails
       fail-fast: false
     runs-on: ubuntu-latest
-    name: Cross-build for ${{ matrix.arch.triple }} LLVM-${{ matrix.llvm-version}} ${{ matrix.build-type }}
+    name: Cross-build for ${{ matrix.arch.triple }} LLVM-${{ matrix.arch.llvm-version}} ${{ matrix.build-type }}
     steps:
       - uses: actions/checkout@v3
       - name: Install cross-compile toolchain and QEMU
@@ -100,13 +103,13 @@ jobs:
           sudo apt install libstdc++-9-dev-${{ matrix.arch.name }}-cross qemu-user ninja-build
       - name: Configure CMake
         run: |
-          export LDFLAGS="-L/usr/lib/llvm-${{ matrix.llvm-version }}/lib/ -fuse-ld=lld -Wl,--dynamic-linker=/usr/${{ matrix.arch.triple }}/lib/${{ matrix.arch.rtld }},-rpath,/usr/${{ matrix.arch.triple }}/lib"
+          export LDFLAGS="-L/usr/lib/llvm-${{ matrix.arch.llvm-version }}/lib/ -fuse-ld=lld -Wl,--dynamic-linker=/usr/${{ matrix.arch.triple }}/lib/${{ matrix.arch.rtld }},-rpath,/usr/${{ matrix.arch.triple }}/lib"
           cmake -B ${{github.workspace}}/build \
             -DCMAKE_SYSTEM_NAME=Linux \
             -DCMAKE_SYSTEM_PROCESSOR=${{ matrix.arch.system-processor }} \
-            -DCMAKE_C_COMPILER=clang-${{ matrix.llvm-version }} \
-            -DCMAKE_CXX_COMPILER=clang++-${{ matrix.llvm-version }} \
-            -DCMAKE_ASM_COMPILER=clang-${{ matrix.llvm-version }} \
+            -DCMAKE_C_COMPILER=clang-${{ matrix.arch.llvm-version }} \
+            -DCMAKE_CXX_COMPILER=clang++-${{ matrix.arch.llvm-version }} \
+            -DCMAKE_ASM_COMPILER=clang-${{ matrix.arch.llvm-version }} \
             -DCMAKE_C_COMPILER_TARGET=${{ matrix.arch.triple }} \
             -DCMAKE_CXX_COMPILER_TARGET=${{ matrix.arch.triple }} \
             -DCMAKE_OBJC_COMPILER_TARGET=${{ matrix.arch.triple }} \
