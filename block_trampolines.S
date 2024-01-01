@@ -98,6 +98,24 @@
 #define ARG1 $a1
 #define ARG2 $a2
 
+#elif defined(__riscv) && (__riscv_xlen == 64)
+////////////////////////////////////////////////////////////////////////////////
+// RISC-V trampoline
+////////////////////////////////////////////////////////////////////////////////
+.macro trampoline arg0, arg1
+	auipc   t6, 0xFFFFF // pc + -0x1000
+	mv      \arg1, \arg0
+	ld      \arg0, 0(t6)
+	ld      t6, 8(t6)
+	jr 	t6
+.endm
+
+#define ARG0 a0
+#define ARG1 a1
+#define ARG2 a2
+#define SARG0 ARG1
+#define SARG1 ARG2
+
 #elif defined(__ARM_ARCH_ISA_A64)
 ////////////////////////////////////////////////////////////////////////////////
 // AArch64 (ARM64) trampoline
