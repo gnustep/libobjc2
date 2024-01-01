@@ -2,42 +2,42 @@
 
 .macro MSGSEND receiver, sel
 	.cfi_startproc
-	beqz \receiver, 3f 	 // Skip everything if receiver is nil
+	beqz \receiver, 3f	 	 // Skip everything if receiver is nil
 
 	andi t0, \receiver, SMALLOBJ_MASK
 	bnez t0, 5f
 
-	ld t0, 0(\receiver)      // Load class into t0
+	ld t0, 0(\receiver)    	 // Load class into t0
 0:
 	ld t0, DTABLE_OFFSET(t0) // dtable -> t0
-	ld t1, 0(\sel) 	 	 // selector->index -> t1
+	ld t1, 0(\sel) 	 	 	 // selector->index -> t1
 	ld t2, SHIFT_OFFSET(t0)	 // dtable->shift -> t2
 
 	li t3, 8
 	beq t2, t3, 1f
 	beqz t2, 2f
 
-	srli t2, t1, 16-3	 // Extract byte 3 of sel index and multiply by 2^3
-	and t2, t2, 0x7F8	 // Mask target byte
-				 // Example: ((0xCAFEBA >> 13) & 0x7f8) == (0xCA << 3)
-	add t2, t0, t2		 // t2 = dtable address + offset
+	srli t2, t1, 16-3	 	 // Extract byte 3 of sel index and multiply by 2^3
+	and t2, t2, 0x7F8	 	 // Mask target byte
+				 			 // Example: ((0xCAFEBA >> 13) & 0x7f8) == (0xCA << 3)
+	add t2, t0, t2		 	 // t2 = dtable address + offset
 	ld t0, DATA_OFFSET(t2)   // Load, adding in the data offset
 1:
-	srli t2, t1, 8-3	 // Extract byte 2 of sel index and multiply by 2^3
-	and t2, t2, 0x7F8	 // Mask target byte
-	add t2, t0, t2		 // t2 = dtable address + offset
+	srli t2, t1, 8-3	 	 // Extract byte 2 of sel index and multiply by 2^3
+	and t2, t2, 0x7F8	 	 // Mask target byte
+	add t2, t0, t2		 	 // t2 = dtable address + offset
 	ld t0, DATA_OFFSET(t2)   // Load, adding in the data offset
 2:
-	slli t2, t1, 3	 	 // Multiply by 2^3
-	and t2, t2, 0x7F8	 // Mask target byte
-	add t2, t0, t2		 // t2 = dtable address + offset
+	slli t2, t1, 3	 	 	 // Multiply by 2^3
+	and t2, t2, 0x7F8	 	 // Mask target byte
+	add t2, t0, t2		 	 // t2 = dtable address + offset
 	ld t0, DATA_OFFSET(t2)   // Load, adding in the data offset
-				 // Slot pointer is now in t0
+				 	    	 // Slot pointer is now in t0
 
 	beqz t0, 4f              // If the slot is nil, go to the C path
 
 	ld t0, SLOT_OFFSET(t0)   // Load the method from the slot
-	jalr zero, t0, 0 	 // Tail-call the method
+	jalr zero, t0, 0 	 	 // Tail-call the method
 
 3:
 	li \receiver, 0
@@ -81,10 +81,10 @@
 	.cfi_offset fp, -16
 	.cfi_offset ra, -8
 	
-	add a0, sp, zero // &self in first argument
+	add a0, sp, zero 	    // &self in first argument
 	call CDECL(slowMsgLookup)
 	
-	add t0, a0, zero // IMP -> t0
+	add t0, a0, zero 		// IMP -> t0
 	
 	ld a0, 16(sp)
 	ld a1, 24(sp)
@@ -112,7 +112,7 @@
 	add sp, sp, ARGUMENT_SPILL_SIZE
 	add sp, sp, 16
 	
-	jalr zero, t0, 0 	 // Tail-call the method
+	jalr zero, t0, 0 	// Tail-call the method
 
 5:
 	// Load address of SmallObjectClasses
