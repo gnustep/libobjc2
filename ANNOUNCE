@@ -23,7 +23,6 @@ Highlights of this release include:
 - The minimum CMake version has been bumped to 3.16, which supports
   Objective-C.  This support is now used, simplifying the build.
 - Support for GC mode is gone.  Apple dropped support for this a long time ago.
-- Support for Windows on Arm has been added.
 - `objc_setUncaughtExceptionHandler` is added, which avoids consuming code
   needing to access a library-owned global.
 - The selector-table code has been rewritten in C++, improving performance of
