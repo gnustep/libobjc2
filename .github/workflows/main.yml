@@ -88,6 +88,7 @@ jobs:
             system-processor: riscv64
             triple: riscv64-linux-gnu
             rtld: ld-linux-riscv64-lp64d.so.1
+        # lld versions prior to 15 do not support R_RISCV_ALIGN relocations
         exclude:
           - llvm-version: 13
             arch:
