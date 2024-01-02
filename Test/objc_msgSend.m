@@ -10,7 +10,6 @@
 
 //#define assert(x) if (!(x)) { printf("Failed %d\n", __LINE__); }
 
-
 typedef struct { int a,b,c,d,e; } s;
 @interface Fake
 - (int)izero;
@@ -175,6 +174,7 @@ struct objc_slot *forward_slot(id o, SEL s)
 
 int main(void)
 {
+#ifdef __GNUSTEP_MSGSEND__
 	__objc_msg_forward2 = forward;
 	__objc_msg_forward3 = forward_slot;
 	TestCls = objc_getClass("MsgTest");
@@ -252,6 +252,8 @@ int main(void)
 	times[2] = ((double)c2 - (double)c1) / (double)CLOCKS_PER_SEC;
 	fprintf(stderr, "Direct IMP call took %f seconds. \n", times[2]);
 	printf("%f\t%f\t%f\n", times[0], times[1], times[2]);
-#endif
 	return 0;
+#endif // BENCHMARK
+#endif // __GNUSTEP_MSGSEND__
+	return 77; // Skip test
 }
