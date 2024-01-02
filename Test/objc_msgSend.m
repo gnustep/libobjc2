@@ -252,8 +252,8 @@ int main(void)
 	times[2] = ((double)c2 - (double)c1) / (double)CLOCKS_PER_SEC;
 	fprintf(stderr, "Direct IMP call took %f seconds. \n", times[2]);
 	printf("%f\t%f\t%f\n", times[0], times[1], times[2]);
-	return 0;
 #endif // BENCHMARK
+	return 0;
 #endif // __GNUSTEP_MSGSEND__
 	return 77; // Skip test
 }
