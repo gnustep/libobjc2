@@ -11,6 +11,12 @@
     defined(__ARM_ARCH_ISA_A64) ||                                             \
     (defined(__riscv) && __riscv_xlen == 64 &&                                 \
      defined(__riscv_float_abi_double))
+
+// Define __GNUSTEP_MSGSEND__ if available
+#ifndef __GNUSTEP_MSGSEND__
+#define __GNUSTEP_MSGSEND__
+#endif
+
 /**
  * Standard message sending function.  This function must be cast to the
  * correct types for the function before use.  The first argument is the
