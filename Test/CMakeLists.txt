@@ -134,9 +134,9 @@ function(addtest_flags TEST_NAME FLAGS TEST_SOURCE)
 endfunction(addtest_flags)
 
 function(addtest_variants TEST TEST_SOURCE LEGACY)
-	addtest_flags(${TEST} "-O0 -fobjc-runtime=gnustep-2.0 -UNDEBUG -DGS_RUNTIME_V2" "${TEST_SOURCE}")
+	addtest_flags(${TEST} "-O0 -fobjc-runtime=gnustep-2.2 -UNDEBUG -DGS_RUNTIME_V2" "${TEST_SOURCE}")
 	target_sources(${TEST} PRIVATE $<TARGET_OBJECTS:test_runtime>)
-	addtest_flags("${TEST}_optimised" "-O3 -fobjc-runtime=gnustep-2.0 -UNDEBUG -DGS_RUNTIME_V2" "${TEST_SOURCE}")
+	addtest_flags("${TEST}_optimised" "-O3 -fobjc-runtime=gnustep-2.2 -UNDEBUG -DGS_RUNTIME_V2" "${TEST_SOURCE}")
 	target_sources("${TEST}_optimised" PRIVATE $<TARGET_OBJECTS:test_runtime>)
 
 	# -fobjc-arc is not supported on platforms using the legacy runtime
