@@ -51,6 +51,7 @@ set(TESTS
 	hash_table_delete.c
 	hash_test.c
 	setSuperclass.m
+	UnexpectedException.m
 )
 
 set(ENABLE_ALL_OBJC_ARC_TESTS On)
@@ -77,11 +78,6 @@ if (ENABLE_ALL_OBJC_ARC_TESTS)
 	ARCTest_arc.m
 	PropertyIntrospectionTest2_arc.m
 	)
-endif()
-
-# UnexpectedException test currently fails on ARM and needs to be fixed
-if(NOT ARCHITECTURE MATCHES "^(arm|aarch64)")
-    list(APPEND TESTS UnexpectedException.m)
 endif()
 
 # List of single-file tests that won't work with the legacy ABI and so
