@@ -24,7 +24,7 @@ static id x(id self, SEL _cmd)
 
 int main(void)
 {
-#ifdef __GNUSTEP_MSGSEND__
+
 	SEL nextSel;
 	Class cls = [Test class];
 	assert(cls != Nil);
@@ -47,9 +47,9 @@ int main(void)
 	objc_msg_lookup(cls, nextSel)(cls, nextSel);
 	assert(methodCalled == YES);
 	methodCalled = NO;
+#ifdef __GNUSTEP_MSGSEND__
 	objc_msgSend([Test class], nextSel);
 	assert(methodCalled == YES);
+#endif
 	return 0;
-#endif // __GNUSTEP_MSGSEND__
-	return 77; // Skip test
 }
