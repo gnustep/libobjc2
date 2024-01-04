@@ -10,6 +10,7 @@
 
 //#define assert(x) if (!(x)) { printf("Failed %d\n", __LINE__); }
 
+typedef void (*fwdManyFunc)(id, SEL, int, int, int, int, int, int, int, int, int, int, int, float, float, float, float, float, float, float, float, float, float, float);
 
 typedef struct { int a,b,c,d,e; } s;
 @interface Fake
@@ -175,6 +176,7 @@ struct objc_slot *forward_slot(id o, SEL s)
 
 int main(void)
 {
+#ifdef __GNUSTEP_MSGSEND__
 	__objc_msg_forward2 = forward;
 	__objc_msg_forward3 = forward_slot;
 	TestCls = objc_getClass("MsgTest");
@@ -220,8 +222,12 @@ int main(void)
 	assert(0 == [f dzero]);
 	assert(0 == [f ldzero]);
 	assert(0 == [f fzero]);
-	[TestCls manyArgs: 0 : 1 : 2 : 3: 4: 5: 6: 7: 8: 9: 10 : 0 : 1 : 2 : 3 : 4 : 5 : 6 : 7 : 8 : 9 : 10];
+	// Call manyArgs with objc_msgSend explicitly to test the slow lookup path
+	SEL manyArgsSel = sel_registerName("manyArgs::::::::::::::::::::::");
+  	((fwdManyFunc)objc_msgSend)(TestCls, manyArgsSel, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
 	assert(forwardcalls == 2);
+	[TestCls manyArgs: 0 : 1 : 2 : 3: 4: 5: 6: 7: 8: 9: 10 : 0 : 1 : 2 : 3 : 4 : 5 : 6 : 7 : 8 : 9 : 10];
+	assert(forwardcalls == 3);
 #ifdef BENCHMARK
 	const int iterations = 1000000000;
 	double times[3];
@@ -252,6 +258,8 @@ int main(void)
 	times[2] = ((double)c2 - (double)c1) / (double)CLOCKS_PER_SEC;
 	fprintf(stderr, "Direct IMP call took %f seconds. \n", times[2]);
 	printf("%f\t%f\t%f\n", times[0], times[1], times[2]);
-#endif
+#endif // BENCHMARK
 	return 0;
+#endif // __GNUSTEP_MSGSEND__
+	return 77; // Skip test
 }
