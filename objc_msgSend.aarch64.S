@@ -169,7 +169,7 @@ CDECL(objc_msgSend_stret):
 	EH_NOP
 	ldp    x2, x3, [sp, #32]
 	EH_NOP
-	ldp    x4, x5, [sp, #64]
+	ldp    x4, x5, [sp, #48]
 	EH_NOP
 	ldp    x6, x7, [sp, #64]
 	EH_NOP
