@@ -10,6 +10,8 @@
 
 //#define assert(x) if (!(x)) { printf("Failed %d\n", __LINE__); }
 
+typedef void (*fwdManyFunc)(id, SEL, int, int, int, int, int, int, int, int, int, int, int, float, float, float, float, float, float, float, float, float, float, float);
+
 typedef struct { int a,b,c,d,e; } s;
 @interface Fake
 - (int)izero;
@@ -220,8 +222,12 @@ int main(void)
 	assert(0 == [f dzero]);
 	assert(0 == [f ldzero]);
 	assert(0 == [f fzero]);
-	[TestCls manyArgs: 0 : 1 : 2 : 3: 4: 5: 6: 7: 8: 9: 10 : 0 : 1 : 2 : 3 : 4 : 5 : 6 : 7 : 8 : 9 : 10];
+	// Call manyArgs with objc_msgSend explicitly to test the slow lookup path
+	SEL manyArgsSel = sel_registerName("manyArgs::::::::::::::::::::::");
+  	((fwdManyFunc)objc_msgSend)(TestCls, manyArgsSel, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
 	assert(forwardcalls == 2);
+	[TestCls manyArgs: 0 : 1 : 2 : 3: 4: 5: 6: 7: 8: 9: 10 : 0 : 1 : 2 : 3 : 4 : 5 : 6 : 7 : 8 : 9 : 10];
+	assert(forwardcalls == 3);
 #ifdef BENCHMARK
 	const int iterations = 1000000000;
 	double times[3];
