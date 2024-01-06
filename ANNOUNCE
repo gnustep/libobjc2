@@ -31,6 +31,11 @@ Highlights of this release include:
   maintainable.
 - Several bug fixes in the ARC code, especially in corner cases surrounding
   weak references.
+- Support for fast-path allocation / initialisation functions.  Root classes
+  that opt into this should implement `+_TrivialAllocInit` (this can be an
+  empty method, it is not called).  Clang 18 or later will emit calls to the
+  fast-path functions for `+alloc`, `+allocWithZone:` and `+alloc` + `-init`
+  calls.  This should improve code density as well as performance.
 
 You may obtain the code for this release from git and use the 2.2 branch:
 

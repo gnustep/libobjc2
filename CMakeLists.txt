@@ -84,6 +84,7 @@ set(libobjc_C_SRCS
 	runtime.c
 	sarray2.c
 	sendmsg2.c
+	fast_paths.m
 	)
 set(libobjc_HDRS
 	objc/Availability.h

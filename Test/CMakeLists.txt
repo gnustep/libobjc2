@@ -84,6 +84,8 @@ endif()
 # shouldn't be run in legacy mode.
 set(NEW_TESTS
 	category_properties.m
+	DirectMethods.m
+	FastPathAlloc.m
 )
 
 remove_definitions(-D__OBJC_RUNTIME_INTERNAL__=1)

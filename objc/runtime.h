@@ -1166,6 +1166,14 @@ int objc_set_apple_compatible_objcxx_exceptions(int newValue) OBJC_NONPORTABLE;
 OBJC_PUBLIC
 void __attribute__((weak)) objc_enumerationMutation(id obj);
 
+/**
+ * Ensure that `+initialize` has been sent to the class of the argument (or the
+ * argument, if it is a class).  This will not call `+initialize` if it has
+ * been called already, either via an explicit call to this function or by
+ * being sent some other message.
+ */
+OBJC_PUBLIC
+void objc_send_initialize(id object) OBJC_NONPORTABLE;
 
 #define _C_ID       '@'
 #define _C_CLASS    '#'
