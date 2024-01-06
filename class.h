@@ -324,6 +324,8 @@ enum objc_class_flags
 	 * This class has been sent a +initalize message.  This message is sent
 	 * exactly once to every class that is sent a message by the runtime, just
 	 * before the first other message is sent.
+	 *
+	 * For direct method support, this is now part of the public ABI.
 	 */
 	objc_class_flag_initialized = (1<<8),
 	/** 
@@ -356,7 +358,14 @@ enum objc_class_flags
 	 * safe to store directly into weak variables and to skip all reference
 	 * count manipulations.
 	 */
-	objc_class_flag_permanent_instances = (1<<14)
+	objc_class_flag_permanent_instances = (1<<14),
+	/**
+	 * On a metaclass, guarantees that `+alloc` and `+allocWithZone:` are
+	 * trivial wrappers around `class_createInstance`.
+	 *
+	 * On a class, guarantees that `+init` is trivial.
+	 */
+	objc_class_flag_fast_alloc_init = (1<<15),
 };
 
 /**

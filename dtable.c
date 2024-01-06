@@ -84,11 +84,67 @@ static BOOL ownsMethod(Class cls, SEL sel)
 #endif
 
 /**
+ * Check whether this class pair implement or override `+alloc`,
+ * `+allocWithZone`, or `-init` in a way that requires the methods to be
+ * called.
+ */
+static void checkFastAllocInit(Class cls)
+{
+	// This needs to be called on the class, not the metaclass
+	if (class_isMetaClass(cls))
+	{
+		return;
+	}
+	static SEL alloc, allocWithZone, init, isTrivialAllocInit;
+	if (NULL == alloc)
+	{
+		alloc = sel_registerName("alloc");
+		allocWithZone = sel_registerName("allocWithZone:");
+		init = sel_registerName("init");
+		isTrivialAllocInit = sel_registerName("_TrivialAllocInit");
+	}
+	Class metaclass = cls->isa;
+	Class isTrivialOwner = ownerForMethod(metaclass, isTrivialAllocInit);
+	// If nothing in this hierarchy opts in to trivial alloc / init behaviour, give up.
+	if (isTrivialOwner == nil)
+	{
+		objc_clear_class_flag(cls, objc_class_flag_fast_alloc_init);
+		objc_clear_class_flag(metaclass, objc_class_flag_fast_alloc_init);
+		return;
+	}
+	// Check for overrides of alloc or allocWithZone:.
+	// This check has some false negatives.  If you override only one of alloc
+	// or allocWithZone, both will hit the slow path.  That's fine because the
+	// fast path is an optimisation, not a guarantee.
+	Class allocOwner = ownerForMethod(metaclass, alloc);
+	Class allocWithZoneOwner = ownerForMethod(metaclass, allocWithZone);
+	if (((allocOwner == nil) || (allocOwner == isTrivialOwner)) &&
+	    ((allocWithZoneOwner == nil) || (allocWithZoneOwner == isTrivialOwner)))
+	{
+		objc_set_class_flag(metaclass, objc_class_flag_fast_alloc_init);
+	}
+	else
+	{
+		objc_clear_class_flag(metaclass, objc_class_flag_fast_alloc_init);
+	}
+	Class initOwner = ownerForMethod(cls, init);
+	if ((initOwner == nil) || (initOwner->isa == isTrivialOwner))
+	{
+		objc_set_class_flag(cls, objc_class_flag_fast_alloc_init);
+	}
+	else
+	{
+		objc_clear_class_flag(cls, objc_class_flag_fast_alloc_init);
+	}
+}
+
+/**
  * Checks whether the class implements memory management methods, and whether
  * they are safe to use with ARC.
  */
 static void checkARCAccessors(Class cls)
 {
+	checkFastAllocInit(cls);
 	static SEL retain, release, autorelease, isARC;
 	if (NULL == retain)
 	{
@@ -661,7 +717,7 @@ static void remove_dtable(InitializingDtable* meta_buffer)
 /**
  * Send a +initialize message to the receiver, if required.  
  */
-PRIVATE void objc_send_initialize(id object)
+OBJC_PUBLIC void objc_send_initialize(id object)
 {
 	Class class = classForObject(object);
 	// If the first message is sent to an instance (weird, but possible and

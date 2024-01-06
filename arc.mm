@@ -18,6 +18,20 @@
 #import "objc/hooks.h"
 #import "objc/objc-arc.h"
 #import "objc/blocks_runtime.h"
+#include "objc/message.h"
+
+/**
+ * Helper to send a manual message for retain / release.
+ * We cannot use [object retain] and friends because recent clang will turn
+ * that into a call to `objc_retain`, causing infinite recursion.
+ */
+#ifdef __GNUSTEP_MSGSEND__
+#define ManualRetainReleaseMessage(object, selName, types) \
+	((types)objc_msgSend)(object, @selector(selName))
+#else
+#define ManualRetainReleaseMessage(object, selName, types) \
+	((types)(objc_msg_lookup(object, @selector(selName))))(object, @selector(selName))
+#endif
 
 extern "C" id (*_objc_weak_load)(id object);
 
@@ -310,7 +324,7 @@ static inline id retain(id obj, BOOL isWeak)
 	{
 		return retain_fast(obj, isWeak);
 	}
-	return [obj retain];
+	return ManualRetainReleaseMessage(obj, retain, id(*)(id, SEL));
 }
 
 extern "C" OBJC_PUBLIC BOOL objc_release_fast_no_destroy_np(id obj)
@@ -376,7 +390,7 @@ static inline void release(id obj)
 		objc_release_fast_np(obj);
 		return;
 	}
-	[obj release];
+	return ManualRetainReleaseMessage(obj, release, void(*)(id, SEL));
 }
 
 static inline void initAutorelease(void)
@@ -436,7 +450,7 @@ static inline id autorelease(id obj)
 		}
 		return obj;
 	}
-	return [obj autorelease];
+	return ManualRetainReleaseMessage(obj, autorelease, id(*)(id, SEL));
 }
 
 extern "C" OBJC_PUBLIC unsigned long objc_arc_autorelease_count_np(void)

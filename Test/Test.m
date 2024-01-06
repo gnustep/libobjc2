@@ -38,6 +38,10 @@
 {
 	return class_createInstance(self, 0);
 }
++ (id)alloc
+{
+	return class_createInstance(self, 0);
+}
 - (void)dealloc
 {
 	object_dispose(self);
@@ -55,6 +59,7 @@
 	objc_release(self);
 }
 - (void)_ARCCompliantRetainRelease {}
++ (void)_TrivialAllocInit{}
 @end
 
 @implementation NSAutoreleasePool
