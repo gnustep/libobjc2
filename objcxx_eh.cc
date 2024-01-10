@@ -6,6 +6,7 @@ typedef struct objc_object* id;
 #include "objcxx_eh.h"
 #include "visibility.h"
 #include "objc/runtime.h"
+#include "objc/objc-arc.h"
 
 /**
  * Helper function that has a custom personality function.
@@ -98,6 +99,9 @@ namespace std
 				const char* name() const { return __type_name; }
 	};
 }
+
+extern "C" void __cxa_throw(void*, std::type_info*, void(*)(void*));
+extern "C" void __cxa_rethrow();
 
 namespace
 {
@@ -340,6 +344,7 @@ bool gnustep::libobjc::__objc_class_type_info::__do_catch(const type_info *throw
 	{
 		*obj = (void*)thrown;
 	}
+
 	return found;
 };
 
@@ -369,7 +374,7 @@ extern "C"
 /**
  * The public symbol that the compiler uses to indicate the Objective-C id type.
  */
-gnustep::libobjc::__objc_id_type_info __objc_id_type_info;
+OBJC_PUBLIC gnustep::libobjc::__objc_id_type_info __objc_id_type_info;
 
 struct _Unwind_Exception *objc_init_cxx_exception(id obj)
 {
@@ -468,6 +473,7 @@ BEGIN_PERSONALITY_FUNCTION(test_eh_personality)
  * personality function, allowing us to inspect a C++ exception that is in a
  * known state.
  */
+#ifndef __MINGW32__
 extern "C" void test_cxx_eh_implementation()
 {
 	if (done_setup)
@@ -485,4 +491,19 @@ extern "C" void test_cxx_eh_implementation()
 	}
 	assert(caught);
 }
+#else
+static void eh_cleanup(void *exception)
+{
+	objc_release(*(id*)exception);
+}
 
+extern "C"
+OBJC_PUBLIC
+void objc_exception_throw(id object)
+{
+	id *exc = (id *)__cxa_allocate_exception(sizeof(id));
+	*exc = object;
+	objc_retain(object);
+	__cxa_throw(exc, & __objc_id_type_info, eh_cleanup);
+}
+#endif
