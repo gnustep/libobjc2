@@ -98,6 +98,37 @@
 #define ARG1 $a1
 #define ARG2 $a2
 
+#elif defined(__powerpc__)
+////////////////////////////////////////////////////////////////////////////////
+// PowerPC trampoline
+////////////////////////////////////////////////////////////////////////////////
+
+#if defined(__powerpc64__)
+#define LOAD ld
+#else
+#define LOAD lw
+#endif
+
+.macro trampoline arg0, arg1
+	mfctr %r12                # The block trampoline is always called
+                                  # via a function pointer. We can thus
+                                  # assume that ctr contains the trampline
+                                  # entry point address from the previous
+                                  # branch to this trampoline (bctrl).
+	addi  %r12, %r12, -0x1000 # Substract 0x1000 (page size) from entry point
+	mr    \arg1, \arg0
+	LOAD  \arg0, 0(%r12)
+	LOAD  %r12, 8(%r12)
+	mtctr %r12                # Move block function pointer into ctr
+	bctr                      # Branch to block function
+.endm
+
+#define ARG0 %r3
+#define ARG1 %r4
+#define ARG2 %r5
+#define SARG0 ARG1
+#define SARG1 ARG2
+
 #elif defined(__riscv) && (__riscv_xlen == 64)
 ////////////////////////////////////////////////////////////////////////////////
 // RISC-V trampoline
