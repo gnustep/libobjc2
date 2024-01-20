@@ -111,10 +111,10 @@
 
 .macro trampoline arg0, arg1
 	mfctr %r12                # The block trampoline is always called
-                                  # via a function pointer. We can thus
-                                  # assume that ctr contains the trampline
-                                  # entry point address from the previous
-                                  # branch to this trampoline (bctrl).
+                              # via a function pointer. We can thus
+                              # assume that ctr contains the trampline
+                              # entry point address from the previous
+                              # branch to this trampoline (bctrl).
 	addi  %r12, %r12, -0x1000 # Substract 0x1000 (page size) from entry point
 	mr    \arg1, \arg0
 	LOAD  \arg0, 0(%r12)
