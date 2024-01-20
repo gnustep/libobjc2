@@ -21,6 +21,13 @@
 #include "lock.h"
 #include "visibility.h"
 
+
+#if defined(__powerpc64__)
+	#define PAGE_SIZE 65536
+#else
+#define PAGE_SIZE 4096
+#endif
+
 #ifndef __has_builtin
 #define __has_builtin(x) 0
 #endif
@@ -95,7 +102,7 @@ static int mprotect(void *buffer, size_t len, int prot)
 #	endif
 #endif
 
-#define PAGE_SIZE 4096
+
 
 struct block_header
 {
