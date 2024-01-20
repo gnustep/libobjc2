@@ -107,7 +107,7 @@
 #define LOAD ld
 #define OFFSET 8
 #else
-#define LOAD lw
+#define LOAD lwz
 #define OFFSET 4
 #endif
 
