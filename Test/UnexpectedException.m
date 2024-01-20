@@ -31,7 +31,7 @@ LONG WINAPI _UnhandledExceptionFilter(struct _EXCEPTION_POINTERS* exceptionInfo)
 
 int main(void)
 {
-#if !(defined(__arm__) || defined(__ARM_ARCH_ISA_A64))
+#if !(defined(__arm__) || defined(__ARM_ARCH_ISA_A64)) && !defined(__powerpc__)
 #if defined(_WIN32) && !defined(__MINGW32__)
 	// also verify that an existing handler still gets called after we set ours
 	SetUnhandledExceptionFilter(&_UnhandledExceptionFilter);
