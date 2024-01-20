@@ -105,8 +105,10 @@
 
 #if defined(__powerpc64__)
 #define LOAD ld
+#define OFFSET 8
 #else
 #define LOAD lw
+#define OFFSET 4
 #endif
 
 .macro trampoline arg0, arg1
@@ -118,7 +120,7 @@
 	addi  %r12, %r12, -0x1000 # Substract 0x1000 (page size) from entry point
 	mr    \arg1, \arg0
 	LOAD  \arg0, 0(%r12)
-	LOAD  %r12, 8(%r12)
+	LOAD  %r12, OFFSET(%r12)
 	mtctr %r12                # Move block function pointer into ctr
 	bctr                      # Branch to block function
 .endm
