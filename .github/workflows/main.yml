@@ -96,6 +96,7 @@ jobs:
             system-processor: powerpc
             triple: powerpc-linux-gnu
             rtld: ld.so.1
+            libs: -latomic
         # lld versions prior to 15 do not support R_RISCV_ALIGN relocations
         exclude:
           - llvm-version: 13
@@ -116,7 +117,8 @@ jobs:
           sudo apt install libstdc++-9-dev-${{ matrix.arch.name }}-cross qemu-user ninja-build
       - name: Configure CMake
         run: |
-          export LDFLAGS="-L/usr/lib/llvm-${{ matrix.llvm-version }}/lib/ -fuse-ld=lld-${{ matrix.llvm-version}} -Wl,--dynamic-linker=/usr/${{ matrix.arch.triple }}/lib/${{ matrix.arch.rtld }},-rpath,/usr/${{ matrix.arch.triple }}/lib"
+          export LD_LIBRARY_PATH=/usr/lib
+          export LDFLAGS="${{ matrix.arch.libs }} -L/usr/lib/llvm-${{ matrix.llvm-version }}/lib/ -fuse-ld=lld-${{ matrix.llvm-version}} -Wl,--dynamic-linker=/usr/${{ matrix.arch.triple }}/lib/${{ matrix.arch.rtld }},-rpath,/usr/${{ matrix.arch.triple }}/lib"
           cmake -B ${{github.workspace}}/build \
             -DCMAKE_SYSTEM_NAME=Linux \
             -DCMAKE_SYSTEM_PROCESSOR=${{ matrix.arch.system-processor }} \
