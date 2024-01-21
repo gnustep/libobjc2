@@ -44,7 +44,7 @@ try_compile(
 )
 
 if(NOT COMPILE_SUCCESS)
-    string(REGEX MATCH "(aarch64|arm|i386|x86_64|unknown)" ARCHITECTURE ${COMPILE_OUTPUT})
+    string(REGEX MATCH "(aarch64|arm|i386|x86_64|powerpc64|powerpc|unknown)" ARCHITECTURE ${COMPILE_OUTPUT})
 endif()
 
 set(ARCHITECTURE ${ARCHITECTURE} CACHE STRING "Architecture Type")
@@ -242,6 +242,10 @@ target_link_libraries(objc Threads::Threads)
 # Link against ntdll.dll for RtlRaiseException
 if (WIN32 AND NOT MINGW)
 	target_link_libraries(objc ntdll.dll)
+endif()
+
+if (ARCHITECTURE STREQUAL "powerpc")
+	target_link_libraries(objc atomic)
 endif()
 
 target_link_libraries(objc tsl::robin_map)
