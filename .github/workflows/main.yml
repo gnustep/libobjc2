@@ -88,6 +88,14 @@ jobs:
             system-processor: riscv64
             triple: riscv64-linux-gnu
             rtld: ld-linux-riscv64-lp64d.so.1
+          - name: ppc64el
+            system-processor: powerpc64le
+            triple: powerpc64le-linux-gnu
+            rtld: ld64.so.2
+          - name: powerpc
+            system-processor: powerpc
+            triple: powerpc-linux-gnu
+            rtld: ld.so.1
         # lld versions prior to 15 do not support R_RISCV_ALIGN relocations
         exclude:
           - llvm-version: 13
