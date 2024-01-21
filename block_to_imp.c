@@ -20,6 +20,7 @@
 #include "blocks_runtime.h"
 #include "lock.h"
 #include "visibility.h"
+#include "asmconstants.h" // For PAGE_SIZE
 
 #ifndef __has_builtin
 #define __has_builtin(x) 0
@@ -94,8 +95,6 @@ static int mprotect(void *buffer, size_t len, int prot)
 #		define MAP_ANONYMOUS MAP_ANON
 #	endif
 #endif
-
-#define PAGE_SIZE 4096
 
 struct block_header
 {
@@ -189,13 +188,7 @@ static struct trampoline_set *alloc_trampolines(char *start, char *end)
 		memcpy(block, start, end-start);
 	}
 	metadata->buffers->headers[HEADERS_PER_PAGE-1].block = NULL;
-
-	#if defined(__powerpc64__) // Workaround as pagesize is 64k on ppc64
-	mprotect(metadata->buffers, 2 *PAGE_SIZE, PROT_READ | PROT_WRITE | PROT_EXEC);
-	#else
 	mprotect(metadata->buffers->rx_buffer, PAGE_SIZE, PROT_READ | PROT_EXEC);
-	#endif
-
 	clear_cache(metadata->buffers->rx_buffer, &metadata->buffers->rx_buffer[PAGE_SIZE]);
 
 	return metadata;
