@@ -116,7 +116,7 @@ jobs:
           sudo apt install libstdc++-9-dev-${{ matrix.arch.name }}-cross qemu-user ninja-build
       - name: Configure CMake
         run: |
-          export LDFLAGS="-L/usr/lib/llvm-${{ matrix.llvm-version }}/lib/ -fuse-ld=lld -Wl,--dynamic-linker=/usr/${{ matrix.arch.triple }}/lib/${{ matrix.arch.rtld }},-rpath,/usr/${{ matrix.arch.triple }}/lib"
+          export LDFLAGS="-L/usr/lib/llvm-${{ matrix.llvm-version }}/lib/ -fuse-ld=lld-${{ matrix.llvm-version}} -Wl,--dynamic-linker=/usr/${{ matrix.arch.triple }}/lib/${{ matrix.arch.rtld }},-rpath,/usr/${{ matrix.arch.triple }}/lib"
           cmake -B ${{github.workspace}}/build \
             -DCMAKE_SYSTEM_NAME=Linux \
             -DCMAKE_SYSTEM_PROCESSOR=${{ matrix.arch.system-processor }} \
