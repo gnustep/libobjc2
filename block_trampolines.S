@@ -1,4 +1,5 @@
 #include "common.S"
+#include "asmconstants.h"
 
 #
 # This file defines some trampolines for calling blocks.  A block function
@@ -112,17 +113,23 @@
 #endif
 
 .macro trampoline arg0, arg1
-	mfctr %r12                # The block trampoline is always called
-                              # via a function pointer. We can thus
-                              # assume that ctr contains the trampline
-                              # entry point address from the previous
-                              # branch to this trampoline (bctrl).
-	addi  %r12, %r12, -0x1000 # Substract 0x1000 (page size) from entry point
+	mfctr %r12                   # The block trampoline is always called
+                                 # via a function pointer. We can thus
+                                 # assume that ctr contains the trampline
+                                 # entry point address from the previous
+                                 # branch to this trampoline (bctrl).
+
+	#if PAGE_SHIFT < 16
+	addi  %r12, %r12, -PAGE_SIZE # Substract page size from entry point
+	#else
+	addis %r12, %r12, (-0x1 << (PAGE_SHIFT - 16))
+	#endif
+	
 	mr    \arg1, \arg0
 	LOAD  \arg0, 0(%r12)
 	LOAD  %r12, OFFSET(%r12)
-	mtctr %r12                # Move block function pointer into ctr
-	bctr                      # Branch to block function
+	mtctr %r12                   # Move block function pointer into ctr
+	bctr                         # Branch to block function
 .endm
 
 #define ARG0 %r3
