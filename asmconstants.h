@@ -22,9 +22,8 @@
 
 // Page size configuration
 #if defined(__powerpc64__)
-#define PAGE_SIZE 65536
-#define PAGE_SHIFT 16
+#	define PAGE_SHIFT 16
 #else
-#define PAGE_SIZE 4096
-#define PAGE_SHIFT 12
+#	define PAGE_SHIFT 12
 #endif
+#define PAGE_SIZE (1<<PAGE_SHIFT)
