@@ -25,18 +25,18 @@
     beq 2f
 
     srdi %r12, %r11, 16-3                // Extract byte 3 of sel index and multiply by 2^3
-    andi %r12, %r12, 0x7F8	 	         // Mask target byte
+    andi. %r12, %r12, 0x7F8	 	         // Mask target byte
 				             			 // Example: ((0xCAFEBA >> 13) & 0x7f8) == (0xCA << 3)
     add %r12, %r0, %r12                  // r12 = dtable address + offset
     ld %r0, DATA_OFFSET(%r12)            // Load, adding in the data offset
 1:
     srdi %r12, %r11, 8-3                 // Extract byte 2 of sel index and multiply by 2^3
-    andi %r12, %r12, 0x7F8	 	         // Mask target byte
+    andi. %r12, %r12, 0x7F8	 	         // Mask target byte
     add %r12, %r0, %r12                  // r12 = dtable address + offset
     ld %r0, DATA_OFFSET(%r12)            // Load, adding in the data offset
 2:
     sldi %r12, %r11, 3                   // Multiply by 2^3
-    andi %r12, %r12, 0x7F8	 	         // Mask target byte
+    andi. %r12, %r12, 0x7F8	 	         // Mask target byte
     add %r12, %r0, %r12                  // r12 = dtable address + offset
     ld %r0, DATA_OFFSET(%r12)            // Load, adding in the data offset
                                          // Slot pointer is now in t0
@@ -53,7 +53,7 @@
     li \sel, 0
 
     addi %r1, %r1, -8                    // Allocate 8 bytes of stack space
-    std \receiver, %r1                   // zero'd dword at r1
+    std \receiver, 0(%r1)                // zero'd dword at r1
 
     lfd %f1, 0(%r1)                      // Zero all fp return registers
     lfd %f2, 0(%r1)                      // Clang uses f1-f8 for struct ret
@@ -104,7 +104,7 @@
     .cfi_offset 31, -184  // Mark location of r31
     .cfi_offset 65, -192  // Mark location of lr
 
-    add %r1, %r1, -8
+    addi %r1, %r1, -8
     .cfi_adjust_cfa_offset -8
 
     std \receiver, 0(%r1) // it is convenient if \receiver is spilled at r1 (sp)
@@ -115,7 +115,7 @@
 
     // Reload spilled registers
     ld \receiver, 0(%r1)
-    add %r1, %r1, 8
+    addi %r1, %r1, 8
     .cfi_adjust_cfa_offset 8
 
     ld %r3,  8(%r1)
@@ -146,7 +146,7 @@
     ld  %r0,  192(%r1)
     mtlr %r0        // Restore lr
 
-    addi r1, r1, ARGUMENT_SPILL_SIZE
+    addi %r1, %r1, ARGUMENT_SPILL_SIZE
     .cfi_adjust_cfa_offset -ARGUMENT_SPILL_SIZE
 
     mtctr %r11
