@@ -8,6 +8,7 @@
 
 #if defined(__x86_64) || defined(__i386) || defined(__arm__) ||                \
     defined(__mips_n64) || defined(__mips_n32) ||                              \
+    defined(__powerpc64__) ||                                                  \
     defined(__ARM_ARCH_ISA_A64) ||                                             \
     (defined(__riscv) && __riscv_xlen == 64 &&                                 \
      defined(__riscv_float_abi_double))
