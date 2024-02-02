@@ -8,45 +8,45 @@
 	.cfi_startproc
 
     cmpldi \receiver, 0
-    beq 3f                               // Skip everything if receiver is nil
+    beq 3f                                // Skip everything if receiver is nil
 
-    andi.  %r0, \receiver, SMALLOBJ_MASK // CR0[EQ] = 1 if this is not a small obj
-    bne 5f                               // Branch to 5f if CR0[EQ] = 0 -> small obj
+    andi.  %r0, \receiver, SMALLOBJ_MASK  // CR0[EQ] = 1 if this is not a small obj
+    bne 5f                                // Branch to 5f if CR0[EQ] = 0 -> small obj
 
-    ld %r0, 0(\receiver)                 // Load class into r0
+    ld %r11, 0(\receiver)                 // Load class into r11
 0:
-    ld %r0, DTABLE_OFFSET(%r0)           // dtable -> r0
-    ld %r11, 0(\sel)                     // selector->index -> r11
-    ld %r12, SHIFT_OFFSET(%r0)           // dtable->shift -> r12
+    ld %r11, DTABLE_OFFSET(%r11)          // dtable -> r11
+    ld %r0, 0(\sel)                       // selector->index -> r0
+    ld %r12, SHIFT_OFFSET(%r11)           // dtable->shift -> r12
 
     cmpldi %r12, 8
     beq 1f
     cmpldi %r12, 0
     beq 2f
 
-    srdi %r12, %r11, 16-3                // Extract byte 3 of sel index and multiply by 2^3
+    srdi %r12, %r0, 16-3                 // Extract byte 3 of sel index and multiply by 2^3
     andi. %r12, %r12, 0x7F8	 	         // Mask target byte
 				             			 // Example: ((0xCAFEBA >> 13) & 0x7f8) == (0xCA << 3)
-    add %r12, %r0, %r12                  // r12 = dtable address + offset
-    ld %r0, DATA_OFFSET(%r12)            // Load, adding in the data offset
+    add %r12, %r11, %r12                 // r12 = dtable address + offset
+    ld %r11, DATA_OFFSET(%r12)           // Load, adding in the data offset
 1:
-    srdi %r12, %r11, 8-3                 // Extract byte 2 of sel index and multiply by 2^3
+    srdi %r12, %r0, 8-3                  // Extract byte 2 of sel index and multiply by 2^3
     andi. %r12, %r12, 0x7F8	 	         // Mask target byte
-    add %r12, %r0, %r12                  // r12 = dtable address + offset
-    ld %r0, DATA_OFFSET(%r12)            // Load, adding in the data offset
+    add %r12, %r11, %r12                 // r12 = dtable address + offset
+    ld %r11, DATA_OFFSET(%r12)           // Load, adding in the data offset
 2:
-    sldi %r12, %r11, 3                   // Multiply by 2^3
+    sldi %r12, %r0, 3                    // Multiply by 2^3
     andi. %r12, %r12, 0x7F8	 	         // Mask target byte
-    add %r12, %r0, %r12                  // r12 = dtable address + offset
-    ld %r0, DATA_OFFSET(%r12)            // Load, adding in the data offset
+    add %r12, %r11, %r12                 // r12 = dtable address + offset
+    ld %r11, DATA_OFFSET(%r12)           // Load, adding in the data offset
                                          // Slot pointer is now in t0
  
-    cmpldi %r0, 0
+    cmpldi %r11, 0
     beq 4f                               // If the slot is nil, go to the C path
 
-    ld %r0, SLOT_OFFSET(%r0)             // Load the method from the slot
+    ld %r11, SLOT_OFFSET(%r11)             // Load the method from the slot
 
-    mtctr %r0
+    mtctr %r11
     bctr                                 // Tail-call the method
 3:
     li \receiver, 0
@@ -157,9 +157,9 @@
     addi %r11, %r11, CDECL(SmallObjectClasses)@toc@l
 
     sldi %r0, %r0, 3 // Multiply by 2^3
-    add %r0, %r11, %r0
+    add %r11, %r11, %r0
 
-    ld %r0, 0(%r0)
+    ld %r11, 0(%r11)
 
     b 0b
 	.cfi_endproc
