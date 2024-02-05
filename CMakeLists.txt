@@ -126,7 +126,7 @@ endif ()
 
 find_package(tsl-robin-map)
 
-if (NOT tls-robin-map_FOUND)
+if (NOT tsl-robin-map_FOUND)
 	FetchContent_Declare(
 		robinmap
 		GIT_REPOSITORY https://github.com/Tessil/robin-map/
