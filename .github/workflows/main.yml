@@ -193,7 +193,7 @@ jobs:
       matrix:
         # Build each combination of OS and release/debug variants
         os: [ windows-2019 ]
-        msystem: [ ucrt64, mingw64 ]
+        msystem: [ ucrt64, mingw64, clang64 ]
         build-type: [ Release, Debug ]
         include:
           - msystem: ucrt64
@@ -202,6 +202,9 @@ jobs:
           - msystem: mingw64
             package-prefix: x86_64
             cmake-flags: LDFLAGS="-fuse-ld=lld -lstdc++ -lgcc_s"
+          - msystem: clang64
+            package-prefix: clang-x86_64
+            cmake-flags: LDFLAGS="-lc++"
       # Don't abort runners if a single one fails
       fail-fast: false
     runs-on: ${{ matrix.os }}
@@ -220,7 +223,7 @@ jobs:
       run: |        
         mkdir build
         cd build
-        ${{ matrix.cmake-flags }} cmake .. -DTESTS=ON -DCMAKE_C_COMPILER="clang" -DCMAKE_CXX_COMPILER="clang" -DCMAKE_BUILD_TYPE=${{ matrix.build-type }}
+        ${{ matrix.cmake-flags }} cmake .. -DTESTS=ON -DCMAKE_C_COMPILER="clang" -DCMAKE_CXX_COMPILER="clang++" -DCMAKE_BUILD_TYPE=${{ matrix.build-type }}
     - name: Build
       working-directory: build
       run: |
@@ -229,7 +232,14 @@ jobs:
       working-directory: build
       run: |
         ctest -j 4 --output-on-failure -T test
-
+    - name: Install
+      working-directory: build
+      run: |
+        cmake --install . --prefix=../dist
+    - uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.msystem }}-${{ matrix.build-type }}
+        path: dist/
 
   # Fake check that can be used as a branch-protection rule.
   all-checks:
