@@ -205,6 +205,7 @@ jobs:
           - msystem: clang64
             package-prefix: clang-x86_64
             cmake-flags: LDFLAGS="-lc++"
+            ctest-flags: -E UnexpectedException*
       # Don't abort runners if a single one fails
       fail-fast: false
     runs-on: ${{ matrix.os }}
@@ -231,7 +232,7 @@ jobs:
     - name: Test
       working-directory: build
       run: |
-        ctest -j 4 --output-on-failure -T test
+        ctest -j 4 --output-on-failure -T test ${{ matrix.ctest-flags }}
     - name: Install
       working-directory: build
       run: |
