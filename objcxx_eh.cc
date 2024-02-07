@@ -8,8 +8,6 @@ typedef struct objc_object* id;
 #include "objc/runtime.h"
 #include "objc/objc-arc.h"
 
-#define DEBUG_EXCEPTIONS
-
 #ifndef DEBUG_EXCEPTIONS
 #define DEBUG_LOG(...)
 #else
