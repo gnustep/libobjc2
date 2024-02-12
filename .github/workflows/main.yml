@@ -192,6 +192,48 @@ jobs:
       run: |
         ctest -j 4 --output-on-failure -T test
 
+  mingw:
+    strategy:
+      matrix:
+        # Build each combination of OS and release/debug variants
+        os: [ windows-2019 ]
+        msystem: [ ucrt64, mingw64 ]
+        build-type: [ Release, Debug ]
+        include:
+          - msystem: ucrt64
+            package-prefix: ucrt-x86_64
+            cmake-flags: LDFLAGS="-fuse-ld=lld -lstdc++ -lgcc_s"
+          - msystem: mingw64
+            package-prefix: x86_64
+            cmake-flags: LDFLAGS="-fuse-ld=lld -lstdc++ -lgcc_s"
+      # Don't abort runners if a single one fails
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.os }} ${{ matrix.msystem }} ${{ matrix.build-type}}
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+    - uses: actions/checkout@v3
+    - uses: msys2/setup-msys2@v2
+      with:
+        msystem: ${{ matrix.msystem }}
+        update: true
+        install: git mingw-w64-${{ matrix.package-prefix }}-clang mingw-w64-${{ matrix.package-prefix }}-lld mingw-w64-${{ matrix.package-prefix }}-cmake
+    - name: Configure CMake
+      run: |        
+        mkdir build
+        cd build
+        ${{ matrix.cmake-flags }} cmake .. -DTESTS=ON -DCMAKE_C_COMPILER="clang" -DCMAKE_CXX_COMPILER="clang" -DCMAKE_BUILD_TYPE=${{ matrix.build-type }}
+    - name: Build
+      working-directory: build
+      run: |
+        cmake --build .
+    - name: Test
+      working-directory: build
+      run: |
+        ctest -j 4 --output-on-failure -T test
+
 
   # Fake check that can be used as a branch-protection rule.
   all-checks:

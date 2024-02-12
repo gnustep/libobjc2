@@ -172,7 +172,7 @@ static BOOL selector_types_equal(const char *t1, const char *t2)
 {
 	if (t1 == nullptr || t2 == nullptr) { return t1 == t2; }
 
-	while (('\0' != *t1) && ('\0' != *t1))
+	while (('\0' != *t1) && ('\0' != *t2))
 	{
 		t1 = skip_irrelevant_type_info(t1);
 		t2 = skip_irrelevant_type_info(t2);
@@ -188,7 +188,7 @@ static BOOL selector_types_equal(const char *t1, const char *t2)
 		// and apply a cluebat to those responsible.
 		if ((*t1 == '*') && (*t2 != '*'))
 		{
-			if (*t2 == '^' && (((*(t2+1) == 'C') || (*(t2+2) == 'c'))))
+			if (*t2 == '^' && (((*(t2+1) == 'C') || (*(t2+1) == 'c'))))
 			{
 				t2++;
 			}
