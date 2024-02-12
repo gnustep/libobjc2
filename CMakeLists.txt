@@ -180,6 +180,14 @@ set(INCLUDE_DIRECTORY "objc" CACHE STRING
 
 add_compile_options($<$<STREQUAL:${CMAKE_SYSTEM_PROCESSOR},i686>:-march=i586>)
 
+# PowerPC 32-bit does not support native 64-bit atomic operations,
+# which is used in safe caching.
+# You must also update the guard in objc/runtime.h, when updating
+# this macro.
+if (ARCHITECTURE STREQUAL "powerpc")
+	add_definitions(-DNO_SAFE_CACHING)
+endif()
+
 set(INSTALL_TARGETS objc)
 
 if(WIN32)
@@ -242,10 +250,6 @@ target_link_libraries(objc Threads::Threads)
 # Link against ntdll.dll for RtlRaiseException
 if (WIN32 AND NOT MINGW)
 	target_link_libraries(objc ntdll.dll)
-endif()
-
-if (ARCHITECTURE STREQUAL "powerpc")
-	target_link_libraries(objc atomic)
 endif()
 
 target_link_libraries(objc tsl::robin_map)

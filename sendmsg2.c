@@ -91,10 +91,15 @@ static
 __attribute__((always_inline))
 struct objc_slot2 *objc_msg_lookup_internal(id *receiver, SEL selector, uint64_t *version)
 {
+#ifdef NO_SAFE_CACHING
+	// Always write 0 to version, marking the slot as uncacheable.
+	*version = 0;
+#else
 	if (version)
 	{
 		*version = objc_method_cache_version;
 	}
+#endif
 	Class class = classForObject((*receiver));
 retry:;
 	struct objc_slot2 * result = objc_dtable_lookup(class->dtable, selector->index);
@@ -118,10 +123,12 @@ retry:;
 		{
 			if ((result = objc_dtable_lookup(dtable, get_untyped_idx(selector))))
 			{
+#ifndef NO_SAFE_CACHING
 				if (version)
 				{
 					*version = 0;
 				}
+#endif
 				uncacheable_slot.imp = call_mismatch_hook(class, selector, result);
 				result = (struct objc_slot2*)&uncacheable_slot;
 			}
@@ -135,10 +142,12 @@ retry:;
 			}
 			if (0 == result)
 			{
+#ifndef NO_SAFE_CACHING
 				if (version)
 				{
 					*version = 0;
 				}
+#endif
 				uncacheable_slot.imp = __objc_msg_forward2(*receiver, selector);
 				result = (struct objc_slot2*)&uncacheable_slot;
 			}
@@ -236,10 +245,12 @@ struct objc_slot2 *objc_slot_lookup_version(id *receiver, SEL selector, uint64_t
 	// inlined trivially.
 	if (UNLIKELY(*receiver == nil))
 	{
+#ifndef NO_SAFE_CACHING
 		if (version)
 		{
 			*version = 0;
 		}
+#endif
 		// Return the correct kind of zero, depending on the type encoding.
 		if (selector->types)
 		{
@@ -350,10 +361,12 @@ struct objc_slot *objc_slot_lookup_super(struct objc_super *super, SEL selector)
  */
 struct objc_slot2 *objc_get_slot2(Class cls, SEL selector, uint64_t *version)
 {
+#ifndef NO_SAFE_CACHING
 	if (version)
 	{
 		*version = objc_method_cache_version;
 	}
+#endif
 	struct objc_slot2 * result = objc_dtable_lookup(cls->dtable, selector->index);
 	if (0 == result)
 	{
@@ -374,10 +387,12 @@ struct objc_slot2 *objc_get_slot2(Class cls, SEL selector, uint64_t *version)
 		{
 			if ((result = objc_dtable_lookup(dtable, get_untyped_idx(selector))))
 			{
+#ifndef NO_SAFE_CACHING
 				if (version)
 				{
 					*version = 0;
 				}
+#endif
 				uncacheable_slot.imp = call_mismatch_hook(cls, selector, result);
 				result = (struct objc_slot2*)&uncacheable_slot;
 			}
