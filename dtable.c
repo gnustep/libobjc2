@@ -43,7 +43,9 @@ PRIVATE mutex_t initialize_lock;
  * 2^x in increments of 8. */
 static uint32_t dtable_depth = 8;
 
+#ifndef NO_SAFE_CACHING
 _Atomic(uint64_t) objc_method_cache_version;
+#endif
 
 /**
  * Starting at `cls`, finds the class that provides the implementation of the
@@ -404,7 +406,9 @@ static BOOL installMethodInDtable(Class class,
 	// Invalidate the old slot, if there is one.
 	if (NULL != oldMethod)
 	{
+#ifndef NO_SAFE_CACHING
 		objc_method_cache_version++;
+#endif
 	}
 	return YES;
 }
@@ -520,7 +524,9 @@ PRIVATE void objc_update_dtable_for_new_superclass(Class cls, Class newSuper)
 	LOCK_RUNTIME_FOR_SCOPE();
 	rebaseDtableRecursive(cls, newSuper);
 	// Invalidate all caches after this operation.
-	objc_method_cache_version++;
+#ifndef NO_SAFE_CACHING
+		objc_method_cache_version++;
+#endif
 
 	return;
 }

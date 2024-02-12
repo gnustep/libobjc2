@@ -19,3 +19,11 @@
 #define SLOT_OFFSET    0
 #endif
 #define SMALLOBJ_MASK  ((1<<SMALLOBJ_BITS) - 1)
+
+// Page size configuration
+#if defined(__powerpc64__)
+#	define PAGE_SHIFT 16
+#else
+#	define PAGE_SHIFT 12
+#endif
+#define PAGE_SIZE (1<<PAGE_SHIFT)

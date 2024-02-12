@@ -27,8 +27,14 @@ struct objc_slot2
  * A counter that is incremented whenever one or more cached slots become
  * invalid, for example if a subclass loads a category containing methods that
  * were inherited from the superclass.
+ *
+ * Caching is disabled on targets without native 64-bit atomics support such
+ * as PowerPC 32-bit.
  */
+#if defined(__powerpc__) && !defined(__powerpc64__)
+#else
 OBJC_PUBLIC extern _Atomic(uint64_t) objc_method_cache_version;
+#endif
 
 /**
  * Legacy cache structure.  This is no longer maintained in the runtime and is

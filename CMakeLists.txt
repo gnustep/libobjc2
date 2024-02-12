@@ -51,7 +51,7 @@ try_compile(
 )
 
 if(NOT COMPILE_SUCCESS)
-    string(REGEX MATCH "(aarch64|arm|i386|x86_64|unknown)" ARCHITECTURE ${COMPILE_OUTPUT})
+    string(REGEX MATCH "(aarch64|arm|i386|x86_64|powerpc64|powerpc|unknown)" ARCHITECTURE ${COMPILE_OUTPUT})
 endif()
 
 set(ARCHITECTURE ${ARCHITECTURE} CACHE STRING "Architecture Type")
@@ -186,6 +186,14 @@ set(INCLUDE_DIRECTORY "objc" CACHE STRING
 	"Subdirectory of the include path to install the headers.")
 
 add_compile_options($<$<STREQUAL:${CMAKE_SYSTEM_PROCESSOR},i686>:-march=i586>)
+
+# PowerPC 32-bit does not support native 64-bit atomic operations,
+# which is used in safe caching.
+# You must also update the guard in objc/runtime.h, when updating
+# this macro.
+if (ARCHITECTURE STREQUAL "powerpc")
+	add_definitions(-DNO_SAFE_CACHING)
+endif()
 
 set(INSTALL_TARGETS objc)
 

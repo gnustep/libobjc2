@@ -20,6 +20,7 @@
 #include "blocks_runtime.h"
 #include "lock.h"
 #include "visibility.h"
+#include "asmconstants.h" // For PAGE_SIZE
 
 #ifndef __has_builtin
 #define __has_builtin(x) 0
@@ -95,22 +96,26 @@ static int mprotect(void *buffer, size_t len, int prot)
 #	endif
 #endif
 
-#define PAGE_SIZE 4096
-
 struct block_header
 {
 	void *block;
 	void(*fnptr)(void);
 	/**
 	 * On 64-bit platforms, we have 16 bytes for instructions, which ought to
-	 * be enough without padding.  On MIPS, we need 
+	 * be enough without padding.
 	 * Note: If we add too much padding, then we waste space but have no other
 	 * ill effects.  If we get this too small, then the assert in
 	 * `init_trampolines` will fire on library load.
+	 *
+	 * PowerPC: We need INSTR_CNT * INSTR_LEN = 7*4 = 28 bytes
+	 * for instruction. sizeof(block_header) must be a divisor of
+	 * PAGE_SIZE, so we need to pad block_header to 32 bytes.
+	 * On PowerPC 64-bit where sizeof(void *) = 8 bytes, we
+	 * add 16 bytes of padding.
 	 */
-#if defined(__i386__) || (defined(__mips__) && !defined(__mips_n64))
+#if defined(__i386__) || (defined(__mips__) && !defined(__mips_n64)) || (defined(__powerpc__) && !defined(__powerpc64__))
 	uint64_t padding[3];
-#elif defined(__mips__)
+#elif defined(__mips__) || defined(__powerpc64__)
 	uint64_t padding[2];
 #elif defined(__arm__)
 	uint64_t padding;
