@@ -20,6 +20,13 @@ endif()
 
 enable_language(OBJC OBJCXX)
 
+if (MINGW)
+	set(CMAKE_IMPORT_LIBRARY_SUFFIX ".dll.a")
+	set(CMAKE_LINK_LIBRARY_SUFFIX "")
+	set(CMAKE_SHARED_LIBRARY_PREFIX "lib")
+	set(CMAKE_OBJCXX_IMPLICIT_INCLUDE_DIRECTORIES ${CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES})
+endif ()
+
 INCLUDE (CheckCXXSourceCompiles)
 INCLUDE (FetchContent)
 
@@ -126,7 +133,7 @@ endif ()
 
 find_package(tsl-robin-map)
 
-if (NOT tls-robin-map_FOUND)
+if (NOT tsl-robin-map_FOUND)
 	FetchContent_Declare(
 		robinmap
 		GIT_REPOSITORY https://github.com/Tessil/robin-map/
@@ -309,11 +316,16 @@ if (NOT CMAKE_INSTALL_LIBDIR)
 	set(CMAKE_INSTALL_LIBDIR lib)
 endif ()
 
+if (NOT CMAKE_INSTALL_BINDIR)
+	set(CMAKE_INSTALL_BINDIR bin)
+endif ()
 
 set(GNUSTEP_INSTALL_TYPE ${DEFAULT_INSTALL_TYPE} CACHE STRING
 	"GNUstep installation type.  Options are NONE, SYSTEM, NETWORK or LOCAL.")
 if (${GNUSTEP_INSTALL_TYPE} STREQUAL "NONE")
 	SET(LIB_INSTALL_PATH "${CMAKE_INSTALL_LIBDIR}" CACHE STRING
+		"Subdirectory of the root prefix where libraries are installed.")
+	SET(BIN_INSTALL_PATH "${CMAKE_INSTALL_BINDIR}" CACHE STRING
 		"Subdirectory of the root prefix where libraries are installed.")
 	SET(HEADER_INSTALL_PATH "include")
 	SET(PC_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX})
@@ -322,6 +334,9 @@ else ()
 		ARGS "--variable=GNUSTEP_${GNUSTEP_INSTALL_TYPE}_LIBRARIES"
 		OUTPUT_VARIABLE LIB_INSTALL_PATH)
 	EXEC_PROGRAM(gnustep-config
+		ARGS "--variable=GNUSTEP_${GNUSTEP_INSTALL_TYPE}_LIBRARIES"
+		OUTPUT_VARIABLE BIN_INSTALL_PATH)
+	EXEC_PROGRAM(gnustep-config
 		ARGS "--variable=GNUSTEP_${GNUSTEP_INSTALL_TYPE}_HEADERS"
 		OUTPUT_VARIABLE HEADER_INSTALL_PATH)
 	SET(PC_INSTALL_PREFIX "/")
@@ -329,7 +344,7 @@ endif ()
 message(STATUS "GNUstep install type set to ${GNUSTEP_INSTALL_TYPE}")
 
 install(TARGETS ${INSTALL_TARGETS}
-	RUNTIME DESTINATION ${LIB_INSTALL_PATH}
+	RUNTIME DESTINATION ${BIN_INSTALL_PATH}
 	LIBRARY DESTINATION ${LIB_INSTALL_PATH}
 	ARCHIVE DESTINATION ${LIB_INSTALL_PATH})
 install(FILES ${libobjc_HDRS}
