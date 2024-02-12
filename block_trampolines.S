@@ -1,4 +1,5 @@
 #include "common.S"
+#include "asmconstants.h"
 
 #
 # This file defines some trampolines for calling blocks.  A block function
@@ -97,6 +98,45 @@
 #define ARG0 $a0
 #define ARG1 $a1
 #define ARG2 $a2
+
+#elif defined(__powerpc__)
+////////////////////////////////////////////////////////////////////////////////
+// PowerPC trampoline
+////////////////////////////////////////////////////////////////////////////////
+
+#if defined(__powerpc64__)
+#define LOAD ld
+#define OFFSET 8
+#else
+#define LOAD lwz
+#define OFFSET 4
+#endif
+
+.macro trampoline arg0, arg1
+	mfctr %r12                   # The block trampoline is always called
+                                 # via a function pointer. We can thus
+                                 # assume that ctr contains the trampline
+                                 # entry point address from the previous
+                                 # branch to this trampoline (bctrl).
+
+	#if PAGE_SHIFT < 16
+	addi  %r12, %r12, -PAGE_SIZE # Substract page size from entry point
+	#else
+	addis %r12, %r12, (-0x1 << (PAGE_SHIFT - 16))
+	#endif
+	
+	mr    \arg1, \arg0
+	LOAD  \arg0, 0(%r12)
+	LOAD  %r12, OFFSET(%r12)
+	mtctr %r12                   # Move block function pointer into ctr
+	bctr                         # Branch to block function
+.endm
+
+#define ARG0 %r3
+#define ARG1 %r4
+#define ARG2 %r5
+#define SARG0 ARG1
+#define SARG1 ARG2
 
 #elif defined(__riscv) && (__riscv_xlen == 64)
 ////////////////////////////////////////////////////////////////////////////////
