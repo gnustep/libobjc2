@@ -8,6 +8,12 @@ typedef struct objc_object* id;
 #include "objc/runtime.h"
 #include "objc/objc-arc.h"
 
+#ifndef DEBUG_EXCEPTIONS
+#define DEBUG_LOG(...)
+#else
+#define DEBUG_LOG(str, ...) fprintf(stderr, str, ## __VA_ARGS__)
+#endif
+
 /**
  * Helper function that has a custom personality function.
  * This calls `cxx_throw` and has a destructor that must be run.  We intercept
@@ -295,10 +301,18 @@ namespace gnustep
 		/* libc++-abi does not have  __is_pointer_p and won't do the double dereference 
 		 * required to get the object pointer. We need to do it ourselves if we have
 		 * caught an exception with libc++'s exception class. */
+#ifndef __MINGW32__
 		 if (cxx_exception_class == llvm_cxx_exception_class) {
 			 return **(id**)obj;
 		 }
 		 return *(id*)obj;
+#else
+#ifdef _LIBCPP_VERSION
+		return **(id**)obj;
+#else
+		return *(id*)obj;
+#endif // _LIBCPP_VERSION
+#endif // __MINGW32__
 	 }
 };
 
@@ -355,14 +369,17 @@ bool gnustep::libobjc::__objc_id_type_info::__do_catch(const type_info *thrownTy
 	// Id catch matches any ObjC throw
 	if (dynamic_cast<const __objc_class_type_info*>(thrownType))
 	{
-		*obj = *(id*)obj;
+		*obj = dereference_thrown_object_pointer(obj);
+		DEBUG_LOG("gnustep::libobjc::__objc_id_type_info::__do_catch caught 0x%x\n", *obj);
 		return true;
 	}
 	if (dynamic_cast<const __objc_id_type_info*>(thrownType))
 	{
-		*obj = *(id*)obj;
+		*obj = dereference_thrown_object_pointer(obj);
+		DEBUG_LOG("gnustep::libobjc::__objc_id_type_info::__do_catch caught 0x%x\n", *obj);
 		return true;
 	}
+	DEBUG_LOG("gnustep::libobjc::__objc_id_type_info::__do_catch returning false\n");
 	return false;
 };
 
@@ -494,6 +511,7 @@ extern "C" void test_cxx_eh_implementation()
 #else
 static void eh_cleanup(void *exception)
 {
+	DEBUG_LOG("eh_cleanup: Releasing 0x%x\n", *(id*)exception);
 	objc_release(*(id*)exception);
 }
 
@@ -504,6 +522,7 @@ void objc_exception_throw(id object)
 	id *exc = (id *)__cxa_allocate_exception(sizeof(id));
 	*exc = object;
 	objc_retain(object);
+	DEBUG_LOG("objc_exception_throw: Throwing 0x%x\n", *exc);
 	__cxa_throw(exc, & __objc_id_type_info, eh_cleanup);
 }
 #endif
