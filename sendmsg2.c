@@ -91,15 +91,15 @@ static
 __attribute__((always_inline))
 struct objc_slot2 *objc_msg_lookup_internal(id *receiver, SEL selector, uint64_t *version)
 {
-#ifdef NO_SAFE_CACHING
-	// Always write 0 to version, marking the slot as uncacheable.
-	*version = 0;
-#else
 	if (version)
 	{
+#ifdef NO_SAFE_CACHING
+		// Always write 0 to version, marking the slot as uncacheable.
+		*version = 0;
+#else
 		*version = objc_method_cache_version;
-	}
 #endif
+	}
 	Class class = classForObject((*receiver));
 retry:;
 	struct objc_slot2 * result = objc_dtable_lookup(class->dtable, selector->index);
