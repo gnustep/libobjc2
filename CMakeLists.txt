@@ -28,6 +28,7 @@ endif ()
 
 INCLUDE (CheckCXXSourceCompiles)
 INCLUDE (FetchContent)
+INCLUDE (CheckCXXSymbolExists)
 
 set(libobjc_VERSION 4.6)
 
@@ -128,6 +129,29 @@ elseif (MINGW)
 	list(APPEND libobjc_CXX_SRCS eh_win32_mingw.m)
 else ()
 	list(APPEND libobjc_C_SRCS eh_personality.c)
+endif ()
+
+# Export the __cxa_begin_catch, __cxa_end_catch and __gxx_personality_seh0 symbols from libobjc2
+# and forward them to the C runtime
+if (MINGW)
+	check_cxx_symbol_exists(_GLIBCXX_RELEASE "version" HAVE_LIBSTDCXX)
+	check_cxx_symbol_exists(_LIBCPP_VERSION "version" HAVE_LIBCXX)
+
+	if (HAVE_LIBSTDCXX)
+		find_library(CXX_RUNTIME "stdc++" REQUIRED)
+		set(CXX_RUNTIME_NAME "libstdc++-6")
+	elseif(HAVE_LIBCXX)
+		find_library(CXX_RUNTIME "c++" REQUIRED)
+		get_filename_component(CXX_RUNTIME_NAME ${CXX_RUNTIME} NAME_WE CACHE)
+	else ()
+		message(WARNING "Could not determine the C++ runtime.")
+	endif ()
+
+	if (CXX_RUNTIME)
+		message(STATUS "Adding forwarders for __cxa_begin_catch, __cxa_end_catch, __cxa_rethrow and __gxx_personality_seh0 to ${CXX_RUNTIME_NAME}")
+		configure_file(eh_forwards.def.in ${CMAKE_CURRENT_BINARY_DIR}/eh_forwards.def @ONLY)
+		list(APPEND libobjc_CXX_SRCS ${CMAKE_CURRENT_BINARY_DIR}/eh_forwards.def)
+	endif()
 endif ()
 
 find_package(tsl-robin-map)

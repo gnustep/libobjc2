@@ -202,13 +202,12 @@ jobs:
         include:
           - msystem: ucrt64
             package-prefix: ucrt-x86_64
-            cmake-flags: LDFLAGS="-fuse-ld=lld -lstdc++ -lgcc_s"
+            cmake-flags: LDFLAGS="-fuse-ld=lld"
           - msystem: mingw64
             package-prefix: x86_64
-            cmake-flags: LDFLAGS="-fuse-ld=lld -lstdc++ -lgcc_s"
+            cmake-flags: LDFLAGS="-fuse-ld=lld"
           - msystem: clang64
             package-prefix: clang-x86_64
-            cmake-flags: LDFLAGS="-lc++"
             ctest-flags: -E UnexpectedException*
       # Don't abort runners if a single one fails
       fail-fast: false

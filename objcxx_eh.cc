@@ -463,6 +463,7 @@ PRIVATE void cxx_throw()
 	throw x;
 }
 
+#ifndef __MINGW32__
 /**
  * Personality function that wraps the C++ personality and inspects the C++
  * exception structure on the way past.  This should be used only for the
@@ -490,7 +491,6 @@ BEGIN_PERSONALITY_FUNCTION(test_eh_personality)
  * personality function, allowing us to inspect a C++ exception that is in a
  * known state.
  */
-#ifndef __MINGW32__
 extern "C" void test_cxx_eh_implementation()
 {
 	if (done_setup)

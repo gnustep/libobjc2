@@ -14,7 +14,13 @@ extern "C" {
 #undef CXA_ALLOCATE_EXCEPTION_SPECIFIER
 #define CXA_ALLOCATE_EXCEPTION_SPECIFIER
 #endif
-__attribute__((weak))
+
+#ifndef __MINGW32__
+#define OBJC_WEAK __attribute__((weak))
+#else
+#define OBJC_WEAK
+#endif
+OBJC_WEAK
 void *__cxa_allocate_exception(size_t thrown_size) CXA_ALLOCATE_EXCEPTION_SPECIFIER;
 
 /**
@@ -23,32 +29,33 @@ void *__cxa_allocate_exception(size_t thrown_size) CXA_ALLOCATE_EXCEPTION_SPECIF
  * _Unwind_Exception structure within this structure, and should be passed to
  * the C++ personality function.
  */
-__attribute__((weak))
+OBJC_WEAK
 struct _Unwind_Exception *objc_init_cxx_exception(id thrown_exception);
 /**
  * The GNU C++ exception personality function, provided by libsupc++ (GNU) or
  * libcxxrt (PathScale).
  */
-__attribute__((weak)) DECLARE_PERSONALITY_FUNCTION(__gxx_personality_v0);
+OBJC_WEAK
+DECLARE_PERSONALITY_FUNCTION(__gxx_personality_v0);
 /**
  * Frees an exception object allocated by __cxa_allocate_exception().  Part of
  * the Itanium C++ ABI.
  */
-__attribute__((weak))
+OBJC_WEAK
 void __cxa_free_exception(void *thrown_exception);
 /**
  * Tests whether a C++ exception contains an Objective-C object, and returns if
  * if it does.  The second argument is a pointer to a boolean value indicating
  * whether this is a valid object.
  */
-__attribute__((weak))
+OBJC_WEAK
 void *objc_object_for_cxx_exception(void *thrown_exception, int *isValid);
 
 /**
  * Prints the type info associated with an exception.  Used only when
  * debugging, not compiled in the normal build.
  */
-__attribute__((weak))
+OBJC_WEAK
 void print_type_info(void *thrown_exception);
 
 /**

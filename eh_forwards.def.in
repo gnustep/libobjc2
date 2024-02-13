@@ -1,0 +1,5 @@
+EXPORTS
+ __cxa_begin_catch = @CXX_RUNTIME_NAME@.__cxa_begin_catch
+ __cxa_end_catch = @CXX_RUNTIME_NAME@.__cxa_end_catch
+ __cxa_rethrow = @CXX_RUNTIME_NAME@.__cxa_rethrow
+ __gxx_personality_seh0 = @CXX_RUNTIME_NAME@.__gxx_personality_seh0
