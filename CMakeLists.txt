@@ -21,9 +21,8 @@ endif()
 enable_language(OBJC OBJCXX)
 
 if (MINGW)
-	set(CMAKE_IMPORT_LIBRARY_SUFFIX ".dll.a")
-	set(CMAKE_LINK_LIBRARY_SUFFIX "")
-	set(CMAKE_SHARED_LIBRARY_PREFIX "lib")
+	# Make sure ObjC++ source code uses the C++ implicit include directories.  This is needed, for example, to make sure we use the right
+	# C++ headers when using clang but linking with libstdc++.
 	set(CMAKE_OBJCXX_IMPLICIT_INCLUDE_DIRECTORIES ${CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES})
 endif ()
 
