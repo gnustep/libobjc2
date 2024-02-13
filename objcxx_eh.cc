@@ -7,6 +7,10 @@ typedef struct objc_object* id;
 #include "visibility.h"
 #include "objc/runtime.h"
 #include "objc/objc-arc.h"
+#ifdef __MINGW32__
+#include "objc/objc-exception.h"
+#include "objc/hooks.h"
+#endif
 
 #ifndef DEBUG_EXCEPTIONS
 #define DEBUG_LOG(...)
@@ -515,14 +519,72 @@ static void eh_cleanup(void *exception)
 	objc_release(*(id*)exception);
 }
 
+namespace __cxxabiv1
+{
+	struct __cxa_refcounted_exception
+	{
+		int referenceCount;
+	};
+}
+
+extern "C" __cxa_refcounted_exception* __cxa_init_primary_exception(void *obj, std::type_info *tinfo, void (*dest) (void *));
+
 extern "C"
 OBJC_PUBLIC
 void objc_exception_throw(id object)
 {
+#ifdef __GLIBCXX__
+	// Don't bother with a mutex here.  It doesn't matter if two threads set
+	// these values at the same time.
+	if (!done_setup)
+	{
+		DEBUG_LOG("objc_exception_throw: Doing initial setup\n");
+		MagicValueHolder *magicExc = (MagicValueHolder *)__cxa_allocate_exception(sizeof(MagicValueHolder));
+		MagicValueHolder x;
+		*magicExc = x;
+
+		__cxa_refcounted_exception *header =
+			__cxa_init_primary_exception(magicExc, & __objc_id_type_info, NULL);
+		exception_struct_size = find_forwards(header, MagicValueHolder::magic);
+		__cxa_free_exception(magicExc);
+
+		DEBUG_LOG("objc_exception_throw: exception_struct_size: 0x%x\n", unsigned(exception_struct_size));
+
+		done_setup = true;
+	}
+#endif
+
 	id *exc = (id *)__cxa_allocate_exception(sizeof(id));
 	*exc = object;
 	objc_retain(object);
 	DEBUG_LOG("objc_exception_throw: Throwing 0x%x\n", *exc);
+
+#ifndef __GLIBCXX__
+	// At the moment, only libstdc++ exposes __cxa_init_primary_exception.
 	__cxa_throw(exc, & __objc_id_type_info, eh_cleanup);
+#else
+	__cxa_eh_globals *globals = __cxa_get_globals ();
+	globals->uncaughtExceptions += 1;
+	__cxa_refcounted_exception *header =
+		__cxa_init_primary_exception(exc, & __objc_id_type_info, eh_cleanup);
+	header->referenceCount = 1;
+
+	_Unwind_Exception *unwindHeader = pointer_add<_Unwind_Exception>(header, exception_struct_size - sizeof(_Unwind_Exception));
+	_Unwind_Reason_Code err = _Unwind_RaiseException (unwindHeader);
+
+	if (_URC_END_OF_STACK == err && 0 != _objc_unexpected_exception)
+	{
+		DEBUG_LOG("Invoking _objc_unexpected_exception\n");
+		_objc_unexpected_exception(object);
+	}
+	DEBUG_LOG("Throw returned %d\n",(int) err);
+	abort();
+#endif
 }
+
+OBJC_PUBLIC extern objc_uncaught_exception_handler objc_setUncaughtExceptionHandler(objc_uncaught_exception_handler handler)
+{
+	return __atomic_exchange_n(&_objc_unexpected_exception, handler, __ATOMIC_SEQ_CST);
+}
+
 #endif

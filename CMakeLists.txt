@@ -124,9 +124,7 @@ set(libobjc_CXX_SRCS
 # Windows does not use DWARF EH, except when using the GNU ABI (MinGW)
 if (WIN32 AND NOT MINGW)
 	list(APPEND libobjc_CXX_SRCS eh_win32_msvc.cc)
-elseif (MINGW)
-	list(APPEND libobjc_CXX_SRCS eh_win32_mingw.m)
-else ()
+elseif (NOT MINGW)
 	list(APPEND libobjc_C_SRCS eh_personality.c)
 endif ()
 
