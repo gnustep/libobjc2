@@ -1,6 +1,7 @@
 #include <atomic>
 #include <stdlib.h>
 #include <stdio.h>
+#include <windows.h>
 #include "dwarf_eh.h"
 #include "objcxx_eh_private.h"
 #include "objcxx_eh.h"
@@ -95,4 +96,46 @@ void objc_exception_throw(id object)
 OBJC_PUBLIC extern objc_uncaught_exception_handler objc_setUncaughtExceptionHandler(objc_uncaught_exception_handler handler)
 {
 	return __atomic_exchange_n(&_objc_unexpected_exception, handler, __ATOMIC_SEQ_CST);
+}
+
+extern "C" void* __cxa_begin_catch(void *object);
+
+extern "C"
+OBJC_PUBLIC
+void* objc_begin_catch(void* object)
+{
+	return __cxa_begin_catch(object);
+}
+
+extern "C" void __cxa_end_catch();
+
+extern "C"
+OBJC_PUBLIC
+void objc_end_catch()
+{
+	__cxa_end_catch();
+}
+
+extern "C" void __cxa_rethrow();
+
+extern "C"
+OBJC_PUBLIC
+void objc_exception_rethrow()
+{
+	__cxa_rethrow();
+}
+
+extern "C" EXCEPTION_DISPOSITION __gxx_personality_seh0(PEXCEPTION_RECORD ms_exc,
+														void *this_frame,
+														PCONTEXT ms_orig_context,
+														PDISPATCHER_CONTEXT ms_disp);
+
+extern "C"
+OBJC_PUBLIC
+EXCEPTION_DISPOSITION __gnu_objc_personality_seh0(PEXCEPTION_RECORD ms_exc,
+														void *this_frame,
+														PCONTEXT ms_orig_context,
+														PDISPATCHER_CONTEXT ms_disp)
+{
+  return __gxx_personality_seh0(ms_exc, this_frame, ms_orig_context, ms_disp);
 }
