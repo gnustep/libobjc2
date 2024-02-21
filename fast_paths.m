@@ -12,6 +12,7 @@ typedef struct _NSZone NSZone;
 /**
  * Equivalent to [cls alloc].  If there's a fast path opt-in, then this skips the message send.
  */
+OBJC_PUBLIC
 id
 objc_alloc(Class cls)
 {
@@ -29,6 +30,7 @@ objc_alloc(Class cls)
 /**
  * Equivalent to [cls allocWithZone: null].  If there's a fast path opt-in, then this skips the message send.
  */
+OBJC_PUBLIC
 id
 objc_allocWithZone(Class cls)
 {
@@ -47,6 +49,7 @@ objc_allocWithZone(Class cls)
  * Equivalent to [[cls alloc] init].  If there's a fast path opt-in, then this
  * skips the message send.
  */
+OBJC_PUBLIC
 id
 objc_alloc_init(Class cls)
 {
