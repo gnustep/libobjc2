@@ -12,6 +12,8 @@
 #include "lock.h"
 #include "gc_ops.h"
 
+PRIVATE int associate_spinlocks[spinlock_count];
+
 /**
  * A single associative reference.  Contains the key, value, and association
  * policy.
@@ -140,7 +142,7 @@ static void setReference(struct reference_list *list,
 			break;
 	}
 	// While inserting into the list, we need to lock it temporarily.
-	volatile int *lock = lock_for_pointer(list);
+	volatile int *lock = associate_lock_for_pointer(list);
 	lock_spinlock(lock);
 	struct reference *r = findReference(list, key);
 	// If there's an existing reference, then we can update it, otherwise we
@@ -165,7 +167,7 @@ static void setReference(struct reference_list *list,
 	BOOL needLock = isAtomic(r->policy) || isAtomic(policy);
 	if (needLock)
 	{
-		lock = lock_for_pointer(r);
+		lock = associate_lock_for_pointer(r);
 		lock_spinlock(lock);
 	}
 	@try
@@ -289,7 +291,7 @@ static struct reference_list* referenceListForObject(id object, BOOL create)
 		Class cls = (Class)object;
 		if ((NULL == cls->extra_data) && create)
 		{
-			volatile int *lock = lock_for_pointer(cls);
+			volatile int *lock = associate_lock_for_pointer(cls);
 			struct reference_list *list = gc->malloc(sizeof(struct reference_list));
 			lock_spinlock(lock);
 			if (NULL == cls->extra_data)
@@ -309,7 +311,7 @@ static struct reference_list* referenceListForObject(id object, BOOL create)
 	Class hiddenClass = findHiddenClass(object);
 	if ((NULL == hiddenClass) && create)
 	{
-		volatile int *lock = lock_for_pointer(object);
+		volatile int *lock = associate_lock_for_pointer(object);
 		lock_spinlock(lock);
 		hiddenClass = findHiddenClass(object);
 		if (NULL == hiddenClass)
@@ -423,7 +425,7 @@ static Class hiddenClassForObject(id object)
 	Class hiddenClass = findHiddenClass(object);
 	if (NULL == hiddenClass)
 	{
-		volatile int *lock = lock_for_pointer(object);
+		volatile int *lock = associate_lock_for_pointer(object);
 		lock_spinlock(lock);
 		hiddenClass = findHiddenClass(object);
 		if (NULL == hiddenClass)
