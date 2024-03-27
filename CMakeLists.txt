@@ -250,13 +250,13 @@ list(APPEND libobjc_CXX_SRCS ${libobjcxx_CXX_SRCS})
 target_sources(objc PRIVATE ${libobjc_CXX_SRCS})
 
 include(FindThreads)
-target_link_libraries(objc Threads::Threads)
+target_link_libraries(objc PUBLIC Threads::Threads)
 # Link against ntdll.dll for RtlRaiseException
 if (WIN32 AND NOT MINGW)
-	target_link_libraries(objc ntdll.dll)
+	target_link_libraries(objc PUBLIC ntdll.dll)
 endif()
 
-target_link_libraries(objc tsl::robin_map)
+target_link_libraries(objc PRIVATE tsl::robin_map)
 
 set_target_properties(objc PROPERTIES
 	LINKER_LANGUAGE C
@@ -278,7 +278,7 @@ endif ()
 
 # Explicitly link libm, as an implicit dependency of the C++ runtime
 if (M_LIBRARY)
-	target_link_libraries(objc ${M_LIBRARY})
+	target_link_libraries(objc PUBLIC ${M_LIBRARY})
 endif ()
 
 # Make weak symbols work on OS X
@@ -340,10 +340,17 @@ else ()
 endif ()
 message(STATUS "GNUstep install type set to ${GNUSTEP_INSTALL_TYPE}")
 
+target_include_directories(
+	objc
+	INTERFACE
+	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+	$<INSTALL_INTERFACE:include>)
 install(TARGETS ${INSTALL_TARGETS}
+	EXPORT libobjcTargets
 	RUNTIME DESTINATION ${BIN_INSTALL_PATH}
 	LIBRARY DESTINATION ${LIB_INSTALL_PATH}
 	ARCHIVE DESTINATION ${LIB_INSTALL_PATH})
+
 install(FILES ${libobjc_HDRS}
 	DESTINATION "${HEADER_INSTALL_PATH}/${INCLUDE_DIRECTORY}")
 install(FILES ${libBlocksRuntime_COMPATIBILITY_HDRS}
@@ -365,6 +372,26 @@ if (UNIX)
 	set(CPACK_STRIP_FILES true CACHE BOOL "Strip libraries when packaging")
 endif ()
 include (CPack)
+
+# CMake Configuration File
+
+install(EXPORT libobjcTargets
+	FILE libobjcTargets.cmake
+	DESTINATION ${LIB_INSTALL_PATH}/cmake/libobjc)
+include(CMakePackageConfigHelpers)
+configure_package_config_file(${CMAKE_CURRENT_SOURCE_DIR}/Config.cmake.in
+	"${CMAKE_CURRENT_BINARY_DIR}/libobjcConfig.cmake"
+	INSTALL_DESTINATION "${LIB_INSTALL_PATH}/cmake/libobjc"
+	NO_SET_AND_CHECK_MACRO
+	NO_CHECK_REQUIRED_COMPONENTS_MACRO)
+write_basic_package_version_file(
+	"${CMAKE_CURRENT_BINARY_DIR}/libobjcConfigVersion.cmake"
+	VERSION "${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}"
+	COMPATIBILITY AnyNewerVersion)
+install(FILES
+	${CMAKE_CURRENT_BINARY_DIR}/libobjcConfig.cmake
+	${CMAKE_CURRENT_BINARY_DIR}/libobjcConfigVersion.cmake
+	DESTINATION ${LIB_INSTALL_PATH}/cmake/libobjc)
 
 # pkg-config descriptor
 
