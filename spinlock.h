@@ -17,7 +17,20 @@ static const int spinlock_mask = spinlock_count - 1;
 /**
  * Integers used as spinlocks for atomic property access.
  */
-extern int spinlocks[spinlock_count];
+extern int prop_spinlocks[spinlock_count];
+extern int associate_spinlocks[spinlock_count];
+
+static inline intptr_t hash_for_pointer(const void *ptr)
+{
+	intptr_t hash = (intptr_t)ptr;
+	// Most properties will be pointers, so disregard the lowest few bits
+	hash >>= sizeof(void*) == 4 ? 2 : 8;
+	intptr_t low = hash & spinlock_mask;
+	hash >>= 16;
+	hash |= low;
+	return (hash & spinlock_mask);
+}
+
 /**
  * Get a spin lock from a pointer.  We want to prevent lock contention between
  * properties in the same object - if someone is stupid enough to be using
@@ -26,15 +39,14 @@ extern int spinlocks[spinlock_count];
  * contention between the same property in different objects, so we can't just
  * use the ivar offset.
  */
-static inline volatile int *lock_for_pointer(const void *ptr)
+static inline volatile int *prop_lock_for_pointer(const void *ptr)
 {
-	intptr_t hash = (intptr_t)ptr;
-	// Most properties will be pointers, so disregard the lowest few bits
-	hash >>= sizeof(void*) == 4 ? 2 : 8;
-	intptr_t low = hash & spinlock_mask;
-	hash >>= 16;
-	hash |= low;
-	return spinlocks + (hash & spinlock_mask);
+	return prop_spinlocks + hash_for_pointer(ptr);
+}
+
+static inline volatile int *associate_lock_for_pointer(const void *ptr)
+{
+	return associate_spinlocks + hash_for_pointer(ptr);
 }
 
 /**
