@@ -204,6 +204,8 @@ TYPE_DIRECTIVE(CDECL(objc_msgSend_fpret), %function)
 TYPE_DIRECTIVE(CDECL(objc_msgSend), %function)
 .globl CDECL(objc_msgSend_stret)
 TYPE_DIRECTIVE(CDECL(objc_msgSend_stret), %function)
+.globl CDECL(objc_msgSend_stret2_np)
+TYPE_DIRECTIVE(CDECL(objc_msgSend_stret2_np), %function)
 CDECL(objc_msgSend):
 CDECL(objc_msgSend_fpret):
 /*
@@ -218,7 +220,7 @@ CDECL(objc_msgSend_fpret):
 CDECL(objc_msgSend_stret):
 	MSGSEND objc_msgSend, x0, x1
 CDECL(objc_msgSend_stret2_np):
-	MSGSEND objc_msgSend_stret, x1, x2
+	MSGSEND objc_msgSend_stret2_np, x1, x2
 
 #ifdef _WIN32
 .text
@@ -243,4 +245,5 @@ CDECL(objc_msgSend_stret2_np):
 .ascii  " /EXPORT:objc_msgSend"
 .ascii  " /EXPORT:objc_msgSend_fpret"
 .ascii  " /EXPORT:objc_msgSend_stret"
+.ascii  " /EXPORT:objc_msgSend_stret2_np"
 #endif
