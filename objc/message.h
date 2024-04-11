@@ -52,8 +52,18 @@ id objc_msgSend(id self, SEL _cmd, ...);
 OBJC_PUBLIC
 #ifdef __cplusplus
 id objc_msgSend_stret(id self, SEL _cmd, ...);
+
+#	if defined(_WIN32) && defined(__ARM_ARCH_ISA_A64)
+id objc_msgSend_stret2_np(id self, SEL _cmd, ...);
+#   endif
+
 #else
 void objc_msgSend_stret(id self, SEL _cmd, ...);
+
+#   if defined(_WIN32) && defined(__ARM_ARCH_ISA_A64)
+void objc_msgSend_stret2_np(id self, SEL _cmd, ...);
+#   endif
+
 #endif
 /**
  * Standard message sending function.  This function must be cast to the
