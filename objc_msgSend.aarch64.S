@@ -154,7 +154,7 @@
 	mov    x1, \sel
 	bl     CDECL(slowMsgLookup)           // This is the only place where the EH directives
 	                                      // have to be accurate...
-	mov    x9, \receiver                         // IMP -> x9
+	mov    x9, x0                         // IMP -> x9
 
 	EH_START_EPILOGUE
 	ldp    x0, x1, [sp, #16]              // Reload spilled argument registers
