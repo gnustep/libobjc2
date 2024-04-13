@@ -204,10 +204,11 @@ TYPE_DIRECTIVE(CDECL(objc_msgSend_fpret), %function)
 TYPE_DIRECTIVE(CDECL(objc_msgSend), %function)
 .globl CDECL(objc_msgSend_stret)
 TYPE_DIRECTIVE(CDECL(objc_msgSend_stret), %function)
-.globl CDECL(objc_msgSend_stret2_np)
-TYPE_DIRECTIVE(CDECL(objc_msgSend_stret2_np), %function)
 CDECL(objc_msgSend):
 CDECL(objc_msgSend_fpret):
+CDECL(objc_msgSend_stret):
+	MSGSEND objc_msgSend, x0, x1
+
 /*
   In AAPCS, an SRet is passed in x8, not x0 like a normal pointer parameter.
   On Windows, this is only the case for POD (plain old data) types. Non trivial
@@ -217,12 +218,12 @@ CDECL(objc_msgSend_fpret):
   	1. objc_msgSend_stret for POD Sret
 	2. objc_msgSend_stret2_np for non-trivial Sret (like C++ class instances)
  */
-CDECL(objc_msgSend_stret):
-	MSGSEND objc_msgSend, x0, x1
+#ifdef _WIN32
+.globl CDECL(objc_msgSend_stret2_np)
+TYPE_DIRECTIVE(CDECL(objc_msgSend_stret2_np), %function)
 CDECL(objc_msgSend_stret2_np):
 	MSGSEND objc_msgSend_stret2_np, x1, x2
 
-#ifdef _WIN32
 .text
 .def objc_msgSend;
 .scl 2;
