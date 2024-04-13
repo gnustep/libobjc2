@@ -50,7 +50,10 @@ try_compile(
 )
 
 if(NOT COMPILE_SUCCESS)
-    string(REGEX MATCH "(aarch64|arm|i386|x86_64|powerpc64|powerpc|unknown)" ARCHITECTURE ${COMPILE_OUTPUT})
+    string(REGEX MATCH "#error (aarch64|arm|i386|x86_64|powerpc64|powerpc|unknown)" ARCH_ERROR ${COMPILE_OUTPUT})
+    if(ARCH_ERROR)
+        string(REGEX REPLACE "#error ([a-z0-9_]*)" "\\1" ARCHITECTURE ${ARCH_ERROR})
+    endif()
 endif()
 
 set(ARCHITECTURE ${ARCHITECTURE} CACHE STRING "Architecture Type")
