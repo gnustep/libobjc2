@@ -133,13 +133,13 @@ int main(int argc, char *argv[]) {
   }
   
   // Stret with inreg. Returned in x0.
-  S4 ret4 = ((S4(*)(id, SEL))objc_msgSend_stret2_np)(TestCls, @selector(stretInRegS4));
+  S4 ret4 = ((S4(*)(id, SEL))objc_msgSend_stret2)(TestCls, @selector(stretInRegS4));
   for (int i = 0; i < 3; i++) {
     assert(ret4.a[i] == i);
   }
   
   // Stret with inreg. Returned in x0.
-  S5 ret5 = ((S5(*)(id, SEL))objc_msgSend_stret2_np)(TestCls, @selector(stretInRegS5));
+  S5 ret5 = ((S5(*)(id, SEL))objc_msgSend_stret2)(TestCls, @selector(stretInRegS5));
   assert(ret5.x == 42);
   
   return 0;

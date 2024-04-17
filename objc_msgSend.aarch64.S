@@ -216,13 +216,13 @@ CDECL(objc_msgSend_stret):
 
   We thus need two objc_msgSend functions on Windows on ARM64 for Sret:
   	1. objc_msgSend_stret for POD Sret
-	2. objc_msgSend_stret2_np for non-trivial Sret (like C++ class instances)
+	2. objc_msgSend_stret2 for non-trivial Sret (like C++ class instances)
  */
 #ifdef _WIN32
-.globl CDECL(objc_msgSend_stret2_np)
-TYPE_DIRECTIVE(CDECL(objc_msgSend_stret2_np), %function)
-CDECL(objc_msgSend_stret2_np):
-	MSGSEND objc_msgSend_stret2_np, x1, x2
+.globl CDECL(objc_msgSend_stret2)
+TYPE_DIRECTIVE(CDECL(objc_msgSend_stret2), %function)
+CDECL(objc_msgSend_stret2):
+	MSGSEND objc_msgSend_stret2, x1, x2
 
 .text
 .def objc_msgSend;
@@ -237,7 +237,7 @@ CDECL(objc_msgSend_stret2_np):
 .scl 2;
 .type 32;
 .endef
-.def objc_msgSend_stret2_np;
+.def objc_msgSend_stret2;
 .scl 2;
 .type 32;
 .endef
@@ -246,5 +246,5 @@ CDECL(objc_msgSend_stret2_np):
 .ascii  " /EXPORT:objc_msgSend"
 .ascii  " /EXPORT:objc_msgSend_fpret"
 .ascii  " /EXPORT:objc_msgSend_stret"
-.ascii  " /EXPORT:objc_msgSend_stret2_np"
+.ascii  " /EXPORT:objc_msgSend_stret2"
 #endif
