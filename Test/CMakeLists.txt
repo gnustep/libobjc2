@@ -64,6 +64,12 @@ if (WIN32)
 			set(ENABLE_ALL_OBJC_ARC_TESTS On)
 		endif()
 	endif()
+
+	if (CMAKE_SYSTEM_PROCESSOR STREQUAL ARM64)
+		list(APPEND TESTS
+			objc_msgSend_WoA64.mm
+		)
+	endif()
 else ()
 	# Don't run the tests that are specific to Itanium-style exceptions on
 	# Windows.
