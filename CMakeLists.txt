@@ -41,20 +41,7 @@ if (MSVC)
 	set(objc_LINK_FLAGS "/DEBUG /INCREMENTAL:NO ${objc_LINK_FLAGS}")
 endif()
 
-# Get Architecture without relying on CMake
-try_compile(
-    COMPILE_SUCCESS
-    ${CMAKE_BINARY_DIR}
-    ${CMAKE_SOURCE_DIR}/CMake/detect_arch.c
-    OUTPUT_VARIABLE COMPILE_OUTPUT
-)
-
-if(NOT COMPILE_SUCCESS)
-    string(REGEX MATCH "(aarch64|arm|i386|x86_64|powerpc64|powerpc|unknown)" ARCHITECTURE ${COMPILE_OUTPUT})
-endif()
-
-set(ARCHITECTURE ${ARCHITECTURE} CACHE STRING "Architecture Type")
-message(STATUS "Architecture: ${ARCHITECTURE}")
+message(STATUS "Architecture as detected by CMake: ${CMAKE_SYSTEM_PROCESSOR}")
 
 # Build configuration
 add_compile_definitions(GNUSTEP __OBJC_RUNTIME_INTERNAL__=1)
@@ -188,7 +175,7 @@ add_compile_options($<$<STREQUAL:${CMAKE_SYSTEM_PROCESSOR},i686>:-march=i586>)
 # which is used in safe caching.
 # You must also update the guard in objc/runtime.h, when updating
 # this macro.
-if (ARCHITECTURE STREQUAL "powerpc")
+if (CMAKE_SYSTEM_PROCESSOR STREQUAL "ppc" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "ppcle")
 	add_definitions(-DNO_SAFE_CACHING)
 endif()
 
