@@ -27,6 +27,7 @@ void init_gc(void);
 void init_protocol_table(void);
 void init_selector_tables(void);
 void init_trampolines(void);
+void init_early_blocks(void);
 void objc_send_load_message(Class class);
 
 void log_selector_memory_usage(void);
@@ -76,6 +77,7 @@ static void init_runtime(void)
 		init_protocol_table();
 		init_class_tables();
 		init_alias_table();
+		init_early_blocks();
 		init_arc();
 		init_trampolines();
 		first_run = NO;

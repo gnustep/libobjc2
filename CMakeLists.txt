@@ -28,6 +28,7 @@ endif ()
 
 INCLUDE (CheckCXXSourceCompiles)
 INCLUDE (FetchContent)
+INCLUDE (CheckSymbolExists)
 
 set(libobjc_VERSION 4.6)
 
@@ -58,7 +59,7 @@ set(libobjc_OBJC_SRCS
 	NSBlocks.m
 	Protocol2.m
 	associate.m
-	blocks_runtime.m
+	blocks_runtime_np.m
 	properties.m)
 set(libobjc_C_SRCS 
 	alias_table.c
@@ -83,8 +84,6 @@ set(libobjc_HDRS
 	objc/Availability.h
 	objc/Object.h
 	objc/Protocol.h
-	objc/blocks_private.h
-	objc/blocks_runtime.h
 	objc/capabilities.h
 	objc/developer.h
 	objc/encoding.h
@@ -101,10 +100,7 @@ set(libobjc_HDRS
 	objc/runtime-deprecated.h
 	objc/runtime.h
 	objc/slot.h)
-set(libBlocksRuntime_COMPATIBILITY_HDRS
-	Block.h
-	Block_private.h
-	)
+
 set(libobjc_CXX_SRCS
 	selector_table.cc
 	)
@@ -143,7 +139,7 @@ option(DEBUG_ARC_COMPAT
 	"Log warnings for classes that don't hit ARC fast paths" OFF)
 option(ENABLE_OBJCXX "Enable support for Objective-C++" ON)
 option(TESTS "Enable building the tests")
-
+option(EMBEDDED_BLOCKS_RUNTIME "Include an embedded blocks runtime, rather than relying on libBlocksRuntime to supply it" ON)
 
 # For release builds, we disable spamming the terminal with warnings about
 # selector type mismatches
@@ -230,6 +226,31 @@ else ()
 	find_library(M_LIBRARY m)
 endif ()
 
+if (EMBEDDED_BLOCKS_RUNTIME)
+	set(libBlocksRuntime_COMPATIBILITY_HDRS
+		Block.h
+		Block_private.h
+		)
+	list(APPEND libobjc_OBJC_SRCS blocks_runtime.m)
+	list(APPEND libobjc_HDRS objc/blocks_private.h)
+	list(APPEND libobjc_HDRS objc/blocks_runtime.h)
+	add_definitions(-DEMBEDDED_BLOCKS_RUNTIME)
+else ()
+	find_library(BLOCKS_RUNTIME_LIBRARY BlocksRuntime)
+	if (BLOCKS_RUNTIME_LIBRARY)
+		set(CMAKE_REQUIRED_LIBRARIES ${BLOCKS_RUNTIME_LIBRARY})
+		check_symbol_exists(_Block_use_RR2 "Block_private.h" HAVE_BLOCK_USE_RR2)
+		if (HAVE_BLOCK_USE_RR2)
+			add_definitions(-DHAVE_BLOCK_USE_RR2)
+		else ()
+			message(FATAL_ERROR "libBlocksRuntime does not contain _Block_use_RR2(). Enable EMBEDDED_BLOCKS_RUNTIME to use the built-in blocks runtime.")
+		endif ()
+		unset(CMAKE_REQUIRED_LIBRARIES)
+	else ()
+		message(FATAL_ERROR "libBlocksRuntime not found. Enable EMBEDDED_BLOCKS_RUNTIME to use the built-in blocks runtime.")
+	endif ()
+endif ()
+
 add_library(objc SHARED ${libobjc_C_SRCS} ${libobjc_ASM_SRCS} ${libobjc_OBJC_SRCS} ${libobjc_OBJCXX_SRCS} ${libobjc_ASM_OBJS})
 target_compile_options(objc PRIVATE "$<$<OR:$<COMPILE_LANGUAGE:OBJC>,$<COMPILE_LANGUAGE:OBJCXX>>:-Wno-deprecated-objc-isa-usage;-Wno-objc-root-class;-fobjc-runtime=gnustep-2.0>$<$<COMPILE_LANGUAGE:C>:-Xclang;-fexceptions>")
 
@@ -266,6 +287,10 @@ endif ()
 # Explicitly link libm, as an implicit dependency of the C++ runtime
 if (M_LIBRARY)
 	target_link_libraries(objc PUBLIC ${M_LIBRARY})
+endif ()
+
+if (BLOCKS_RUNTIME_LIBRARY)
+	target_link_libraries(objc PUBLIC ${BLOCKS_RUNTIME_LIBRARY})
 endif ()
 
 # Make weak symbols work on OS X
@@ -340,8 +365,12 @@ install(TARGETS ${INSTALL_TARGETS}
 
 install(FILES ${libobjc_HDRS}
 	DESTINATION "${HEADER_INSTALL_PATH}/${INCLUDE_DIRECTORY}")
-install(FILES ${libBlocksRuntime_COMPATIBILITY_HDRS}
-	DESTINATION "${HEADER_INSTALL_PATH}")
+
+if (EMBEDDED_BLOCKS_RUNTIME)
+	install(FILES ${libBlocksRuntime_COMPATIBILITY_HDRS}
+		DESTINATION "${HEADER_INSTALL_PATH}")
+endif ()
+
 
 set(CPACK_GENERATOR TGZ CACHE STRING
 	"Installer types to generate.  Sensible options include TGZ, RPM and DEB")
@@ -385,6 +414,9 @@ install(FILES
 set(PC_LIBS_PRIVATE ${CMAKE_CXX_IMPLICIT_LINK_LIBRARIES})
 if (M_LIBRARY)
 	list(APPEND PC_LIBS_PRIVATE ${M_LIBRARY})
+endif ()
+if (BLOCKS_RUNTIME_LIBRARY)
+	list(APPEND PC_LIBS_PRIVATE ${BLOCKS_RUNTIME_LIBRARY})
 endif ()
 list(REMOVE_DUPLICATES PC_LIBS_PRIVATE)
 string(REPLACE  ";" " -l" PC_LIBS_PRIVATE "${PC_LIBS_PRIVATE}")

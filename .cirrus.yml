@@ -1,7 +1,7 @@
 libcxxrt_freebsd_task:
   matrix:
   - freebsd_instance:
-     image_family: freebsd-13-2
+     image_family: freebsd-13-3
   - freebsd_instance:
      image_family: freebsd-15-0-snap
   - freebsd_instance:

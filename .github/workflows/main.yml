@@ -20,6 +20,7 @@ jobs:
         # Build each combination of OS and release/debug variants
         os: [ "ubuntu-22.04", "ubuntu-20.04" ]
         build-type: [ Release, Debug ]
+        blocks-runtime: [ "EMBEDDED", "swift-5.10-RELEASE" ]
         cxxlib: [ "libc++", "libstdc++" ]
         llvm-version: [10, 11, 12, 13, 14, 15]
         # Don't bother testing the LLVM versions that aren't in the default image for the different platforms
@@ -41,7 +42,7 @@ jobs:
       # Don't abort runners if a single one fails
       fail-fast: false
     runs-on: ${{ matrix.os }}
-    name: ${{ matrix.os }} ${{ matrix.build-type }} LLVM-${{ matrix.llvm-version }} ${{ matrix.cxxlib }}
+    name: ${{ matrix.os }} ${{ matrix.build-type }} LLVM-${{ matrix.llvm-version }} ${{ matrix.cxxlib }} BlocksRuntime-${{ matrix.blocks-runtime }}
     steps:
       - uses: actions/checkout@v3
       - name: Install dependencies 
@@ -53,11 +54,24 @@ jobs:
             sudo apt install libc++-${{matrix.llvm-version}}-dev libc++abi-${{matrix.llvm-version}}-dev 
             sudo apt install libunwind-${{matrix.llvm-version}}-dev || true
           fi
+          if [ "${{ matrix.blocks-runtime }}" != "EMBEDDED" ]; then
+            git clone --depth 1 --branch "${{ matrix.blocks-runtime }}" https://github.com/apple/swift-corelibs-libdispatch.git ${{github.workspace}}/swift-corelibs-libdispatch
+            cmake -B ${{github.workspace}}/swift-corelibs-libdispatch/build -G Ninja -DINSTALL_PRIVATE_HEADERS=ON -DCMAKE_C_COMPILER=clang-${{matrix.llvm-version}} -DCMAKE_CXX_COMPILER=clang++-${{matrix.llvm-version}} -S ${{github.workspace}}/swift-corelibs-libdispatch
+            pushd ${{github.workspace}}/swift-corelibs-libdispatch/build
+            ninja
+            sudo ninja install
+            popd
+          fi
       - name: Configure CMake
         run: |
           export LDFLAGS=-L/usr/lib/llvm-${{ matrix.llvm-version }}/lib/
+          if [ "${{ matrix.blocks-runtime }}" != "EMBEDDED" ]; then
+            export EMBEDDED_BLOCKS_RUNTIME=OFF
+          else
+            export EMBEDDED_BLOCKS_RUNTIME=ON
+          fi
           ls -lahR /usr/lib/llvm-${{ matrix.llvm-version }}/lib/
-          cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -G Ninja -DTESTS=ON -DCMAKE_C_COMPILER=clang-${{matrix.llvm-version}} -DCMAKE_OBJC_COMPILER=clang-${{matrix.llvm-version}} -DCMAKE_ASM_COMPILER=clang-${{matrix.llvm-version}} -DCMAKE_CXX_COMPILER=clang++-${{matrix.llvm-version}} -DCMAKE_OBJCXX_COMPILER=clang++-${{matrix.llvm-version}} -DCMAKE_CXX_FLAGS="-stdlib=${{matrix.cxxlib}}"
+          cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -G Ninja -DTESTS=ON -DEMBEDDED_BLOCKS_RUNTIME=$EMBEDDED_BLOCKS_RUNTIME -DCMAKE_C_COMPILER=clang-${{matrix.llvm-version}} -DCMAKE_OBJC_COMPILER=clang-${{matrix.llvm-version}} -DCMAKE_ASM_COMPILER=clang-${{matrix.llvm-version}} -DCMAKE_CXX_COMPILER=clang++-${{matrix.llvm-version}} -DCMAKE_OBJCXX_COMPILER=clang++-${{matrix.llvm-version}} -DCMAKE_CXX_FLAGS="-stdlib=${{matrix.cxxlib}}"
         # Build with a nice ninja status line
       - name: Build
         working-directory: ${{github.workspace}}/build

@@ -366,6 +366,11 @@ enum objc_class_flags
 	 * On a class, guarantees that `+init` is trivial.
 	 */
 	objc_class_flag_fast_alloc_init = (1<<15),
+	/**
+	 * The class is a block class. Reference count management must be done by
+	 * the underlying blocks runtime.
+	 */
+	objc_class_flag_is_block = (1 << 16),
 };
 
 /**
