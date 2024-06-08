@@ -462,6 +462,8 @@ void freeIvarLists(Class aClass);
  */
 void freeMethodLists(Class aClass);
 
+void objc_load_class(struct objc_class *cls);
+
 #ifdef __cplusplus
 } // extern "C"
 #endif
