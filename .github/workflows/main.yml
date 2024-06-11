@@ -272,7 +272,7 @@ jobs:
       # Don't abort runners if a single one fails
       fail-fast: false
     runs-on: ${{ matrix.os }}
-    name: Android ${{ matrix.build-type }} ${{ matrix.arch }} API-${{ matrix.api-level }}
+    name: Android ${{ matrix.build-type }} ${{ matrix.arch.name }} API-${{ matrix.api-level }}
     steps:
     - uses: actions/checkout@v4
     - name: Install Dependencies
@@ -289,13 +289,13 @@ jobs:
       run: |
         export TOOLCHAIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64
         export CCPREFIX=$TOOLCHAIN/bin/${{ matrix.arch.triple }}${{ matrix.api-level }}
-        export CC="$TOOLCHAIN/bin/$CCPREFIX-clang"
-        export CXX="$TOOLCHAIN/bin/$CCPREFIX-clang++"
-        export OBJC="$TOOLCHAIN/bin/$CCPREFIX-clang"
-        export OBJCXX="$TOOLCHAIN/bin/$CCPREFIX-clang++"
+        export CC="$CCPREFIX-clang"
+        export CXX="$CCPREFIX-clang++"
+        export OBJC="$CCPREFIX-clang"
+        export OBJCXX="$CCPREFIX-clang++"
+        export AS="$CCPREFIX-clang"
         export LD="$TOOLCHAIN/bin/ld.lld"
         export AR="$TOOLCHAIN/bin/llvm-ar"
-        export AS="$TOOLCHAIN/bin/$CCPREFIX-clang"
         export RANLIB="$TOOLCHAIN/bin/llvm-ranlib"
         export STRIP="$TOOLCHAIN/bin/llvm-strip"
         export NM="$TOOLCHAIN/bin/llvm-nm"
