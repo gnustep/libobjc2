@@ -265,8 +265,7 @@ jobs:
         # Build each combination of OS and release/debug variants
         os: [ ubuntu-20.04 ]
         build-type: [ Release, Debug ]
-        arch:
-          - name: x86_64
+        arch: [x86_64]
         api-level: [ 26 ]
       # Don't abort runners if a single one fails
       fail-fast: false
@@ -277,14 +276,14 @@ jobs:
     - name: Install Dependencies
       run: |
         sudo apt-get update -y
-        sudo apt-get install patchelf -y
+        sudo apt-get install patchelf ninja-build -y
     - uses: nttld/setup-ndk@v1
       id: setup-ndk
       with:
         ndk-version: r26d
     - name: Configure CMake
       env: 
-        ANDROID_NDK_HOME: ${{ steps.ndk.outputs.ndk-path }}
+        ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
       run: |
         export TOOLCHAIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64
         export CC="$TOOLCHAIN/bin/aarch64-linux-android${{ matrix.api-level }}-clang"
@@ -303,7 +302,7 @@ jobs:
 
         cmake -B ${{github.workspace}}/build \
           -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
-          -DANDROID_ABI={{ matrix.arch.name }} \
+          -DANDROID_ABI={{ matrix.arch }} \
           -DANDROID_NDK=$ANDROID_NDK_HOME \
           -DANDROID_STL=c++_shared \
           -DCMAKE_FIND_USE_CMAKE_PATH=false \
