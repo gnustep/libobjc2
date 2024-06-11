@@ -302,7 +302,7 @@ jobs:
 
         cmake -B ${{github.workspace}}/build \
           -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
-          -DANDROID_ABI={{ matrix.arch }} \
+          -DANDROID_ABI=${{ matrix.arch }} \
           -DANDROID_NDK=$ANDROID_NDK_HOME \
           -DANDROID_STL=c++_shared \
           -DCMAKE_FIND_USE_CMAKE_PATH=false \
