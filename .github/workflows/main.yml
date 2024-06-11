@@ -265,12 +265,14 @@ jobs:
         # Build each combination of OS and release/debug variants
         os: [ ubuntu-20.04 ]
         build-type: [ Release, Debug ]
-        arch: [x86_64]
+        arch:
+          - name: x86_64
+            triple: x86_64-linux-android
         api-level: [ 26 ]
       # Don't abort runners if a single one fails
       fail-fast: false
     runs-on: ${{ matrix.os }}
-    name: ${{ matrix.os }} ${{ matrix.build-type }} ${{ matrix.arch }} API-${{ matrix.api-level }}
+    name: Android ${{ matrix.build-type }} ${{ matrix.arch }} API-${{ matrix.api-level }}
     steps:
     - uses: actions/checkout@v4
     - name: Install Dependencies
@@ -286,13 +288,14 @@ jobs:
         ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
       run: |
         export TOOLCHAIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64
-        export CC="$TOOLCHAIN/bin/aarch64-linux-android${{ matrix.api-level }}-clang"
-        export CXX="$TOOLCHAIN/bin/aarch64-linux-android${{ matrix.api-level }}-clang++"
-        export OBJC="$TOOLCHAIN/bin/aarch64-linux-android${{ matrix.api-level }}-clang"
-        export OBJCXX="$TOOLCHAIN/bin/aarch64-linux-android${{ matrix.api-level }}-clang++"
+        export CCPREFIX=$TOOLCHAIN/bin/${{ matrix.arch.triple }}${{ matrix.api-level }}
+        export CC="$TOOLCHAIN/bin/$CCPREFIX-clang"
+        export CXX="$TOOLCHAIN/bin/$CCPREFIX-clang++"
+        export OBJC="$TOOLCHAIN/bin/$CCPREFIX-clang"
+        export OBJCXX="$TOOLCHAIN/bin/$CCPREFIX-clang++"
         export LD="$TOOLCHAIN/bin/ld.lld"
         export AR="$TOOLCHAIN/bin/llvm-ar"
-        export AS="$TOOLCHAIN/bin/aarch64-linux-android${{ matrix.api-level }}-clang"
+        export AS="$TOOLCHAIN/bin/$CCPREFIX-clang"
         export RANLIB="$TOOLCHAIN/bin/llvm-ranlib"
         export STRIP="$TOOLCHAIN/bin/llvm-strip"
         export NM="$TOOLCHAIN/bin/llvm-nm"
@@ -302,7 +305,7 @@ jobs:
 
         cmake -B ${{github.workspace}}/build \
           -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
-          -DANDROID_ABI=${{ matrix.arch }} \
+          -DANDROID_ABI=${{ matrix.arch.name }} \
           -DANDROID_NDK=$ANDROID_NDK_HOME \
           -DANDROID_STL=c++_shared \
           -DCMAKE_FIND_USE_CMAKE_PATH=false \
