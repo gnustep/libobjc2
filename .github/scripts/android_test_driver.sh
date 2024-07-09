@@ -14,13 +14,15 @@ FAIL=0
 for BINARY in $BINARIES; do
     TOTAL=$((TOTAL + 1))
     
-    START_TIME=$(date +%s%3N)
+    START_TIME=$(date +%s)
+    START_TIME_MS=$((START_TIME * 1000 + $(date +%N) / 1000000))
     
     OUTPUT=$("$BINARY" 2>&1)
     EXIT_CODE=$?
     
-    END_TIME=$(date +%s%3N)
-    ELAPSED_TIME=$((END_TIME - START_TIME))
+    END_TIME=$(date +%s)
+    END_TIME_MS=$((END_TIME * 1000 + $(date +%N) / 1000000))
+    ELAPSED_TIME=$((END_TIME_MS - START_TIME_MS))
     
     BINARY_NAME=$(basename "$BINARY")
     
