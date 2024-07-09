@@ -259,6 +259,79 @@ jobs:
         name: ${{ matrix.msystem }}-${{ matrix.build-type }}
         path: dist/
 
+  android:
+    strategy:
+      matrix:
+        # Build each combination of OS and release/debug variants
+        os: [ ubuntu-20.04 ]
+        build-type: [ Release, Debug ]
+        arch:
+          - name: x86_64
+            triple: x86_64-linux-android
+        api-level: [ 26 ]
+      # Don't abort runners if a single one fails
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
+    name: Android ${{ matrix.build-type }} ${{ matrix.arch.name }} API-${{ matrix.api-level }}
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update -y
+        sudo apt-get install patchelf ninja-build -y
+    - uses: nttld/setup-ndk@v1
+      id: setup-ndk
+      with:
+        ndk-version: r26d
+    - name: Configure CMake
+      env: 
+        ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
+      run: |
+        export TOOLCHAIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64
+        export CCPREFIX=$TOOLCHAIN/bin/${{ matrix.arch.triple }}${{ matrix.api-level }}
+        export CC="$CCPREFIX-clang"
+        export CXX="$CCPREFIX-clang++"
+        export OBJC="$CCPREFIX-clang"
+        export OBJCXX="$CCPREFIX-clang++"
+        export AS="$CCPREFIX-clang"
+        export LD="$TOOLCHAIN/bin/ld.lld"
+        export AR="$TOOLCHAIN/bin/llvm-ar"
+        export RANLIB="$TOOLCHAIN/bin/llvm-ranlib"
+        export STRIP="$TOOLCHAIN/bin/llvm-strip"
+        export NM="$TOOLCHAIN/bin/llvm-nm"
+        export OBJDUMP="$TOOLCHAIN/bin/llvm-objdump"
+        export LDFLAGS="-fuse-ld=lld"
+        export LIBS="-lc++_shared"
+
+        cmake -B ${{github.workspace}}/build \
+          -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
+          -DANDROID_ABI=${{ matrix.arch.name }} \
+          -DANDROID_NDK=$ANDROID_NDK_HOME \
+          -DANDROID_STL=c++_shared \
+          -DCMAKE_FIND_USE_CMAKE_PATH=false \
+          -DCMAKE_C_COMPILER=$CC \
+          -DCMAKE_CXX_COMPILER=$CXX \
+          -DCMAKE_ASM_COMPILER=$AS \
+          -DCMAKE_BUILD_TYPE=${{matrix.build-type}} \
+          -DTESTS=ON \
+          -DANDROID_PLATFORM=android-${{ matrix.api-level }} \
+          -G Ninja
+    - name: Build
+      working-directory: ${{github.workspace}}/build
+      run: |
+        NINJA_STATUS="%p [%f:%s/%t] %o/s, %es" ninja -v
+    - name: Test
+      uses: reactivecircus/android-emulator-runner@v2
+      env: 
+        ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
+      with:
+        api-level: ${{ matrix.api-level }}
+        target: default
+        arch: ${{ matrix.arch.name }}
+        script: |
+          ${{github.workspace}}/.github/scripts/android_test_main.sh ${{github.workspace}}/build ${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/sysroot ${{ matrix.arch.triple }}
+
+
   # Fake check that can be used as a branch-protection rule.
   all-checks:
     needs: [ubuntu, windows, qemu-crossbuild]
