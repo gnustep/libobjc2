@@ -268,7 +268,15 @@ jobs:
         arch:
           - name: x86_64
             triple: x86_64-linux-android
-        api-level: [ 26 ]
+          - name: arm64-v8a
+            triple: aarch64-linux-android
+        # It is currently (July 2024) not possible
+        # to virtualize arm-based Android emulators on GitHub Actions.
+        # This is because there are only macOS M1 runners available which do not support nested virtualization.
+        #
+        # However, any Android system image with API level 30 or higher can run arm binaries on x86_64.
+        # See https://developer.android.com/studio/releases/emulator#support_for_arm_binaries_on_android_9_and_11_system_images
+        api-level: [ 30 ]
       # Don't abort runners if a single one fails
       fail-fast: false
     runs-on: ${{ matrix.os }}
@@ -327,7 +335,7 @@ jobs:
       with:
         api-level: ${{ matrix.api-level }}
         target: default
-        arch: ${{ matrix.arch.name }}
+        arch: x86_64 # Fixed for now
         script: |
           ${{github.workspace}}/.github/scripts/android_test_main.sh ${{github.workspace}}/build ${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/sysroot ${{ matrix.arch.triple }}
 
