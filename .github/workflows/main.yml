@@ -268,16 +268,20 @@ jobs:
         arch:
           - name: x86_64
             triple: x86_64-linux-android
+            emu-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           - name: arm64-v8a
             triple: aarch64-linux-android
-        # It is currently (July 2024) not possible
-        # to virtualize arm-based Android emulators on GitHub Actions.
-        # This is because there are only macOS M1 runners available which do not support nested virtualization.
-        #
-        # However, any Android system image with API level 30 or higher can run arm binaries on x86_64.
-        # See https://developer.android.com/studio/releases/emulator#support_for_arm_binaries_on_android_9_and_11_system_images
-        api-level: [ 30 ]
-      # Don't abort runners if a single one fails
+            # Google broke ARM64 emulation on x86_64 hosts. A workaround is to overwrite the qemu machine type.
+            emu-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -accel off -qemu -machine virt
+        api-level: [ 27, 33 ]
+        # Please note that:
+        # - arm64-v8a emulation on a x86_64 host currently is only possible up to API level 27 Oreo
+        # - armeabi-v7a is only supported up to API level 24
+        exclude:
+          - api-level: 33
+            arch:
+              name: arm64-v8a
+        # Don't abort runners if a single one fails
       fail-fast: false
     runs-on: ${{ matrix.os }}
     name: Android ${{ matrix.build-type }} ${{ matrix.arch.name }} API-${{ matrix.api-level }}
@@ -287,13 +291,31 @@ jobs:
       run: |
         sudo apt-get update -y
         sudo apt-get install patchelf ninja-build -y
-    - uses: nttld/setup-ndk@v1
-      id: setup-ndk
+    - name: Enable KVM
+      run: |
+        echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+        sudo udevadm control --reload-rules
+        sudo udevadm trigger --name-match=kvm
+    - name: AVD cache
+      uses: actions/cache@v4
+      id: avd-cache
       with:
-        ndk-version: r26d
+        path: |
+          ~/.android/avd/*
+          ~/.android/adb*
+        key: avd-${{ matrix.api-level }}-${{ matrix.arch.name }}
+    - name: Create AVD and Snapshot for Caching
+      if: steps.avd-cache.outputs.cache-hit != 'true'
+      uses: hmelder/android-emulator-runner@v2.33.2
+      with:
+        api-level: ${{ matrix.api-level }}
+        arch: ${{ matrix.arch.name }}
+        force-avd-creation: false
+        emulator-options: ${{ matrix.arch.emu-options }}
+        disable-animations: true
+        script: echo "Generated AVD snapshot for caching."
+    # We are using the default NDK from the GitHub Actions runner.
     - name: Configure CMake
-      env: 
-        ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
       run: |
         export TOOLCHAIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64
         export CCPREFIX=$TOOLCHAIN/bin/${{ matrix.arch.triple }}${{ matrix.api-level }}
@@ -329,13 +351,14 @@ jobs:
       run: |
         NINJA_STATUS="%p [%f:%s/%t] %o/s, %es" ninja -v
     - name: Test
-      uses: reactivecircus/android-emulator-runner@v2
-      env: 
-        ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
+      uses: hmelder/android-emulator-runner@v2.33.2
       with:
         api-level: ${{ matrix.api-level }}
+        arch: ${{ matrix.arch.name }}
+        force-avd-creation: false
+        emulator-options: ${{ matrix.arch.emu-options }}
+        disable-animations: true
         target: default
-        arch: x86_64 # Fixed for now
         script: |
           ${{github.workspace}}/.github/scripts/android_test_main.sh ${{github.workspace}}/build ${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/sysroot ${{ matrix.arch.triple }}
 

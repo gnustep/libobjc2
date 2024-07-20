@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # This script is run on the emulator to run the tests
 
