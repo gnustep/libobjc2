@@ -263,24 +263,24 @@ jobs:
     strategy:
       matrix:
         # Build each combination of OS and release/debug variants
-        os: [ ubuntu-20.04 ]
         build-type: [ Release, Debug ]
         arch:
           - name: x86_64
             triple: x86_64-linux-android
+            os: macos-13 # x86_64
           - name: arm64-v8a
             triple: aarch64-linux-android
+            os: macos-14 # m1
         api-level: [ 26 ]
       # Don't abort runners if a single one fails
       fail-fast: false
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.arch.os }}
     name: Android ${{ matrix.build-type }} ${{ matrix.arch.name }} API-${{ matrix.api-level }}
     steps:
     - uses: actions/checkout@v4
     - name: Install Dependencies
       run: |
-        sudo apt-get update -y
-        sudo apt-get install patchelf ninja-build -y
+        brew install ninja patchelf
     - uses: nttld/setup-ndk@v1
       id: setup-ndk
       with:
@@ -289,7 +289,7 @@ jobs:
       env: 
         ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
       run: |
-        export TOOLCHAIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64
+        export TOOLCHAIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/darwin-x86_64
         export CCPREFIX=$TOOLCHAIN/bin/${{ matrix.arch.triple }}${{ matrix.api-level }}
         export CC="$CCPREFIX-clang"
         export CXX="$CCPREFIX-clang++"
@@ -331,7 +331,7 @@ jobs:
         target: default
         arch: ${{ matrix.arch.name }}
         script: |
-          ${{github.workspace}}/.github/scripts/android_test_main.sh ${{github.workspace}}/build ${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/sysroot ${{ matrix.arch.triple }}
+          ${{github.workspace}}/.github/scripts/android_test_main.sh ${{github.workspace}}/build ${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/darwin-x86_64/sysroot ${{ matrix.arch.triple }}
 
 
   # Fake check that can be used as a branch-protection rule.
