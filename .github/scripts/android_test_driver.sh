@@ -15,26 +15,28 @@ for BINARY in $BINARIES; do
     TOTAL=$((TOTAL + 1))
     
     START_TIME=$(date +%s)
-    START_TIME_MS=$((START_TIME * 1000 + $(date +%N) / 1000000))
+    # Busybox date does not support %N, so we can't get milliseconds this way
+    #START_TIME_MS=$((START_TIME * 1000 + $(date +%N) / 1000000))
     
     OUTPUT=$("$BINARY" 2>&1)
     EXIT_CODE=$?
     
     END_TIME=$(date +%s)
-    END_TIME_MS=$((END_TIME * 1000 + $(date +%N) / 1000000))
-    ELAPSED_TIME=$((END_TIME_MS - START_TIME_MS))
+    #END_TIME_MS=$((END_TIME * 1000 + $(date +%N) / 1000000))
+    #ELAPSED_TIME=$((END_TIME_MS - START_TIME_MS))
+    ELAPSED_TIME=$((END_TIME - START_TIME))
     
     BINARY_NAME=$(basename "$BINARY")
     
     if [ $EXIT_CODE -eq 0 ]; then
         PASS=$((PASS + 1))
-        echo "PASSED ($EXIT_CODE): $BINARY_NAME (${ELAPSED_TIME}ms)"
+        echo "PASSED ($EXIT_CODE): $BINARY_NAME (${ELAPSED_TIME}s)"
     elif [ $EXIT_CODE -eq 77 ]; then
         SKIP=$((SKIP + 1))
         echo "SKIPPED: $BINARY_NAME"
     else
         FAIL=$((FAIL + 1))
-        echo "FAILED ($EXIT_CODE): $BINARY_NAME (${ELAPSED_TIME}ms)"
+        echo "FAILED ($EXIT_CODE): $BINARY_NAME (${ELAPSED_TIME}s)"
         if [ -z "$OUTPUT" ]; then
             echo "No output written to stdout."
         else
