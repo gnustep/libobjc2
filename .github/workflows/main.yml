@@ -102,14 +102,14 @@ jobs:
               name: riscv64
       # Don't abort runners if a single one fails
       fail-fast: false
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     name: Cross-build for ${{ matrix.arch.triple }} LLVM-${{ matrix.llvm-version}} ${{ matrix.build-type }}
     steps:
       - uses: actions/checkout@v3
       - name: Install cross-compile toolchain and QEMU
         run: |
           sudo apt update
-          sudo apt install libstdc++-9-dev-${{ matrix.arch.name }}-cross qemu-user ninja-build
+          sudo apt install libstdc++-14-dev-${{ matrix.arch.name }}-cross qemu-user ninja-build
       - name: Configure CMake
         run: |
           export LDFLAGS="-L/usr/lib/llvm-${{ matrix.llvm-version }}/lib/ -fuse-ld=lld-${{ matrix.llvm-version}} -Wl,--dynamic-linker=/usr/${{ matrix.arch.triple }}/lib/${{ matrix.arch.rtld }},-rpath,/usr/${{ matrix.arch.triple }}/lib"
