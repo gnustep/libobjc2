@@ -419,6 +419,13 @@ const char *method_getTypeEncoding(Method method)
 }
 
 OBJC_PUBLIC
+SEL method_getTypedSelector_np(Method method)
+{
+	if (NULL == method) { return NULL; }
+	return method->selector;
+}
+
+OBJC_PUBLIC
 void method_getArgumentType(Method method,
                             unsigned int index,
                             char *dst,
