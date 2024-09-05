@@ -57,13 +57,13 @@ set(libobjc_OBJCXX_SRCS
 	)
 set(libobjc_OBJC_SRCS 
 	NSBlocks.m
-	Protocol2.m
 	associate.m
 	blocks_runtime_np.m
 	properties.m)
 set(libobjc_C_SRCS 
 	alias_table.c
 	block_to_imp.c
+	builtin_classes.c
 	caps.c
 	category_loader.c
 	class_table.c
