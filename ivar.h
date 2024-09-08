@@ -125,7 +125,7 @@ static inline objc_ivar_ownership ivarGetOwnership(Ivar ivar)
 /**
  * Legacy ivar structure, inherited from the GCC ABI.
  */
-struct objc_ivar_gcc
+struct objc_ivar_gsv1
 {
 	/**
 	 * Name of this instance variable.
@@ -189,7 +189,7 @@ static inline struct objc_ivar *ivar_at_index(struct objc_ivar_list *l, int i)
 /**
  * Legacy version of the ivar list
  */
-struct objc_ivar_list_gcc
+struct objc_ivar_list_gsv1
 {
 	/**
 	 * The number of instance variables in this list.
@@ -199,6 +199,6 @@ struct objc_ivar_list_gcc
 	 * An array of instance variable metadata structures.  Note that this array
 	 * has count elements.
 	 */
-	struct objc_ivar_gcc ivar_list[];
+	struct objc_ivar_gsv1 ivar_list[];
 };
 

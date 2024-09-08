@@ -97,7 +97,6 @@ set(libobjc_HDRS
 	objc/objc-runtime.h
 	objc/objc-visibility.h
 	objc/objc.h
-	objc/runtime-deprecated.h
 	objc/runtime.h
 	objc/slot.h)
 
@@ -134,7 +133,6 @@ option(ENABLE_TRACING
 option(OLDABI_COMPAT 
 	"Enable compatibility with GCC and old GNUstep ABIs"
 	${OLD_ABI_COMPAT_DEFAULT})
-option(LEGACY_COMPAT "Enable legacy compatibility features" OFF)
 option(DEBUG_ARC_COMPAT
 	"Log warnings for classes that don't hit ARC fast paths" OFF)
 option(ENABLE_OBJCXX "Enable support for Objective-C++" ON)
@@ -152,12 +150,6 @@ if (OLDABI_COMPAT)
 	list(APPEND libobjc_C_SRCS legacy.c abi_version.c statics_loader.c)
 	add_definitions(-DOLDABI_COMPAT=1)
 endif()
-
-if (LEGACY_COMPAT)
-	list(APPEND libobjc_C_SRCS legacy_malloc.c)
-else ()
-	add_definitions(-DNO_LEGACY)
-endif ()
 
 set(LIBOBJC_NAME "objc" CACHE STRING 
 	"Name of the Objective-C runtime library (e.g. objc2 for libobjc2)")

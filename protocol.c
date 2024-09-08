@@ -58,10 +58,6 @@ static id incompleteProtocolClass(void)
 }
 
 /**
- * Class used for legacy GCC protocols (`ProtocolGCC`).
- */
-static id protocol_class_gcc;
-/**
  * Class used for legacy GNUstep V1 ABI  protocols (`ProtocolGSv1`).
  */
 static id protocol_class_gsv1;
@@ -72,10 +68,6 @@ static id protocol_class_gsv2;
 
 static BOOL init_protocol_classes(void)
 {
-	if (nil == protocol_class_gcc)
-	{
-		protocol_class_gcc = objc_getClass("ProtocolGCC");
-	}
 	if (nil == protocol_class_gsv1)
 	{
 		protocol_class_gsv1 = objc_getClass("ProtocolGSv1");
@@ -84,8 +76,7 @@ static BOOL init_protocol_classes(void)
 	{
 		protocol_class_gsv2 = objc_getClass("Protocol");
 	}
-	if ((nil == protocol_class_gcc) ||
-	    (nil == protocol_class_gsv1) ||
+	if ((nil == protocol_class_gsv1) ||
 	    (nil == protocol_class_gsv2))
 	{
 		return NO;
@@ -105,10 +96,6 @@ static BOOL protocol_hasClassProperties(struct objc_protocol *p)
 static BOOL protocol_hasOptionalMethodsAndProperties(struct objc_protocol *p)
 {
 	if (!init_protocol_classes())
-	{
-		return NO;
-	}
-	if (p->isa == protocol_class_gcc)
 	{
 		return NO;
 	}
@@ -207,8 +194,7 @@ static BOOL init_protocols(struct objc_protocol_list *protocols)
 	{
 		struct objc_protocol *aProto = protocols->list[i];
 		// Don't initialise a protocol twice
-		if ((aProto->isa == protocol_class_gcc) ||
-		    (aProto->isa == protocol_class_gsv1) ||
+		if ((aProto->isa == protocol_class_gsv1) ||
 		    (aProto->isa == protocol_class_gsv2))
 		{
 			continue;
@@ -224,12 +210,6 @@ static BOOL init_protocols(struct objc_protocol_list *protocols)
 				fprintf(stderr, "Unknown protocol version");
 				abort();
 #ifdef OLDABI_COMPAT
-			case protocol_version_gcc:
-				protocols->list[i] = objc_upgrade_protocol_gcc((struct objc_protocol_gcc *)aProto);
-				assert(aProto->isa == protocol_class_gcc);
-				assert(protocols->list[i]->isa == protocol_class_gsv2);
-				aProto = protocols->list[i];
-				break;
 			case protocol_version_gsv1:
 				protocols->list[i] = objc_upgrade_protocol_gsv1((struct objc_protocol_gsv1 *)aProto);
 				assert(aProto->isa == protocol_class_gsv1);
