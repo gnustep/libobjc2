@@ -97,7 +97,6 @@ set(libobjc_HDRS
 	objc/objc-runtime.h
 	objc/objc-visibility.h
 	objc/objc.h
-	objc/runtime-deprecated.h
 	objc/runtime.h
 	objc/slot.h)
 
