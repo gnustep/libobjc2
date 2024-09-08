@@ -176,39 +176,8 @@ static BOOL selector_types_equal(const char *t1, const char *t2)
 	{
 		t1 = skip_irrelevant_type_info(t1);
 		t2 = skip_irrelevant_type_info(t2);
-		// This is a really ugly hack.  For some stupid reason, the people
-		// designing Objective-C type encodings decided to allow * as a
-		// shorthand for char*, because strings are 'special'.  Unfortunately,
-		// FSF GCC generates "*" for @encode(BOOL*), while Clang and Apple GCC
-		// generate "^c" or "^C" (depending on whether BOOL is declared
-		// unsigned).  
-		//
-		// The correct fix is to remove * completely from type encodings, but
-		// unfortunately my time machine is broken so I can't travel to 1986
-		// and apply a cluebat to those responsible.
-		if ((*t1 == '*') && (*t2 != '*'))
-		{
-			if (*t2 == '^' && (((*(t2+1) == 'C') || (*(t2+1) == 'c'))))
-			{
-				t2++;
-			}
-			else
-			{
-				return NO;
-			}
-		}
-		else if ((*t2 == '*') && (*t1 != '*'))
-		{
-			if (*t1 == '^' && (((*(t1+1) == 'C') || (*(t1+1) == 'c'))))
-			{
-				t1++;
-			}
-			else
-			{
-				return NO;
-			}
-		}
-		else if (*t1 != *t2)
+ 
+ 		if (*t1 != *t2)
 		{
 			return NO;
 		}
@@ -294,20 +263,11 @@ struct SelectorHash
 			hash = hash * 33 + c;
 		}
 #ifdef TYPE_DEPENDENT_DISPATCH
-		// We can't use all of the values in the type encoding for the hash,
-		// because our equality test is a bit more complex than simple string
-		// encoding (for example, * and ^C have to be considered equivalent, since
-		// they are both used as encodings for C strings in different situations)
 		if ((str = types))
 		{
 			while((c = (size_t)*str++))
 			{
-				switch (c)
-				{
-					case '@': case 'i': case 'I': case 'l': case 'L':
-					case 'q': case 'Q': case 's': case 'S': 
-					hash = hash * 33 + c;
-				}
+				hash = hash * 33 + c;
 			}
 		}
 #endif
