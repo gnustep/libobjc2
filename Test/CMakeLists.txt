@@ -106,7 +106,7 @@ set_target_properties(test_runtime_legacy PROPERTIES
 add_library(test_runtime OBJECT Test.m)
 set_target_properties(test_runtime PROPERTIES
 	INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}"
-	COMPILE_FLAGS "-Xclang -fblocks -fobjc-runtime=gnustep-2.0"
+	COMPILE_FLAGS "-Xclang -fblocks -fobjc-runtime=gnustep-2.2"
 	LINKER_LANGUAGE C
 )
 
