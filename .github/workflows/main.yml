@@ -265,22 +265,12 @@ jobs:
         # Build each combination of OS and release/debug variants
         os: [ ubuntu-20.04 ]
         build-type: [ Release, Debug ]
+        # TODO(hugo): Add AArch64 configuration when GitHub AArch64 CI runners are available.
         arch:
           - name: x86_64
             triple: x86_64-linux-android
             emu-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          - name: arm64-v8a
-            triple: aarch64-linux-android
-            # Google broke ARM64 emulation on x86_64 hosts. A workaround is to overwrite the qemu machine type.
-            emu-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -accel off -qemu -machine virt
         api-level: [ 27, 33 ]
-        # Please note that:
-        # - arm64-v8a emulation on a x86_64 host currently is only possible up to API level 27 Oreo
-        # - armeabi-v7a is only supported up to API level 24
-        exclude:
-          - api-level: 33
-            arch:
-              name: arm64-v8a
         # Don't abort runners if a single one fails
       fail-fast: false
     runs-on: ${{ matrix.os }}
