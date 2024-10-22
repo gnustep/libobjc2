@@ -91,6 +91,11 @@ typedef struct _NSZone NSZone;
 }
 @end
 
+Class getClassNamed(char *name)
+{
+	return nil;
+}
+
 int main(void)
 {
 	called = NO;
@@ -124,6 +129,11 @@ int main(void)
 	called = NO;
 	[[NoInit2 alloc] init];
 	assert(!called);
+
+	// Look up a non-existing class to test if fast-path
+	// implementations can handle receivers that are nil
+	[getClassNamed("flibble") alloc];
+	[[getClassNamed("flibble") alloc] init];
 }
 
 #endif
