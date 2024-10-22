@@ -1,4 +1,4 @@
-#if __clang_major__ < 18
+#if __clang_major__ < 18 || (__clang_major__ == 18 && __clang_minor__ < 1)
 // Skip this test if clang is too old to support it.
 int main(void)
 {
