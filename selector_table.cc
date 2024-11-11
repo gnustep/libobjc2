@@ -300,6 +300,22 @@ struct SelectorHash
 		// they are both used as encodings for C strings in different situations)
 		if ((str = types))
 		{
+		    // If one compilation unit has a selector that takes a pointer to a
+		    // forward-declared structure and another has one that takes a pointer
+		    // to the same forward-declared structure but can see the definition,
+		    // their types will not match. 
+			//
+			// We only hash the name of the struct, not the type encoding of the fields
+			if (str[0] == '^' && str[1] == '{')
+			{
+				while((c = (size_t)*str++) && c != '=')
+				{
+					
+					hash = hash * 33 + c;
+				}
+				return hash;
+			}
+
 			while((c = (size_t)*str++))
 			{
 				switch (c)
