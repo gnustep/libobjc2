@@ -5,11 +5,7 @@
 #else
 #	define PRIVATE  __attribute__ ((visibility("hidden")))
 #endif
-#ifdef NO_LEGACY
-#	define LEGACY PRIVATE
-#else
-#	define LEGACY OBJC_PUBLIC
-#endif
+#define LEGACY PRIVATE
 
 #if defined(DEBUG) || (!defined(__clang__))
 #	include <assert.h>

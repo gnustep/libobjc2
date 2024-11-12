@@ -22,7 +22,7 @@ struct objc_method
 };
 // end: objc_method
 
-struct objc_method_gcc
+struct objc_method_gsv1
 {
 	/**
 	 * Selector used to send messages to this method.  The type encoding of
@@ -87,12 +87,12 @@ static inline struct objc_method *method_at_index(struct objc_method_list *l, in
 /**
  * Legacy version of the method list.
  */
-struct objc_method_list_gcc
+struct objc_method_list_gsv1
 {
 	/**
 	 * The next group of methods in the list.
 	 */
-	struct objc_method_list_gcc *next;
+	struct objc_method_list_gsv1 *next;
 	/**
 	 * The number of methods in this list.
 	 */
@@ -100,5 +100,5 @@ struct objc_method_list_gcc
 	/**
 	 * An array of methods.  Note that the actual size of this is count.
 	 */
-	struct objc_method_gcc methods[];
+	struct objc_method_gsv1 methods[];
 };
