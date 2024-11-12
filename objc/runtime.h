@@ -131,7 +131,7 @@ typedef struct objc_method *Method;
 #	ifdef STRICT_APPLE_COMPATIBILITY
 typedef signed char BOOL;
 #	else
-#		if defined(__vxworks) || defined(_WIN32)
+#		if defined(__vxworks)
 typedef  int BOOL;
 #		else
 typedef unsigned char BOOL;
