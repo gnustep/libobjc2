@@ -213,6 +213,7 @@ jobs:
         os: [ windows-2019 ]
         msystem: [ ucrt64, mingw64, clang64 ]
         build-type: [ Release, Debug ]
+        strict-apple-compatibility: [ ON, OFF ]
         include:
           - msystem: ucrt64
             package-prefix: ucrt-x86_64
@@ -226,7 +227,7 @@ jobs:
       # Don't abort runners if a single one fails
       fail-fast: false
     runs-on: ${{ matrix.os }}
-    name: ${{ matrix.os }} ${{ matrix.msystem }} ${{ matrix.build-type}}
+    name: ${{ matrix.os }} ${{ matrix.msystem }} ${{ matrix.build-type}} (Strict Apple compatibility ${{ matrix.strict-apple-compatibility }})
     defaults:
       run:
         shell: msys2 {0}
@@ -241,7 +242,7 @@ jobs:
       run: |        
         mkdir build
         cd build
-        ${{ matrix.cmake-flags }} cmake .. -DTESTS=ON -DCMAKE_C_COMPILER="clang" -DCMAKE_CXX_COMPILER="clang++" -DCMAKE_BUILD_TYPE=${{ matrix.build-type }}
+        ${{ matrix.cmake-flags }} cmake .. -DTESTS=ON -DCMAKE_C_COMPILER="clang" -DCMAKE_CXX_COMPILER="clang++" -DCMAKE_BUILD_TYPE=${{ matrix.build-type }} -DSTRICT_APPLE_COMPATIBILITY=${{ matrix.strict-apple-compatibility }}
     - name: Build
       working-directory: build
       run: |
@@ -256,7 +257,7 @@ jobs:
         cmake --install . --prefix=../dist
     - uses: actions/upload-artifact@v4
       with:
-        name: ${{ matrix.msystem }}-${{ matrix.build-type }}
+        name: ${{ matrix.msystem }}-${{ matrix.build-type }}-compat-${{ matrix.strict-apple-compatibility }}
         path: dist/
 
   android:
