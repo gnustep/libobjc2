@@ -517,6 +517,7 @@ int objc_getClassList(Class *buffer, int bufferLen)
 	{
 		buffer[count++] = next;
 	}
+	free(e);
 	return count;
 }
 Class *objc_copyClassList(unsigned int *outCount)
