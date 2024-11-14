@@ -45,7 +45,7 @@ endif()
 message(STATUS "Architecture as detected by CMake: ${CMAKE_SYSTEM_PROCESSOR}")
 
 # Build configuration
-add_compile_definitions(GNUSTEP __OBJC_RUNTIME_INTERNAL__=1)
+add_compile_definitions(GNUSTEP __OBJC_RUNTIME_INTERNAL__=1 __OBJC_BOOL)
 
 set(CMAKE_CXX_STANDARD 17)
 
@@ -140,6 +140,7 @@ option(DEBUG_ARC_COMPAT
 option(ENABLE_OBJCXX "Enable support for Objective-C++" ON)
 option(TESTS "Enable building the tests")
 option(EMBEDDED_BLOCKS_RUNTIME "Include an embedded blocks runtime, rather than relying on libBlocksRuntime to supply it" ON)
+option(STRICT_APPLE_COMPATIBILITY "Use strict Apple compatibility, always defining BOOL as signed char" OFF)
 
 # For release builds, we disable spamming the terminal with warnings about
 # selector type mismatches
@@ -147,6 +148,7 @@ add_compile_definitions($<$<CONFIG:Release>:NO_SELECTOR_MISMATCH_WARNINGS>)
 add_compile_definitions($<$<BOOL:${TYPE_DEPENDENT_DISPATCH}>:TYPE_DEPENDENT_DISPATCH>)
 add_compile_definitions($<$<BOOL:${ENABLE_TRACING}>:WITH_TRACING=1>)
 add_compile_definitions($<$<BOOL:${DEBUG_ARC_COMPAT}>:DEBUG_ARC_COMPAT>)
+add_compile_definitions($<$<BOOL:${STRICT_APPLE_COMPATIBILITY}>:STRICT_APPLE_COMPATIBILITY>)
 
 if (OLDABI_COMPAT)
 	list(APPEND libobjc_C_SRCS legacy.c abi_version.c statics_loader.c)
