@@ -35,6 +35,8 @@
 	mov   (\receiver), %r10               # Load the dtable from the class
 1:	                                      # classLoaded
 	mov   DTABLE_OFFSET(%r10), %r10       # Load the dtable from the class into r10
+	test  %r10, %r10                      # If the dtable is nil
+	jz    4f                              # return nil
 	mov   %rax, -8(%rsp)                  # %rax contains information for variadic calls
 	mov   %rbx, -16(%rsp)                 # On the fast path, spill into the red zone
 	mov   (\sel), %eax                    # Load the selector index into %eax
