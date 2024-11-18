@@ -17,7 +17,6 @@
 
 .file	"block_trampolines.S"
 
-
 #if __x86_64
 ////////////////////////////////////////////////////////////////////////////////
 // x86-64 trampoline
@@ -107,9 +106,11 @@
 #if defined(__powerpc64__)
 #define LOAD ld
 #define OFFSET 8
+#define PAGE_SHIFT 16
 #else
 #define LOAD lwz
 #define OFFSET 4
+#define PAGE_SHIFT 12
 #endif
 
 .macro trampoline arg0, arg1
@@ -161,10 +162,19 @@
 // AArch64 (ARM64) trampoline
 ////////////////////////////////////////////////////////////////////////////////
 .macro trampoline arg0, arg1
-	adr x17, #-4096
-	mov \arg1, \arg0
-	ldp \arg0, x17, [x17]
-	br x17
+// Retrieve the pointer to the block_header from pc + 20
+adr x17, #20
+ldr x17, [x17]
+mov \arg1, \arg0
+ldp \arg0, x17, [x17]
+br x17
+// In AArch64 a nop "advance[s] the value of the program counter by 4".
+// We reserve 8 bytes for the block_header address.
+// When the trampoline is copied into the rx_buffer of a trampoline region,
+// the two nops are overwritten by the block_header address, associated
+// with this trampoline. This happens in `alloc_trampolines`.
+nop
+nop
 .endm
 #define ARG0 x0
 #define ARG1 x1

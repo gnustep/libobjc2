@@ -115,7 +115,7 @@ struct block_header
 	 */
 #if defined(__i386__) || (defined(__mips__) && !defined(__mips_n64)) || (defined(__powerpc__) && !defined(__powerpc64__))
 	uint64_t padding[3];
-#elif defined(__mips__) || defined(__powerpc64__)
+#elif defined(__mips__) || defined(__ARM_ARCH_ISA_A64) || defined(__powerpc64__)
 	uint64_t padding[2];
 #elif defined(__arm__)
 	uint64_t padding;
@@ -212,7 +212,15 @@ static struct trampoline_set *alloc_trampolines(char *start, char *end)
 		headers_start[i].fnptr = (void(*)(void))invalid;
 		headers_start[i].block = &headers_start[i+1].block;
 		uint8_t *block = rx_buffer_start + (i * sizeof(struct block_header));
+
 		memcpy(block, start, end-start);
+#if defined(__ARM_ARCH_ISA_A64)
+		// Fix-up the trampoline with the address to its block header.
+		// We reserved 8 bytes after the branch for the block header address.
+		// See block_trampolines.S for more information.
+		uintptr_t ptr = (uintptr_t)&headers_start[i];
+		memcpy(block + (end-start) -8, &ptr, 8);
+#endif
 	}
 	headers_start[trampoline_header_per_page-1].block = NULL;
 	mprotect(rx_buffer_start, trampoline_page_size, PROT_READ | PROT_EXEC);
