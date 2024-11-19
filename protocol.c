@@ -516,6 +516,10 @@ Protocol*__unsafe_unretained* objc_copyProtocolList(unsigned int *outCount)
 	{
 		p[count++] = next;
 	}
+	if (NULL != e)
+	{
+		free(e);
+	}
 	if (NULL != outCount)
 	{
 		*outCount = total;
