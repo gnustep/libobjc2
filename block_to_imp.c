@@ -183,6 +183,14 @@ PRIVATE void init_trampolines(void)
 	// Check that sizeof(struct block_header) is a divisor of the current page size
 	assert(trampoline_header_per_page * sizeof(struct block_header) == trampoline_page_size);
 
+        // Check that assumpttions for all non-variable page size implementations
+	// (currently everything except AArch64) are met
+#if defined(__powerpc64__)
+	assert(trampoline_page_size == 0x10000);
+#elif !defined(__ARM_ARCH_ISA_A64)
+	assert(trampoline_page_size == 0x1000);
+#endif
+
 	// Check that we can fit the body of the trampoline function inside a block_header
 	assert(&__objc_block_trampoline_end - &__objc_block_trampoline <= sizeof(struct block_header));
 	assert(&__objc_block_trampoline_end_sret - &__objc_block_trampoline_sret <= sizeof(struct block_header));
