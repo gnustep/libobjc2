@@ -110,7 +110,7 @@
 #else
 #define LOAD lwz
 #define OFFSET 4
-#define PAGE_SHIFT 12
+#define PAGE_SIZE 0x1000
 #endif
 
 .macro trampoline arg0, arg1
