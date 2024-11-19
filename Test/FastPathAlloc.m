@@ -21,6 +21,8 @@ typedef struct _NSZone NSZone;
 @interface NoInit : Test @end
 @interface NoInit2 : NoInit @end
 
+@interface ShouldInitSubclassed : NoInit @end
+
 @implementation ShouldAlloc
 + (instancetype)alloc
 {
@@ -91,6 +93,13 @@ typedef struct _NSZone NSZone;
 }
 @end
 
+@implementation ShouldInitSubclassed
++ (instancetype) alloc
+{
+	return [ShouldInit alloc];
+}
+@end
+
 Class getClassNamed(char *name)
 {
 	return nil;
@@ -112,6 +121,10 @@ int main(void)
 
 	called = NO;
 	[[ShouldInit2 alloc] init];
+	assert(called);
+
+	called = NO;
+	[[ShouldInitSubclassed alloc] init];
 	assert(called);
 
 	called = NO;
