@@ -140,6 +140,7 @@ option(DEBUG_ARC_COMPAT
 	"Log warnings for classes that don't hit ARC fast paths" OFF)
 option(ENABLE_OBJCXX "Enable support for Objective-C++" ON)
 option(TESTS "Enable building the tests")
+option(BENCHMARKS "Enable building the benchmarks" OFF)
 option(EMBEDDED_BLOCKS_RUNTIME "Include an embedded blocks runtime, rather than relying on libBlocksRuntime to supply it" ON)
 option(STRICT_APPLE_COMPATIBILITY "Use strict Apple compatibility, always defining BOOL as signed char" OFF)
 
@@ -447,6 +448,10 @@ if (TESTS)
 	enable_testing()
 	add_subdirectory(Test)
 endif (TESTS)
+
+if (BENCHMARKS)
+	add_subdirectory(benchmarks)
+endif()
 
 CHECK_CXX_SOURCE_COMPILES("
 	#include <stdlib.h>
