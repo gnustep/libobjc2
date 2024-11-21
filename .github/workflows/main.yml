@@ -47,7 +47,7 @@ jobs:
       - uses: actions/checkout@v3
       - name: Install dependencies 
         run: |
-          sudo apt install ninja-build
+          sudo apt install ninja-build libbenchmark-dev
           if [ "${{ matrix.cxxlib }}" = "libc++" ]; then
             sudo apt remove -y 'libc++*'
             apt search libunwind
@@ -71,7 +71,7 @@ jobs:
             export EMBEDDED_BLOCKS_RUNTIME=ON
           fi
           ls -lahR /usr/lib/llvm-${{ matrix.llvm-version }}/lib/
-          cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -G Ninja -DTESTS=ON -DEMBEDDED_BLOCKS_RUNTIME=$EMBEDDED_BLOCKS_RUNTIME -DCMAKE_C_COMPILER=clang-${{matrix.llvm-version}} -DCMAKE_OBJC_COMPILER=clang-${{matrix.llvm-version}} -DCMAKE_ASM_COMPILER=clang-${{matrix.llvm-version}} -DCMAKE_CXX_COMPILER=clang++-${{matrix.llvm-version}} -DCMAKE_OBJCXX_COMPILER=clang++-${{matrix.llvm-version}} -DCMAKE_CXX_FLAGS="-stdlib=${{matrix.cxxlib}}"
+          cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -G Ninja -DTESTS=ON -DBENCHMARKS=ON -DEMBEDDED_BLOCKS_RUNTIME=$EMBEDDED_BLOCKS_RUNTIME -DCMAKE_C_COMPILER=clang-${{matrix.llvm-version}} -DCMAKE_OBJC_COMPILER=clang-${{matrix.llvm-version}} -DCMAKE_ASM_COMPILER=clang-${{matrix.llvm-version}} -DCMAKE_CXX_COMPILER=clang++-${{matrix.llvm-version}} -DCMAKE_OBJCXX_COMPILER=clang++-${{matrix.llvm-version}} -DCMAKE_CXX_FLAGS="-stdlib=${{matrix.cxxlib}}"
         # Build with a nice ninja status line
       - name: Build
         working-directory: ${{github.workspace}}/build
@@ -81,6 +81,11 @@ jobs:
         working-directory: ${{github.workspace}}/build
         run: |
           ctest --output-on-failure -j 4
+      - name: Benchmark
+        working-directory: ${{github.workspace}}/build
+        run: |
+          ./benchmarks/benchmark_objc_msgSend
+        if: matrix.cxxlib == 'libstdc++'
 
   qemu-crossbuild:
     strategy:
@@ -237,12 +242,12 @@ jobs:
       with:
         msystem: ${{ matrix.msystem }}
         update: true
-        install: git mingw-w64-${{ matrix.package-prefix }}-clang mingw-w64-${{ matrix.package-prefix }}-lld mingw-w64-${{ matrix.package-prefix }}-cmake
+        install: git mingw-w64-${{ matrix.package-prefix }}-clang mingw-w64-${{ matrix.package-prefix }}-lld mingw-w64-${{ matrix.package-prefix }}-cmake mingw-w64-${{ matrix.package-prefix }}-benchmark
     - name: Configure CMake
       run: |        
         mkdir build
         cd build
-        ${{ matrix.cmake-flags }} cmake .. -DTESTS=ON -DCMAKE_C_COMPILER="clang" -DCMAKE_CXX_COMPILER="clang++" -DCMAKE_BUILD_TYPE=${{ matrix.build-type }} -DSTRICT_APPLE_COMPATIBILITY=${{ matrix.strict-apple-compatibility }}
+        ${{ matrix.cmake-flags }} cmake .. -DTESTS=ON -DBENCHMARKS=ON -DCMAKE_C_COMPILER="clang" -DCMAKE_CXX_COMPILER="clang++" -DCMAKE_BUILD_TYPE=${{ matrix.build-type }} -DSTRICT_APPLE_COMPATIBILITY=${{ matrix.strict-apple-compatibility }}
     - name: Build
       working-directory: build
       run: |
@@ -251,6 +256,10 @@ jobs:
       working-directory: build
       run: |
         ctest -j 4 --output-on-failure -T test ${{ matrix.ctest-flags }}
+    - name: Benchmark
+      working-directory: build
+      run: |
+        ./benchmarks/benchmark_objc_msgSend.exe
     - name: Install
       working-directory: build
       run: |
