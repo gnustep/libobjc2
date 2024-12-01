@@ -67,7 +67,7 @@ static objc_ivar_ownership ownershipForIvar(struct objc_class_gsv1 *cls, int idx
 
 static struct objc_ivar_list *upgradeIvarList(struct objc_class_gsv1 *cls)
 {
-	struct objc_ivar_list_gcc *l = cls->ivars;
+	struct objc_ivar_list_gsv1 *l = cls->ivars;
 	if (l == NULL)
 	{
 		return NULL;
@@ -136,7 +136,7 @@ static struct objc_ivar_list *upgradeIvarList(struct objc_class_gsv1 *cls)
 	return n;
 }
 
-static struct objc_method_list *upgradeMethodList(struct objc_method_list_gcc *old)
+static struct objc_method_list *upgradeMethodList(struct objc_method_list_gsv1 *old)
 {
 	if (old == NULL)
 	{
@@ -368,10 +368,11 @@ PRIVATE Class objc_upgrade_class(struct objc_class_gsv1 *oldClass)
 	}
 	return cls;
 }
-PRIVATE struct objc_category *objc_upgrade_category(struct objc_category_gcc *old)
+
+PRIVATE struct objc_category *objc_upgrade_category(struct objc_category_gsv1 *old)
 {
 	struct objc_category *cat = calloc(1, sizeof(struct objc_category));
-	memcpy(cat, old, sizeof(struct objc_category_gcc));
+	memcpy(cat, old, sizeof(struct objc_category_gsv1));
 	cat->instance_methods = upgradeMethodList(old->instance_methods);
 	cat->class_methods = upgradeMethodList(old->class_methods);
 	if (cat->instance_methods != NULL)
@@ -390,7 +391,7 @@ PRIVATE struct objc_category *objc_upgrade_category(struct objc_category_gcc *ol
 }
 
 static struct objc_protocol_method_description_list*
-upgrade_protocol_method_list_gcc(struct objc_protocol_method_description_list_gcc *l)
+upgrade_protocol_method_list_gsv1(struct objc_protocol_method_description_list_gsv1 *l)
 {
 	if ((l == NULL) || (l->count == 0))
 	{
@@ -409,26 +410,6 @@ upgrade_protocol_method_list_gcc(struct objc_protocol_method_description_list_gc
 	return n;
 }
 
-PRIVATE struct objc_protocol *objc_upgrade_protocol_gcc(struct objc_protocol_gcc *p)
-{
-	// If the protocol has already been upgraded, the don't try to upgrade it twice.
-	if (p->isa == (id)&_OBJC_CLASS_ProtocolGCC)
-	{
-		return objc_getProtocol(p->name);
-	}
-	p->isa = (id)&_OBJC_CLASS_ProtocolGCC;
-	Protocol *proto =
-		(Protocol*)class_createInstance(&_OBJC_CLASS_Protocol, 0);
-	proto->name = p->name;
-	// Aliasing of this between the new and old structures means that when this
-	// returns these will all be updated.
-	proto->protocol_list = p->protocol_list;
-	proto->instance_methods = upgrade_protocol_method_list_gcc(p->instance_methods);
-	proto->class_methods = upgrade_protocol_method_list_gcc(p->class_methods);
-	assert(proto->isa);
-	return proto;
-}
-
 PRIVATE struct objc_protocol *objc_upgrade_protocol_gsv1(struct objc_protocol_gsv1 *p)
 {
 	// If the protocol has already been upgraded, the don't try to upgrade it twice.
@@ -438,19 +419,19 @@ PRIVATE struct objc_protocol *objc_upgrade_protocol_gsv1(struct objc_protocol_gs
 	}
 	Protocol *n =
 		(Protocol*)class_createInstance(&_OBJC_CLASS_Protocol, 0);
-	n->instance_methods = upgrade_protocol_method_list_gcc(p->instance_methods);
+	n->instance_methods = upgrade_protocol_method_list_gsv1(p->instance_methods);
 	// Aliasing of this between the new and old structures means that when this
 	// returns these will all be updated.
 	n->name = p->name;
 	n->protocol_list = p->protocol_list;
-	n->class_methods = upgrade_protocol_method_list_gcc(p->class_methods);
+	n->class_methods = upgrade_protocol_method_list_gsv1(p->class_methods);
 	n->properties = upgradePropertyList(p->properties);
 	n->optional_properties = upgradePropertyList(p->optional_properties);
 	n->isa = (id)&_OBJC_CLASS_Protocol;
 	// We do in-place upgrading of these, because they might be referenced
 	// directly
-	p->instance_methods = (struct objc_protocol_method_description_list_gcc*)n->instance_methods;
-	p->class_methods = (struct objc_protocol_method_description_list_gcc*)n->class_methods;
+	p->instance_methods = (struct objc_protocol_method_description_list_gsv1*)n->instance_methods;
+	p->class_methods = (struct objc_protocol_method_description_list_gsv1*)n->class_methods;
 	p->properties = (struct objc_property_list_gsv1*)n->properties;
 	p->optional_properties = (struct objc_property_list_gsv1*)n->optional_properties;
 	p->isa = (id)&_OBJC_CLASS_ProtocolGSv1;

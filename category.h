@@ -37,26 +37,26 @@ struct objc_category
 	struct objc_property_list *class_properties;
 };
 
-struct objc_category_gcc
+struct objc_category_gsv1
 {
-	/** 
-	 * The name of this category.
-	 */
-	const char                *name;
-	/**
-	 * The name of the class to which this category should be applied.
-	 */
-	const char                *class_name;
-	/**
-	 * The list of instance methods to add to the class.
-	 */
-	struct objc_method_list_gcc   *instance_methods;
-	/**
-	 * The list of class methods to add to the class.
-	 */
-	struct objc_method_list_gcc   *class_methods;
-	/**
-	 * The list of protocols adopted by this category.
-	 */
-	struct objc_protocol_list *protocols;
+    /** 
+     * The name of this category.
+     */
+    const char                *name;
+    /**
+     * The name of the class to which this category should be applied.
+     */
+    const char                *class_name;
+    /**
+     * The list of instance methods to add to the class.
+     */
+    struct objc_method_list_gsv1 *instance_methods;
+    /**
+     * The list of class methods to add to the class.
+     */
+    struct objc_method_list_gsv1 *class_methods;
+    /**
+     * The list of protocols adopted by this category.
+     */
+    struct objc_protocol_list *protocols;
 };
