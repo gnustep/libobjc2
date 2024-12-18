@@ -149,7 +149,6 @@ add_compile_definitions($<$<CONFIG:Release>:NO_SELECTOR_MISMATCH_WARNINGS>)
 add_compile_definitions($<$<BOOL:${TYPE_DEPENDENT_DISPATCH}>:TYPE_DEPENDENT_DISPATCH>)
 add_compile_definitions($<$<BOOL:${ENABLE_TRACING}>:WITH_TRACING=1>)
 add_compile_definitions($<$<BOOL:${DEBUG_ARC_COMPAT}>:DEBUG_ARC_COMPAT>)
-add_compile_definitions($<$<BOOL:${STRICT_APPLE_COMPATIBILITY}>:STRICT_APPLE_COMPATIBILITY>)
 
 configure_file(objc/objc-config.h.in objc/objc-config.h @ONLY)
 include_directories("${PROJECT_BINARY_DIR}/objc/")
