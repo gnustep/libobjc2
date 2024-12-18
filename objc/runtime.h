@@ -44,6 +44,10 @@ extern "C" {
 #include <sys/types.h>
 #include "Availability.h"
 
+#if OBJC_BOOL_TYPE == OBJC_BOOL_TYPE_STDBOOL
+#include <stdbool.h>
+#endif
+
 // Undo GNUstep substitutions
 #ifdef class_setVersion
 #	undef class_setVersion
@@ -129,7 +133,9 @@ typedef struct objc_method *Method;
 /**
  * Objective-C boolean type.
  */
-#	ifdef STRICT_APPLE_COMPATIBILITY
+#	if OBJC_BOOL_TYPE == OBJC_BOOL_TYPE_STDBOOL
+typedef bool BOOL;
+#	elif OBJC_BOOL_TYPE == OBJC_BOOL_TYPE_APPLE
 typedef signed char BOOL;
 #	else
 #		if defined(__vxworks) || defined(_WIN32)

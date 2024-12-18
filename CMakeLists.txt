@@ -141,7 +141,16 @@ option(DEBUG_ARC_COMPAT
 option(ENABLE_OBJCXX "Enable support for Objective-C++" ON)
 option(TESTS "Enable building the tests")
 option(EMBEDDED_BLOCKS_RUNTIME "Include an embedded blocks runtime, rather than relying on libBlocksRuntime to supply it" ON)
-option(STRICT_APPLE_COMPATIBILITY "Use strict Apple compatibility, always defining BOOL as signed char" OFF)
+option(STRICT_APPLE_COMPATIBILITY "Use strict Apple compatibility, defining non-C99-bool BOOL as signed char" OFF)
+set(OBJC_BOOL_IS_BOOL_MODE auto CACHE STRING "Control whether BOOL should be defined as C99 bool. One of 'auto', 'always', 'never'.")
+
+if ("${OBJC_BOOL_IS_BOOL_MODE}" STREQUAL "always")
+	set(OBJC_BOOL_IS_BOOL_MODE_CONFIG OBJC_BOOL_IS_BOOL_MODE_ALWAYS)
+elseif ("${OBJC_BOOL_IS_BOOL_MODE}" STREQUAL "never")
+	set(OBJC_BOOL_IS_BOOL_MODE_CONFIG OBJC_BOOL_IS_BOOL_MODE_NEVER)
+else()
+	set(OBJC_BOOL_IS_BOOL_MODE_CONFIG OBJC_BOOL_IS_BOOL_MODE_AUTO)
+endif()
 
 # For release builds, we disable spamming the terminal with warnings about
 # selector type mismatches
