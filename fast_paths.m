@@ -9,9 +9,6 @@ typedef struct _NSZone NSZone;
 @end
 #include <stdio.h>
 
-/**
- * Equivalent to [cls alloc].  If there's a fast path opt-in, then this skips the message send.
- */
 OBJC_PUBLIC
 id
 objc_alloc(Class cls)
@@ -66,6 +63,9 @@ objc_alloc_init(Class cls)
 		return nil;
 	}
 	id instance = objc_alloc(cls);
+	// If +alloc was overwritten, it is not guaranteed that it returns
+	// an instance of cls.
+	cls = classForObject(instance);
 	if (objc_test_class_flag(cls, objc_class_flag_fast_alloc_init))
 	{
 		return instance;

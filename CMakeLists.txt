@@ -99,7 +99,8 @@ set(libobjc_HDRS
 	objc/objc.h
 	objc/runtime-deprecated.h
 	objc/runtime.h
-	objc/slot.h)
+	objc/slot.h
+	${PROJECT_BINARY_DIR}/objc/objc-config.h)
 
 set(libobjc_CXX_SRCS
 	selector_table.cc
@@ -149,6 +150,9 @@ add_compile_definitions($<$<BOOL:${TYPE_DEPENDENT_DISPATCH}>:TYPE_DEPENDENT_DISP
 add_compile_definitions($<$<BOOL:${ENABLE_TRACING}>:WITH_TRACING=1>)
 add_compile_definitions($<$<BOOL:${DEBUG_ARC_COMPAT}>:DEBUG_ARC_COMPAT>)
 add_compile_definitions($<$<BOOL:${STRICT_APPLE_COMPATIBILITY}>:STRICT_APPLE_COMPATIBILITY>)
+
+configure_file(objc/objc-config.h.in objc/objc-config.h @ONLY)
+include_directories("${PROJECT_BINARY_DIR}/objc/")
 
 if (OLDABI_COMPAT)
 	list(APPEND libobjc_C_SRCS legacy.c abi_version.c statics_loader.c)

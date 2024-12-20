@@ -98,14 +98,14 @@ remove_definitions(-D__OBJC_RUNTIME_INTERNAL__=1)
 
 add_library(test_runtime_legacy OBJECT Test.m)
 set_target_properties(test_runtime_legacy PROPERTIES
-	INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}"
+	INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR};${PROJECT_BINARY_DIR}/objc/"
 	COMPILE_FLAGS "-Xclang -fblocks -fobjc-runtime=gnustep-1.7"
 	LINKER_LANGUAGE C
 )
 
 add_library(test_runtime OBJECT Test.m)
 set_target_properties(test_runtime PROPERTIES
-	INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}"
+	INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR};${PROJECT_BINARY_DIR}/objc/"
 	COMPILE_FLAGS "-Xclang -fblocks -fobjc-runtime=gnustep-2.0"
 	LINKER_LANGUAGE C
 )
@@ -123,7 +123,7 @@ function(addtest_flags TEST_NAME FLAGS TEST_SOURCE)
 	add_test(${TEST_NAME} ${TEST_NAME})
 	set(ARC "")
 	set_target_properties(${TEST_NAME} PROPERTIES
-		INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}"
+		INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR};${PROJECT_BINARY_DIR}/objc/"
 		COMPILE_FLAGS "-Xclang -fblocks -Xclang -fobjc-exceptions ${FLAGS}"
 		LINK_FLAGS ${INCREMENTAL}
 		LINKER_LANGUAGE C
