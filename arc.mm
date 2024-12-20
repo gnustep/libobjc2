@@ -840,7 +840,7 @@ extern "C" OBJC_PUBLIC id objc_storeWeak(id *addr, id obj)
 	loadWeakPointer(addr, &old, &oldRef);
 	// If the old and new values are the same, then we don't need to do anything
 	// unless we are deleting the weak reference by storing NULL to it.
-	if (old == obj && (obj != NULL || NULL == oldRef))
+	if ((old == obj) && ((obj != NULL) || (NULL == oldRef)))
 	{
 		return obj;
 	}
