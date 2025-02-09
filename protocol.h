@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <assert.h>
 
-struct objc_protocol_method_description_list_gcc
+struct objc_protocol_method_description_list_gsv1
 {
 	/**
 	 * Number of method descriptions in this list.
@@ -25,10 +25,6 @@ struct objc_protocol_method_description_list_gcc
  */
 enum protocol_version
 {
-	/**
-	 * Legacy (GCC-compatible) protocol version.
-	 */
-	protocol_version_gcc = 2,
 	/**
 	 * GNUstep V1 ABI protocol.
 	 */
@@ -152,11 +148,11 @@ struct objc_protocol_gcc
 	/**
 	 * List of instance methods required by this protocol.
 	 */
-	struct objc_protocol_method_description_list_gcc *instance_methods;
+	struct objc_protocol_method_description_list_gsv1 *instance_methods;
 	/**
 	 * List of class methods required by this protocol.
 	 */
-	struct objc_protocol_method_description_list_gcc *class_methods;
+	struct objc_protocol_method_description_list_gsv1 *class_methods;
 };
 
 struct objc_protocol_gsv1
@@ -167,16 +163,16 @@ struct objc_protocol_gsv1
 	id                                   isa;
 	char                                *name;
 	struct objc_protocol_list           *protocol_list;
-	struct objc_protocol_method_description_list_gcc *instance_methods;
-	struct objc_protocol_method_description_list_gcc *class_methods;
+	struct objc_protocol_method_description_list_gsv1 *instance_methods;
+	struct objc_protocol_method_description_list_gsv1 *class_methods;
 	/**
 	 * Instance methods that are declared as optional for this protocol.
 	 */
-	struct objc_protocol_method_description_list_gcc *optional_instance_methods;
+	struct objc_protocol_method_description_list_gsv1 *optional_instance_methods;
 	/**
 	 * Class methods that are declared as optional for this protocol.
 	 */
-	struct objc_protocol_method_description_list_gcc *optional_class_methods;
+	struct objc_protocol_method_description_list_gsv1 *optional_class_methods;
 	/**
 	 * Properties that are required by this protocol.
 	 */

@@ -1219,8 +1219,6 @@ void objc_send_initialize(id object) OBJC_NONPORTABLE;
 #define _C_BYCOPY   'O'
 #define _C_ONEWAY   'V'
 
-#include "runtime-deprecated.h"
-
 #ifdef __cplusplus
 }
 #endif
