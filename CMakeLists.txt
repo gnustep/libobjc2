@@ -118,7 +118,7 @@ if (NOT tsl-robin-map_FOUND)
 	FetchContent_Declare(
 		robinmap
 		GIT_REPOSITORY https://github.com/Tessil/robin-map/
-		GIT_TAG        v1.2.1)
+		GIT_TAG        v1.4.0)
 
 	FetchContent_MakeAvailable(robinmap)
 endif()
