@@ -333,7 +333,7 @@ static const char *alignof_type(const char *type, size_t *align)
 		case '[':
 		{
 			const char *t = type;
-			parse_array(&t, (type_parser)alignof_type, &align);
+			parse_array(&t, (type_parser)alignof_type, align);
 			return t;
 		}
 		case 'b':
