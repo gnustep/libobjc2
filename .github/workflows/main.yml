@@ -18,27 +18,19 @@ jobs:
     strategy:
       matrix:
         # Build each combination of OS and release/debug variants
-        os: [ "ubuntu-22.04", "ubuntu-20.04" ]
+        os: [ "ubuntu-24.04", "ubuntu-22.04" ]
         build-type: [ Release, Debug ]
-        blocks-runtime: [ "EMBEDDED", "swift-5.10-RELEASE" ]
+        blocks-runtime: [ "EMBEDDED", "swift-6.1.2-RELEASE" ]
         cxxlib: [ "libc++", "libstdc++" ]
-        llvm-version: [10, 11, 12, 13, 14, 15]
+        llvm-version: [13, 14, 15, 16, 17, 18]
         # Don't bother testing the LLVM versions that aren't in the default image for the different platforms
         exclude:
           - os: "ubuntu-22.04"
-            llvm-version: 10
+            llvm-version: 16
           - os: "ubuntu-22.04"
-            llvm-version: 11
+            llvm-version: 17
           - os: "ubuntu-22.04"
-            llvm-version: 12
-          - os: "ubuntu-20.04"
-            llvm-version: 11
-          - os: "ubuntu-20.04"
-            llvm-version: 13
-          - os: "ubuntu-20.04"
-            llvm-version: 14
-          - os: "ubuntu-20.04"
-            llvm-version: 15
+            llvm-version: 18
       # Don't abort runners if a single one fails
       fail-fast: false
     runs-on: ${{ matrix.os }}
@@ -152,7 +144,7 @@ jobs:
     strategy:
       matrix:
         # Build each combination of OS and release/debug variants
-        os: [ windows-2022, windows-2019 ]
+        os: [ windows-2025, windows-2022 ]
         build-type: [ Release, Debug ]
         arch: [ x64_x86, x64 ]
         include:
@@ -160,10 +152,7 @@ jobs:
             flags: -m32
           - arch: x64
             flags: -m64
-          - os: windows-2022
-            vspath: C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build
-          - os: windows-2019
-            vspath: C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build
+          - vspath: C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build
       # Don't abort runners if a single one fails
       fail-fast: false
     runs-on: ${{ matrix.os }}
@@ -207,7 +196,7 @@ jobs:
     strategy:
       matrix:
         # Build each combination of OS and release/debug variants
-        os: [ windows-2019 ]
+        os: [ windows-2025, windows-2022 ]
         msystem: [ ucrt64, mingw64, clang64 ]
         build-type: [ Release, Debug ]
         strict-apple-compatibility: [ ON, OFF ]
@@ -261,11 +250,12 @@ jobs:
     strategy:
       matrix:
         # Build each combination of OS and release/debug variants
-        os: [ ubuntu-20.04 ]
+        os: [ ubuntu-24.04 ]
         build-type: [ Release, Debug ]
         # TODO(hugo): Add AArch64 configuration when GitHub AArch64 CI runners are available.
         arch:
-          - name: x86_64
+          - os: ubuntu-24.04
+            name: x86_64
             triple: x86_64-linux-android
             emu-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
         api-level: [ 27, 33 ]
