@@ -258,7 +258,9 @@ jobs:
             name: x86_64
             triple: x86_64-linux-android
             emu-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-        api-level: [ 27, 33 ]
+        # Include the oldest Android version still receiving security update
+        # and the newest version. 
+        api-level: [ 31, 36 ]
         # Don't abort runners if a single one fails
       fail-fast: false
     runs-on: ${{ matrix.os }}
