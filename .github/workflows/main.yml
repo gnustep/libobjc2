@@ -25,6 +25,12 @@ jobs:
         llvm-version: [13, 14, 15, 16, 17, 18]
         # Don't bother testing the LLVM versions that aren't in the default image for the different platforms
         exclude:
+          - os: "ubuntu-24.04"
+            llvm-version: 15
+          - os: "ubuntu-24.04"
+            llvm-version: 14
+          - os: "ubuntu-24.04"
+            llvm-version: 13
           - os: "ubuntu-22.04"
             llvm-version: 16
           - os: "ubuntu-22.04"
@@ -144,7 +150,7 @@ jobs:
     strategy:
       matrix:
         # Build each combination of OS and release/debug variants
-        os: [ windows-2025, windows-2022 ]
+        os: [ windows-2025 ]
         build-type: [ Release, Debug ]
         arch: [ x64_x86, x64 ]
         include:
@@ -196,7 +202,7 @@ jobs:
     strategy:
       matrix:
         # Build each combination of OS and release/debug variants
-        os: [ windows-2025, windows-2022 ]
+        os: [ windows-2025 ]
         msystem: [ ucrt64, mingw64, clang64 ]
         build-type: [ Release, Debug ]
         strict-apple-compatibility: [ ON, OFF ]
@@ -243,7 +249,7 @@ jobs:
         cmake --install . --prefix=../dist
     - uses: actions/upload-artifact@v4
       with:
-        name: ${{ matrix.msystem }}-${{ matrix.build-type }}-compat-${{ matrix.strict-apple-compatibility }}
+        name: ${{matrix.os}}-${{ matrix.msystem }}-${{ matrix.build-type }}-compat-${{ matrix.strict-apple-compatibility }}
         path: dist/
 
   android:
