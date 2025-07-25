@@ -265,8 +265,8 @@ jobs:
             triple: x86_64-linux-android
             emu-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
         # Include the oldest Android version still receiving security update
-        # and the newest version. 
-        api-level: [ 31, 36 ]
+        # and the latest version. 
+        api-level: [ 31, 35 ]
         # Don't abort runners if a single one fails
       fail-fast: false
     runs-on: ${{ matrix.os }}
@@ -289,10 +289,10 @@ jobs:
         path: |
           ~/.android/avd/*
           ~/.android/adb*
-        key: avd-${{ matrix.api-level }}-${{ matrix.arch.name }}
+        key: avd-${{ matrix.os }}-${{ matrix.api-level }}-${{matrix.arch.name}}
     - name: Create AVD and Snapshot for Caching
       if: steps.avd-cache.outputs.cache-hit != 'true'
-      uses: hmelder/android-emulator-runner@v2.33.2
+      uses: reactivecircus/android-emulator-runner@v2
       with:
         api-level: ${{ matrix.api-level }}
         arch: ${{ matrix.arch.name }}
@@ -337,7 +337,7 @@ jobs:
       run: |
         NINJA_STATUS="%p [%f:%s/%t] %o/s, %es" ninja -v
     - name: Test
-      uses: hmelder/android-emulator-runner@v2.33.2
+      uses: reactivecircus/android-emulator-runner@v2
       with:
         api-level: ${{ matrix.api-level }}
         arch: ${{ matrix.arch.name }}
