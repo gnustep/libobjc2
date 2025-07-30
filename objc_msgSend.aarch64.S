@@ -47,7 +47,7 @@
 #   define EH_NOP .seh_nop
 #else
 // Marks the real start and end of the function
-#   define EH_START .cfi_startproc
+#   define EH_START .cfi_startproc; bti c
 #   define EH_END .cfi_endproc
 
 // The following directives are either not

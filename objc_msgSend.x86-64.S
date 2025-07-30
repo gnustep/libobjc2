@@ -9,7 +9,7 @@
 #	define THIRD_ARGUMENT %r8
 #	define FOURTH_ARGUMENT %r9
 #else
-#	define START_PROC(x) .cfi_startproc
+#	define START_PROC(x) .cfi_startproc; endbr64
 #	define END_PROC(x) .cfi_endproc
 #	define FRAME_OFFSET(x) .cfi_adjust_cfa_offset x
 #	define FIRST_ARGUMENT_STR "%rdi"

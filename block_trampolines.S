@@ -23,6 +23,7 @@
 // x86-64 trampoline
 ////////////////////////////////////////////////////////////////////////////////
 .macro trampoline arg0, arg1
+	endbr64
 	mov   -0x1007(%rip), \arg1   # Load the block pointer into the second argument
 	xchg  \arg1, \arg0           # Swap the first and second arguments
 	jmp   *-0x1008(%rip)         # Call the block function
@@ -161,6 +162,7 @@
 // AArch64 (ARM64) trampoline
 ////////////////////////////////////////////////////////////////////////////////
 .macro trampoline arg0, arg1
+	bti c
 	adr x17, #-4096
 	mov \arg1, \arg0
 	ldp \arg0, x17, [x17]
