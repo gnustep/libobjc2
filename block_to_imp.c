@@ -206,7 +206,17 @@ static void *trampoline_end_sret;
 PRIVATE void init_trampolines(void)
 {
 	// Retrieve the page size
+	#if defined(__powerpc64__)
+	// For PowerPC we fix the page size to 64KiB.
+	// We therefore effectively support all systems with page size <= 64 KiB.
+	trampoline_page_size = 0x10000;
+	// Check that the pagesize is greater or equal to the smallest size that we
+	// can perform mprotect operations on.
+	assert(pagesize() <= trampoline_page_size);
+	#else
 	trampoline_page_size = pagesize();
+	#endif
+
 	trampoline_region_size = trampoline_page_size * TRAMPOLINE_REGION_PAGES;
 	trampoline_header_per_page = trampoline_page_size / sizeof(struct block_header);
 
