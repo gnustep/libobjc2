@@ -190,7 +190,7 @@ extern char __objc_block_trampoline_end;
 extern char __objc_block_trampoline_sret;
 extern char __objc_block_trampoline_end_sret;
 
-#if defined(__ARM_ARCH_ISA_A64)
+#if defined(__ARM_ARCH_ISA_A64) || defined(__x86_64__)
 extern char __objc_block_trampoline_16;
 extern char __objc_block_trampoline_end_16;
 extern char __objc_block_trampoline_sret_16;
@@ -227,14 +227,14 @@ PRIVATE void init_trampolines(void)
 	// (currently everything except AArch64) are met
 #if defined(__powerpc64__)
 	assert(trampoline_page_size == 0x10000);
-#elif defined(__ARM_ARCH_ISA_A64)
+#elif defined(__ARM_ARCH_ISA_A64) || defined(__x86_64__)
 	assert(trampoline_page_size == 0x1000 || trampoline_page_size == 0x4000);
 #else
 	assert(trampoline_page_size == 0x1000);
 #endif
 
 	// Select the correct trampoline for our page size
-#if defined(__ARM_ARCH_ISA_A64)
+#if defined(__ARM_ARCH_ISA_A64) || defined(__x86_64__)
 	if (trampoline_page_size == 0x4000) {
 		trampoline_start = &__objc_block_trampoline_16;
 		trampoline_end = &__objc_block_trampoline_end_16;

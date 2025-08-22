@@ -27,6 +27,11 @@
 	xchg  \arg1, \arg0           # Swap the first and second arguments
 	jmp   *-0x1008(%rip)         # Call the block function
 .endm
+.macro trampoline_16 arg0, arg1
+	mov   -0x4007(%rip), \arg1  # Load the block pointer into the second argument
+	xchg  \arg1, \arg0           # Swap the first and second arguments
+	jmp   *-0x4008(%rip)        # Call the block function
+.endm
 // The Win64 and SysV x86-64 ABIs use different registers
 #	ifdef _WIN64
 #		define ARG0 %rcx
@@ -234,7 +239,7 @@ CDECL(__objc_block_trampoline_sret):
 CDECL(__objc_block_trampoline_end_sret):
 
 // Trampoline for 16 KiB page sizes
-#if defined(__ARM_ARCH_ISA_A64)
+#if defined(__ARM_ARCH_ISA_A64) || __x86_64
 .globl CDECL(__objc_block_trampoline_16)
 CDECL(__objc_block_trampoline_16):
 	trampoline_16 ARG0, ARG1
