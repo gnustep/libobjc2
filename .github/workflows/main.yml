@@ -266,11 +266,17 @@ jobs:
             emu-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
         # Include the oldest Android version still receiving security update
         # and the latest version. 
-        api-level: [ 31, 35 ]
+        config:
+          - api-level: 31
+            target: default
+          - api-level: 36
+            target: default
+          - api-level: 36
+            target: google_apis_ps16k # Kernel with 16 KiB pages
         # Don't abort runners if a single one fails
       fail-fast: false
     runs-on: ${{ matrix.os }}
-    name: Android ${{ matrix.build-type }} ${{ matrix.arch.name }} API-${{ matrix.api-level }}
+    name: Android ${{ matrix.build-type }} ${{ matrix.arch.name }} API-${{ matrix.config.api-level }}
     steps:
     - uses: actions/checkout@v4
     - name: Install Dependencies
@@ -289,12 +295,12 @@ jobs:
         path: |
           ~/.android/avd/*
           ~/.android/adb*
-        key: avd-${{ matrix.os }}-${{ matrix.api-level }}-${{matrix.arch.name}}
+        key: avd-${{ matrix.os }}-${{ matrix.config.api-level }}-${{matrix.arch.name}}-${{matrix.config.target}}
     - name: Create AVD and Snapshot for Caching
       if: steps.avd-cache.outputs.cache-hit != 'true'
       uses: reactivecircus/android-emulator-runner@v2
       with:
-        api-level: ${{ matrix.api-level }}
+        api-level: ${{ matrix.config.api-level }}
         arch: ${{ matrix.arch.name }}
         force-avd-creation: false
         emulator-options: ${{ matrix.arch.emu-options }}
@@ -304,7 +310,7 @@ jobs:
     - name: Configure CMake
       run: |
         export TOOLCHAIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64
-        export CCPREFIX=$TOOLCHAIN/bin/${{ matrix.arch.triple }}${{ matrix.api-level }}
+        export CCPREFIX=$TOOLCHAIN/bin/${{ matrix.arch.triple }}${{ matrix.config.api-level }}
         export CC="$CCPREFIX-clang"
         export CXX="$CCPREFIX-clang++"
         export OBJC="$CCPREFIX-clang"
@@ -330,7 +336,7 @@ jobs:
           -DCMAKE_ASM_COMPILER=$AS \
           -DCMAKE_BUILD_TYPE=${{matrix.build-type}} \
           -DTESTS=ON \
-          -DANDROID_PLATFORM=android-${{ matrix.api-level }} \
+          -DANDROID_PLATFORM=android-${{ matrix.config.api-level }} \
           -G Ninja
     - name: Build
       working-directory: ${{github.workspace}}/build
@@ -339,12 +345,12 @@ jobs:
     - name: Test
       uses: reactivecircus/android-emulator-runner@v2
       with:
-        api-level: ${{ matrix.api-level }}
+        api-level: ${{ matrix.config.api-level }}
         arch: ${{ matrix.arch.name }}
         force-avd-creation: false
         emulator-options: ${{ matrix.arch.emu-options }}
         disable-animations: true
-        target: default
+        target: ${{ matrix.config.target }}
         script: |
           ${{github.workspace}}/.github/scripts/android_test_main.sh ${{github.workspace}}/build ${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/sysroot ${{ matrix.arch.triple }}
 
