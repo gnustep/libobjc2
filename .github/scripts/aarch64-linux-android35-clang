@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+# Wrapper to build Android executables with the upstream clang shipped with Ubuntu.
+
+bin_dir=@BIN_DIR@
+extra_flags="--sysroot=$bin_dir/../sysroot -resource-dir=$bin_dir/../lib/clang/19 -rtlib=compiler-rt"
+if [ "$1" != "-cc1" ]; then
+    "@CC@" --target=aarch64-linux-android35 $extra_flags "$@"
+else
+    # Target is already an argument.
+    "@CC@" $extra_flags "$@"
+fi

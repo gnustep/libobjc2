@@ -256,21 +256,32 @@ jobs:
     strategy:
       matrix:
         # Build each combination of OS and release/debug variants
-        os: [ ubuntu-24.04 ]
+        os: [ ubuntu-24.04, ubuntu-24.04-arm]
         build-type: [ Release, Debug ]
         # TODO(hugo): Add AArch64 configuration when GitHub AArch64 CI runners are available.
-        arch:
+        include:
           - os: ubuntu-24.04
             name: x86_64
             triple: x86_64-linux-android
             emu-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+            api-level: [ 31, 35 ]
+          - os: ubuntu-24.04-arm
+            name: arm64-v8a
+            triple: aarch64-linux-android
+            # Before changing the NDK version of this configuration, please
+            # check the clang version shipped with the NDK (i.e.
+            # $ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/lib/clang/VERSION)
+            # and modify the NDK patching step below.
+            ndk: "28.2.13676358"
+            llvm-version: 19
+            emu-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+            api-level: [ 35 ]
         # Include the oldest Android version still receiving security update
         # and the latest version. 
-        api-level: [ 31, 35 ]
         # Don't abort runners if a single one fails
       fail-fast: false
     runs-on: ${{ matrix.os }}
-    name: Android ${{ matrix.build-type }} ${{ matrix.arch.name }} API-${{ matrix.api-level }}
+    name: Android ${{ matrix.build-type }} ${{ matrix.name }} API-${{ matrix.api-level }}
     steps:
     - uses: actions/checkout@v4
     - name: Install Dependencies
@@ -282,46 +293,99 @@ jobs:
         echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
         sudo udevadm control --reload-rules
         sudo udevadm trigger --name-match=kvm
+    - name: Patch Android SDK
+      if: ${{ matrix.name }} == arm64-v8a
+      run: |
+        sudo apt-get install clang-${{matrix.llvm-version}} lld-${{matrix.llvm-version}} adb sdkmanager openjdk-21-jre --no-install-recommends -y
+        sudo sdkmanager --install "cmdline-tools;latest"
+
+        CMDLINE_TOOLS=/opt/android-sdk/cmdline-tools/latest/bin
+        yes | sudo $CMDLINE_TOOLS/sdkmanager --licenses
+        sudo $CMDLINE_TOOLS/sdkmanager --install "ndk;${{ matrix.ndk }}"
+
+        export ANDROID_NDK_HOME=/opt/android-sdk/ndk/${{matrix.ndk}}
+        export TOOLCHAIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64
+
+        # Save for later use
+        echo "ANDROID_NDK_HOME=$ANDROID_NDK_HOME" >> $GITHUB_ENV
+
+        # Create a C++ version of the wrapper
+        SCRIPT_DIR=${{github.workspace}}/.github/scripts
+        cp $SCRIPT_DIR/aarch64-linux-android35-clang $SCRIPT_DIR/aarch64-linux-android35-clang++
+
+        # Patch the paths in the wrappers
+        bin_dir = $TOOLCHAIN/bin
+        cc=`which clang-${{matrix.llvm-version}}`
+        cxx=`which clang++-${{matrix.llvm-version}}`
+
+        sed -i \
+            -e "s|@BIN_DIR@|$bin_dir|g" \
+            -e "s|@CC@|$cc|g" \
+           "$SCRIPT_DIR/aarch64-linux-android35-clang"
+        sed -i \
+            -e "s|@BIN_DIR@|$bin_dir|g" \
+            -e "s|@CC@|$cxx|g" \
+           "$SCRIPT_DIR/aarch64-linux-android35-clang++"
+
+        chmod +x $SCRIPT_DIR/aarch64-linux-android35-clang
+        chmod +x $SCRIPT_DIR/aarch64-linux-android35-clang++
     - name: AVD cache
+      if: ${{ matrix.name }} != arm64-v8a
       uses: actions/cache@v4
       id: avd-cache
       with:
         path: |
           ~/.android/avd/*
           ~/.android/adb*
-        key: avd-${{ matrix.os }}-${{ matrix.api-level }}-${{matrix.arch.name}}
+        key: avd-${{ matrix.os }}-${{ matrix.api-level }}-${{matrix.name}}
     - name: Create AVD and Snapshot for Caching
-      if: steps.avd-cache.outputs.cache-hit != 'true'
+      if: (steps.avd-cache.outputs.cache-hit != 'true') && (${{ matrix.name }} != arm64-v8a)
       uses: reactivecircus/android-emulator-runner@v2
       with:
         api-level: ${{ matrix.api-level }}
-        arch: ${{ matrix.arch.name }}
+        arch: ${{ matrix.name }}
         force-avd-creation: false
-        emulator-options: ${{ matrix.arch.emu-options }}
+        emulator-options: ${{ matrix.emu-options }}
         disable-animations: true
         script: echo "Generated AVD snapshot for caching."
     # We are using the default NDK from the GitHub Actions runner.
     - name: Configure CMake
       run: |
-        export TOOLCHAIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64
-        export CCPREFIX=$TOOLCHAIN/bin/${{ matrix.arch.triple }}${{ matrix.api-level }}
-        export CC="$CCPREFIX-clang"
-        export CXX="$CCPREFIX-clang++"
-        export OBJC="$CCPREFIX-clang"
-        export OBJCXX="$CCPREFIX-clang++"
-        export AS="$CCPREFIX-clang"
-        export LD="$TOOLCHAIN/bin/ld.lld"
-        export AR="$TOOLCHAIN/bin/llvm-ar"
-        export RANLIB="$TOOLCHAIN/bin/llvm-ranlib"
-        export STRIP="$TOOLCHAIN/bin/llvm-strip"
-        export NM="$TOOLCHAIN/bin/llvm-nm"
-        export OBJDUMP="$TOOLCHAIN/bin/llvm-objdump"
+        if [ "${{matrix.name}}" -eq "arm64-v8a" ]; then
+          SCRIPT_DIR=${{github.workspace}}/.github/scripts
+          export CC="$SCRIPT_DIR/aarch64-linux-android35-clang"
+          export CXX="$SCRIPT_DIR/aarch64-linux-android35-clang++"
+          export OBJC="$SCRIPT_DIR/aarch64-linux-android35-clang"
+          export OBJCXX="$SCRIPT_DIR/aarch64-linux-android35-clang++"
+          export AS="$SCRIPT_DIR/aarch64-linux-android35-clang"
+          export LD=`which ld.lld-${{matrix.llvm-version}}`
+          export AR=`which llvm-ar-${{matrix.llvm-version}}`
+          export RANLIB=`which llvm-ranlib-${{matrix.llvm-version}}`
+          export STRIP=`which llvm-strip-${{matrix.llvm-version}}`
+          export NM=`which llvm-nm-${{matrix.llvm-version}}`
+          export OBJDUMP=`which llvm-objdump-${{matrix.llvm-version}}`
+        else
+          TOOLCHAIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64
+          CCPREFIX=$TOOLCHAIN/bin/${{ matrix.triple }}${{ matrix.api-level }}
+
+          export CC="$CCPREFIX-clang"
+          export CXX="$CCPREFIX-clang++"
+          export OBJC="$CCPREFIX-clang"
+          export OBJCXX="$CCPREFIX-clang++"
+          export AS="$CCPREFIX-clang"
+          export LD="$TOOLCHAIN/bin/ld.lld"
+          export AR="$TOOLCHAIN/bin/llvm-ar"
+          export RANLIB="$TOOLCHAIN/bin/llvm-ranlib"
+          export STRIP="$TOOLCHAIN/bin/llvm-strip"
+          export NM="$TOOLCHAIN/bin/llvm-nm"
+          export OBJDUMP="$TOOLCHAIN/bin/llvm-objdump"
+        fi
         export LDFLAGS="-fuse-ld=lld"
         export LIBS="-lc++_shared"
 
         cmake -B ${{github.workspace}}/build \
           -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
-          -DANDROID_ABI=${{ matrix.arch.name }} \
+          -DANDROID_ABI=${{ matrix.name }} \
           -DANDROID_NDK=$ANDROID_NDK_HOME \
           -DANDROID_STL=c++_shared \
           -DCMAKE_FIND_USE_CMAKE_PATH=false \
@@ -337,16 +401,17 @@ jobs:
       run: |
         NINJA_STATUS="%p [%f:%s/%t] %o/s, %es" ninja -v
     - name: Test
+      if: ${{ matrix.name }} != arm64-v8a
       uses: reactivecircus/android-emulator-runner@v2
       with:
         api-level: ${{ matrix.api-level }}
-        arch: ${{ matrix.arch.name }}
+        arch: ${{ matrix.name }}
         force-avd-creation: false
-        emulator-options: ${{ matrix.arch.emu-options }}
+        emulator-options: ${{ matrix.emu-options }}
         disable-animations: true
         target: default
         script: |
-          ${{github.workspace}}/.github/scripts/android_test_main.sh ${{github.workspace}}/build ${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/sysroot ${{ matrix.arch.triple }}
+          ${{github.workspace}}/.github/scripts/android_test_main.sh ${{github.workspace}}/build ${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/sysroot ${{ matrix.triple }}
 
 
   # Fake check that can be used as a branch-protection rule.
