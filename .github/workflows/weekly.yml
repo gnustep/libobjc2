@@ -1,0 +1,84 @@
+name: Libobjc2 Weekly CI
+
+on:
+  # Automatically run the workflow once a week
+  schedule:
+    - cron: '20 4 * * 1'
+  # Allow running the workflow manually
+  workflow_dispatch:
+
+jobs:
+  ubuntu:
+    strategy:
+      matrix:
+        # Build each combination of OS and release/debug variants
+        build-type: [ Release, Debug ]
+        blocks-runtime: [ "EMBEDDED", "main" ]
+        cxxlib: [ "libc++", "libstdc++" ]
+      fail-fast: false
+    runs-on: ubuntu-latest
+    name: ${{ matrix.os }} ${{ matrix.build-type }} ${{ matrix.cxxlib }} BlocksRuntime-${{ matrix.blocks-runtime }}
+    steps:
+      - name: Install LLVM Snapshot 
+        run: |
+          sudo apt install -y lsb-release wget software-properties-common gnupg
+          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc
+          
+          codename=`lsb_release -cs`
+          echo "deb http://apt.llvm.org/${codename}/ llvm-toolchain-${codename} main" | sudo tee /etc/apt/sources.list.d/llvm-toolchain.list
+          sudo apt update
+
+          # Get the current version in the snapshot archive
+          llvm_version=`grep -Phoe '^Package: clang-\K[0-9]*$' /var/lib/apt/lists/apt.llvm.org*`
+          echo "LLVM_VERSION=${llvm_version}" >> $GITHUB_ENV
+
+          sudo apt install clang-${llvm_version} lld-${llvm_version}
+          if [ "${{ matrix.cxxlib }}" = "libc++" ]; then
+            sudo apt remove -y 'libc++*'
+            sudo apt install libc++-${llvm_version}-dev libc++abi-${llvm_version}-dev 
+            sudo apt install libunwind-${llvm_version}-dev || true
+          fi
+      - uses: actions/checkout@v3
+      - name: Install dependencies 
+        run: |
+          sudo apt install ninja-build
+          if [ "${{ matrix.blocks-runtime }}" != "EMBEDDED" ]; then
+            git clone --depth 1 --branch "${{ matrix.blocks-runtime }}" \
+             https://github.com/apple/swift-corelibs-libdispatch.git ${{github.workspace}}/swift-corelibs-libdispatch
+            cmake -B ${{github.workspace}}/swift-corelibs-libdispatch/build -G Ninja \
+              -DINSTALL_PRIVATE_HEADERS=ON \
+              -DCMAKE_C_COMPILER=clang-${LLVM_VERSION} -DCMAKE_CXX_COMPILER=clang++-${LLVM_VERSION} -S ${{github.workspace}}/swift-corelibs-libdispatch
+            pushd ${{github.workspace}}/swift-corelibs-libdispatch/build
+            ninja
+            sudo ninja install
+            popd
+          fi
+      - name: Configure CMake
+        run: |
+          export LDFLAGS=-L/usr/lib/llvm-${LLVM_VERSION}/lib/
+          if [ "${{ matrix.blocks-runtime }}" != "EMBEDDED" ]; then
+            export EMBEDDED_BLOCKS_RUNTIME=OFF
+          else
+            export EMBEDDED_BLOCKS_RUNTIME=ON
+          fi
+          ls -lahR /usr/lib/llvm-${LLVM_VERSION}/lib/
+          cmake -B ${{github.workspace}}/build \
+            -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -G Ninja \
+            -DTESTS=ON \
+            -DEMBEDDED_BLOCKS_RUNTIME=$EMBEDDED_BLOCKS_RUNTIME \
+            -DCMAKE_C_COMPILER=clang-${LLVM_VERSION} \
+            -DCMAKE_OBJC_COMPILER=clang-${LLVM_VERSION} \
+            -DCMAKE_ASM_COMPILER=clang-${LLVM_VERSION} \
+            -DCMAKE_CXX_COMPILER=clang++-${LLVM_VERSION} \
+            -DCMAKE_OBJCXX_COMPILER=clang++-${LLVM_VERSION} \
+            -DCMAKE_CXX_FLAGS="-stdlib=${{matrix.cxxlib}}"
+        # Build with a nice ninja status line
+      - name: Build
+        working-directory: ${{github.workspace}}/build
+        run: |
+          NINJA_STATUS="%p [%f:%s/%t] %o/s, %es" ninja
+      - name: Test
+        working-directory: ${{github.workspace}}/build
+        run: |
+          ctest --output-on-failure -j 4
+
