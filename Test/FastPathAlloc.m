@@ -96,7 +96,7 @@ typedef struct _NSZone NSZone;
 @implementation ShouldInitSubclassed
 + (instancetype) alloc
 {
-	return [ShouldInit alloc];
+	return (ShouldInitSubclassed *)[ShouldInit alloc];
 }
 @end
 
