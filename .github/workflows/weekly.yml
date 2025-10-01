@@ -6,6 +6,10 @@ on:
     - cron: '20 4 * * 1'
   # Allow running the workflow manually
   workflow_dispatch:
+  # Testing in Local Branch
+  push:
+    branches:
+      - weekly-ci
 
 jobs:
   ubuntu:
