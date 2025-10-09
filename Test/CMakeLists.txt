@@ -16,7 +16,6 @@ set(TESTS
 	AllocatePair.m
 	AssociatedObject.m
 	AssociatedObject2.m
-	BlockImpTest.m
 	BlockTest_arc.m
 	ConstantString.m
 	Category.m
@@ -53,6 +52,10 @@ set(TESTS
 	setSuperclass.m
 	UnexpectedException.m
 )
+
+if (EMBEDDED_BLOCKS_RUNTIME)
+	list(APPEND TESTS BlockImpTest.m)
+endif()
 
 set(ENABLE_ALL_OBJC_ARC_TESTS On)
 
