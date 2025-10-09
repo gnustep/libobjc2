@@ -59,7 +59,9 @@ static void init_runtime(void)
 		init_alias_table();
 		init_early_blocks();
 		init_arc();
+#if defined(EMBEDDED_BLOCKS_RUNTIME)
 		init_trampolines();
+#endif
 		init_builtin_classes();
 		first_run = NO;
 		if (getenv("LIBOBJC_MEMORY_PROFILE"))
