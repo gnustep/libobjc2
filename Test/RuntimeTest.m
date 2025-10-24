@@ -78,7 +78,9 @@ __attribute__((objc_root_class))
 - (void) synchronizedCode;
 + (void) synchronizedCode;
 + (id) shared;
+#if __has_feature(objc_exceptions)
 - (BOOL) basicThrowAndCatchException;
+#endif
 @end
 
 @interface Bar : Foo
@@ -117,6 +119,8 @@ id exceptionObj = @"Exception";
 	@synchronized(self) { }
 	return nil;
 }
+
+#if __has_feature(objc_exceptions)
 - (void) throwException
 {
 	@throw exceptionObj;
@@ -138,6 +142,7 @@ id exceptionObj = @"Exception";
 	}
 	return NO;
 }
+#endif
 @end
 
 @implementation Bar
@@ -282,6 +287,7 @@ void testSynchronized()
   printf("testSynchronized() ran\n");
 }
 
+#if __has_feature(objc_exceptions)
 void testExceptions()
 {
   Foo *foo = [Foo new];
@@ -290,6 +296,7 @@ void testExceptions()
   printf("testExceptions() ran\n");
 
 }
+#endif
 
 void testRegisterAlias()
 {
@@ -336,7 +343,9 @@ int main (int argc, const char * argv[])
   printf("Instance of NSObject: %p\n", class_createInstance([NSObject class], 0));
 
   testSynchronized();
+#if __has_feature(objc_exceptions)
   testExceptions();
+#endif
   testRegisterAlias();
 
   return exitStatus;

@@ -92,7 +92,9 @@ __attribute__((objc_root_class))
 + (void)initialize
 {
 	[self printf: "Format %s %d %f%c", "string", 42, 42.0, '\n'];
+#if __has_feature(objc_exceptions)
 	@throw self;
+#endif
 }
 + nothing { return 0; }
 @end
@@ -180,6 +182,8 @@ int main(void)
 	__objc_msg_forward2 = forward;
 	__objc_msg_forward3 = forward_slot;
 	TestCls = objc_getClass("MsgTest");
+
+#if __has_feature(objc_exceptions)
 	int exceptionThrown = 0;
 	@try {
 		objc_msgSend(TestCls, @selector(foo));
@@ -189,6 +193,8 @@ int main(void)
 		exceptionThrown = 1;
 	}
 	assert(exceptionThrown && "An exception was thrown");
+#endif
+
 	assert((id)0x42 == objc_msgSend(TestCls, @selector(foo)));
 	objc_msgSend(TestCls, @selector(nothing));
 	objc_msgSend(TestCls, @selector(missing));
