@@ -7,10 +7,14 @@
 #include <assert.h>
 
 #ifdef EMBEDDED_BLOCKS_RUNTIME
-#define BLOCK_STORAGE OBJC_PUBLIC
+#	define BLOCK_STORAGE OBJC_PUBLIC
 #else
-#define BLOCK_STORAGE extern
-#endif
+#	if defined(_WIN32)
+#		define BLOCK_STORAGE __attribute__((dllimport))
+#	else
+#		define BLOCK_STORAGE extern
+#	endif // defined(_WIN32)
+#endif // EMBEDDED_BLOCKS_RUNTIME
 
 BLOCK_STORAGE struct objc_class _NSConcreteGlobalBlock;
 BLOCK_STORAGE struct objc_class _NSConcreteStackBlock;
