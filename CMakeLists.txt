@@ -94,7 +94,6 @@ set(libobjc_HDRS
 	objc/objc-arc.h
 	objc/objc-auto.h
 	objc/objc-class.h
-	objc/objc-exception.h
 	objc/objc-runtime.h
 	objc/objc-visibility.h
 	objc/objc.h
@@ -107,12 +106,6 @@ set(libobjc_CXX_SRCS
 	selector_table.cc
 	)
 
-# Windows does not use DWARF EH, except when using the GNU ABI (MinGW)
-if (WIN32 AND NOT MINGW)
-	list(APPEND libobjc_CXX_SRCS eh_win32_msvc.cc)
-elseif (NOT MINGW)
-	list(APPEND libobjc_C_SRCS eh_personality.c)
-endif ()
 
 find_package(tsl-robin-map)
 
@@ -141,6 +134,7 @@ option(LEGACY_COMPAT "Enable legacy compatibility features" OFF)
 option(DEBUG_ARC_COMPAT
 	"Log warnings for classes that don't hit ARC fast paths" OFF)
 option(ENABLE_OBJCXX "Enable support for Objective-C++" ON)
+option(ENABLE_EXCEPTIONS "Enable exceptions" ON)
 option(TESTS "Enable building the tests")
 option(EMBEDDED_BLOCKS_RUNTIME "Include an embedded blocks runtime, rather than relying on libBlocksRuntime to supply it" ON)
 option(STRICT_APPLE_COMPATIBILITY "Use strict Apple compatibility, always defining BOOL as signed char" OFF)
@@ -159,6 +153,17 @@ include_directories("${PROJECT_BINARY_DIR}/objc/")
 if (EMBEDDED_BLOCKS_RUNTIME)
 	list(APPEND libobjc_ASM_SRCS block_trampolines.S)
 	list(APPEND libobjc_C_SRCS block_to_imp.c)
+endif()
+
+if (ENABLE_EXCEPTIONS)
+	# Windows does not use DWARF EH, except when using the GNU ABI (MinGW)
+	if (WIN32 AND NOT MINGW)
+		list(APPEND libobjc_CXX_SRCS eh_win32_msvc.cc)
+	elseif (NOT MINGW)
+		list(APPEND libobjc_C_SRCS eh_personality.c)
+	endif ()
+
+	list(APPEND libobjc_HDRS objc/objc-exception.h)
 endif()
 
 if (OLDABI_COMPAT)
@@ -220,23 +225,25 @@ endif()
 
 
 
-if (WIN32 AND NOT MINGW)
-	message(STATUS "Using MSVC-compatible exception model")
-elseif (MINGW)
-	message(STATUS "Using MinGW-compatible exception model")
-	list(APPEND libobjc_CXX_SRCS objcxx_eh.cc objcxx_eh_mingw.cc)
-else ()
-	set(EH_PERSONALITY_FLAGS "")
-	if (CMAKE_CXX_COMPILER_TARGET)
-		list(APPEND EH_PERSONALITY_FLAGS "${CMAKE_CXX_COMPILE_OPTIONS_TARGET}${CMAKE_CXX_COMPILER_TARGET}")
+if (ENABLE_EXCEPTIONS)
+	if (WIN32 AND NOT MINGW)
+		message(STATUS "Using MSVC-compatible exception model")
+	elseif (MINGW)
+		message(STATUS "Using MinGW-compatible exception model")
+		list(APPEND libobjc_CXX_SRCS objcxx_eh.cc objcxx_eh_mingw.cc)
+	else ()
+		set(EH_PERSONALITY_FLAGS "")
+		if (CMAKE_CXX_COMPILER_TARGET)
+			list(APPEND EH_PERSONALITY_FLAGS "${CMAKE_CXX_COMPILE_OPTIONS_TARGET}${CMAKE_CXX_COMPILER_TARGET}")
+		endif ()
+		add_custom_command(OUTPUT eh_trampoline.S
+			COMMAND ${CMAKE_CXX_COMPILER} ARGS ${EH_PERSONALITY_FLAGS} -fPIC -S "${CMAKE_SOURCE_DIR}/eh_trampoline.cc" -o - -fexceptions -fno-inline | sed "s/__gxx_personality_v0/test_eh_personality/g" > "${CMAKE_BINARY_DIR}/eh_trampoline.S"
+			MAIN_DEPENDENCY eh_trampoline.cc)
+		list(APPEND libobjc_ASM_SRCS eh_trampoline.S)
+		list(APPEND libobjc_CXX_SRCS objcxx_eh.cc)
+		# Find libm for linking, as some versions of libc++ don't link against it
+		find_library(M_LIBRARY m)
 	endif ()
-	add_custom_command(OUTPUT eh_trampoline.S
-		COMMAND ${CMAKE_CXX_COMPILER} ARGS ${EH_PERSONALITY_FLAGS} -fPIC -S "${CMAKE_SOURCE_DIR}/eh_trampoline.cc" -o - -fexceptions -fno-inline | sed "s/__gxx_personality_v0/test_eh_personality/g" > "${CMAKE_BINARY_DIR}/eh_trampoline.S"
-		MAIN_DEPENDENCY eh_trampoline.cc)
-	list(APPEND libobjc_ASM_SRCS eh_trampoline.S)
-	list(APPEND libobjc_CXX_SRCS objcxx_eh.cc)
-	# Find libm for linking, as some versions of libc++ don't link against it
-	find_library(M_LIBRARY m)
 endif ()
 
 if (EMBEDDED_BLOCKS_RUNTIME)
@@ -256,7 +263,9 @@ else ()
 endif ()
 
 add_library(objc SHARED ${libobjc_C_SRCS} ${libobjc_ASM_SRCS} ${libobjc_OBJC_SRCS} ${libobjc_OBJCXX_SRCS} ${libobjc_ASM_OBJS})
-target_compile_options(objc PRIVATE "$<$<OR:$<COMPILE_LANGUAGE:OBJC>,$<COMPILE_LANGUAGE:OBJCXX>>:-Wno-gnu-folding-constant;-Wno-deprecated-objc-isa-usage;-Wno-objc-root-class;-fobjc-runtime=gnustep-2.0>$<$<COMPILE_LANGUAGE:C>:-Xclang;-fexceptions;-Wno-gnu-folding-constant>")
+
+#target_compile_options(objc PRIVATE "$<$<OR:$<COMPILE_LANGUAGE:OBJC>,$<COMPILE_LANGUAGE:OBJCXX>>:-Wno-gnu-folding-constant;-Wno-deprecated-objc-isa-usage;-Wno-objc-root-class;-fobjc-runtime=gnustep-2.0>$<$<COMPILE_LANGUAGE:C>:-Xclang;-fexceptions;-Wno-gnu-folding-constant>")
+target_compile_options(objc PRIVATE "$<$<OR:$<COMPILE_LANGUAGE:OBJC>,$<COMPILE_LANGUAGE:OBJCXX>>:-Wno-gnu-folding-constant;-fno-exceptions;-fno-objc-exceptions;-Wno-deprecated-objc-isa-usage;-Wno-objc-root-class;-fobjc-runtime=gnustep-2.0>$<$<COMPILE_LANGUAGE:C>:-Xclang;-Wno-gnu-folding-constant>")
 
 list(APPEND libobjc_CXX_SRCS ${libobjcxx_CXX_SRCS})
 target_sources(objc PRIVATE ${libobjc_CXX_SRCS})
@@ -466,13 +475,15 @@ if (TESTS)
 	add_subdirectory(Test)
 endif (TESTS)
 
-CHECK_CXX_SOURCE_COMPILES("
-	#include <stdlib.h>
-	extern \"C\" {
-	__attribute__((weak))
-	void *__cxa_allocate_exception(size_t thrown_size) noexcept;
-	}
-	#include <exception>
-	int main() { return 0; }" CXA_ALLOCATE_EXCEPTION_NOEXCEPT_COMPILES)
+if (ENABLE_EXCEPTIONS)
+	CHECK_CXX_SOURCE_COMPILES("
+		#include <stdlib.h>
+		extern \"C\" {
+		__attribute__((weak))
+		void *__cxa_allocate_exception(size_t thrown_size) noexcept;
+		}
+		#include <exception>
+		int main() { return 0; }" CXA_ALLOCATE_EXCEPTION_NOEXCEPT_COMPILES)
 
-add_compile_definitions($<IF:$<BOOL:${CXA_ALLOCATE_EXCEPTION_NOEXCEPT_COMPILES}>,CXA_ALLOCATE_EXCEPTION_SPECIFIER=noexcept,CXA_ALLOCATE_EXCEPTION_SPECIFIER>)
+	add_compile_definitions($<IF:$<BOOL:${CXA_ALLOCATE_EXCEPTION_NOEXCEPT_COMPILES}>,CXA_ALLOCATE_EXCEPTION_SPECIFIER=noexcept,CXA_ALLOCATE_EXCEPTION_SPECIFIER>)
+endif()

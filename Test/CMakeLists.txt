@@ -1,4 +1,3 @@
-
 # Clear the LD_LIBRARY_PATH if GNUstep set it so that we don't accidentally use
 # the installed version
 
@@ -19,13 +18,11 @@ set(TESTS
 	BlockTest_arc.m
 	ConstantString.m
 	Category.m
-	ExceptionTest.m
 	FastARC.m
 	FastARCPool.m
 	FastRefCount.m
 	Forward.m
 	ManyManySelectors.m
-	NestedExceptions.m
 	PropertyAttributeTest.m
 	ProtocolExtendedProperties.m
 	PropertyIntrospectionTest.m
@@ -43,15 +40,35 @@ set(TESTS
 	IVarSuperclassOverlap.m
 	objc_msgSend.m
 	msgInterpose.m
-	NilException.m
 	MethodArguments.m
 	zeroSizedIVar.m
 	exchange.m
 	hash_table_delete.c
 	hash_test.c
 	setSuperclass.m
-	UnexpectedException.m
 )
+
+if (ENABLE_EXCEPTIONS)
+	set(ADDITIONAL_CFLAGS "-fobjc-exceptions")
+
+	list(APPEND TESTS
+		ExceptionTest.m
+		NestedExceptions.m
+		NilException.m
+		UnexpectedException.m
+	)
+
+	# Don't run the tests that are specific to Itanium-style exceptions on
+	# Windows.
+	if (NOT WIN32)
+		list(APPEND TESTS
+			BoxedForeignException.m
+			ForeignException.m
+		)
+	endif()
+else()
+	set(ADDITIONAL_CFLAGS "-fno-objc-exceptions")
+endif()
 
 if (EMBEDDED_BLOCKS_RUNTIME)
 	list(APPEND TESTS BlockImpTest.m)
@@ -73,13 +90,6 @@ if (WIN32)
 			objc_msgSend_WoA64.mm
 		)
 	endif()
-else ()
-	# Don't run the tests that are specific to Itanium-style exceptions on
-	# Windows.
-	list(APPEND TESTS
-	BoxedForeignException.m
-	ForeignException.m
-	)
 endif ()
 
 if (ENABLE_ALL_OBJC_ARC_TESTS)
@@ -102,14 +112,14 @@ remove_definitions(-D__OBJC_RUNTIME_INTERNAL__=1)
 add_library(test_runtime_legacy OBJECT Test.m)
 set_target_properties(test_runtime_legacy PROPERTIES
 	INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR};${PROJECT_BINARY_DIR}/objc/"
-	COMPILE_FLAGS "-Xclang -fblocks -fobjc-runtime=gnustep-1.7"
+	COMPILE_FLAGS "-Xclang -fblocks -fobjc-runtime=gnustep-1.7 ${ADDITIONAL_CFLAGS}"
 	LINKER_LANGUAGE C
 )
 
 add_library(test_runtime OBJECT Test.m)
 set_target_properties(test_runtime PROPERTIES
 	INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR};${PROJECT_BINARY_DIR}/objc/"
-	COMPILE_FLAGS "-Xclang -fblocks -fobjc-runtime=gnustep-2.0"
+	COMPILE_FLAGS "-Xclang -fblocks -fobjc-runtime=gnustep-2.0 ${ADDITIONAL_CFLAGS}"
 	LINKER_LANGUAGE C
 )
 
@@ -142,16 +152,16 @@ function(addtest_flags TEST_NAME FLAGS TEST_SOURCE)
 endfunction(addtest_flags)
 
 function(addtest_variants TEST TEST_SOURCE LEGACY)
-	addtest_flags(${TEST} "-O0 -fobjc-runtime=gnustep-2.2 -UNDEBUG -DGS_RUNTIME_V2" "${TEST_SOURCE}")
+	addtest_flags(${TEST} "-O0 -fobjc-runtime=gnustep-2.2 ${ADDITIONAL_CFLAGS} -UNDEBUG -DGS_RUNTIME_V2" "${TEST_SOURCE}")
 	target_sources(${TEST} PRIVATE $<TARGET_OBJECTS:test_runtime>)
-	addtest_flags("${TEST}_optimised" "-O3 -fobjc-runtime=gnustep-2.2 -UNDEBUG -DGS_RUNTIME_V2" "${TEST_SOURCE}")
+	addtest_flags("${TEST}_optimised" "-O3 -fobjc-runtime=gnustep-2.2 ${ADDITIONAL_CFLAGS} -UNDEBUG -DGS_RUNTIME_V2" "${TEST_SOURCE}")
 	target_sources("${TEST}_optimised" PRIVATE $<TARGET_OBJECTS:test_runtime>)
 
 	# -fobjc-arc is not supported on platforms using the legacy runtime
 	if (${LEGACY} AND ${OLDABI_COMPAT} AND NOT ${TEST} MATCHES ".*_arc")
-		addtest_flags("${TEST}_legacy" "-O0 -fobjc-runtime=gnustep-1.7 -UNDEBUG" "${TEST_SOURCE}")
+		addtest_flags("${TEST}_legacy" "-O0 -fobjc-runtime=gnustep-1.7 ${ADDITIONAL_CFLAGS} -UNDEBUG" "${TEST_SOURCE}")
 		target_sources("${TEST}_legacy" PRIVATE $<TARGET_OBJECTS:test_runtime_legacy>)
-		addtest_flags("${TEST}_legacy_optimised" "-O3 -fobjc-runtime=gnustep-1.7 -UNDEBUG" "${TEST_SOURCE}")
+		addtest_flags("${TEST}_legacy_optimised" "-O3 -fobjc-runtime=gnustep-1.7 ${ADDITIONAL_CFLAGS} -UNDEBUG" "${TEST_SOURCE}")
 		target_sources("${TEST}_legacy_optimised" PRIVATE $<TARGET_OBJECTS:test_runtime_legacy>)
 	endif()
 endfunction(addtest_variants)
@@ -166,18 +176,20 @@ foreach(TEST_SOURCE ${NEW_TESTS})
 	addtest_variants(${TEST} ${TEST_SOURCE} false)
 endforeach()
 
-# Tests that are more than a single file.
-addtest_variants("CXXExceptions" "CXXException.m;CXXException.cc" true)
-addtest_variants("ForwardDeclareProtocolAccess" "ForwardDeclareProtocolAccess.m;ForwardDeclareProtocol.m" true)
-if (ENABLE_OBJCXX)
-	addtest_variants(ObjCXXEHInterop "ObjCXXEHInterop.mm;ObjCXXEHInterop.m" true)
-	addtest_variants(ObjCXXEHInteropTwice "ObjCXXEHInteropTwice.mm" true)
-	if (WIN32 AND CMAKE_CXX_COMPILER_ID STREQUAL Clang)
-		if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 16.0.0)
+if (ENABLE_EXCEPTIONS)
+	# Tests that are more than a single file.
+	addtest_variants("CXXExceptions" "CXXException.m;CXXException.cc" true)
+	addtest_variants("ForwardDeclareProtocolAccess" "ForwardDeclareProtocolAccess.m;ForwardDeclareProtocol.m" true)
+	if (ENABLE_OBJCXX)
+		addtest_variants(ObjCXXEHInterop "ObjCXXEHInterop.mm;ObjCXXEHInterop.m" true)
+		addtest_variants(ObjCXXEHInteropTwice "ObjCXXEHInteropTwice.mm" true)
+		if (WIN32 AND CMAKE_CXX_COMPILER_ID STREQUAL Clang)
+			if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 16.0.0)
+				addtest_variants(ObjCXXEHInterop_arc "ObjCXXEHInterop_arc.mm;ObjCXXEHInterop_arc.m" true)
+			endif()
+		else()
 			addtest_variants(ObjCXXEHInterop_arc "ObjCXXEHInterop_arc.mm;ObjCXXEHInterop_arc.m" true)
 		endif()
-	else()
-		addtest_variants(ObjCXXEHInterop_arc "ObjCXXEHInterop_arc.mm;ObjCXXEHInterop_arc.m" true)
 	endif()
 endif()
 
