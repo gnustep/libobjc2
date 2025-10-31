@@ -168,6 +168,7 @@ static void setReference(struct reference_list *list,
 		lock = lock_for_pointer(r);
 		lock_spinlock(lock);
 	}
+#if __has_feature(objc_exceptions)
 	@try
 	{
 		if (OBJC_ASSOCIATION_ASSIGN != r->policy)
@@ -180,6 +181,14 @@ static void setReference(struct reference_list *list,
 		r->policy = policy;
 		r->object = obj;
 	}
+#else
+	if (OBJC_ASSOCIATION_ASSIGN != r->policy)
+	{
+		objc_release(r->object);
+	}
+	r->policy = policy;
+	r->object = obj;
+#endif // __has_feature(objc_exceptions)
 	if (needLock)
 	{
 		unlock_spinlock(lock);
