@@ -677,7 +677,7 @@ LEGACY void update_dispatch_table_for_class(Class cls)
 	objc_update_dtable_for_class(cls);
 }
 
-void objc_resolve_class(Class);
+BOOL objc_resolve_class(Class);
 
 __attribute__((unused)) static void objc_release_object_lock(id *x)
 {
