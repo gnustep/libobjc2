@@ -22,7 +22,7 @@
 #define CHECK_ARG(arg) if (0 == arg) { return 0; }
 
 static inline void safe_remove_from_subclass_list(Class cls);
-PRIVATE void objc_resolve_class(Class);
+PRIVATE BOOL objc_resolve_class(Class);
 void objc_send_initialize(id object);
 
 /**
