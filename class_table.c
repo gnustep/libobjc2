@@ -12,6 +12,8 @@
 #include <stdlib.h>
 #include <assert.h>
 
+typedef void (*loadIMP)(Class, SEL);
+
 void objc_init_protocols(struct objc_protocol_list *protos);
 void objc_compute_ivar_offsets(Class class);
 
@@ -54,7 +56,7 @@ PRIVATE void objc_send_load_message(Class class)
 			{
 				if (load_messages_table_get(load_table, m->imp) == 0)
 				{
-					m->imp((id)class, loadSel);
+					((loadIMP)m->imp)(class, loadSel);
 					load_messages_insert(load_table, m->imp);
 				}
 			}
