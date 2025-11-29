@@ -85,18 +85,17 @@ PRIVATE void objc_compute_ivar_offsets(Class class)
 				// that contains them.  If we are in a bitfield, then we need
 				// to make sure that we don't add any displacement from the
 				// previous value.
-				if (*ivar->offset < last_offset + last_size)
+				if ((i != 0) && (*ivar->offset == last_offset))
 				{
-					*ivar->offset = last_computed_offset + (*ivar->offset - last_offset);
-					ivar_size = 0;
+					*ivar->offset = last_computed_offset;
 					continue;
 				}
 				last_offset = *ivar->offset;
 				*ivar->offset = next_ivar;
-				last_computed_offset = *ivar->offset;
 				next_ivar += ivar_size;
 				last_size = ivar->size;
 				size_t align = ivarGetAlign(ivar);
+				// If the alignment is insufficient, round it up.
 				if ((*ivar->offset + refcount_size) % align != 0)
 				{
 					long padding = align - ((*ivar->offset + refcount_size) % align); 
@@ -104,6 +103,7 @@ PRIVATE void objc_compute_ivar_offsets(Class class)
 					class->instance_size += padding;
 					next_ivar += padding;
 				}
+				last_computed_offset = *ivar->offset;
 				assert((*ivar->offset + sizeof(uintptr_t)) % ivarGetAlign(ivar) == 0);
 				class->instance_size += ivar_size;
 			}

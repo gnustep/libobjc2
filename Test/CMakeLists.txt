@@ -13,6 +13,7 @@ endif ()
 set(TESTS
 	alias.m
 	alignTest.m
+	bitfield.m
 	AllocatePair.m
 	AssociatedObject.m
 	AssociatedObject2.m
