@@ -525,7 +525,7 @@ int objc_getClassList(Class *buffer, int bufferLen)
 Class *objc_copyClassList(unsigned int *outCount)
 {
 	int count = class_table->table_used;
-	Class *buffer = calloc(sizeof(Class), count);
+	Class *buffer = calloc(count, sizeof(Class));
 	if (NULL != outCount)
 	{
 		*outCount = count;
