@@ -737,7 +737,7 @@ PRIVATE extern "C" void init_arc(void)
   * exists.
   */
 __attribute__((always_inline))
-static BOOL loadWeakPointer(id *addr, id *obj, WeakRef **ref)
+static inline BOOL loadWeakPointer(id *addr, id *obj, WeakRef **ref)
 {
 	id oldObj = *addr;
 	if (oldObj == nil)
