@@ -779,40 +779,37 @@ static BOOL setObjectHasWeakRefs(id obj)
 	if (obj && cls && objc_test_class_flag(cls, objc_class_flag_fast_arc))
 	{
 		uintptr_t *refCount = ((uintptr_t*)obj) - 1;
-		if (obj)
-		{
-			uintptr_t refCountVal = __sync_fetch_and_add(refCount, 0);
-			uintptr_t newVal = refCountVal;
-			do {
-				refCountVal = newVal;
-				size_t realCount = refCountVal & refcount_mask;
-				// If this object has already been deallocated (or is in the
-				// process of being deallocated) then don't bother storing it.
-				if (realCount == refcount_mask)
-				{
-					obj = nil;
-					cls = Nil;
-					break;
-				}
-				// The weak ref flag is monotonic (it is set, never cleared) so
-				// don't bother trying to re-set it.
-				if ((refCountVal & weak_mask) == weak_mask)
-				{
-					break;
-				}
-				// Set the flag in the reference count to indicate that a weak
-				// reference has been taken.
-				//
-				// We currently hold the weak ref lock, so another thread
-				// racing to deallocate this object will have to wait to do so
-				// if we manage to do the reference count update first.  This
-				// shouldn't be possible, because `obj` should be a strong
-				// reference and so it shouldn't be possible to deallocate it
-				// while we're assigning it.
-				uintptr_t updated = ((uintptr_t)realCount | weak_mask);
-				newVal = __sync_val_compare_and_swap(refCount, refCountVal, updated);
-			} while (newVal != refCountVal);
-		}
+		uintptr_t refCountVal = __sync_fetch_and_add(refCount, 0);
+		uintptr_t newVal = refCountVal;
+		do {
+			refCountVal = newVal;
+			size_t realCount = refCountVal & refcount_mask;
+			// If this object has already been deallocated (or is in the
+			// process of being deallocated) then don't bother storing it.
+			if (realCount == refcount_mask)
+			{
+				obj = nil;
+				cls = Nil;
+				break;
+			}
+			// The weak ref flag is monotonic (it is set, never cleared) so
+			// don't bother trying to re-set it.
+			if ((refCountVal & weak_mask) == weak_mask)
+			{
+				break;
+			}
+			// Set the flag in the reference count to indicate that a weak
+			// reference has been taken.
+			//
+			// We currently hold the weak ref lock, so another thread
+			// racing to deallocate this object will have to wait to do so
+			// if we manage to do the reference count update first.  This
+			// shouldn't be possible, because `obj` should be a strong
+			// reference and so it shouldn't be possible to deallocate it
+			// while we're assigning it.
+			uintptr_t updated = ((uintptr_t)realCount | weak_mask);
+			newVal = __sync_val_compare_and_swap(refCount, refCountVal, updated);
+		} while (newVal != refCountVal);
 	}
 	return isGlobalObject;
 }
