@@ -134,7 +134,7 @@ struct arc_tls
 template<typename T>
 static inline T* new_zeroed()
 {
-	return static_cast<T*>(calloc(sizeof(T), 1));
+	return static_cast<T*>(calloc(1, sizeof(T)));
 }
 
 static inline struct arc_tls* getARCThreadData(void)
