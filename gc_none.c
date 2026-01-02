@@ -16,7 +16,7 @@ static id allocate_class(Class cls, size_t extraBytes)
 		_aligned_malloc(size, 32);
 	memset(addr, 0, size);
 #else
-		calloc(size, 1);
+		calloc(1, size);
 #endif
 	return (id)(addr + 1);
 }
@@ -32,7 +32,7 @@ static void free_object(id obj)
 
 static void *alloc(size_t size)
 {
-	return calloc(size, 1);
+	return calloc(1, size);
 }
 
 void objc_registerThreadWithCollector(void) {}
