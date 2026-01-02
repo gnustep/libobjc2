@@ -285,7 +285,7 @@ objc_property_t* class_copyPropertyList(Class cls, unsigned int *outCount)
 	{
 		return NULL;
 	}
-	objc_property_t *list = calloc(sizeof(objc_property_t), count);
+	objc_property_t *list = calloc(count, sizeof(objc_property_t));
 	unsigned int out = 0;
 	for (struct objc_property_list *l=properties ; NULL!=l ; l=l->next)
 	{
@@ -423,7 +423,7 @@ objc_property_attribute_t *property_copyAttributeList(objc_property_t property,
 		}
 		count++;
 	}
-	objc_property_attribute_t *propAttrs = calloc(sizeof(objc_property_attribute_t), count);
+	objc_property_attribute_t *propAttrs = calloc(count, sizeof(objc_property_attribute_t));
 	memcpy(propAttrs, attrs, count * sizeof(objc_property_attribute_t));
 	if (NULL != outCount)
 	{
