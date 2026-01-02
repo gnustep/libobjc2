@@ -88,7 +88,7 @@ follows.
 	unsigned total = sel_copyTypes_np("alloc", types, total);
 	if (total > 16)
 	{
-		types = calloc(sizeof(char*), total);
+		types = calloc(total, sizeof(char*));
 		sel_copyTypes_np("alloc", types, total);
 	}
 	// Do stuff with the types.
