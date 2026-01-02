@@ -316,7 +316,7 @@ struct objc_method_description *protocol_copyMethodDescriptionList(Protocol *p,
 
 	*count = list->count;
 	struct objc_method_description *out =
-		calloc(sizeof(struct objc_method_description), list->count);
+		calloc(list->count, sizeof(struct objc_method_description));
 	for (int i=0 ; i < (list->count) ; i++)
 	{
 		out[i].name = protocol_method_at_index(list, i)->selector;
@@ -335,7 +335,7 @@ Protocol*__unsafe_unretained* protocol_copyProtocolList(Protocol *p, unsigned in
 	}
 
 	*count  = p->protocol_list->count;
-	Protocol **out = calloc(sizeof(Protocol*), p->protocol_list->count);
+	Protocol **out = calloc(p->protocol_list->count, sizeof(Protocol*));
 	for (int i=0 ; i<p->protocol_list->count ; i++)
 	{
 		out[i] = (Protocol*)p->protocol_list->list[i];
@@ -370,7 +370,7 @@ objc_property_t *protocol_copyPropertyList2(Protocol *p, unsigned int *outCount,
 	{
 		return NULL;
 	}
-	objc_property_t *list = calloc(sizeof(objc_property_t), count);
+	objc_property_t *list = calloc(count, sizeof(objc_property_t));
 	unsigned int out = 0;
 	for (struct objc_property_list *l=properties ; l!=NULL ; l=l->next)
 	{
@@ -506,7 +506,7 @@ Protocol*__unsafe_unretained* objc_copyProtocolList(unsigned int *outCount)
 {
 	LOCK_FOR_SCOPE(&protocol_table_lock);
 	unsigned int total = known_protocol_table->table_used;
-	Protocol **p = calloc(sizeof(Protocol*), known_protocol_table->table_used);
+	Protocol **p = calloc(known_protocol_table->table_used, sizeof(Protocol*));
 
 	struct protocol_table_enumerator *e = NULL;
 	Protocol *next;
