@@ -16,7 +16,7 @@ BOOL finally_called = NO;
 
 int throw(void)
 {
-	struct foreign_exception *foreign_exception = calloc(sizeof(struct foreign_exception), 1);
+	struct foreign_exception *foreign_exception = calloc(1, sizeof(struct foreign_exception));
 	foreign_exception->header.exception_class = 42;
 	foreign_exception->x = 12;
 	_Unwind_RaiseException(&foreign_exception->header);
