@@ -146,7 +146,7 @@ static struct objc_method_list *upgradeMethodList(struct objc_method_list_gcc *o
 	{
 		return NULL;
 	}
-	struct objc_method_list *l = calloc(sizeof(struct objc_method_list) + old->count * sizeof(struct objc_method), 1);
+	struct objc_method_list *l = calloc(1, sizeof(struct objc_method_list) + old->count * sizeof(struct objc_method));
 	l->count = old->count;
 	if (old->next)
 	{
@@ -343,7 +343,7 @@ PRIVATE struct objc_class_gsv1* objc_legacy_class_for_class(Class cls)
 
 PRIVATE Class objc_upgrade_class(struct objc_class_gsv1 *oldClass)
 {
-	Class cls = calloc(sizeof(struct objc_class), 1);
+	Class cls = calloc(1, sizeof(struct objc_class));
 	cls->isa = oldClass->isa;
 	// super_class is left nil and we upgrade it later.
 	cls->name = oldClass->name;
