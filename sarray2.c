@@ -183,7 +183,7 @@ PRIVATE void SparseArrayInsert(SparseArray * sarray, uint32_t index, void *value
 
 PRIVATE SparseArray *SparseArrayCopy(SparseArray * sarray)
 {
-	SparseArray *copy = calloc(sizeof(SparseArray), 1);
+	SparseArray *copy = calloc(1, sizeof(SparseArray));
 	memcpy(copy, sarray, sizeof(SparseArray));
 	copy->refCount = 1;
 	// If the sarray has children, increase their refcounts and link them
