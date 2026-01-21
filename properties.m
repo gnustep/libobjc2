@@ -12,7 +12,7 @@
 #include "gc_ops.h"
 #include "lock.h"
 
-PRIVATE int spinlocks[spinlock_count];
+PRIVATE int prop_spinlocks[spinlock_count];
 
 /**
  * Public function for getting a property.  
@@ -26,7 +26,7 @@ id objc_getProperty(id obj, SEL _cmd, ptrdiff_t offset, BOOL isAtomic)
 	id ret;
 	if (isAtomic)
 	{
-		volatile int *lock = lock_for_pointer(addr);
+		volatile int *lock = prop_lock_for_pointer(addr);
 		lock_spinlock(lock);
 		ret = *(id*)addr;
 		ret = objc_retain(ret);
@@ -59,7 +59,7 @@ void objc_setProperty(id obj, SEL _cmd, ptrdiff_t offset, id arg, BOOL isAtomic,
 	id old;
 	if (isAtomic)
 	{
-		volatile int *lock = lock_for_pointer(addr);
+		volatile int *lock = prop_lock_for_pointer(addr);
 		lock_spinlock(lock);
 		old = *(id*)addr;
 		*(id*)addr = arg;
@@ -79,7 +79,7 @@ void objc_setProperty_atomic(id obj, SEL _cmd, id arg, ptrdiff_t offset)
 	char *addr = (char*)obj;
 	addr += offset;
 	arg = objc_retain(arg);
-	volatile int *lock = lock_for_pointer(addr);
+	volatile int *lock = prop_lock_for_pointer(addr);
 	lock_spinlock(lock);
 	id old = *(id*)addr;
 	*(id*)addr = arg;
@@ -94,7 +94,7 @@ void objc_setProperty_atomic_copy(id obj, SEL _cmd, id arg, ptrdiff_t offset)
 	addr += offset;
 
 	arg = [arg copy];
-	volatile int *lock = lock_for_pointer(addr);
+	volatile int *lock = prop_lock_for_pointer(addr);
 	lock_spinlock(lock);
 	id old = *(id*)addr;
 	*(id*)addr = arg;
@@ -127,20 +127,25 @@ OBJC_PUBLIC
 void objc_copyCppObjectAtomic(void *dest, const void *src,
                               void (*copyHelper) (void *dest, const void *source))
 {
-	volatile int *lock = lock_for_pointer(src < dest ? src : dest);
-	volatile int *lock2 = lock_for_pointer(src < dest ? dest : src);
+	volatile int *lock = prop_lock_for_pointer(src < dest ? src : dest);
+	volatile int *lock2 = prop_lock_for_pointer(src < dest ? dest : src);
 	lock_spinlock(lock);
-	lock_spinlock(lock2);
+	if (lock != lock2) { 
+		// this might look odd, but anytime we take two spinlocks simutaniously, there
+		// is a non-zero chance that the pointers might hash to the same spinlock.
+		// in which cause, locking one locks both, and locking both would deadlock us.
+		lock_spinlock(lock2);
+	}
 	copyHelper(dest, src);
 	unlock_spinlock(lock);
-	unlock_spinlock(lock2);
+	if (lock != lock2) { unlock_spinlock(lock2); }
 }
 
 OBJC_PUBLIC
 void objc_getCppObjectAtomic(void *dest, const void *src,
                              void (*copyHelper) (void *dest, const void *source))
 {
-	volatile int *lock = lock_for_pointer(src);
+	volatile int *lock = prop_lock_for_pointer(src);
 	lock_spinlock(lock);
 	copyHelper(dest, src);
 	unlock_spinlock(lock);
@@ -150,7 +155,7 @@ OBJC_PUBLIC
 void objc_setCppObjectAtomic(void *dest, const void *src,
                              void (*copyHelper) (void *dest, const void *source))
 {
-	volatile int *lock = lock_for_pointer(dest);
+	volatile int *lock = prop_lock_for_pointer(dest);
 	lock_spinlock(lock);
 	copyHelper(dest, src);
 	unlock_spinlock(lock);
@@ -172,13 +177,13 @@ void objc_copyPropertyStruct(void *dest,
 {
 	if (atomic)
 	{
-		volatile int *lock = lock_for_pointer(src < dest ? src : dest);
-		volatile int *lock2 = lock_for_pointer(src < dest ? dest : src);
+		volatile int *lock = prop_lock_for_pointer(src < dest ? src : dest);
+		volatile int *lock2 = prop_lock_for_pointer(src < dest ? dest : src);
 		lock_spinlock(lock);
-		lock_spinlock(lock2);
+		if (lock != lock2) { lock_spinlock(lock2); }
 		memcpy(dest, src, size);
 		unlock_spinlock(lock);
-		unlock_spinlock(lock2);
+		if (lock != lock2) { unlock_spinlock(lock2); }
 	}
 	else
 	{
@@ -199,7 +204,7 @@ void objc_getPropertyStruct(void *dest,
 {
 	if (atomic)
 	{
-		volatile int *lock = lock_for_pointer(src);
+		volatile int *lock = prop_lock_for_pointer(src);
 		lock_spinlock(lock);
 		memcpy(dest, src, size);
 		unlock_spinlock(lock);
@@ -223,7 +228,7 @@ void objc_setPropertyStruct(void *dest,
 {
 	if (atomic)
 	{
-		volatile int *lock = lock_for_pointer(dest);
+		volatile int *lock = prop_lock_for_pointer(dest);
 		lock_spinlock(lock);
 		memcpy(dest, src, size);
 		unlock_spinlock(lock);
