@@ -564,9 +564,9 @@ id objc_getClass(const char *name)
 	return class;
 }
 
-id objc_lookUpClass(const char *name)
+Class objc_lookUpClass(const char *name)
 {
-	return (id)class_table_get_safe(name);
+	return class_table_get_safe(name);
 }
 
 
