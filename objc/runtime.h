@@ -414,7 +414,7 @@ OBJC_PUBLIC
 void class_setVersion(Class theClass, int version);
 
 OBJC_PUBLIC OBJC_GNUSTEP_RUNTIME_UNSUPPORTED("Weak instance variables")
-const char *class_getWeakIvarLayout(Class cls);
+const uint8_t *class_getWeakIvarLayout(Class cls);
 
 /**
  * Returns whether the class is a metaclass.  This can be used in conjunction
@@ -452,13 +452,13 @@ BOOL class_respondsToSelector(Class cls, SEL sel);
  * can be applied to other classes.
  */
 OBJC_PUBLIC
-const char *class_getIvarLayout(Class cls);
+const uint8_t *class_getIvarLayout(Class cls);
 /**
  * Sets the class's instance variable layout.  The layout argument must be a
  * value returned by class_getIvarLayout().
  */
 OBJC_PUBLIC
-void class_setIvarLayout(Class cls, const char *layout);
+void class_setIvarLayout(Class cls, const uint8_t *layout);
 
 /**
  * Sets the superclass of the specified class.  This function is deprecated,
@@ -469,7 +469,7 @@ OBJC_PUBLIC __attribute__((deprecated))
 Class class_setSuperclass(Class cls, Class newSuper);
 
 OBJC_PUBLIC OBJC_GNUSTEP_RUNTIME_UNSUPPORTED("Weak instance variables")
-void class_setWeakIvarLayout(Class cls, const char *layout);
+void class_setWeakIvarLayout(Class cls, const uint8_t *layout);
 
 /**
  * Returns the name of an instance variable.
