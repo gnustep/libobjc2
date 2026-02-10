@@ -628,14 +628,14 @@ id objc_getMetaClass(const char *name);
  * that all required libraries are loaded.
  */
 OBJC_PUBLIC
-id objc_getRequiredClass(const char *name);
+Class objc_getRequiredClass(const char *name);
 
 /**
  * Looks up the class with the specified name, but does not invoke any
  * external lazy loading mechanisms.
  */
 OBJC_PUBLIC
-id objc_lookUpClass(const char *name);
+Class objc_lookUpClass(const char *name);
 
 /**
  * Returns the protocol with the specified name.

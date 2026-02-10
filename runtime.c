@@ -628,10 +628,10 @@ IMP method_setImplementation(Method method, IMP imp)
 	return old;
 }
 
-id objc_getRequiredClass(const char *name)
+Class objc_getRequiredClass(const char *name)
 {
 	CHECK_ARG(name);
-	id cls = objc_getClass(name);
+	Class cls = (Class)objc_getClass(name);
 	if (nil == cls)
 	{
 		abort();
