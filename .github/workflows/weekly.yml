@@ -65,6 +65,9 @@ jobs:
           else
             export EMBEDDED_BLOCKS_RUNTIME=ON
           fi
+          if [ "${{ matrix.cxxlib }}" = "libc++" ]; then
+            export ADDITIONAL_LINKER_FLAGS="-stdlib=libstdc++ -lc++abi"
+          fi
           ls -lahR /usr/lib/llvm-${LLVM_VERSION}/lib/
           cmake -B ${{github.workspace}}/build \
             -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -G Ninja \
@@ -75,7 +78,8 @@ jobs:
             -DCMAKE_ASM_COMPILER=clang-${LLVM_VERSION} \
             -DCMAKE_CXX_COMPILER=clang++-${LLVM_VERSION} \
             -DCMAKE_OBJCXX_COMPILER=clang++-${LLVM_VERSION} \
-            -DCMAKE_CXX_FLAGS="-stdlib=${{matrix.cxxlib}}"
+            -DCMAKE_CXX_FLAGS="-stdlib=${{matrix.cxxlib}}" \
+            -DCMAKE_EXE_LINKER_FLAGS="-stdlib=${{matrix.cxxlib}} $ADDITIONAL_LINKER_FLAGS"
         # Build with a nice ninja status line
       - name: Build
         working-directory: ${{github.workspace}}/build
