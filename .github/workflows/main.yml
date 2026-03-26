@@ -100,6 +100,10 @@ jobs:
             system-processor: riscv64
             triple: riscv64-linux-gnu
             rtld: ld-linux-riscv64-lp64d.so.1
+          - name: loongarch64
+            system-processor: loongarch64
+            triple: loongarch64-linux-gnu
+            rtld: ld-linux-loongarch-lp64d.so.1
           - name: ppc64el
             system-processor: powerpc64le
             triple: powerpc64le-linux-gnu
@@ -118,7 +122,12 @@ jobs:
       - name: Install cross-compile toolchain and QEMU
         run: |
           sudo apt update
-          sudo apt install libstdc++-9-dev-${{ matrix.arch.name }}-cross qemu-user ninja-build
+          if [ "${{ matrix.arch.name }}" = "loongarch64" ]; then
+            # No libstdc++-9 package exists for LoongArch on Ubuntu, so use version 13.
+            sudo apt install libstdc++-13-dev-loong64-cross qemu-user ninja-build
+          else
+            sudo apt install libstdc++-9-dev-${{ matrix.arch.name }}-cross qemu-user ninja-build
+          fi
       - name: Configure CMake
         run: |
           export LDFLAGS="-L/usr/lib/llvm-${{ matrix.llvm-version }}/lib/ -fuse-ld=lld-${{ matrix.llvm-version}} -Wl,--dynamic-linker=/usr/${{ matrix.arch.triple }}/lib/${{ matrix.arch.rtld }},-rpath,/usr/${{ matrix.arch.triple }}/lib"
