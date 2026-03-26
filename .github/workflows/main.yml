@@ -109,6 +109,13 @@ jobs:
             triple: powerpc64le-linux-gnu
             rtld: ld64.so.2
         exclude:
+          # lld versions prior to 18 do not support linking LoongArch in the Ubuntu provided packages.
+          - llvm-version: 16
+            arch:
+              name: loongarch64
+          - llvm-version: 17
+            arch:
+              name: loongarch64
           # FIXME(hugo): Hangs while executing tests.
           - llvm-version: 18
             arch:
