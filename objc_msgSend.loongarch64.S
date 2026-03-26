@@ -74,9 +74,10 @@
 	addi.d   $sp, $sp, -16
 	st.d     \receiver, $sp, 0            // Keep &self at sp for slowMsgLookup
 
-	.cfi_def_cfa fp, 16
-	.cfi_offset fp, -16
-	.cfi_offset ra, -8
+	// Use explicit DWARF register numbers for compatibility with older Clang IAS.
+	.cfi_def_cfa 22, 16
+	.cfi_offset 22, -16
+	.cfi_offset 1, -8
 
 	move     $a0, $sp                     // &self in first argument
 	move     $a1, \sel
