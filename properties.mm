@@ -7,12 +7,14 @@
 #include "class.h"
 #include "properties.h"
 #include "spinlock.h"
+#include "helpers.hh"
 #include "visibility.h"
 #include "nsobject.h"
 #include "gc_ops.h"
 #include "lock.h"
 
-PRIVATE int spinlocks[spinlock_count];
+extern "C"
+{
 
 /**
  * Public function for getting a property.  
@@ -26,11 +28,11 @@ id objc_getProperty(id obj, SEL _cmd, ptrdiff_t offset, BOOL isAtomic)
 	id ret;
 	if (isAtomic)
 	{
-		volatile int *lock = lock_for_pointer(addr);
-		lock_spinlock(lock);
-		ret = *(id*)addr;
-		ret = objc_retain(ret);
-		unlock_spinlock(lock);
+		{
+			auto guard = acquire_locks_for_pointers(addr);
+			ret = *(id*)addr;
+			ret = objc_retain(ret);
+		}
 		ret = objc_autoreleaseReturnValue(ret);
 	}
 	else
@@ -59,11 +61,9 @@ void objc_setProperty(id obj, SEL _cmd, ptrdiff_t offset, id arg, BOOL isAtomic,
 	id old;
 	if (isAtomic)
 	{
-		volatile int *lock = lock_for_pointer(addr);
-		lock_spinlock(lock);
+		auto guard = acquire_locks_for_pointers(addr);
 		old = *(id*)addr;
 		*(id*)addr = arg;
-		unlock_spinlock(lock);
 	}
 	else
 	{
@@ -79,11 +79,9 @@ void objc_setProperty_atomic(id obj, SEL _cmd, id arg, ptrdiff_t offset)
 	char *addr = (char*)obj;
 	addr += offset;
 	arg = objc_retain(arg);
-	volatile int *lock = lock_for_pointer(addr);
-	lock_spinlock(lock);
+	auto guard = acquire_locks_for_pointers(addr);
 	id old = *(id*)addr;
 	*(id*)addr = arg;
-	unlock_spinlock(lock);
 	objc_release(old);
 }
 
@@ -94,11 +92,9 @@ void objc_setProperty_atomic_copy(id obj, SEL _cmd, id arg, ptrdiff_t offset)
 	addr += offset;
 
 	arg = [arg copy];
-	volatile int *lock = lock_for_pointer(addr);
-	lock_spinlock(lock);
+	auto guard = acquire_locks_for_pointers(addr);
 	id old = *(id*)addr;
 	*(id*)addr = arg;
-	unlock_spinlock(lock);
 	objc_release(old);
 }
 
@@ -127,33 +123,24 @@ OBJC_PUBLIC
 void objc_copyCppObjectAtomic(void *dest, const void *src,
                               void (*copyHelper) (void *dest, const void *source))
 {
-	volatile int *lock = lock_for_pointer(src < dest ? src : dest);
-	volatile int *lock2 = lock_for_pointer(src < dest ? dest : src);
-	lock_spinlock(lock);
-	lock_spinlock(lock2);
+	auto guard = acquire_locks_for_pointers(src, dest);
 	copyHelper(dest, src);
-	unlock_spinlock(lock);
-	unlock_spinlock(lock2);
 }
 
 OBJC_PUBLIC
 void objc_getCppObjectAtomic(void *dest, const void *src,
                              void (*copyHelper) (void *dest, const void *source))
 {
-	volatile int *lock = lock_for_pointer(src);
-	lock_spinlock(lock);
+	auto guard = acquire_locks_for_pointers(src);
 	copyHelper(dest, src);
-	unlock_spinlock(lock);
 }
 
 OBJC_PUBLIC
 void objc_setCppObjectAtomic(void *dest, const void *src,
                              void (*copyHelper) (void *dest, const void *source))
 {
-	volatile int *lock = lock_for_pointer(dest);
-	lock_spinlock(lock);
+	auto guard = acquire_locks_for_pointers(dest);
 	copyHelper(dest, src);
-	unlock_spinlock(lock);
 }
 
 /**
@@ -172,13 +159,8 @@ void objc_copyPropertyStruct(void *dest,
 {
 	if (atomic)
 	{
-		volatile int *lock = lock_for_pointer(src < dest ? src : dest);
-		volatile int *lock2 = lock_for_pointer(src < dest ? dest : src);
-		lock_spinlock(lock);
-		lock_spinlock(lock2);
+		auto guard = acquire_locks_for_pointers(src, dest);
 		memcpy(dest, src, size);
-		unlock_spinlock(lock);
-		unlock_spinlock(lock2);
 	}
 	else
 	{
@@ -199,10 +181,8 @@ void objc_getPropertyStruct(void *dest,
 {
 	if (atomic)
 	{
-		volatile int *lock = lock_for_pointer(src);
-		lock_spinlock(lock);
+		auto guard = acquire_locks_for_pointers(src);
 		memcpy(dest, src, size);
-		unlock_spinlock(lock);
 	}
 	else
 	{
@@ -223,10 +203,8 @@ void objc_setPropertyStruct(void *dest,
 {
 	if (atomic)
 	{
-		volatile int *lock = lock_for_pointer(dest);
-		lock_spinlock(lock);
+		auto guard = acquire_locks_for_pointers(dest);
 		memcpy(dest, src, size);
-		unlock_spinlock(lock);
 	}
 	else
 	{
@@ -285,7 +263,7 @@ objc_property_t* class_copyPropertyList(Class cls, unsigned int *outCount)
 	{
 		return NULL;
 	}
-	objc_property_t *list = calloc(count, sizeof(objc_property_t));
+	objc_property_t *list = allocate_zeroed_array<objc_property_t>(count);
 	unsigned int out = 0;
 	for (struct objc_property_list *l=properties ; NULL!=l ; l=l->next)
 	{
@@ -423,7 +401,7 @@ objc_property_attribute_t *property_copyAttributeList(objc_property_t property,
 		}
 		count++;
 	}
-	objc_property_attribute_t *propAttrs = calloc(count, sizeof(objc_property_attribute_t));
+	objc_property_attribute_t *propAttrs = allocate_zeroed_array<objc_property_attribute_t>(count);
 	memcpy(propAttrs, attrs, count * sizeof(objc_property_attribute_t));
 	if (NULL != outCount)
 	{
@@ -484,7 +462,7 @@ static const char *encodingFromAttrs(const objc_property_attribute_t *attributes
 		return NULL;
 	}
 
-	char *buffer = malloc(attributesSize);
+	char *buffer = static_cast<char*>(malloc(attributesSize));
 
 	char *out = buffer;
 	out = addAttrIfExists('T', out, attributes, attributeCount);
@@ -503,9 +481,10 @@ static const char *encodingFromAttrs(const objc_property_attribute_t *attributes
 
 	return buffer;
 }
+
 PRIVATE struct objc_property propertyFromAttrs(const objc_property_attribute_t *attributes,
-                                               unsigned int attributeCount,
-                                               const char *name)
+                                                          unsigned int attributeCount,
+                                                          const char *name)
 {
 	struct objc_property p;
 	p.name = strdup(name);
@@ -535,7 +514,6 @@ PRIVATE struct objc_property propertyFromAttrs(const objc_property_attribute_t *
 	return p;
 }
 
-
 OBJC_PUBLIC
 BOOL class_addProperty(Class cls,
                        const char *name,
@@ -546,8 +524,7 @@ BOOL class_addProperty(Class cls,
 
 	struct objc_property p = propertyFromAttrs(attributes, attributeCount, name);
 
-	struct objc_property_list *l = calloc(1, sizeof(struct objc_property_list)
-			+ sizeof(struct objc_property));
+	struct objc_property_list *l = allocate_zeroed<struct objc_property_list>(sizeof(struct objc_property));
 	l->count = 1;
 	l->size = sizeof(struct objc_property);
 	memcpy(&l->properties, &p, sizeof(struct objc_property));
@@ -611,3 +588,5 @@ char *property_copyAttributeValue(objc_property_t property,
 	}
 	return 0;
 }
+
+} // extern "C"

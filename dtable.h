@@ -6,12 +6,14 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#ifdef __OBJC_LOW_MEMORY__
-typedef struct objc_dtable* dtable_t;
-struct objc_slot* objc_dtable_lookup(dtable_t dtable, uint32_t uid);
-#else
 typedef SparseArray* dtable_t;
-#	define objc_dtable_lookup SparseArrayLookup
+#define objc_dtable_lookup SparseArrayLookup
+
+typedef struct objc_class *Class;
+
+#ifdef __cplusplus
+extern "C"
+{
 #endif
 
 /**
@@ -27,7 +29,7 @@ PRIVATE extern dtable_t uninstalled_dtable;
 typedef struct _InitializingDtable
 {
 	/** The class that owns the dtable. */
-	Class class;
+	struct objc_class *owner;
 	/** The dtable for this class. */
 	dtable_t dtable;
 	/** The next uninstalled dtable in the list. */
@@ -50,12 +52,13 @@ OBJC_PUBLIC
 int objc_sync_enter(id object);
 OBJC_PUBLIC
 int objc_sync_exit(id object);
+
 /**
  * Returns the dtable for a given class.  If we are currently in an +initialize
  * method then this will block if called from a thread other than the one
  * running the +initialize method.  
  */
-static inline dtable_t dtable_for_class(Class cls)
+static inline dtable_t dtable_for_class(struct objc_class *cls)
 {
 	if (classHasInstalledDtable(cls))
 	{
@@ -77,7 +80,7 @@ static inline dtable_t dtable_for_class(Class cls)
 		InitializingDtable *buffer = temporary_dtables;
 		while (NULL != buffer)
 		{
-			if (buffer->class == cls)
+			if (buffer->owner == cls)
 			{
 				dtable = buffer->dtable;
 				break;
@@ -139,3 +142,7 @@ void free_dtable(dtable_t dtable);
  * is installed.
  */
 void checkARCAccessorsSlow(Class cls);
+
+#ifdef __cplusplus
+}
+#endif

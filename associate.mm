@@ -11,6 +11,7 @@
 #include "selector.h"
 #include "lock.h"
 #include "gc_ops.h"
+#include "helpers.hh"
 
 /**
  * A single associative reference.  Contains the key, value, and association
@@ -105,7 +106,7 @@ static void cleanupReferenceList(struct reference_list *list)
 				// Full barrier - ensure that we've zero'd the key before doing
 				// this!
 				__sync_synchronize();
-				objc_release(r->object);
+				objc_release((id)r->object);
 			}
 			r->object = 0;
 			r->policy = 0;
@@ -117,7 +118,7 @@ static void freeReferenceList(struct reference_list *l)
 {
 	if (NULL == l) { return; }
 	freeReferenceList(l->next);
-	gc->free(l);
+	free(l);
 }
 
 static void setReference(struct reference_list *list,
@@ -135,44 +136,45 @@ static void setReference(struct reference_list *list,
 			break;
 		case OBJC_ASSOCIATION_RETAIN_NONATOMIC:
 		case OBJC_ASSOCIATION_RETAIN:
-			obj = objc_retain(obj);
+			obj = objc_retain((id)obj);
 		case OBJC_ASSOCIATION_ASSIGN:
 			break;
 	}
 	// While inserting into the list, we need to lock it temporarily.
-	volatile int *lock = lock_for_pointer(list);
-	lock_spinlock(lock);
 	struct reference *r = findReference(list, key);
-	// If there's an existing reference, then we can update it, otherwise we
-	// have to install a new one
-	if (NULL == r)
 	{
-		// Search for an unused slot
-		r = findReference(list, 0);
+		auto lock = acquire_locks_for_pointers(list);
+		// If there's an existing reference, then we can update it, otherwise we
+		// have to install a new one
 		if (NULL == r)
 		{
-			struct reference_list *l = list;
+			// Search for an unused slot
+			r = findReference(list, 0);
+			if (NULL == r)
+			{
+				struct reference_list *l = list;
 
-			while (NULL != l->next) { l = l->next; }
+				while (NULL != l->next) { l = l->next; }
 
-			l->next = gc->malloc(sizeof(struct reference_list));
-			r = &l->next->list[0];
+				l->next = allocate_zeroed<struct reference_list>();
+				r = &l->next->list[0];
+			}
+			r->key = key;
 		}
-		r->key = key;
 	}
-	unlock_spinlock(lock);
 	// Now we only need to lock if the old or new property is atomic
 	BOOL needLock = isAtomic(r->policy) || isAtomic(policy);
+	ThinLock *lock;
 	if (needLock)
 	{
 		lock = lock_for_pointer(r);
-		lock_spinlock(lock);
+		lock->lock();
 	}
 	@try
 	{
 		if (OBJC_ASSOCIATION_ASSIGN != r->policy)
 		{
-			objc_release(r->object);
+			objc_release((id)r->object);
 		}
 	}
 	@finally
@@ -182,7 +184,7 @@ static void setReference(struct reference_list *list,
 	}
 	if (needLock)
 	{
-		unlock_spinlock(lock);
+		lock->unlock();
 	}
 }
 
@@ -201,8 +203,8 @@ static inline Class findHiddenClass(id obj)
 
 static Class allocateHiddenClass(Class superclass)
 {
-	Class newClass =
-		calloc(1, sizeof(struct objc_class) + sizeof(struct reference_list));
+	struct objc_class *newClass =
+		allocate_zeroed<struct objc_class>(sizeof(struct reference_list));
 
 	if (Nil == newClass) { return Nil; }
 
@@ -221,9 +223,9 @@ static Class allocateHiddenClass(Class superclass)
 
 	LOCK_RUNTIME_FOR_SCOPE();
 	newClass->sibling_class = superclass->subclass_list;
-	superclass->subclass_list = newClass;
+	superclass->subclass_list = (Class)newClass;
 
-	return newClass;
+	return (Class)newClass;
 }
 
 static inline Class initHiddenClassForObject(id obj)
@@ -248,7 +250,7 @@ static void deallocHiddenClass(id obj, SEL _cmd)
 	Class hiddenClass = findHiddenClass(obj);
 	// After calling [super dealloc], the object will no longer exist.
 	// Free the hidden class.
-	struct reference_list *list = object_getIndexedIvars(hiddenClass);
+	struct reference_list *list = static_cast<struct reference_list *>(object_getIndexedIvars(hiddenClass));
 	DESTROY_LOCK(&list->lock);
 	cleanupReferenceList(list);
 	freeReferenceList(list->next);
@@ -289,19 +291,16 @@ static struct reference_list* referenceListForObject(id object, BOOL create)
 		Class cls = (Class)object;
 		if ((NULL == cls->extra_data) && create)
 		{
-			volatile int *lock = lock_for_pointer(cls);
-			struct reference_list *list = gc->malloc(sizeof(struct reference_list));
-			lock_spinlock(lock);
+			struct reference_list *list = allocate_zeroed<struct reference_list>();
+			auto guard = acquire_locks_for_pointers(cls);
 			if (NULL == cls->extra_data)
 			{
 				INIT_LOCK(list->lock);
 				cls->extra_data = list;
-				unlock_spinlock(lock);
 			}
 			else
 			{
-				unlock_spinlock(lock);
-				gc->free(list);
+				free(list);
 			}
 		}
 		return cls->extra_data;
@@ -309,18 +308,16 @@ static struct reference_list* referenceListForObject(id object, BOOL create)
 	Class hiddenClass = findHiddenClass(object);
 	if ((NULL == hiddenClass) && create)
 	{
-		volatile int *lock = lock_for_pointer(object);
-		lock_spinlock(lock);
+		auto guard = acquire_locks_for_pointers(object);
 		hiddenClass = findHiddenClass(object);
 		if (NULL == hiddenClass)
 		{
 			hiddenClass = initHiddenClassForObject(object);
-			struct reference_list *list = object_getIndexedIvars(hiddenClass);
+			struct reference_list *list = static_cast<struct reference_list *>(object_getIndexedIvars(hiddenClass));
 			INIT_LOCK(list->lock);
 		}
-		unlock_spinlock(lock);
 	}
-	return hiddenClass ? object_getIndexedIvars(hiddenClass) : NULL;
+	return hiddenClass ? static_cast<struct reference_list*>(object_getIndexedIvars(hiddenClass)) : nullptr;
 }
 
 void objc_setAssociatedObject(id object,
@@ -345,9 +342,9 @@ id objc_getAssociatedObject(id object, const void *key)
 		// Apple's objc4 retains and autoreleases the object under these policies
 		if (r->policy & OBJC_ASSOCIATION_RETAIN_NONATOMIC)
 		{
-			objc_retainAutorelease(r->object);
+			objc_retainAutorelease((id)r->object);
 		}
-		return r->object;
+		return (id)r->object;
 	}
 	if (class_isMetaClass(object->isa))
 	{
@@ -363,7 +360,7 @@ id objc_getAssociatedObject(id object, const void *key)
 		}
 		if (Nil != cls)
 		{
-			struct reference_list *next_list = object_getIndexedIvars(cls);
+			struct reference_list *next_list = static_cast<struct reference_list *>(object_getIndexedIvars(cls));
 			if (list != next_list)
 			{
 				list = next_list;
@@ -372,9 +369,9 @@ id objc_getAssociatedObject(id object, const void *key)
 				{
 					if (r->policy & OBJC_ASSOCIATION_RETAIN_NONATOMIC)
 					{
-						objc_retainAutorelease(r->object);
+						objc_retainAutorelease((id)r->object);
 					}
-					return r->object;
+					return (id)r->object;
 				}
 			}
 			cls = class_getSuperclass(cls);
@@ -433,16 +430,14 @@ static Class hiddenClassForObject(id object)
 	Class hiddenClass = findHiddenClass(object);
 	if (NULL == hiddenClass)
 	{
-		volatile int *lock = lock_for_pointer(object);
-		lock_spinlock(lock);
+		auto guard = acquire_locks_for_pointers(object);
 		hiddenClass = findHiddenClass(object);
 		if (NULL == hiddenClass)
 		{
 			hiddenClass = initHiddenClassForObject(object);
-			struct reference_list *list = object_getIndexedIvars(hiddenClass);
+			struct reference_list *list = static_cast<struct reference_list*>(object_getIndexedIvars(hiddenClass));
 			INIT_LOCK(list->lock);
 		}
-		unlock_spinlock(lock);
 	}
 	return hiddenClass;
 }
@@ -464,13 +459,13 @@ id object_clone_np(id object)
 	// Make sure that the prototype has a hidden class, so that methods added
 	// to it will appear in the clone.
 	referenceListForObject(object, YES);
-	id new = class_createInstance(object->isa, 0);
-	Class hiddenClass = initHiddenClassForObject(new);
-	struct reference_list *list = object_getIndexedIvars(hiddenClass);
+	id newInstance = class_createInstance(object->isa, 0);
+	Class hiddenClass = initHiddenClassForObject(newInstance);
+	struct reference_list *list = static_cast<struct reference_list*>(object_getIndexedIvars(hiddenClass));
 	INIT_LOCK(list->lock);
-	objc_setAssociatedObject(new, &prototypeKey, object,
+	objc_setAssociatedObject(newInstance, &prototypeKey, object,
 			OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-	return new;
+	return newInstance;
 }
 
 id object_getPrototype_np(id object)
