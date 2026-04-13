@@ -1,23 +1,157 @@
-#ifdef _WIN32
-#include "safewindows.h"
-static unsigned sleep(unsigned seconds)
+#include "visibility.h"
+#include <atomic>
+#include <chrono>
+#include <mutex>
+#include <thread>
+
+
+// Not all supported targets implement the wait / notify instructions on
+// atomics.  Provide simple spinning fallback for ones that don't.
+template<typename T>
+concept Waitable = requires(T t)
 {
-	Sleep(seconds*1000);
-	return 0;
-}
-#else
-#include <unistd.h>
-#endif
+	t.notify_all();
+};
 
 /**
- * Number of spinlocks.  This allocates one page on 32-bit platforms.
+ * Lightweight spinlock that falls back to using the operating system's futex
+ * abstraction if one exists.
+ */
+class ThinLock
+{
+	// Underlying type for the lock word.  Should be the type used for futexes
+	// and similar.
+	using LockWordUnderlyingType = uint32_t;
+	// A lock word, as a 3-state state machine.
+	enum LockState : LockWordUnderlyingType
+	{
+		Unlocked = 0,
+		Locked = 1,
+		LockedWithWaiters = 3
+	};
+	// The lock word
+	std::atomic<LockState> lockWord;
+
+	// Call notify if it exists
+	template<typename T>
+	static void notify(T &atomic) requires (Waitable<T>)
+	{
+		atomic.notify_all();
+	}
+
+	// Simply ignore notify if we don't have one.
+	template<typename T>
+	static void notify(T &atomic) requires (!Waitable<T>)
+	{
+	}
+
+	// Wait if we have a wait method.
+	template<typename T>
+	static void wait(T &atomic, LockState expected) requires (Waitable<T>)
+	{
+		atomic.wait(expected);
+	}
+
+	// Short sleep if we don't.
+	template<typename T>
+	static void wait(T &atomic, LockState expected) requires (!Waitable<T>)
+	{
+		using namespace std::chrono_literals;
+		std::this_thread::sleep_for(1ms);
+	}
+
+	public:
+	// Acquire the lock
+	void lock()
+	{
+		while (true)
+		{
+			auto old     = LockState::Unlocked;
+			// CAS in the locked state.
+			if (lockWord.compare_exchange_strong(old, LockState::Locked))
+			{
+				return;
+			}
+			// If the CAS failed add the waiters flag.
+			if (old != LockState::LockedWithWaiters)
+			{
+				if (!lockWord.compare_exchange_strong(old, LockState::LockedWithWaiters))
+				{
+					// If the CAS failed, this means that we lost the race, retry.
+					continue;
+				}
+			}
+			wait(lockWord, LockState::LockedWithWaiters);
+		}
+	}
+
+	// Release the lock
+	void unlock()
+	{
+		auto old = lockWord.exchange(LockState::Unlocked);
+		if (old == LockState::LockedWithWaiters)
+		{
+			notify(lockWord);
+		}
+	}
+
+	// Stable ordering of locks.
+	// This should be operator<=>, but we support targets with no <compare> 
+	auto operator==(ThinLock &other)
+	{
+		return this == &other;
+	}
+
+	auto operator<(ThinLock &other)
+	{
+		return this < &other;
+	}
+};
+
+/**
+ * Deadlock-free lock guard.  Acquires the two locks in order defined by their
+ * sort order.  If the two locks are the same, does not acquire the second.
+ */
+class DoubleLockGuard
+{
+	// The first lock
+	ThinLock *lock1;
+	// The second lock
+	ThinLock *lock2;
+	public:
+	DoubleLockGuard(ThinLock *lock1, ThinLock *lock2) : lock1(lock1), lock2(lock2)
+	{
+		if (lock2 < lock1)
+		{
+			std::swap(lock1, lock2);
+		}
+		lock1->lock();
+		if (lock1 != lock2)
+		{
+			lock2->lock();
+		}
+	}
+	~DoubleLockGuard()
+	{
+		assert(lock2 >= lock1);
+		lock1->unlock();
+		if (lock1 != lock2)
+		{
+			lock2->unlock();
+		}
+	}
+};
+
+/**
+ * Number of spinlocks.  This allocates one page with a 32-bit lock.
  */
 #define spinlock_count (1<<10)
 static const int spinlock_mask = spinlock_count - 1;
 /**
  * Integers used as spinlocks for atomic property access.
  */
-extern int spinlocks[spinlock_count];
+PRIVATE inline ThinLock spinlocks[spinlock_count];
+
 /**
  * Get a spin lock from a pointer.  We want to prevent lock contention between
  * properties in the same object - if someone is stupid enough to be using
@@ -26,7 +160,7 @@ extern int spinlocks[spinlock_count];
  * contention between the same property in different objects, so we can't just
  * use the ivar offset.
  */
-static inline volatile int *lock_for_pointer(const void *ptr)
+static inline ThinLock *lock_for_pointer(const void *ptr)
 {
 	intptr_t hash = (intptr_t)ptr;
 	// Most properties will be pointers, so disregard the lowest few bits
@@ -38,44 +172,17 @@ static inline volatile int *lock_for_pointer(const void *ptr)
 }
 
 /**
- * Unlocks the spinlock.  This is not an atomic operation.  We are only ever
- * modifying the lowest bit of the spinlock word, so it doesn't matter if this
- * is two writes because there is no contention among the high bit.  There is
- * no possibility of contention among calls to this, because it may only be
- * called by the thread owning the spin lock.
+ * Returns a lock guard for the lock associated with a single address.
  */
-inline static void unlock_spinlock(volatile int *spinlock)
+inline auto acquire_locks_for_pointers(const void *ptr)
 {
-	__sync_synchronize();
-	*spinlock = 0;
-}
-/**
- * Attempts to lock a spinlock.  This is heavily optimised for the uncontended
- * case, because property access should (generally) not be contended.  In the
- * uncontended case, this is a single atomic compare and swap instruction and a
- * branch.  Atomic CAS is relatively expensive (can be a pipeline flush, and
- * may require locking a cache line in a cache-coherent SMP system, but it's a
- * lot cheaper than a system call).
- *
- * If the lock is contended, then we just sleep and then try again after the
- * other threads have run.  Note that there is no upper bound on the potential
- * running time of this function, which is one of the great many reasons that
- * using atomic accessors is a terrible idea, but in the common case it should
- * be very fast.
- */
-inline static void lock_spinlock(volatile int *spinlock)
-{
-	int count = 0;
-	// Set the spin lock value to 1 if it is 0.
-	while(!__sync_bool_compare_and_swap(spinlock, 0, 1))
-	{
-		count++;
-		if (0 == count % 10)
-		{
-			// If it is already 1, let another thread play with the CPU for a
-			// bit then try again.
-			sleep(0);
-		}
-	}
+	return std::lock_guard<ThinLock>{*lock_for_pointer(ptr)};
 }
 
+/**
+ * Returns a lock guard for locks associated with two addresses.
+ */
+inline auto acquire_locks_for_pointers(const void *ptr, const void *ptr2)
+{
+	return DoubleLockGuard(lock_for_pointer(ptr), lock_for_pointer(ptr2));
+}

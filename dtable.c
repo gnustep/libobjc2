@@ -696,8 +696,8 @@ static void remove_dtable(InitializingDtable* meta_buffer)
 	LOCK(&initialize_lock);
 	InitializingDtable *buffer = meta_buffer->next;
 	// Install the dtable:
-	meta_buffer->class->dtable = meta_buffer->dtable;
-	buffer->class->dtable = buffer->dtable;
+	meta_buffer->owner->dtable = meta_buffer->dtable;
+	buffer->owner->dtable = buffer->dtable;
 	// Remove the look-aside buffer entry.
 	if (temporary_dtables == meta_buffer)
 	{
@@ -706,7 +706,7 @@ static void remove_dtable(InitializingDtable* meta_buffer)
 	else
 	{
 		InitializingDtable *prev = temporary_dtables;
-		while (prev->next->class != meta_buffer->class)
+		while (prev->next->owner != meta_buffer->owner)
 		{
 			prev = prev->next;
 		}

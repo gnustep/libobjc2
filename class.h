@@ -2,6 +2,7 @@
 #define __OBJC_CLASS_H_INCLUDED
 #include "visibility.h"
 #include "objc/runtime.h"
+#include "sarray2.h"
 #include <stdint.h>
 
 #ifdef __cplusplus
@@ -96,7 +97,7 @@ struct objc_class
 	 * The dispatch table for this class.  Intialized and maintained by the
 	 * runtime.
 	 */
-	void                      *dtable;
+	SparseArray               *dtable;
 	/**
 	 * A pointer to the first subclass for this class.  Filled in by the
 	 * runtime.

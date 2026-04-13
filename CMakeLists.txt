@@ -55,13 +55,13 @@ add_compile_definitions(GNUSTEP __OBJC_RUNTIME_INTERNAL__=1 __OBJC_BOOL)
 set(libobjc_ASM_SRCS 
 	objc_msgSend.S)
 set(libobjc_OBJCXX_SRCS 
+	properties.mm
 	arc.mm
+	associate.mm
 	)
 set(libobjc_OBJC_SRCS 
 	NSBlocks.m
-	associate.m
-	blocks_runtime_np.m
-	properties.m)
+	blocks_runtime_np.m)
 set(libobjc_C_SRCS 
 	alias_table.c
 	builtin_classes.c
@@ -257,7 +257,7 @@ endif ()
 
 add_library(objc SHARED ${libobjc_C_SRCS} ${libobjc_ASM_SRCS} ${libobjc_OBJC_SRCS} ${libobjc_OBJCXX_SRCS} ${libobjc_ASM_OBJS})
 target_compile_options(objc PRIVATE "$<$<OR:$<COMPILE_LANGUAGE:OBJC>,$<COMPILE_LANGUAGE:OBJCXX>>:-Wno-gnu-folding-constant;-Wno-deprecated-objc-isa-usage;-Wno-objc-root-class;-fobjc-runtime=gnustep-2.0>$<$<COMPILE_LANGUAGE:C>:-Xclang;-fexceptions;-Wno-gnu-folding-constant>")
-target_compile_features(objc PRIVATE cxx_std_17)
+target_compile_features(objc PRIVATE cxx_std_20)
 
 list(APPEND libobjc_CXX_SRCS ${libobjcxx_CXX_SRCS})
 target_sources(objc PRIVATE ${libobjc_CXX_SRCS})

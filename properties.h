@@ -223,6 +223,11 @@ static inline struct objc_property *property_at_index(struct objc_property_list 
 	return (struct objc_property*)(((char*)l->properties) + (i * l->size));
 }
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 /**
  * Constructs a property description from a list of attributes, returning the
  * instance variable name via the third parameter.
@@ -237,3 +242,7 @@ PRIVATE struct objc_property propertyFromAttrs(const objc_property_attribute_t *
  */
 PRIVATE const char *constructPropertyAttributes(objc_property_t property,
                                                 const char *iVarName);
+
+#ifdef __cplusplus
+}
+#endif

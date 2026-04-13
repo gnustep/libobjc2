@@ -72,7 +72,11 @@ __attribute__((unused)) static void objc_release_lock(void *x)
 /**
  * The global runtime mutex.
  */
-extern mutex_t runtime_mutex;
+extern 
+#ifdef __cplusplus
+"C"
+#endif
+mutex_t runtime_mutex;
 
 #define LOCK_RUNTIME() LOCK(&runtime_mutex)
 #define UNLOCK_RUNTIME() UNLOCK(&runtime_mutex)

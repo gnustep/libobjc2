@@ -1,3 +1,6 @@
+// Prevent including libstdc++'s incompatible <type_info> header.
+#define _TYPEINFO
+
 #include <atomic>
 #include <stdlib.h>
 #include <stdio.h>
