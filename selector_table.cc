@@ -484,22 +484,13 @@ SEL objc_register_selector_copy(UnregisteredSelector &aSel, BOOL copyArgs)
 		else
 		{
 			copy->name = strdup(aSel.name);
-			if (copy->name == nullptr)
-			{
-				fprintf(stderr, "Failed to allocate memory for selector %s\n", aSel.name);
-				abort();
-			}
 			assert(copy->name);
 			selector_name_copies += strlen(copy->name);
 		}
 		if (copy->types != nullptr)
 		{
 			copy->types = strdup(copy->types);
-			if (copy->name == nullptr)
-			{
-				fprintf(stderr, "Failed to allocate memory for selector %s\n", aSel.name);
-				abort();
-			}
+			assert(copy->types);
 			selector_name_copies += strlen(copy->types);
 		}
 	}
