@@ -155,6 +155,9 @@ add_compile_definitions($<$<BOOL:${STRICT_APPLE_COMPATIBILITY}>:STRICT_APPLE_COM
 
 configure_file(objc/objc-config.h.in objc/objc-config.h @ONLY)
 include_directories("${PROJECT_BINARY_DIR}/objc/")
+if (IS_DIRECTORY /usr/local/include)                                           
+	include_directories("/usr/local/include")
+endif()
 
 if (EMBEDDED_BLOCKS_RUNTIME)
 	list(APPEND libobjc_ASM_SRCS block_trampolines.S)
@@ -298,7 +301,9 @@ set_property(TARGET PROPERTY NO_SONAME true)
 
 option(BUILD_STATIC_LIBOBJC "Build the static version of libobjc" OFF)
 if (BUILD_STATIC_LIBOBJC)
-	add_library(objc-static STATIC ${libobjc_C_SRCS} ${libobjc_ASM_SRCS} ${libobjc_OBJC_SRCS} ${libobjc_CXX_SRCS})
+	add_library(objc-static STATIC ${libobjc_C_SRCS} ${libobjc_ASM_SRCS} ${libobjc_OBJC_SRCS} ${libobjc_OBJCXX_SRCS} ${libobjc_CXX_SRCS})
+	target_compile_options(objc-static PRIVATE "$<$<OR:$<COMPILE_LANGUAGE:OBJC>,$<COMPILE_LANGUAGE:OBJCXX>>:-Wno-gnu-folding-constant;-Wno-deprecated-objc-isa-usage;-Wno-objc-root-class;-fobjc-runtime=gnustep-2.0>$<$<COMPILE_LANGUAGE:C>:-Xclang;-fexceptions;-Wno-gnu-folding-constant>")
+	target_compile_features(objc-static PRIVATE cxx_std_20)
 	set_target_properties(objc-static PROPERTIES
 		POSITION_INDEPENDENT_CODE true
 		OUTPUT_NAME ${LIBOBJC_NAME})
