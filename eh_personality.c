@@ -735,10 +735,11 @@ OBJC_PUBLIC void objc_exception_rethrow(struct _Unwind_Exception *e)
 		// rethrown exception in objc_end_catch
 		ex->catch_count = -ex->catch_count;
 		_Unwind_Reason_Code err = _Unwind_Resume_or_Rethrow(e);
+		id object = ex->object;
 		free(ex);
 		if (_URC_END_OF_STACK == err && 0 != _objc_unexpected_exception)
 		{
-			_objc_unexpected_exception(ex->object);
+			_objc_unexpected_exception(object);
 		}
 		abort();
 	}
