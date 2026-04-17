@@ -117,7 +117,7 @@ set_target_properties(test_runtime PROPERTIES
 
 # Function for adding a test.  This takes the name of the test and the list of
 # source files as arguments.
-function(addtest_flags TEST_NAME FLAGS TEST_SOURCE LINK_TARGET)
+function(addtest_flags TEST_NAME FLAGS TEST_SOURCE LINK_TARGET EXTRA_LINK_FLAGS)
 	if (${TEST_NAME} MATCHES ".*_arc")
 		# Only compile the main file with ARC
 		set_source_files_properties(${TEST_SOURCE}
@@ -129,7 +129,7 @@ function(addtest_flags TEST_NAME FLAGS TEST_SOURCE LINK_TARGET)
 	set_target_properties(${TEST_NAME} PROPERTIES
 		INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR};${PROJECT_BINARY_DIR}/objc/"
 		COMPILE_FLAGS "-Xclang -fblocks -Xclang -fobjc-exceptions ${FLAGS}"
-		LINK_FLAGS ${INCREMENTAL}
+		LINK_FLAGS "${INCREMENTAL} ${EXTRA_LINK_FLAGS}"
 		LINKER_LANGUAGE C
 	)
 	set_property(TEST ${TEST_NAME} PROPERTY SKIP_RETURN_CODE 77)
@@ -142,25 +142,25 @@ function(addtest_flags TEST_NAME FLAGS TEST_SOURCE LINK_TARGET)
 	target_link_libraries(${TEST_NAME} ${LINK_TARGET})
 endfunction(addtest_flags)
 
-function(addtest_variants_for_target TEST TEST_SOURCE LEGACY LINK_TARGET SUFFIX)
-	addtest_flags("${TEST}${SUFFIX}" "-O0 -fobjc-runtime=gnustep-2.2 -UNDEBUG -DGS_RUNTIME_V2" "${TEST_SOURCE}" ${LINK_TARGET})
+function(addtest_variants_for_target TEST TEST_SOURCE LEGACY LINK_TARGET SUFFIX EXTRA_LINK_FLAGS)
+	addtest_flags("${TEST}${SUFFIX}" "-O0 -fobjc-runtime=gnustep-2.2 -UNDEBUG -DGS_RUNTIME_V2" "${TEST_SOURCE}" ${LINK_TARGET} "${EXTRA_LINK_FLAGS}")
 	target_sources("${TEST}${SUFFIX}" PRIVATE $<TARGET_OBJECTS:test_runtime>)
-	addtest_flags("${TEST}_optimised${SUFFIX}" "-O3 -fobjc-runtime=gnustep-2.2 -UNDEBUG -DGS_RUNTIME_V2" "${TEST_SOURCE}" ${LINK_TARGET})
+	addtest_flags("${TEST}_optimised${SUFFIX}" "-O3 -fobjc-runtime=gnustep-2.2 -UNDEBUG -DGS_RUNTIME_V2" "${TEST_SOURCE}" ${LINK_TARGET} "${EXTRA_LINK_FLAGS}")
 	target_sources("${TEST}_optimised${SUFFIX}" PRIVATE $<TARGET_OBJECTS:test_runtime>)
 
 	# -fobjc-arc is not supported on platforms using the legacy runtime
 	if (${LEGACY} AND ${OLDABI_COMPAT} AND NOT ${TEST} MATCHES ".*_arc")
-		addtest_flags("${TEST}_legacy${SUFFIX}" "-O0 -fobjc-runtime=gnustep-1.7 -UNDEBUG" "${TEST_SOURCE}" ${LINK_TARGET})
+		addtest_flags("${TEST}_legacy${SUFFIX}" "-O0 -fobjc-runtime=gnustep-1.7 -UNDEBUG" "${TEST_SOURCE}" ${LINK_TARGET} "${EXTRA_LINK_FLAGS}")
 		target_sources("${TEST}_legacy${SUFFIX}" PRIVATE $<TARGET_OBJECTS:test_runtime_legacy>)
-		addtest_flags("${TEST}_legacy_optimised${SUFFIX}" "-O3 -fobjc-runtime=gnustep-1.7 -UNDEBUG" "${TEST_SOURCE}" ${LINK_TARGET})
+		addtest_flags("${TEST}_legacy_optimised${SUFFIX}" "-O3 -fobjc-runtime=gnustep-1.7 -UNDEBUG" "${TEST_SOURCE}" ${LINK_TARGET} "${EXTRA_LINK_FLAGS}")
 		target_sources("${TEST}_legacy_optimised${SUFFIX}" PRIVATE $<TARGET_OBJECTS:test_runtime_legacy>)
 	endif()
 endfunction(addtest_variants_for_target)
 
 function(addtest_variants TEST TEST_SOURCE LEGACY)
-	addtest_variants_for_target(${TEST} "${TEST_SOURCE}" ${LEGACY} objc "")
+	addtest_variants_for_target(${TEST} "${TEST_SOURCE}" ${LEGACY} objc "" "")
 	if (BUILD_STATIC_LIBOBJC)
-		addtest_variants_for_target(${TEST} "${TEST_SOURCE}" false objc-static "_static")
+		addtest_variants_for_target(${TEST} "${TEST_SOURCE}" false objc-static "_static" "-static")
 	endif()
 endfunction(addtest_variants)
 
