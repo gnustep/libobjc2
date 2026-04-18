@@ -55,11 +55,6 @@ struct reference_list
 	 */
 	mutex_t lock;
 	/**
-	 * Garbage collection type.  This stores the location of all of the
-	 * instance variables in the object that may contain pointers.
-	 */
-	void *gc_type;
-	/**
 	 * Array of references.
 	 */
 	struct reference list[REFERENCE_LIST_SIZE];
