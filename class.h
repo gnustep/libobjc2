@@ -276,30 +276,6 @@ struct objc_class_gsv1
 };
 
 /**
- * Structure representing the GCC ABI class structure.  This is only ever
- * required so that we can take its size - struct objc_class begins with the
- * same fields, and you can test the new abi flag to tell whether it is safe to
- * access the subsequent fields.
- */
-struct objc_class_gcc
-{
-	Class                      isa;
-	Class                      super_class;
-	const char                *name;
-	long                       version;
-	unsigned long              info;
-	long                       instance_size;
-	struct objc_ivar_list_gcc *ivars;
-	struct objc_method_list   *methods;
-	void                      *dtable;
-	Class                      subclass_list;
-	Class                      sibling_class;
-	struct objc_protocol_list *protocols;
-	void                      *gc_object_type;
-};
-
-
-/**
  * An enumerated type describing all of the valid flags that may be used in the
  * info field of a class.
  */
