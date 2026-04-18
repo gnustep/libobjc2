@@ -387,17 +387,6 @@ void objc_removeAssociatedObjects(id object)
 	cleanupReferenceList(referenceListForObject(object, NO));
 }
 
-PRIVATE void *gc_typeForClass(Class cls)
-{
-	struct reference_list *list = referenceListForObject(cls, YES);
-	return list->gc_type;
-}
-PRIVATE void gc_setTypeForClass(Class cls, void *type)
-{
-	struct reference_list *list = referenceListForObject(cls, YES);
-	list->gc_type = type;
-}
-
 OBJC_PUBLIC
 int objc_sync_enter(id object)
 {
