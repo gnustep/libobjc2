@@ -155,57 +155,71 @@ static inline void release(id obj);
 
 /**
  * Empties objects from the autorelease pool, stating at the head of the list
- * specified by pool and continuing until it reaches the stop point.  If the stop point is NULL then 
+ * specified by pool and continuing until it reaches the stop point.  If the stop
+ * point is NULL then all pools are cleared.
  */
-static void emptyPool(struct arc_tls *tls, void *stop)
+static void emptyPool(struct arc_tls *tls, void *stopAt)
 {
+	/* Clear all pools by default. */
 	struct arc_autorelease_pool *stopPool = NULL;
-	if (NULL != stop)
+	void *oldPool;
+
+	/* Are we clearing up to a given object? */
+	if (stopAt != NULL)
 	{
 		stopPool = tls->pool;
-		while (1)
+
+		/* Find pool in which object to stop at is located. */
+		while (stopPool != NULL)
 		{
-			// Invalid stop location
-			if (NULL == stopPool)
-			{
-				return;
-			}
-			// NULL is the placeholder for the top-level pool
-			if (NULL == stop && stopPool->previous == NULL)
+			if (stopAt >= (void *)stopPool->pool &&
+			    stopAt < (void *)&stopPool->pool[POOL_SIZE])
 			{
 				break;
 			}
-			// Stop location was found in this pool
-			if ((stop >= stopPool->pool) && (stop < &stopPool->pool[POOL_SIZE]))
-			{
-				break;
-			}
+
 			stopPool = stopPool->previous;
 		}
+
+		/* Invalid pointer, quit. */
+		if (stopPool == NULL)
+		{
+			return;
+		}
 	}
-	do {
+
+	do
+	{
+		/* Clear all pools up to the stop pool. */
 		while (tls->pool != stopPool)
 		{
 			while (tls->pool->insert > tls->pool->pool)
 			{
-				tls->pool->insert--;
-				// This may autorelease some other objects, so we have to work in
-				// the case where the autorelease pool is extended during a -release.
+				--tls->pool->insert;
 				release(*tls->pool->insert);
 			}
-			void *old = tls->pool;
+
+			oldPool = tls->pool;
 			tls->pool = tls->pool->previous;
-			free(old);
+			free(oldPool);
 		}
-		if (NULL == tls->pool) break;
-		while ((stop == NULL || (tls->pool->insert > stop)) &&
-		       (tls->pool->insert > tls->pool->pool))
+
+		/* If we cleared them all, quit. */
+		if (tls->pool == NULL)
 		{
-			tls->pool->insert--;
+			return;
+		}
+
+		/* Release objects up to the stopping point, if necessary. */
+		while (tls->pool->insert > (id *)stopAt)
+		{
+			--tls->pool->insert;
 			release(*tls->pool->insert);
 		}
+
+	/* Be sure that releasing objects did not push any new pools. */
 	} while (tls->pool != stopPool);
-	//fprintf(stderr, "New insert: %p.  Stop: %p\n", tls->pool->insert, stop);
+	/* fprintf(stderr, "New insert: %p.  Stop: %p\n", tls->pool->insert, stop); */
 }
 
 #ifdef arc_tls_store
