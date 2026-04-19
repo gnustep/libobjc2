@@ -211,8 +211,8 @@ static void emptyPool(struct arc_tls *tls, void *stopAt)
 		}
 
 		/*
-		 * Release objects down to the stopping point, but never below
-		 * the pool's base.
+		 * Release objects down to the stopping point. If a new pool is
+		 * pushed, never release below the pool's base.
 		 */
 		while (tls->pool->insert > (id *)stopAt &&
 		       tls->pool->insert > tls->pool->pool)
