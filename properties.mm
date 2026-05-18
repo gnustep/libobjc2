@@ -79,9 +79,12 @@ void objc_setProperty_atomic(id obj, SEL _cmd, id arg, ptrdiff_t offset)
 	char *addr = (char*)obj;
 	addr += offset;
 	arg = objc_retain(arg);
-	auto guard = acquire_locks_for_pointers(addr);
-	id old = *(id*)addr;
-	*(id*)addr = arg;
+	id old;
+	{
+		auto guard = acquire_locks_for_pointers(addr);
+		old = *(id*)addr;
+		*(id*)addr = arg;
+	}
 	objc_release(old);
 }
 
@@ -90,11 +93,13 @@ void objc_setProperty_atomic_copy(id obj, SEL _cmd, id arg, ptrdiff_t offset)
 {
 	char *addr = (char*)obj;
 	addr += offset;
-
 	arg = [arg copy];
-	auto guard = acquire_locks_for_pointers(addr);
-	id old = *(id*)addr;
-	*(id*)addr = arg;
+	id old;
+	{
+		auto guard = acquire_locks_for_pointers(addr);
+		old = *(id*)addr;
+		*(id*)addr = arg;
+	}
 	objc_release(old);
 }
 
