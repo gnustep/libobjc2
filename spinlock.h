@@ -121,14 +121,14 @@ class DoubleLockGuard
 	public:
 	DoubleLockGuard(ThinLock *lock1, ThinLock *lock2) : lock1(lock1), lock2(lock2)
 	{
-		if (lock2 < lock1)
+		if (this->lock2 < this->lock1)
 		{
-			std::swap(lock1, lock2);
+			std::swap(this->lock1, this->lock2);
 		}
-		lock1->lock();
-		if (lock1 != lock2)
+		this->lock1->lock();
+		if (this->lock1 != this->lock2)
 		{
-			lock2->lock();
+			this->lock2->lock();
 		}
 	}
 	~DoubleLockGuard()
