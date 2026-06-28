@@ -50,8 +50,11 @@ int main(void)
 		struct big b = {1, 2, 3, 4, 5};
 		return b;
 	};
+	blk = Block_copy((blk));
 	imp = imp_implementationWithBlock(blk);
 	assert(imp && "Can't make sret IMP");
+	// imp_getBlock / imp_removeBlock must also work for struct-return blocks.
+	assert(imp_getBlock(imp) == blk);
 	type = block_copyIMPTypeEncoding_np(blk);
 	assert(NULL != type);
 	class_addMethod((objc_getMetaClass("Foo")), @selector(sret), imp, type);
@@ -62,5 +65,7 @@ int main(void)
 	assert(s.c == 3);
 	assert(s.d == 4);
 	assert(s.e == 5);
+	imp_removeBlock(imp);
+	assert(imp_getBlock(imp) != blk);
 	return 0;
 }
