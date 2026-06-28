@@ -373,7 +373,7 @@ id imp_getBlock(IMP anImp)
 	if (idx == -1)
 	{
 		set = sret_trampolines;
-		indexForIMP(anImp, &set);
+		idx = indexForIMP(anImp, &set);
 	}
 	if (idx == -1)
 	{
@@ -390,7 +390,7 @@ BOOL imp_removeBlock(IMP anImp)
 	if (idx == -1)
 	{
 		set = sret_trampolines;
-		indexForIMP(anImp, &set);
+		idx = indexForIMP(anImp, &set);
 	}
 	if (idx == -1)
 	{
