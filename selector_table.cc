@@ -447,6 +447,15 @@ extern "C" PRIVATE SEL objc_register_selector(SEL aSel)
 		return registered;
 	}
 	assert(!(aSel->types && (strstr(aSel->types, "@\"") != nullptr)));
+	// Acquire the runtime lock before the selector table lock.  Registering a
+	// new selector resizes the dtables (objc_resize_dtables), which takes the
+	// runtime lock, while the class loader (__objc_load) takes the runtime lock
+	// first and then registers selectors.  Acquiring the two in a consistent
+	// runtime-before-table order avoids a lock-order inversion
+	// (gnustep/libobjc2#391).  Holding the runtime lock for the whole
+	// registration also keeps the new selector's index (the selector_list size)
+	// and the matching dtable resize atomic with respect to other resizes.
+	LOCK_RUNTIME_FOR_SCOPE();
 	LockGuard g{selector_table_lock};
 	register_selector_locked(aSel);
 	return aSel;
@@ -463,6 +472,9 @@ SEL objc_register_selector_copy(UnregisteredSelector &aSel, BOOL copyArgs)
 	{
 		return copy;
 	}
+	// Runtime lock before the selector table lock, for the duration of the
+	// registration; see objc_register_selector above and gnustep/libobjc2#391.
+	LOCK_RUNTIME_FOR_SCOPE();
 	LockGuard g{selector_table_lock};
 	copy = selector_lookup(aSel.name, aSel.types);
 	if (nullptr != copy && selector_identical(aSel, copy))
