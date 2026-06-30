@@ -431,7 +431,7 @@ IMP class_getMethodImplementation(Class cls, SEL name)
 {
 	if ((Nil == cls) || (NULL == name)) { return (IMP)0; }
 	struct objc_slot2 * slot = objc_get_slot2(cls, name, NULL);
-	return NULL != slot ? slot->method : (IMP)__objc_msg_forward2;
+	return NULL != slot ? slot->method : __objc_msg_forward2(nil, name);
 }
 
 IMP class_getMethodImplementation_stret(Class cls, SEL name)
