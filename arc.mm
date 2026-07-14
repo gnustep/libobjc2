@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <atomic>
 #include <vector>
 #include <tsl/robin_map.h>
 #import "lock.h"
@@ -270,19 +271,18 @@ static const size_t refcount_max = refcount_mask - 1;
 
 extern "C" OBJC_PUBLIC size_t object_getRetainCount_np(id obj)
 {
-	uintptr_t *refCount = ((uintptr_t*)obj) - 1;
-	uintptr_t refCountVal = __sync_fetch_and_add(refCount, 0);
+	auto *refCount = reinterpret_cast<std::atomic<uintptr_t>*>(obj) - 1;
+	uintptr_t refCountVal = refCount->load(std::memory_order_relaxed);
 	size_t realCount = refCountVal & refcount_mask;
 	return realCount == refcount_mask ? 0 : realCount + 1;
 }
 
 static id retain_fast(id obj, BOOL isWeak)
 {
-	uintptr_t *refCount = ((uintptr_t*)obj) - 1;
-	uintptr_t refCountVal = __sync_fetch_and_add(refCount, 0);
-	uintptr_t newVal = refCountVal;
-	do {
-		refCountVal = newVal;
+	auto *refCount = reinterpret_cast<std::atomic<uintptr_t>*>(obj) - 1;
+	uintptr_t refCountVal = refCount->load(std::memory_order_relaxed);
+	for (;;)
+	{
 		size_t realCount = refCountVal & refcount_mask;
 		// If this object's reference count is already less than 0, then
 		// this is a spurious retain.  This can happen when one thread is
@@ -310,9 +310,16 @@ static id retain_fast(id obj, BOOL isWeak)
 		realCount++;
 		realCount |= refCountVal & weak_mask;
 		uintptr_t updated = (uintptr_t)realCount;
-		newVal = __sync_val_compare_and_swap(refCount, refCountVal, updated);
-	} while (newVal != refCountVal);
-	return obj;
+		// Acquire/release on the exchange so reference-count updates are
+		// ordered against each other on weakly-ordered targets.  On a failed
+		// exchange refCountVal is refreshed with the current value.
+		if (refCount->compare_exchange_weak(refCountVal, updated,
+		                                    std::memory_order_acq_rel,
+		                                    std::memory_order_acquire))
+		{
+			return obj;
+		}
+	}
 }
 
 extern "C" OBJC_PUBLIC id objc_retain_fast_np(id obj)
@@ -355,13 +362,12 @@ static inline id retain(id obj, BOOL isWeak)
 
 extern "C" OBJC_PUBLIC BOOL objc_release_fast_no_destroy_np(id obj)
 {
-	uintptr_t *refCount = ((uintptr_t*)obj) - 1;
-	uintptr_t refCountVal = __sync_fetch_and_add(refCount, 0);
-	uintptr_t newVal = refCountVal;
+	auto *refCount = reinterpret_cast<std::atomic<uintptr_t>*>(obj) - 1;
+	uintptr_t refCountVal = refCount->load(std::memory_order_relaxed);
 	bool isWeak;
 	bool shouldFree;
-	do {
-		refCountVal = newVal;
+	for (;;)
+	{
 		size_t realCount = refCountVal & refcount_mask;
 		// If the reference count is saturated or deallocating, don't decrement it.
 		if (realCount >= refcount_max)
@@ -373,11 +379,23 @@ extern "C" OBJC_PUBLIC BOOL objc_release_fast_no_destroy_np(id obj)
 		shouldFree = realCount == -1;
 		realCount |= refCountVal & weak_mask;
 		uintptr_t updated = (uintptr_t)realCount;
-		newVal = __sync_val_compare_and_swap(refCount, refCountVal, updated);
-	} while (newVal != refCountVal);
-	
+		// Release ordering on the decrement so that writes made through the
+		// references being dropped are visible to whichever thread performs
+		// the final release.  refCountVal is refreshed on a failed exchange.
+		if (refCount->compare_exchange_weak(refCountVal, updated,
+		                                    std::memory_order_release,
+		                                    std::memory_order_relaxed))
+		{
+			break;
+		}
+	}
+
 	if (shouldFree)
 	{
+		// Acquire fence pairing with the release above, so this thread sees
+		// every write made under the object's prior references before it
+		// runs -dealloc.
+		std::atomic_thread_fence(std::memory_order_acquire);
 		if (isWeak)
 		{
 			if (!objc_delete_weak_refs(obj))
@@ -796,11 +814,10 @@ static BOOL setObjectHasWeakRefs(id obj)
 	Class cls = isGlobalObject ? Nil : obj->isa;
 	if (obj && cls && objc_test_class_flag(cls, objc_class_flag_fast_arc))
 	{
-		uintptr_t *refCount = ((uintptr_t*)obj) - 1;
-		uintptr_t refCountVal = __sync_fetch_and_add(refCount, 0);
-		uintptr_t newVal = refCountVal;
-		do {
-			refCountVal = newVal;
+		auto *refCount = reinterpret_cast<std::atomic<uintptr_t>*>(obj) - 1;
+		uintptr_t refCountVal = refCount->load(std::memory_order_relaxed);
+		for (;;)
+		{
 			size_t realCount = refCountVal & refcount_mask;
 			// If this object has already been deallocated (or is in the
 			// process of being deallocated) then don't bother storing it.
@@ -826,8 +843,16 @@ static BOOL setObjectHasWeakRefs(id obj)
 			// reference and so it shouldn't be possible to deallocate it
 			// while we're assigning it.
 			uintptr_t updated = ((uintptr_t)realCount | weak_mask);
-			newVal = __sync_val_compare_and_swap(refCount, refCountVal, updated);
-		} while (newVal != refCountVal);
+			// Acquire/release on the exchange, matching the other
+			// reference-count updates.  The weak-ref lock, held here, orders
+			// the weak-table entry we publish next.
+			if (refCount->compare_exchange_weak(refCountVal, updated,
+			                                    std::memory_order_acq_rel,
+			                                    std::memory_order_acquire))
+			{
+				break;
+			}
+		}
 	}
 	return isGlobalObject;
 }
@@ -907,8 +932,8 @@ extern "C" OBJC_PUBLIC BOOL objc_delete_weak_refs(id obj)
 	if (objc_test_class_flag(classForObject(obj), objc_class_flag_fast_arc))
 	{
 		// Don't proceed if the object isn't deallocating.
-		uintptr_t *refCount = ((uintptr_t*)obj) - 1;
-		uintptr_t refCountVal = __sync_fetch_and_add(refCount, 0);
+		auto *refCount = reinterpret_cast<std::atomic<uintptr_t>*>(obj) - 1;
+		uintptr_t refCountVal = refCount->load(std::memory_order_relaxed);
 		size_t realCount = refCountVal & refcount_mask;
 		if (realCount != refcount_mask)
 		{
