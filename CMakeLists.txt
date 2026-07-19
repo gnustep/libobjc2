@@ -207,13 +207,13 @@ if (WIN32 AND NOT MINGW)
 	message(STATUS "ASM compiler: ${ASSEMBLER}")
 	# CMake is completely broken when you try to build assembly files on Windows.
 	add_custom_command(OUTPUT block_trampolines.obj
-		COMMAND echo ${ASSEMBLER} ${ASM_TARGET} -c "${CMAKE_SOURCE_DIR}/block_trampolines.S" -o "${CMAKE_BINARY_DIR}/block_trampolines.obj"
-		COMMAND ${ASSEMBLER} ${ASM_TARGET} -c "${CMAKE_SOURCE_DIR}/block_trampolines.S" -o "${CMAKE_BINARY_DIR}/block_trampolines.obj"
+		COMMAND echo ${ASSEMBLER} ${ASM_TARGET} -c "${CMAKE_CURRENT_SOURCE_DIR}/block_trampolines.S" -o "${CMAKE_CURRENT_BINARY_DIR}/block_trampolines.obj"
+		COMMAND ${ASSEMBLER} ${ASM_TARGET} -c "${CMAKE_CURRENT_SOURCE_DIR}/block_trampolines.S" -o "${CMAKE_CURRENT_BINARY_DIR}/block_trampolines.obj"
 		MAIN_DEPENDENCY block_trampolines.S
 	)
 	add_custom_command(OUTPUT objc_msgSend.obj
-		COMMAND echo ${ASSEMBLER} ${ASM_TARGET} -c "${CMAKE_SOURCE_DIR}/objc_msgSend.S" -o "${CMAKE_BINARY_DIR}/objc_msgSend.obj"
-		COMMAND ${ASSEMBLER} ${ASM_TARGET} -c "${CMAKE_SOURCE_DIR}/objc_msgSend.S" -o "${CMAKE_BINARY_DIR}/objc_msgSend.obj"
+		COMMAND echo ${ASSEMBLER} ${ASM_TARGET} -c "${CMAKE_CURRENT_SOURCE_DIR}/objc_msgSend.S" -o "${CMAKE_CURRENT_BINARY_DIR}/objc_msgSend.obj"
+		COMMAND ${ASSEMBLER} ${ASM_TARGET} -c "${CMAKE_CURRENT_SOURCE_DIR}/objc_msgSend.S" -o "${CMAKE_CURRENT_BINARY_DIR}/objc_msgSend.obj"
 		MAIN_DEPENDENCY objc_msgSend.S
 		DEPENDS objc_msgSend.aarch64.S objc_msgSend.arm.S objc_msgSend.mips.S objc_msgSend.x86-32.S objc_msgSend.x86-64.S
 	)
@@ -233,7 +233,7 @@ else ()
 		list(APPEND EH_PERSONALITY_FLAGS "${CMAKE_CXX_COMPILE_OPTIONS_TARGET}${CMAKE_CXX_COMPILER_TARGET}")
 	endif ()
 	add_custom_command(OUTPUT eh_trampoline.S
-		COMMAND ${CMAKE_CXX_COMPILER} ARGS ${EH_PERSONALITY_FLAGS} -fPIC -S "${CMAKE_SOURCE_DIR}/eh_trampoline.cc" -o - -fexceptions -fno-inline | sed "s/__gxx_personality_v0/test_eh_personality/g" > "${CMAKE_BINARY_DIR}/eh_trampoline.S"
+		COMMAND ${CMAKE_CXX_COMPILER} ARGS ${EH_PERSONALITY_FLAGS} -fPIC -S "${CMAKE_CURRENT_SOURCE_DIR}/eh_trampoline.cc" -o - -fexceptions -fno-inline | sed "s/__gxx_personality_v0/test_eh_personality/g" > "${CMAKE_CURRENT_BINARY_DIR}/eh_trampoline.S"
 		MAIN_DEPENDENCY eh_trampoline.cc)
 	list(APPEND libobjc_ASM_SRCS eh_trampoline.S)
 	list(APPEND libobjc_CXX_SRCS objcxx_eh.cc)
