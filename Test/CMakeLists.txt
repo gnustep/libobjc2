@@ -43,6 +43,7 @@ set(TESTS
 	IVarOverlap.m
 	IVarSuperclassOverlap.m
 	objc_msgSend.m
+	NilTypeQualifier.m
 	msgInterpose.m
 	NilException.m
 	MethodArguments.m
