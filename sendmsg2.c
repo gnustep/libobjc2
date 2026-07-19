@@ -189,7 +189,7 @@ struct objc_slot *objc_msg_lookup_sender(id *receiver, SEL selector, id sender)
 			{
 				t++;
 			}
-			switch (selector->types[0])
+			switch (*t)
 			{
 				case 'D': return &nil_slot_D_v1;
 				case 'd': return &nil_slot_d_v1;
@@ -225,7 +225,7 @@ static struct objc_slot2* objc_slot_lookup(id *receiver, SEL selector)
 			{
 				t++;
 			}
-			switch (selector->types[0])
+			switch (*t)
 			{
 				case 'D': return (struct objc_slot2*)&nil_slot_D;
 				case 'd': return (struct objc_slot2*)&nil_slot_d;
@@ -261,7 +261,7 @@ struct objc_slot2 *objc_slot_lookup_version(id *receiver, SEL selector, uint64_t
 			{
 				t++;
 			}
-			switch (selector->types[0])
+			switch (*t)
 			{
 				case 'D': return (struct objc_slot2*)&nil_slot_D;
 				case 'd': return (struct objc_slot2*)&nil_slot_d;
