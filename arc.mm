@@ -256,70 +256,215 @@ static IMP AutoreleaseAdd;
 
 static BOOL useARCAutoreleasePool;
 
-static const long refcount_shift = 1;
+namespace {
 /**
- * We use the top bit of the reference count to indicate whether an object has
- * ever had a weak reference taken.  This lets us avoid acquiring the weak
- * table lock for most objects on deallocation.
+ * The reference count that precedes every fast-ARC object.  It owns the bit
+ * layout -- the weak flag, the guard bit, the count field and the deallocating
+ * sentinel -- and all of the atomic manipulation of the count word, so that the
+ * retain / release / weak entry points are expressed as operations rather than
+ * as open-coded masks.  Obtain the reference count for an object with
+ * `RefCount::fromObject(obj)`.  Keeping this behind a single type is also what
+ * would let the count move into spare isa bits (with overflow spilling to a
+ * side table) without touching any of the callers.
  */
-static const size_t weak_mask = ((size_t)1)<<((sizeof(size_t)*8)-refcount_shift);
-/**
- * All of the bits other than the top bit are the real reference count.
- */
-static const size_t refcount_mask = ~weak_mask;
-static const size_t refcount_max = refcount_mask - 1;
+class RefCount
+{
+	std::atomic<uintptr_t> *word;
+
+	/**
+	 * The top bit records whether the object has ever had a weak reference
+	 * taken, which lets most objects skip the weak-table lock on deallocation.
+	 */
+	static const uintptr_t weak_flag =
+		((uintptr_t)1) << ((sizeof(uintptr_t) * 8) - 1);
+	/**
+	 * The bit immediately below the weak flag is a guard.  It is never part of
+	 * the logical count, so an optimistic `fetch_add` in the strong-retain fast
+	 * path can carry a maxed-out count into it without ever reaching (and
+	 * corrupting) the weak flag above it.
+	 */
+	static const uintptr_t guard = weak_flag >> 1;
+	/** Every bit other than the weak flag and the guard is the count itself. */
+	static const uintptr_t count_mask = ~(weak_flag | guard);
+	/** The largest representable count; incrementing past it saturates. */
+	static const uintptr_t count_max = count_mask - 1;
+	/*
+	 * A count field of all ones (== count_mask) is the deallocating sentinel,
+	 * reached when the last reference (a stored count of zero) is decremented
+	 * and the subtraction borrows.
+	 */
+
+	explicit RefCount(std::atomic<uintptr_t> *w) : word(w) {}
+
+public:
+	/** The count word sits immediately before the object. */
+	static RefCount fromObject(id obj)
+	{
+		return RefCount(reinterpret_cast<std::atomic<uintptr_t>*>(obj) - 1);
+	}
+
+	/** The logical retain count (stored count + 1), or 0 while deallocating. */
+	size_t retainCount() const
+	{
+		uintptr_t v = word->load(std::memory_order_relaxed);
+		uintptr_t count = v & count_mask;
+		return count == count_mask ? 0 : count + 1;
+	}
+
+	/** Whether the object has entered deallocation. */
+	bool isDeallocating() const
+	{
+		return (word->load(std::memory_order_relaxed) & count_mask) == count_mask;
+	}
+
+	/**
+	 * Strong retain.  The caller already owns a reference, so the object cannot
+	 * be at (or reach) the deallocating sentinel while this runs: the final
+	 * release only happens once every strong reference, including the caller's,
+	 * is gone.  A single `fetch_add` is therefore safe, and the guard bit above
+	 * the count means even a saturating increment cannot carry into the weak
+	 * flag.  This replaces a compare-exchange retry loop, which re-spins on
+	 * every lost race under contention.
+	 */
+	void increment()
+	{
+		uintptr_t old = word->fetch_add(1, std::memory_order_acq_rel);
+		if (UNLIKELY((old & count_mask) >= count_max))
+		{
+			// Saturated (unreachable for any real object: it needs 2^62 live
+			// references).  Undo the speculative increment and leave the count
+			// pinned; the guard bit guaranteed the weak flag was untouched.
+			word->fetch_sub(1, std::memory_order_relaxed);
+		}
+	}
+
+	/**
+	 * Weak-to-strong retain.  This can race a concurrent final release, so it
+	 * must atomically check-and-increment (a `fetch_add` could resurrect an
+	 * object that is already deallocating), which is why it keeps the
+	 * compare-exchange loop.  Returns false if the object is already
+	 * deallocating and must not be retained.
+	 *
+	 * The deallocating case arises when one thread acquires a strong reference
+	 * from a weak reference while another destroys the object: the deallocating
+	 * thread decrements the count with no lock held, then takes the weak-ref
+	 * table lock to zero the weak references, while `objc_loadWeakRetained`
+	 * (this path's caller) also holds that lock.  If the decrement is serialised
+	 * before this increment we return false so the object is actually
+	 * destroyed; if it is serialised after, the deallocating thread's locked
+	 * count check sees our reference and skips the destruction.
+	 */
+	bool incrementIfLive()
+	{
+		uintptr_t v = word->load(std::memory_order_relaxed);
+		for (;;)
+		{
+			uintptr_t count = v & count_mask;
+			if (count == count_mask)
+			{
+				// Already deallocating: fail the weak-to-strong transition.
+				return false;
+			}
+			if (count == count_max)
+			{
+				// Saturated: leave the count pinned.
+				return true;
+			}
+			uintptr_t updated = (count + 1) | (v & weak_flag);
+			// Acquire/release on the exchange so reference-count updates are
+			// ordered against each other on weakly-ordered targets.  On a failed
+			// exchange `v` is refreshed with the current value.
+			if (word->compare_exchange_weak(v, updated,
+			                                std::memory_order_acq_rel,
+			                                std::memory_order_acquire))
+			{
+				return true;
+			}
+		}
+	}
+
+	/**
+	 * Drop one reference.  Returns true if this dropped the last reference (the
+	 * object should now be destroyed), setting `wasWeaklyReferenced` to whether
+	 * the object had ever had a weak reference taken.  Release ordering on the
+	 * decrement makes writes through the dropped references visible to whichever
+	 * thread performs the final release.
+	 */
+	bool decrement(bool &wasWeaklyReferenced)
+	{
+		uintptr_t old = word->fetch_sub(1, std::memory_order_release);
+		uintptr_t count = old & count_mask;
+		if (LIKELY((count != 0) && (count < count_max)))
+		{
+			// The common case: a live object with other references remaining.
+			return false;
+		}
+		if (count >= count_max)
+		{
+			// Saturated, or already at the deallocating sentinel from an
+			// over-release: the decrement must not stand, so undo it.  The guard
+			// bit keeps the undo off the weak flag.
+			word->fetch_add(1, std::memory_order_relaxed);
+			return false;
+		}
+		// count == 0: this dropped the last reference.  The borrow leaves the
+		// count field at the deallocating sentinel, which every other path keys
+		// off; it also flips the weak flag, but that is never observed (the
+		// sentinel is what -objc_delete_weak_refs and -setObjectHasWeakRefs test,
+		// the weak state is taken from the pre-decrement value here, and the word
+		// is freed immediately afterwards).
+		std::atomic_thread_fence(std::memory_order_acquire);
+		wasWeaklyReferenced = (old & weak_flag) == weak_flag;
+		return true;
+	}
+
+	/**
+	 * Record that the object has a weak reference.  The flag is monotonic (set,
+	 * never cleared), so this is a no-op once it is set, and it is a no-op once
+	 * the object is deallocating.
+	 */
+	void markWeaklyReferenced()
+	{
+		uintptr_t v = word->load(std::memory_order_relaxed);
+		for (;;)
+		{
+			uintptr_t count = v & count_mask;
+			if (count == count_mask)
+			{
+				// Deallocating (or deallocated): nothing to record.
+				return;
+			}
+			if ((v & weak_flag) == weak_flag)
+			{
+				// Already set; monotonic, so don't try to re-set it.
+				return;
+			}
+			uintptr_t updated = count | weak_flag;
+			if (word->compare_exchange_weak(v, updated,
+			                                std::memory_order_acq_rel,
+			                                std::memory_order_acquire))
+			{
+				return;
+			}
+		}
+	}
+};
+} // namespace
 
 extern "C" OBJC_PUBLIC size_t object_getRetainCount_np(id obj)
 {
-	auto *refCount = reinterpret_cast<std::atomic<uintptr_t>*>(obj) - 1;
-	uintptr_t refCountVal = refCount->load(std::memory_order_relaxed);
-	size_t realCount = refCountVal & refcount_mask;
-	return realCount == refcount_mask ? 0 : realCount + 1;
+	return RefCount::fromObject(obj).retainCount();
 }
 
 static id retain_fast(id obj, BOOL isWeak)
 {
-	auto *refCount = reinterpret_cast<std::atomic<uintptr_t>*>(obj) - 1;
-	uintptr_t refCountVal = refCount->load(std::memory_order_relaxed);
-	for (;;)
+	RefCount refCount = RefCount::fromObject(obj);
+	if (LIKELY(!isWeak))
 	{
-		size_t realCount = refCountVal & refcount_mask;
-		// If this object's reference count is already less than 0, then
-		// this is a spurious retain.  This can happen when one thread is
-		// attempting to acquire a strong reference from a weak reference
-		// and the other thread is attempting to destroy it.  The
-		// deallocating thread will decrement the reference count with no
-		// locks held and will then acquire the weak ref table lock and
-		// attempt to zero the weak references.  The caller of this will be
-		// `objc_loadWeakRetained`, which will also hold the lock.  If the
-		// serialisation is such that the locked retain happens after the
-		// decrement, then we return nil here so that the weak-to-strong
-		// transition doesn't happen and the object is actually destroyed.
-		// If the serialisation happens the other way, then the locked
-		// check of the reference count will happen after we've referenced
-		// this and we don't zero the references or deallocate.
-		if (realCount == refcount_mask)
-		{
-			return isWeak ? nil : obj;
-		}
-		// If the reference count is saturated, don't increment it.
-		if (realCount == refcount_max)
-		{
-			return obj;
-		}
-		realCount++;
-		realCount |= refCountVal & weak_mask;
-		uintptr_t updated = (uintptr_t)realCount;
-		// Acquire/release on the exchange so reference-count updates are
-		// ordered against each other on weakly-ordered targets.  On a failed
-		// exchange refCountVal is refreshed with the current value.
-		if (refCount->compare_exchange_weak(refCountVal, updated,
-		                                    std::memory_order_acq_rel,
-		                                    std::memory_order_acquire))
-		{
-			return obj;
-		}
+		refCount.increment();
+		return obj;
 	}
+	return refCount.incrementIfLive() ? obj : nil;
 }
 
 extern "C" OBJC_PUBLIC id objc_retain_fast_np(id obj)
@@ -362,50 +507,18 @@ static inline id retain(id obj, BOOL isWeak)
 
 extern "C" OBJC_PUBLIC BOOL objc_release_fast_no_destroy_np(id obj)
 {
-	auto *refCount = reinterpret_cast<std::atomic<uintptr_t>*>(obj) - 1;
-	uintptr_t refCountVal = refCount->load(std::memory_order_relaxed);
-	bool isWeak;
-	bool shouldFree;
-	for (;;)
+	bool wasWeaklyReferenced;
+	if (!RefCount::fromObject(obj).decrement(wasWeaklyReferenced))
 	{
-		size_t realCount = refCountVal & refcount_mask;
-		// If the reference count is saturated or deallocating, don't decrement it.
-		if (realCount >= refcount_max)
-		{
-			return NO;
-		}
-		realCount--;
-		isWeak = (refCountVal & weak_mask) == weak_mask;
-		shouldFree = realCount == -1;
-		realCount |= refCountVal & weak_mask;
-		uintptr_t updated = (uintptr_t)realCount;
-		// Release ordering on the decrement so that writes made through the
-		// references being dropped are visible to whichever thread performs
-		// the final release.  refCountVal is refreshed on a failed exchange.
-		if (refCount->compare_exchange_weak(refCountVal, updated,
-		                                    std::memory_order_release,
-		                                    std::memory_order_relaxed))
-		{
-			break;
-		}
+		return NO;
 	}
-
-	if (shouldFree)
+	// This dropped the last reference, so the object is now deallocating.  Zero
+	// any weak references to it before the caller destroys it.
+	if (wasWeaklyReferenced && !objc_delete_weak_refs(obj))
 	{
-		// Acquire fence pairing with the release above, so this thread sees
-		// every write made under the object's prior references before it
-		// runs -dealloc.
-		std::atomic_thread_fence(std::memory_order_acquire);
-		if (isWeak)
-		{
-			if (!objc_delete_weak_refs(obj))
-			{
-				return NO;
-			}
-		}
-		return YES;
+		return NO;
 	}
-	return NO;
+	return YES;
 }
 
 extern "C" OBJC_PUBLIC void objc_release_fast_np(id obj)
@@ -991,38 +1104,9 @@ static BOOL setObjectHasWeakRefs(id obj)
 	Class cls = isGlobalObject ? Nil : obj->isa;
 	if (obj && cls && objc_test_class_flag(cls, objc_class_flag_fast_arc))
 	{
-		auto *refCount = reinterpret_cast<std::atomic<uintptr_t>*>(obj) - 1;
-		uintptr_t refCountVal = refCount->load(std::memory_order_relaxed);
-		for (;;)
-		{
-			size_t realCount = refCountVal & refcount_mask;
-			// If this object has already been deallocated (or is in the
-			// process of being deallocated) then don't bother storing it.
-			if (realCount == refcount_mask)
-			{
-				obj = nil;
-				cls = Nil;
-				break;
-			}
-			// The weak ref flag is monotonic (it is set, never cleared) so
-			// don't bother trying to re-set it.
-			if ((refCountVal & weak_mask) == weak_mask)
-			{
-				break;
-			}
-			// Set the weak-ref flag in the reference count.  We hold the owning
-			// stripe lock, so a thread racing to deallocate waits if we win the
-			// update.  Relaxed suffices: the flag lives in the reference-count
-			// word, so the release-path CAS observes it via the location's
-			// modification order; the stripe lock orders the table entry.
-			uintptr_t updated = ((uintptr_t)realCount | weak_mask);
-			if (refCount->compare_exchange_weak(refCountVal, updated,
-			                                    std::memory_order_acq_rel,
-			                                    std::memory_order_acquire))
-			{
-				break;
-			}
-		}
+		// We hold the owning stripe lock, so a thread racing to deallocate waits
+		// if we win the update.
+		RefCount::fromObject(obj).markWeaklyReferenced();
 	}
 	return isGlobalObject;
 }
@@ -1090,10 +1174,7 @@ extern "C" OBJC_PUBLIC BOOL objc_delete_weak_refs(id obj)
 	if (objc_test_class_flag(classForObject(obj), objc_class_flag_fast_arc))
 	{
 		// Don't proceed if the object isn't deallocating.
-		auto *refCount = reinterpret_cast<std::atomic<uintptr_t>*>(obj) - 1;
-		uintptr_t refCountVal = refCount->load(std::memory_order_relaxed);
-		size_t realCount = refCountVal & refcount_mask;
-		if (realCount != refcount_mask)
+		if (!RefCount::fromObject(obj).isDeallocating())
 		{
 			return NO;
 		}
