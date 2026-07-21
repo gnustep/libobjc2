@@ -85,7 +85,8 @@ int main()
 
 const long refcount_shift = 1;
 const size_t weak_mask = ((size_t)1)<<((sizeof(size_t)*8)-refcount_shift);
-const size_t refcount_mask = ~weak_mask;
+const size_t guard_mask = weak_mask >> 1;
+const size_t refcount_mask = ~(weak_mask | guard_mask);
 const size_t refcount_max = refcount_mask - 1;
 
 size_t get_refcount(id obj)
