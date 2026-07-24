@@ -690,12 +690,21 @@ static int weakref_class;
 
 namespace {
 
+// Weak-reference control block.  `shardIndex` is the owning stripe: set once,
+// never changed, and blocks are recycled (never freed), so a slot-first
+// operation can read it to pick the stripe without a lock.
 struct WeakRef
 {
-	void *isa = &weakref_class;
+	void *isa;
 	id obj = nullptr;
 	size_t weak_count = 1;
-	WeakRef(id o) : obj(o) {}
+	size_t shardIndex;
+	WeakRef *nextFree = nullptr;  // valid only while on a stripe's free list
+	WeakRef(id o, size_t shard) : obj(o), shardIndex(shard)
+	{
+		// isa is read without a lock by asWeakRef, so publish it atomically.
+		__atomic_store_n(&isa, (void*)&weakref_class, __ATOMIC_RELAXED);
+	}
 };
 
 template<typename T>
@@ -730,19 +739,225 @@ struct malloc_allocator
 	}
 };
 
-using weak_ref_table = tsl::robin_pg_map<const void*,
-                                         WeakRef*,
-                                         std::hash<const void*>,
-                                         std::equal_to<const void*>,
-                                         malloc_allocator<std::pair<const void*, WeakRef*>>>;
+using weak_ref_map = tsl::robin_pg_map<const void*,
+                                       WeakRef*,
+                                       std::hash<const void*>,
+                                       std::equal_to<const void*>,
+                                       malloc_allocator<std::pair<const void*, WeakRef*>>>;
 
-weak_ref_table &weakRefs()
+// A weak slot is accessed under whichever stripe lock owns the block it points
+// at, so no single lock serialises it: use atomic acquire/release.
+static inline id weakSlotLoad(id *slot)
 {
-	static weak_ref_table w{128};
-	return w;
+	return (id)__atomic_load_n((void**)slot, __ATOMIC_ACQUIRE);
+}
+static inline void weakSlotStore(id *slot, id value)
+{
+	__atomic_store_n((void**)slot, (void*)value, __ATOMIC_RELEASE);
 }
 
-mutex_t weakRefLock;
+// If `p` is a control block, return it so the caller can pick the owning stripe
+// before locking; otherwise (nil, tagged pointer, real object) return nullptr.
+// isa is read atomically as a concurrent recycle may republish it.
+static inline WeakRef *asWeakRef(id p)
+{
+	if ((p == nil) || isSmallObject(p))
+	{
+		return nullptr;
+	}
+	if (__atomic_load_n((void**)&p->isa, __ATOMIC_RELAXED) == (void*)&weakref_class)
+	{
+		return reinterpret_cast<WeakRef*>(p);
+	}
+	return nullptr;
+}
+
+// Sharded weak-reference table: the striping is internal; callers work in terms
+// of objects and slots.  NumShards is a compile-time power of two.  Every
+// operation runs inside withSlotLocked / withStoreLocked, which hold the owning
+// stripe lock(s); the helpers below assume that lock is held.
+template<size_t NumShards>
+class WeakRefTable
+{
+	static_assert((NumShards & (NumShards - 1)) == 0,
+	              "NumShards must be a power of two");
+
+	// One stripe: lock, map and free list.  Cache-line aligned so stripes do not
+	// false-share.  The free list recycles blocks (never freed) so their memory
+	// and immutable shardIndex stay valid for lock-free selection; it is guarded
+	// by the stripe lock the callers already hold.
+	struct alignas(64) Shard
+	{
+		mutex_t lock;
+		weak_ref_map map;
+		WeakRef *freeList = nullptr;
+		Shard() : map(16) { INIT_LOCK(lock); }
+	};
+	Shard shards[NumShards];
+
+	// Object address -> stripe.  The low bits are alignment, so fold in higher
+	// bits before masking.
+	static inline size_t indexFor(const void *obj)
+	{
+		uintptr_t a = reinterpret_cast<uintptr_t>(obj);
+		return ((a >> 4) ^ (a >> 12) ^ (a >> 20)) & (NumShards - 1);
+	}
+
+public:
+	static const size_t NONE = ~static_cast<size_t>(0);  // "no stripe" for Guard
+
+	// Locks one or two stripes (NONE = none) in ascending index order,
+	// de-duplicating.  The ordering makes two-object operations deadlock-free.
+	class Guard
+	{
+		Shard *s0 = nullptr;
+		Shard *s1 = nullptr;
+	public:
+		Guard(WeakRefTable &t, size_t i, size_t j = NONE)
+		{
+			size_t a = i, b = j;
+			if ((a != NONE) && (b != NONE))
+			{
+				if (a == b) { b = NONE; }
+				else if (a > b) { size_t x = a; a = b; b = x; }
+			}
+			else if (a == NONE) { a = b; b = NONE; }
+			if (a != NONE) { s0 = &t.shards[a]; LOCK(&s0->lock); }
+			if (b != NONE) { s1 = &t.shards[b]; LOCK(&s1->lock); }
+		}
+		Guard(const Guard&) = delete;
+		Guard &operator=(const Guard&) = delete;
+		~Guard()
+		{
+			if (s1) { UNLOCK(&s1->lock); }
+			if (s0) { UNLOCK(&s0->lock); }
+		}
+	};
+
+	// Construct the stripes (and init their locks) before first use.
+	void init() { (void)shards[0].map.size(); }
+
+	// Run fn(ref, raw) with the stripe owning the slot's current weak reference
+	// locked (ref == nullptr, no lock, for a nil/strong slot).  The slot may be
+	// repointed between the lock-free peek and the lock; re-check and retry.  fn
+	// uses `raw`, never a fresh load, so it cannot return a value that appeared
+	// after the check.
+	template<typename Fn>
+	auto withSlotLocked(id *slot, Fn &&fn) -> decltype(fn((WeakRef*)nullptr, (id)nil))
+	{
+		for (;;)
+		{
+			id raw = weakSlotLoad(slot);
+			WeakRef *peek = asWeakRef(raw);
+			Guard g(*this, peek ? peek->shardIndex : NONE);
+			if (weakSlotLoad(slot) != raw)
+			{
+				continue;
+			}
+			return fn(peek, raw);
+		}
+	}
+
+	// As withSlotLocked, but also locks the stripe owning `newObj` (storeWeak
+	// touches the slot's current target and the new object).
+	template<typename Fn>
+	auto withStoreLocked(id *slot, id newObj, Fn &&fn) -> decltype(fn((WeakRef*)nullptr, (id)nil))
+	{
+		size_t sNew = newObj ? indexFor(newObj) : NONE;
+		for (;;)
+		{
+			id raw = weakSlotLoad(slot);
+			WeakRef *peek = asWeakRef(raw);
+			Guard g(*this, peek ? peek->shardIndex : NONE, sNew);
+			if (weakSlotLoad(slot) != raw)
+			{
+				continue;
+			}
+			return fn(peek, raw);
+		}
+	}
+
+	size_t shardOf(id obj) { return indexFor(obj); }  // stripe index owning `obj`
+
+	// Map of the stripe owning `obj` (caller holds its lock).
+	weak_ref_map &mapFor(id obj) { return shards[indexFor(obj)].map; }
+
+	// Control block for `obj`, incrementing its weak count.  Caller holds the lock.
+	WeakRef *increment(id obj)
+	{
+		size_t shard = indexFor(obj);
+		WeakRef *&ref = shards[shard].map[obj];
+		if (ref == nullptr)
+		{
+			ref = alloc(obj, shard);
+		}
+		else
+		{
+			assert(ref->obj == obj);
+			ref->weak_count++;
+		}
+		return ref;
+	}
+
+	// Drop one weak reference; recycle the block when the last goes.  Caller
+	// holds the lock.
+	BOOL release(WeakRef *ref)
+	{
+		ref->weak_count--;
+		if (ref->weak_count == 0)
+		{
+			shards[ref->shardIndex].map.erase(ref->obj);
+			recycle(ref);
+			return YES;
+		}
+		return NO;
+	}
+
+private:
+	// A block for `obj` in `shard`, recycled if one is available.
+	WeakRef *alloc(id obj, size_t shard)
+	{
+		Shard &s = shards[shard];
+		WeakRef *ref = s.freeList;
+		if (ref != nullptr)
+		{
+			s.freeList = ref->nextFree;
+			__atomic_store_n(&ref->isa, (void*)&weakref_class, __ATOMIC_RELAXED);
+			ref->obj = obj;
+			ref->weak_count = 1;
+			ref->nextFree = nullptr;
+			// shardIndex is already == shard and never changes.
+		}
+		else
+		{
+			ref = new WeakRef(obj, shard);
+		}
+		return ref;
+	}
+
+	// Return a block to its stripe's free list, keeping its memory valid.
+	void recycle(WeakRef *ref)
+	{
+		Shard &s = shards[ref->shardIndex];
+		ref->obj = nil;
+		ref->nextFree = s.freeList;
+		s.freeList = ref;
+	}
+};
+
+#ifndef OBJC_WEAK_SHARD_COUNT
+#define OBJC_WEAK_SHARD_COUNT 64
+#endif
+
+using weak_table_t = WeakRefTable<OBJC_WEAK_SHARD_COUNT>;
+
+// The function-local static constructs the stripes (and inits their locks)
+// before any weak operation can run.
+static inline weak_table_t &weakTable()
+{
+	static weak_table_t t;
+	return t;
+}
 
 }
 
@@ -757,53 +972,15 @@ static const struct Block_callbacks_RR blocks_runtime_callbacks = {
 
 PRIVATE extern "C" void init_arc(void)
 {
-	INIT_LOCK(weakRefLock);
+	// Force the weak-table stripes (and their locks) to be constructed before
+	// any weak operation can run.
+	weakTable().init();
 #ifdef arc_tls_store
 	ARCThreadKey = arc_tls_key_create((arc_cleanup_function_t)cleanupPools);
 #endif
 #ifdef HAVE_BLOCK_USE_RR2
 	_Block_use_RR2(&blocks_runtime_callbacks);
 #endif
-}
-
-/**
-  * Load from a weak pointer and return whether this really was a weak
-  * reference or a strong (not deallocatable) object in a weak pointer.  The
-  * object will be stored in `obj` and the weak reference in `ref`, if one
-  * exists.
-  */
-__attribute__((always_inline))
-static inline BOOL loadWeakPointer(id *addr, id *obj, WeakRef **ref)
-{
-	id oldObj = *addr;
-	if (oldObj == nil)
-	{
-		*ref = NULL;
-		*obj = nil;
-		return NO;
-	}
-	if (classForObject(oldObj) == (Class)&weakref_class)
-	{
-		*ref = (WeakRef*)oldObj;
-		*obj = (*ref)->obj;
-		return YES;
-	}
-	*ref = NULL;
-	*obj = oldObj;
-	return NO;
-}
-
-__attribute__((always_inline))
-static inline BOOL weakRefRelease(WeakRef *ref)
-{
-	ref->weak_count--;
-	if (ref->weak_count == 0)
-	{
-		weakRefs().erase(ref->obj);
-		delete ref;
-		return YES;
-	}
-	return NO;
 }
 
 extern "C" void* block_load_weak(void *block);
@@ -833,19 +1010,12 @@ static BOOL setObjectHasWeakRefs(id obj)
 			{
 				break;
 			}
-			// Set the flag in the reference count to indicate that a weak
-			// reference has been taken.
-			//
-			// We currently hold the weak ref lock, so another thread
-			// racing to deallocate this object will have to wait to do so
-			// if we manage to do the reference count update first.  This
-			// shouldn't be possible, because `obj` should be a strong
-			// reference and so it shouldn't be possible to deallocate it
-			// while we're assigning it.
+			// Set the weak-ref flag in the reference count.  We hold the owning
+			// stripe lock, so a thread racing to deallocate waits if we win the
+			// update.  Relaxed suffices: the flag lives in the reference-count
+			// word, so the release-path CAS observes it via the location's
+			// modification order; the stripe lock orders the table entry.
 			uintptr_t updated = ((uintptr_t)realCount | weak_mask);
-			// Acquire/release on the exchange, matching the other
-			// reference-count updates.  The weak-ref lock, held here, orders
-			// the weak-table entry we publish next.
 			if (refCount->compare_exchange_weak(refCountVal, updated,
 			                                    std::memory_order_acq_rel,
 			                                    std::memory_order_acquire))
@@ -857,78 +1027,66 @@ static BOOL setObjectHasWeakRefs(id obj)
 	return isGlobalObject;
 }
 
-WeakRef *incrementWeakRefCount(id obj)
-{
-	WeakRef *&ref = weakRefs()[obj];
-	if (ref == nullptr)
-	{
-		ref = new WeakRef(obj);
-	}
-	else
-	{
-		assert(ref->obj == obj);
-		ref->weak_count++;
-	}
-	return ref;
-}
-
 extern "C" OBJC_PUBLIC id objc_storeWeak(id *addr, id obj)
 {
-	LOCK_FOR_SCOPE(&weakRefLock);
-	WeakRef *oldRef;
-	id old;
-	loadWeakPointer(addr, &old, &oldRef);
-	// If the old and new values are the same, then we don't need to do anything
-	// unless we are deleting the weak reference by storing NULL to it.
-	if ((old == obj) && ((obj != NULL) || (NULL == oldRef)))
-	{
-		return obj;
-	}
-	BOOL isGlobalObject = setObjectHasWeakRefs(obj);
-	// If we old ref exists, decrement its reference count.  This may also
-	// delete the weak reference control block.
-	if (oldRef != NULL)
-	{
-		weakRefRelease(oldRef);
-	}
-	// If we're storing nil, then just write a null pointer.
-	if (nil == obj)
-	{
-		*addr = obj;
-		return nil;
-	}
-	if (isGlobalObject)
-	{
-		// If this is a global object, it's never deallocated, so secretly make
-		// this a strong reference.
-		*addr = obj;
-		return obj;
-	}
-	Class cls = classForObject(obj);
-	if (UNLIKELY(objc_test_class_flag(cls, objc_class_flag_is_block)))
-	{
-		// Check whether the block is being deallocated and return nil if so
-		if (_Block_isDeallocating(obj)) {
-			*addr = nil;
+	auto &t = weakTable();
+	return t.withStoreLocked(addr, obj, [&](WeakRef *oldRef, id raw) -> id {
+		// Both stripe locks are held, so oldRef, oldRef->obj and the slot are stable.
+		id old = oldRef ? oldRef->obj : raw;
+		// If the old and new values are the same, then we don't need to do
+		// anything unless we are deleting the weak reference by storing NULL.
+		if ((old == obj) && ((obj != NULL) || (NULL == oldRef)))
+		{
+			return obj;
+		}
+		BOOL isGlobalObject = setObjectHasWeakRefs(obj);
+		// If an old ref exists, decrement its reference count.  This may also
+		// recycle the weak reference control block.
+		if (oldRef != NULL)
+		{
+			t.release(oldRef);
+		}
+		// If we're storing nil, then just write a null pointer.
+		if (nil == obj)
+		{
+			weakSlotStore(addr, obj);
 			return nil;
 		}
-	}
-	else if (object_getRetainCount_np(obj) == 0)
-	{
-		// If the object is being deallocated return nil.
-		*addr = nil;
-		return nil;
-	}
-	if (nil != obj)
-	{
-		*addr = (id)incrementWeakRefCount(obj);
-	}
-	return obj;
+		if (isGlobalObject)
+		{
+			// A global object is never deallocated, so secretly make this a
+			// strong reference.
+			weakSlotStore(addr, obj);
+			return obj;
+		}
+		Class cls = classForObject(obj);
+		if (UNLIKELY(objc_test_class_flag(cls, objc_class_flag_is_block)))
+		{
+			// Check whether the block is being deallocated and return nil if so
+			if (_Block_isDeallocating(obj))
+			{
+				weakSlotStore(addr, nil);
+				return nil;
+			}
+		}
+		else if (object_getRetainCount_np(obj) == 0)
+		{
+			// If the object is being deallocated return nil.
+			weakSlotStore(addr, nil);
+			return nil;
+		}
+		if (nil != obj)
+		{
+			weakSlotStore(addr, (id)t.increment(obj));
+		}
+		return obj;
+	});
 }
 
 extern "C" OBJC_PUBLIC BOOL objc_delete_weak_refs(id obj)
 {
-	LOCK_FOR_SCOPE(&weakRefLock);
+	auto &t = weakTable();
+	typename weak_table_t::Guard guard(t, t.shardOf(obj));
 	if (objc_test_class_flag(classForObject(obj), objc_class_flag_fast_arc))
 	{
 		// Don't proceed if the object isn't deallocating.
@@ -940,22 +1098,20 @@ extern "C" OBJC_PUBLIC BOOL objc_delete_weak_refs(id obj)
 			return NO;
 		}
 	}
-	auto &table = weakRefs();
+	auto &table = t.mapFor(obj);
 	auto old = table.find(obj);
 	if (old != table.end())
 	{
 		WeakRef *oldRef = old->second;
-		// The address of obj is likely to be reused, so remove it from
-		// the table so that we don't accidentally alias weak
-		// references
+		// The address of obj is likely to be reused, so remove it from the
+		// table so that we don't accidentally alias weak references.
 		table.erase(old);
-		// Zero the object pointer.  This prevents any other weak
-		// accesses from loading from this.  This must be done after
-		// removing the ref from the table, because the compare operation
-		// tests the obj field.
+		// Zero the object pointer.  This prevents any other weak accesses from
+		// loading from this.  It must be done after removing the ref from the
+		// table, because the compare operation tests the obj field.
 		oldRef->obj = nil;
-		// If the weak reference count is zero, then we should have
-		// already removed this.
+		// If the weak reference count is zero, then we should have already
+		// removed this.
 		assert(oldRef->weak_count > 0);
 	}
 	return YES;
@@ -963,56 +1119,51 @@ extern "C" OBJC_PUBLIC BOOL objc_delete_weak_refs(id obj)
 
 extern "C" OBJC_PUBLIC id objc_loadWeakRetained(id* addr)
 {
-	LOCK_FOR_SCOPE(&weakRefLock);
-	id obj;
-	WeakRef *ref;
-	// If this is really a strong reference (nil, or an non-deallocatable
-	// object), just return it.
-	if (!loadWeakPointer(addr, &obj, &ref))
-	{
-		return obj;
-	}
-	// The object cannot be deallocated while we hold the lock (release
-	// will acquire the lock before attempting to deallocate)
-	if (obj == nil)
-	{
-		// If the object is destroyed, drop this reference to the WeakRef
-		// struct.
-		if (ref != NULL)
+	auto &t = weakTable();
+	return t.withSlotLocked(addr, [&](WeakRef *peek, id raw) -> id {
+		// A nil or non-deallocatable strong value needs no table access.
+		if (peek == nullptr)
 		{
-			weakRefRelease(ref);
-			*addr = nil;
+			return raw;
 		}
-		return nil;
-	}
-	Class cls = classForObject(obj);
-	if (objc_test_class_flag(cls, objc_class_flag_permanent_instances))
-	{
-		return obj;
-	}
-	else if (UNLIKELY(objc_test_class_flag(cls, objc_class_flag_is_block)))
-	{
-		obj = static_cast<id>(block_load_weak(obj));
+		// The stripe lock is held, so peek and peek->obj are stable, and the
+		// object cannot be deallocated (release acquires the lock first).
+		id obj = peek->obj;
 		if (obj == nil)
 		{
+			// The object is destroyed; drop this reference to the control block.
+			t.release(peek);
+			weakSlotStore(addr, nil);
 			return nil;
 		}
-		// This is a defeasible retain operation that protects against another thread concurrently
-		// starting to deallocate the block.
-		if (_Block_tryRetain(obj))
+		Class cls = classForObject(obj);
+		if (objc_test_class_flag(cls, objc_class_flag_permanent_instances))
 		{
 			return obj;
 		}
-		return nil;
-
-	}
-	else if (!objc_test_class_flag(cls, objc_class_flag_fast_arc))
-	{
-		obj = _objc_weak_load(obj);
-	}
-	// _objc_weak_load() can return nil
-	if (obj == nil) { return nil; }
-	return retain(obj, YES);
+		else if (UNLIKELY(objc_test_class_flag(cls, objc_class_flag_is_block)))
+		{
+			obj = static_cast<id>(block_load_weak(obj));
+			if (obj == nil)
+			{
+				return nil;
+			}
+			// A defeasible retain that protects against another thread
+			// concurrently starting to deallocate the block.
+			if (_Block_tryRetain(obj))
+			{
+				return obj;
+			}
+			return nil;
+		}
+		else if (!objc_test_class_flag(cls, objc_class_flag_fast_arc))
+		{
+			obj = _objc_weak_load(obj);
+		}
+		// _objc_weak_load() can return nil
+		if (obj == nil) { return nil; }
+		return retain(obj, YES);
+	});
 }
 
 extern "C" OBJC_PUBLIC id objc_loadWeak(id* object)
@@ -1026,15 +1177,14 @@ extern "C" OBJC_PUBLIC void objc_copyWeak(id *dest, id *src)
 	// `src` is a valid pointer to a __weak pointer or nil.
 	// `dest` is a valid pointer to uninitialised memory.
 	// After this operation, `dest` should contain whatever `src` contained.
-	LOCK_FOR_SCOPE(&weakRefLock);
-	id obj;
-	WeakRef *srcRef;
-	loadWeakPointer(src, &obj, &srcRef);
-	*dest = *src;
-	if (srcRef)
-	{
-		srcRef->weak_count++;
-	}
+	weakTable().withSlotLocked(src, [&](WeakRef *peek, id raw) -> char {
+		*dest = raw;
+		if (peek)
+		{
+			peek->weak_count++;  // took another reference to the control block
+		}
+		return 0;
+	});
 }
 
 extern "C" OBJC_PUBLIC void objc_moveWeak(id *dest, id *src)
@@ -1043,56 +1193,52 @@ extern "C" OBJC_PUBLIC void objc_moveWeak(id *dest, id *src)
 	// `dest` is a valid pointer to uninitialized memory.
 	// `src` is a valid pointer to a __weak pointer.
 	// This operation moves from *src to *dest and must be atomic with respect
-	// to other stores to *src via `objc_storeWeak`.
-	//
-	// Acquire the lock so that we guarantee the atomicity.  We could probably
-	// optimise this by doing an atomic exchange of `*src` with `nil` and
-	// storing the result in `dest`, but it's probably not worth it unless weak
-	// references are a bottleneck.
-	LOCK_FOR_SCOPE(&weakRefLock);
-	*dest = *src;
-	*src = nil;
+	// to other stores to *src via `objc_storeWeak`; the stripe lock provides it.
+	weakTable().withSlotLocked(src, [&](WeakRef *, id raw) -> char {
+		*dest = raw;
+		weakSlotStore(src, nil);
+		return 0;
+	});
 }
 
 extern "C" OBJC_PUBLIC void objc_destroyWeak(id* obj)
 {
-	LOCK_FOR_SCOPE(&weakRefLock);
-	WeakRef *oldRef;
-	id old;
-	loadWeakPointer(obj, &old, &oldRef);
-	// If the old ref exists, decrement its reference count.  This may also
-	// delete the weak reference control block.
-	if (oldRef != NULL)
-	{
-		weakRefRelease(oldRef);
-	}
+	weakTable().withSlotLocked(obj, [&](WeakRef *peek, id) -> char {
+		// If the slot held a weak reference, decrement its count (may recycle it).
+		if (peek != NULL)
+		{
+			weakTable().release(peek);
+		}
+		return 0;
+	});
 }
 
 extern "C" OBJC_PUBLIC id objc_initWeak(id *addr, id obj)
 {
 	if (obj == nil)
 	{
-		*addr = nil;
+		weakSlotStore(addr, nil);
 		return nil;
 	}
-	LOCK_FOR_SCOPE(&weakRefLock);
+	auto &t = weakTable();
+	typename weak_table_t::Guard guard(t, t.shardOf(obj));
 	BOOL isGlobalObject = setObjectHasWeakRefs(obj);
 	if (isGlobalObject)
 	{
-		// If this is a global object, it's never deallocated, so secretly make
-		// this a strong reference.
-		*addr = obj;
+		// A global object is never deallocated, so secretly make this a strong
+		// reference.
+		weakSlotStore(addr, obj);
 		return obj;
 	}
 	// If the object is being deallocated return nil.
 	if (object_getRetainCount_np(obj) == 0)
 	{
-		*addr = nil;
+		weakSlotStore(addr, nil);
 		return nil;
 	}
 	if (nil != obj)
 	{
-		*(WeakRef**)addr = incrementWeakRefCount(obj);
+		weakSlotStore(addr, (id)t.increment(obj));
 	}
 	return obj;
 }
