@@ -803,6 +803,27 @@ static int weakref_class;
 
 namespace {
 
+/*
+ * Two words on these paths are reached without a lock, and neither is declared
+ * as an atomic object: the isa word of a control block has to stay layout
+ * compatible with an object so the block can be handed out as an id, and the
+ * slot of a weak variable belongs to the caller.  Both are therefore reached
+ * through an atomic pointer, as the reference count word is.
+ */
+static inline std::atomic<void*> *atomicIsa(void **isa)
+{
+	return reinterpret_cast<std::atomic<void*>*>(isa);
+}
+
+/*
+ * The value type is void* rather than id because an Objective-C object pointer
+ * is not a permitted atomic value type.
+ */
+static inline std::atomic<void*> *atomicSlot(id *slot)
+{
+	return reinterpret_cast<std::atomic<void*>*>(slot);
+}
+
 // Weak-reference control block.  `shardIndex` is the owning stripe: set once,
 // never changed, and blocks are recycled (never freed), so a slot-first
 // operation can read it to pick the stripe without a lock.
@@ -816,7 +837,7 @@ struct WeakRef
 	WeakRef(id o, size_t shard) : obj(o), shardIndex(shard)
 	{
 		// isa is read without a lock by asWeakRef, so publish it atomically.
-		__atomic_store_n(&isa, (void*)&weakref_class, __ATOMIC_RELAXED);
+		atomicIsa(&isa)->store((void*)&weakref_class, std::memory_order_relaxed);
 	}
 };
 
@@ -862,11 +883,11 @@ using weak_ref_map = tsl::robin_pg_map<const void*,
 // at, so no single lock serialises it: use atomic acquire/release.
 static inline id weakSlotLoad(id *slot)
 {
-	return (id)__atomic_load_n((void**)slot, __ATOMIC_ACQUIRE);
+	return (id)atomicSlot(slot)->load(std::memory_order_acquire);
 }
 static inline void weakSlotStore(id *slot, id value)
 {
-	__atomic_store_n((void**)slot, (void*)value, __ATOMIC_RELEASE);
+	atomicSlot(slot)->store((void*)value, std::memory_order_release);
 }
 
 // If `p` is a control block, return it so the caller can pick the owning stripe
@@ -878,7 +899,8 @@ static inline WeakRef *asWeakRef(id p)
 	{
 		return nullptr;
 	}
-	if (__atomic_load_n((void**)&p->isa, __ATOMIC_RELAXED) == (void*)&weakref_class)
+	if (atomicIsa((void**)&p->isa)->load(std::memory_order_relaxed)
+	    == (void*)&weakref_class)
 	{
 		return reinterpret_cast<WeakRef*>(p);
 	}
@@ -1035,7 +1057,8 @@ private:
 		if (ref != nullptr)
 		{
 			s.freeList = ref->nextFree;
-			__atomic_store_n(&ref->isa, (void*)&weakref_class, __ATOMIC_RELAXED);
+			atomicIsa(&ref->isa)->store((void*)&weakref_class,
+			                            std::memory_order_relaxed);
 			ref->obj = obj;
 			ref->weak_count = 1;
 			ref->nextFree = nullptr;
