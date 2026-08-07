@@ -42,7 +42,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.os }} ${{ matrix.build-type }} LLVM-${{ matrix.llvm-version }} ${{ matrix.cxxlib }} BlocksRuntime-${{ matrix.blocks-runtime }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
       - name: Install dependencies 
         run: |
           sudo apt install ninja-build
@@ -114,7 +114,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Cross-build for ${{ matrix.arch.triple }} LLVM-${{ matrix.llvm-version}} ${{ matrix.build-type }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
       - name: Install cross-compile toolchain and QEMU
         run: |
           sudo apt update
@@ -168,7 +168,7 @@ jobs:
       shell: cmd
       run: |
         dir "${{ matrix.vspath }}"
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v5
       with:
         submodules: true
     - name: Install dependencies
@@ -224,7 +224,7 @@ jobs:
       run:
         shell: msys2 {0}
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v5
     - uses: msys2/setup-msys2@v2
       with:
         msystem: ${{ matrix.msystem }}
@@ -247,7 +247,7 @@ jobs:
       working-directory: build
       run: |
         cmake --install . --prefix=../dist
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v6
       with:
         name: ${{matrix.os}}-${{ matrix.msystem }}-${{ matrix.build-type }}-compat-${{ matrix.strict-apple-compatibility }}
         path: dist/
@@ -272,7 +272,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     name: Android ${{ matrix.build-type }} ${{ matrix.arch.name }} API-${{ matrix.api-level }}
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - name: Install Dependencies
       run: |
         sudo apt-get update -y
@@ -283,7 +283,7 @@ jobs:
         sudo udevadm control --reload-rules
         sudo udevadm trigger --name-match=kvm
     - name: AVD cache
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       id: avd-cache
       with:
         path: |
