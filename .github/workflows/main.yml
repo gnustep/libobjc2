@@ -158,16 +158,25 @@ jobs:
             flags: -m32
           - arch: x64
             flags: -m64
-          - vspath: C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build
       # Don't abort runners if a single one fails
       fail-fast: false
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.os }} ${{ matrix.build-type }} ${{ matrix.arch }}
     steps:
-    - name: look at VS install
-      shell: cmd
+    # The runner image carries whichever Visual Studio it was built with, so
+    # ask the installer where the C++ tools are rather than naming a version.
+    - name: Find vcvarsall.bat
+      shell: pwsh
       run: |
-        dir "${{ matrix.vspath }}"
+        $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+        $install = & $vswhere -latest -products * `
+          -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 `
+          -property installationPath
+        if (!$install) { throw "no Visual Studio with the C++ tools installed" }
+        $vcvarsall = "$install\VC\Auxiliary\Build\vcvarsall.bat"
+        if (!(Test-Path $vcvarsall)) { throw "$vcvarsall does not exist" }
+        echo "using $vcvarsall"
+        echo "VCVARSALL=$vcvarsall" >> $env:GITHUB_ENV
     - uses: actions/checkout@v5
       with:
         submodules: true
@@ -177,7 +186,7 @@ jobs:
     - name: Configure CMake
       shell: cmd
       run: |
-        call "${{ matrix.vspath }}\vcvarsall.bat" ${{ matrix.arch }}
+        call "%VCVARSALL%" ${{ matrix.arch }}
         set CFLAGS=${{ matrix.flags }}
         set CXXFLAGS=${{ matrix.flags }}
         set OBJCFLAGS=${{ matrix.flags }}
@@ -190,7 +199,7 @@ jobs:
       shell: cmd
       working-directory: build
       run: |
-        call "${{ matrix.vspath }}\vcvarsall.bat" ${{ matrix.arch }}
+        call "%VCVARSALL%" ${{ matrix.arch }}
         ninja
     - name: Test
       shell: cmd
