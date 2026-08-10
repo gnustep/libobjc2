@@ -42,7 +42,7 @@ jobs:
             sudo apt install libc++-${llvm_version}-dev libc++abi-${llvm_version}-dev 
             sudo apt install libunwind-${llvm_version}-dev || true
           fi
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
       - name: Install dependencies 
         run: |
           sudo apt install ninja-build
