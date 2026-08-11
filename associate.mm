@@ -135,12 +135,14 @@ static void setReference(struct reference_list *list,
 		case OBJC_ASSOCIATION_ASSIGN:
 			break;
 	}
-	// While inserting into the list, we need to lock it temporarily.
+	// While inserting into the list, we need to lock it temporarily.  An
+	// existing reference is updated in place.
 	struct reference *r = findReference(list, key);
+	if (NULL == r)
 	{
 		auto lock = acquire_locks_for_pointers(list);
-		// If there's an existing reference, then we can update it, otherwise we
-		// have to install a new one
+		// Another thread may have installed this key since the search above.
+		r = findReference(list, key);
 		if (NULL == r)
 		{
 			// Search for an unused slot
