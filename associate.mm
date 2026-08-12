@@ -55,6 +55,11 @@ struct reference_list
 	 */
 	mutex_t lock;
 	/**
+	 * Lock guarding the structure of the list.  Only the first reference list
+	 * in a chain uses it.
+	 */
+	ThinLock structureLock;
+	/**
 	 * Array of references.
 	 */
 	struct reference list[REFERENCE_LIST_SIZE];
@@ -140,7 +145,7 @@ static void setReference(struct reference_list *list,
 	struct reference *r = findReference(list, key);
 	if (NULL == r)
 	{
-		auto lock = acquire_locks_for_pointers(list);
+		std::lock_guard<ThinLock> lock{list->structureLock};
 		// Another thread may have installed this key since the search above.
 		r = findReference(list, key);
 		if (NULL == r)
