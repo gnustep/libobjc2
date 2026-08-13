@@ -35,7 +35,7 @@ struct reference
 	uintptr_t policy;
 };
 
-#define REFERENCE_LIST_SIZE 10
+#define REFERENCE_LIST_SIZE 4
 
 /**
  * Linked list of references associated with an object.  We assume that there
@@ -45,8 +45,8 @@ struct reference
 struct reference_list
 {
 	/**
-	 * Next group of references.  This is only ever used if we have more than
-	 * 10 references associated with an object, which seems highly unlikely.
+	 * Next group of references.  This is only ever used if we have more
+	 * references associated with an object than a single block holds.
 	 */
 	struct reference_list *next;
 	/**
