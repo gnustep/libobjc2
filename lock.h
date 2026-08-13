@@ -13,6 +13,15 @@ typedef CRITICAL_SECTION mutex_t;
 #	define LOCK(x) EnterCriticalSection(x)
 #	define UNLOCK(x) LeaveCriticalSection(x)
 #	define DESTROY_LOCK(x) DeleteCriticalSection(x)
+// A slim reader/writer lock needs Windows Vista or later.  Its exclusive mode
+// is a mutex, so a writer sees the same behaviour as a critical section.
+typedef SRWLOCK rwlock_t;
+#	define INIT_RWLOCK(x) InitializeSRWLock(&(x))
+#	define RDLOCK(x) AcquireSRWLockShared(x)
+#	define RDUNLOCK(x) ReleaseSRWLockShared(x)
+#	define WRLOCK(x) AcquireSRWLockExclusive(x)
+#	define WRUNLOCK(x) ReleaseSRWLockExclusive(x)
+#	define DESTROY_RWLOCK(x) (void)(x)
 #else
 
 #	include <pthread.h>
@@ -40,6 +49,14 @@ static inline void init_recursive_mutex(pthread_mutex_t *x)
 #	define LOCK(x) pthread_mutex_lock(x)
 #	define UNLOCK(x) pthread_mutex_unlock(x)
 #	define DESTROY_LOCK(x) pthread_mutex_destroy(x)
+
+typedef pthread_rwlock_t rwlock_t;
+#	define INIT_RWLOCK(x) pthread_rwlock_init(&(x), NULL)
+#	define RDLOCK(x) pthread_rwlock_rdlock(x)
+#	define RDUNLOCK(x) pthread_rwlock_unlock(x)
+#	define WRLOCK(x) pthread_rwlock_wrlock(x)
+#	define WRUNLOCK(x) pthread_rwlock_unlock(x)
+#	define DESTROY_RWLOCK(x) pthread_rwlock_destroy(x)
 #endif
 
 __attribute__((unused)) static void objc_release_lock(void *x)
@@ -111,6 +128,50 @@ class RecursiveMutex
 	void unlock()
 	{
 		UNLOCK(&mutex);
+	}
+};
+
+/**
+ * A lock that many readers may hold at once, or one writer exclusively.  It is
+ * not recursive: a thread that holds it must not acquire it again.
+ */
+class ReadWriteLock
+{
+	/// The underlying lock
+	rwlock_t rwlock;
+
+	public:
+	/**
+	 * Explicit initialisation of the underlying lock, so that this can be a
+	 * global.
+	 */
+	void init()
+	{
+		INIT_RWLOCK(rwlock);
+	}
+
+	/// Acquire the lock for writing.
+	void lock()
+	{
+		WRLOCK(&rwlock);
+	}
+
+	/// Release the lock after writing.
+	void unlock()
+	{
+		WRUNLOCK(&rwlock);
+	}
+
+	/// Acquire the lock for reading.
+	void lock_shared()
+	{
+		RDLOCK(&rwlock);
+	}
+
+	/// Release the lock after reading.
+	void unlock_shared()
+	{
+		RDUNLOCK(&rwlock);
 	}
 };
 #endif
