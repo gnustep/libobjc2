@@ -235,6 +235,10 @@ static inline Class initHiddenClassForObject(id obj)
 	const char *types = sizeof(void*) == 4 ? "v8@0:4" : "v16@0:8";
 	class_addMethod(hiddenClass, cxx_destruct,
 		(IMP)deallocHiddenClass, types);
+	// The class carries uninstalled_dtable until the object is next messaged,
+	// and a method is only recorded in the class as it is installed into a
+	// dtable, so record it here.  Without this the class is never freed.
+	hiddenClass->cxx_destruct = (IMP)deallocHiddenClass;
 	obj->isa = hiddenClass;
 	return hiddenClass;
 }
