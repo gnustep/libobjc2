@@ -213,7 +213,23 @@ static Class allocateHiddenClass(Class superclass)
 	newClass->info = objc_class_flag_resolved | objc_class_flag_user_created |
 		objc_class_flag_hidden_class | objc_class_flag_assoc_class;
 	newClass->super_class = superclass;
-	newClass->dtable = uninstalled_dtable;
+	// A hidden class adds no methods of its own until one is added through
+	// object_addMethod_np, so it can answer sends from its superclass's
+	// dispatch table rather than building a copy it would never change.
+	dtable_t superDtable = dtable_for_class((struct objc_class *)superclass);
+	if (superDtable != uninstalled_dtable)
+	{
+		newClass->dtable = superDtable;
+		newClass->info |= objc_class_flag_shared_dtable;
+		// The class answers the same methods as its superclass, so it has the
+		// same answers to the questions create_dtable_for_class would ask.
+		newClass->info |= (superclass->info &
+			(objc_class_flag_fast_arc | objc_class_flag_fast_alloc_init));
+	}
+	else
+	{
+		newClass->dtable = uninstalled_dtable;
+	}
 	newClass->instance_size = superclass->instance_size;
 
 	LOCK_RUNTIME_FOR_SCOPE();
@@ -227,17 +243,9 @@ static inline Class initHiddenClassForObject(id obj)
 {
 	Class hiddenClass = allocateHiddenClass(obj->isa); 
 	assert(!class_isMetaClass(obj->isa));
-	static SEL cxx_destruct;
-	if (NULL == cxx_destruct)
-	{
-		cxx_destruct = sel_registerName(".cxx_destruct");
-	}
-	const char *types = sizeof(void*) == 4 ? "v8@0:4" : "v16@0:8";
-	class_addMethod(hiddenClass, cxx_destruct,
-		(IMP)deallocHiddenClass, types);
-	// The class carries uninstalled_dtable until the object is next messaged,
-	// and a method is only recorded in the class as it is installed into a
-	// dtable, so record it here.  Without this the class is never freed.
+	// Recorded in the class rather than added as a method: the class may be
+	// answering sends from its superclass's dispatch table, which must not
+	// gain this.  call_cxx_destruct reads the field.
 	hiddenClass->cxx_destruct = (IMP)deallocHiddenClass;
 	obj->isa = hiddenClass;
 	return hiddenClass;
@@ -254,7 +262,10 @@ static void deallocHiddenClass(id obj, SEL _cmd)
 	cleanupReferenceList(list);
 	freeReferenceList(list->next);
 	//fprintf(stderr, "Deallocating dtable %p\n", hiddenClass->dtable);
-	free_dtable(hiddenClass->dtable);
+	if (!objc_test_class_flag(hiddenClass, objc_class_flag_shared_dtable))
+	{
+		free_dtable(hiddenClass->dtable);
+	}
 	// We shouldn't have any subclasses left at this point
 	assert(hiddenClass->subclass_list == 0);
 	// Remove the class from the subclass list of its superclass
@@ -430,14 +441,30 @@ static Class hiddenClassForObject(id object)
 	return hiddenClass;
 }
 
+/**
+ * Gives a hidden class a dispatch table of its own, so that a method added to
+ * it does not reach the table its superclass is using.
+ */
+static Class hiddenClassForMethodAdd(id object)
+{
+	Class hiddenClass = hiddenClassForObject(object);
+	LOCK_RUNTIME_FOR_SCOPE();
+	if (objc_test_class_flag(hiddenClass, objc_class_flag_shared_dtable))
+	{
+		objc_clear_class_flag(hiddenClass, objc_class_flag_shared_dtable);
+		hiddenClass->dtable = create_dtable_for_class(hiddenClass, uninstalled_dtable);
+	}
+	return hiddenClass;
+}
+
 BOOL object_addMethod_np(id object, SEL name, IMP imp, const char *types)
 {
-	return class_addMethod(hiddenClassForObject(object), name, imp, types);
+	return class_addMethod(hiddenClassForMethodAdd(object), name, imp, types);
 }
 
 IMP object_replaceMethod_np(id object, SEL name, IMP imp, const char *types)
 {
-	return class_replaceMethod(hiddenClassForObject(object), name, imp, types);
+	return class_replaceMethod(hiddenClassForMethodAdd(object), name, imp, types);
 }
 static char prototypeKey;
 
