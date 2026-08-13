@@ -1,6 +1,7 @@
 #include "visibility.h"
 #include <atomic>
 #include <chrono>
+#include <cstdint>
 #include <mutex>
 #include <thread>
 
@@ -162,12 +163,19 @@ PRIVATE inline ThinLock spinlocks[spinlock_count];
  */
 static inline ThinLock *lock_for_pointer(const void *ptr)
 {
-	intptr_t hash = (intptr_t)ptr;
-	// Most properties will be pointers, so disregard the lowest few bits
-	hash >>= sizeof(void*) == 4 ? 2 : 8;
-	intptr_t low = hash & spinlock_mask;
-	hash >>= 16;
-	hash |= low;
+	uintptr_t hash = (uintptr_t)ptr;
+	// Every bit of the pointer reaches the index, so that two properties in one
+	// object, and objects that the allocator placed next to each other, take
+	// different locks.
+#if UINTPTR_MAX > 0xffffffffU
+	hash ^= hash >> 33;
+	hash *= 0xff51afd7ed558ccdULL;
+	hash ^= hash >> 29;
+#else
+	hash ^= hash >> 16;
+	hash *= 0x7feb352dU;
+	hash ^= hash >> 15;
+#endif
 	return spinlocks + (hash & spinlock_mask);
 }
 
