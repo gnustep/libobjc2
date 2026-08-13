@@ -348,6 +348,13 @@ enum objc_class_flags
 	 * the underlying blocks runtime.
 	 */
 	objc_class_flag_is_block = (1 << 16),
+	/**
+	 * Neither this class nor any of its superclasses has a `.cxx_construct`
+	 * method, so constructing an instance of it has nothing to do.  Set when
+	 * the class's dispatch table is created, cleared if a `.cxx_construct` is
+	 * installed later.
+	 */
+	objc_class_flag_no_cxx_construct = (1<<17),
 };
 
 /**
