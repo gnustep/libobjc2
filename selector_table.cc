@@ -10,6 +10,7 @@
 #include <ctype.h>
 #include <vector>
 #include <mutex>
+#include <shared_mutex>
 #include <forward_list>
 #include <tsl/robin_set.h>
 #include "class.h"
@@ -96,12 +97,17 @@ struct TypeList : public std::forward_list<const char*>
 std::vector<TypeList> *selector_list;
 
 /**
- * Lock protecting the selector table.
+ * Lock protecting the selector table.  Registration is the only writer, so
+ * lookups share it.  It is not recursive: anything called with it held must
+ * use the _locked form.
  */
-RecursiveMutex selector_table_lock;
+ReadWriteLock selector_table_lock;
 
-/// Type to use as a lock guard
+/// Type to use as a lock guard for registration
 using LockGuard = std::lock_guard<decltype(selector_table_lock)>;
+
+/// Type to use as a lock guard for lookup
+using ReadGuard = std::shared_lock<decltype(selector_table_lock)>;
 
 inline TypeList *selLookup_locked(uint32_t idx)
 {
@@ -114,7 +120,7 @@ inline TypeList *selLookup_locked(uint32_t idx)
 
 inline TypeList *selLookup(uint32_t idx)
 {
-	LockGuard g{selector_table_lock};
+	ReadGuard g{selector_table_lock};
 	return selLookup_locked(idx);
 }
 
@@ -367,12 +373,17 @@ extern "C" PRIVATE void init_selector_tables()
 	selector_table_lock.init();
 }
 
-static SEL selector_lookup(const char *name, const char *types)
+static SEL selector_lookup_locked(const char *name, const char *types)
 {
 	UnregisteredSelector sel = {name, types};
-	LockGuard g{selector_table_lock};
 	auto result = selector_table->find(sel);
 	return (result == selector_table->end()) ? nullptr : *result;
+}
+
+static SEL selector_lookup(const char *name, const char *types)
+{
+	ReadGuard g{selector_table_lock};
+	return selector_lookup_locked(name, types);
 }
 
 static inline void add_selector_to_table(SEL aSel)
@@ -404,7 +415,7 @@ static inline void register_selector_locked(SEL aSel)
 		objc_resize_dtables(selector_list->size());
 		return;
 	}
-	SEL untyped = selector_lookup(aSel->name, 0);
+	SEL untyped = selector_lookup_locked(aSel->name, 0);
 	// If this has a type encoding, store the untyped version too.
 	if (untyped == nullptr)
 	{
@@ -476,7 +487,7 @@ SEL objc_register_selector_copy(UnregisteredSelector &aSel, BOOL copyArgs)
 	// registration; see objc_register_selector above and gnustep/libobjc2#391.
 	LOCK_RUNTIME_FOR_SCOPE();
 	LockGuard g{selector_table_lock};
-	copy = selector_lookup(aSel.name, aSel.types);
+	copy = selector_lookup_locked(aSel.name, aSel.types);
 	if (nullptr != copy && selector_identical(aSel, copy))
 	{
 		return copy;
@@ -488,10 +499,10 @@ SEL objc_register_selector_copy(UnregisteredSelector &aSel, BOOL copyArgs)
 	copy->types = (nullptr == aSel.types) ? nullptr : aSel.types;
 	if (copyArgs)
 	{
-		SEL untyped = selector_lookup(aSel.name, 0);
+		SEL untyped = selector_lookup_locked(aSel.name, 0);
 		if (untyped != nullptr)
 		{
-			copy->name = sel_getName(untyped);
+			copy->name = sel_getNameNonUnique(untyped);
 		}
 		else
 		{
