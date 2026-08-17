@@ -344,6 +344,11 @@ enum objc_class_flags
 	 */
 	objc_class_flag_fast_alloc_init = (1<<15),
 	/**
+	 * This class's dtable belongs to its superclass and must not be modified
+	 * or freed through this class.
+	 */
+	objc_class_flag_shared_dtable = (1<<19),
+	/**
 	 * The class is a block class. Reference count management must be done by
 	 * the underlying blocks runtime.
 	 */
