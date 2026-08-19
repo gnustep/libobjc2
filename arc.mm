@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <atomic>
+#include <type_traits>
 #include <vector>
 #include <tsl/robin_map.h>
 #import "lock.h"
@@ -250,9 +251,11 @@ static TLS_CALLBACK(cleanupPools)(struct arc_tls* tls)
 
 
 static Class AutoreleasePool;
-static IMP NewAutoreleasePool;
-static IMP DeleteAutoreleasePool;
-static IMP AutoreleaseAdd;
+template<typename Return, typename... Arguments>
+using Selector = Return (*)(id, SEL, Arguments...);
+static Selector<id> NewAutoreleasePool;
+static Selector<void> DeleteAutoreleasePool;
+static Selector<void, id> AutoreleaseAdd;
 
 static BOOL useARCAutoreleasePool;
 
@@ -566,12 +569,14 @@ static inline void initAutorelease(void)
 			if (!useARCAutoreleasePool)
 			{
 				[AutoreleasePool class];
-				NewAutoreleasePool = class_getMethodImplementation(object_getClass(AutoreleasePool),
-				                                                   SELECTOR(new));
-				DeleteAutoreleasePool = class_getMethodImplementation(AutoreleasePool,
-				                                                      SELECTOR(release));
-				AutoreleaseAdd = class_getMethodImplementation(object_getClass(AutoreleasePool),
-				                                               SELECTOR(addObject:));
+				auto storeSelector = [](auto &target, Class cls, SEL selector)
+				{
+					target = reinterpret_cast<std::remove_reference_t<decltype(target)>>(
+						class_getMethodImplementation(cls, selector));
+				};
+				storeSelector(NewAutoreleasePool, object_getClass(AutoreleasePool), SELECTOR(new));
+				storeSelector(DeleteAutoreleasePool, AutoreleasePool, SELECTOR(release));
+				storeSelector(AutoreleaseAdd, object_getClass(AutoreleasePool), SELECTOR(addObject:));
 			}
 		}
 	}

@@ -5,6 +5,9 @@
 #include "sarray2.h"
 #include <stdint.h>
 
+typedef id (*CXXConstructIMP)(id, SEL);
+typedef void (*CXXDestructIMP)(id, SEL);
+
 #ifdef __cplusplus
 extern "C"
 {
@@ -107,12 +110,12 @@ struct objc_class
 	 * Pointer to the .cxx_construct method if one exists.  This method needs
 	 * to be called outside of the normal dispatch mechanism.
 	 */
-	IMP                        cxx_construct;
+	CXXConstructIMP             cxx_construct;
 	/**
 	 * Pointer to the .cxx_destruct method if one exists.  This method needs to
 	 * be called outside of the normal dispatch mechanism.
 	 */
-	IMP                        cxx_destruct;
+	CXXDestructIMP              cxx_destruct;
 	/**
 	 * A pointer to the next sibling class to this.  You may find all
 	 * subclasses of a given class by following the subclass_list pointer and
