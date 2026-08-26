@@ -786,13 +786,12 @@ extern "C" OBJC_PUBLIC void objc_release(id obj)
 	release(obj);
 }
 
-extern "C" OBJC_PUBLIC id objc_storeStrong(id *addr, id value)
+extern "C" OBJC_PUBLIC void objc_storeStrong(id *addr, id value)
 {
 	value = objc_retain(value);
 	id oldValue = *addr;
 	*addr = value;
 	objc_release(oldValue);
-	return value;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
