@@ -50,6 +50,24 @@ message(STATUS "Architecture as detected by CMake: ${CMAKE_SYSTEM_PROCESSOR}")
 # Build configuration
 add_compile_definitions(GNUSTEP __OBJC_RUNTIME_INTERNAL__=1 __OBJC_BOOL)
 
+set(BUILD_SHARED_LIBOBJC_DEFAULT ON)
+set(BUILD_STATIC_LIBOBJC_DEFAULT OFF)
+
+option(WASM "Build WebAssembly-specific runtime support" "${EMSCRIPTEN}")
+
+if (WASM)
+   # For WebAssembly, libobjc2 should generally be linked statically.
+	set(BUILD_SHARED_LIBOBJC_DEFAULT OFF)
+	set(BUILD_STATIC_LIBOBJC_DEFAULT ON)
+endif ()
+
+option(BUILD_SHARED_LIBOBJC "Build the shared version of libobjc" ${BUILD_SHARED_LIBOBJC_DEFAULT})
+option(BUILD_STATIC_LIBOBJC "Build the static version of libobjc" ${BUILD_STATIC_LIBOBJC_DEFAULT})
+
+if (NOT BUILD_SHARED_LIBOBJC AND NOT BUILD_STATIC_LIBOBJC)
+	message(FATAL_ERROR "At least one of BUILD_SHARED_LIBOBJC and BUILD_STATIC_LIBOBJC must be enabled.")
+endif ()
+
 
 
 set(libobjc_ASM_SRCS 
@@ -125,7 +143,7 @@ if (NOT tsl-robin-map_FOUND)
 	FetchContent_MakeAvailable(robinmap)
 endif()
 
-if (WIN32)
+if (WIN32 OR WASM)
 	set(OLD_ABI_COMPAT_DEFAULT false)
 else()
 	set(OLD_ABI_COMPAT_DEFAULT true)
@@ -137,6 +155,9 @@ option(ENABLE_TRACING
 option(OLDABI_COMPAT 
 	"Enable compatibility with GCC and old GNUstep ABIs"
 	${OLD_ABI_COMPAT_DEFAULT})
+if (WASM AND OLDABI_COMPAT)
+	message(FATAL_ERROR "WebAssembly builds only support the version 2 Objective-C ABI. Please disable OLDABI_COMPAT.")
+endif ()
 option(LEGACY_COMPAT "Enable legacy compatibility features" OFF)
 option(DEBUG_ARC_COMPAT
 	"Log warnings for classes that don't hit ARC fast paths" OFF)
@@ -156,10 +177,16 @@ add_compile_definitions($<$<BOOL:${STRICT_APPLE_COMPATIBILITY}>:STRICT_APPLE_COM
 configure_file(objc/objc-config.h.in objc/objc-config.h @ONLY)
 include_directories("${PROJECT_BINARY_DIR}/objc/")
 
-if (EMBEDDED_BLOCKS_RUNTIME)
+if (WASM)
+	# WebAssembly has no native dispatch assembly or Objective-C fast paths.
+	set(libobjc_ASM_SRCS)
+	list(REMOVE_ITEM libobjc_C_SRCS fast_paths.m)
+endif ()
+
+if (EMBEDDED_BLOCKS_RUNTIME AND NOT WASM)
 	list(APPEND libobjc_ASM_SRCS block_trampolines.S)
 	list(APPEND libobjc_C_SRCS block_to_imp.c)
-endif()
+endif ()
 
 if (OLDABI_COMPAT)
 	list(APPEND libobjc_C_SRCS legacy.c abi_version.c statics_loader.c)
@@ -188,7 +215,7 @@ if (CMAKE_SYSTEM_PROCESSOR STREQUAL "ppc" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "pp
 	add_definitions(-DNO_SAFE_CACHING)
 endif()
 
-set(INSTALL_TARGETS objc)
+set(INSTALL_TARGETS)
 
 if(WIN32)
 	if(CMAKE_ASM_COMPILER_TARGET)
@@ -227,6 +254,9 @@ if (WIN32 AND NOT MINGW)
 elseif (MINGW)
 	message(STATUS "Using MinGW-compatible exception model")
 	list(APPEND libobjc_CXX_SRCS objcxx_eh.cc objcxx_eh_mingw.cc)
+elseif (WASM)
+	list(REMOVE_ITEM libobjc_C_SRCS eh_personality.c)
+	list(APPEND libobjc_CXX_SRCS objc_wasm_eh.cc)
 else ()
 	set(EH_PERSONALITY_FLAGS "")
 	if (CMAKE_CXX_COMPILER_TARGET)
@@ -257,19 +287,8 @@ else ()
 	endif ()
 endif ()
 
-add_library(objc SHARED ${libobjc_C_SRCS} ${libobjc_ASM_SRCS} ${libobjc_OBJC_SRCS} ${libobjc_OBJCXX_SRCS} ${libobjc_ASM_OBJS})
-target_compile_options(objc PRIVATE "$<$<OR:$<COMPILE_LANGUAGE:OBJC>,$<COMPILE_LANGUAGE:OBJCXX>>:-Wno-gnu-folding-constant;-Wno-deprecated-objc-isa-usage;-Wno-objc-root-class;-fobjc-runtime=gnustep-2.0>$<$<COMPILE_LANGUAGE:C>:-Xclang;-fexceptions;-Wno-gnu-folding-constant>")
-target_compile_features(objc PRIVATE cxx_std_20)
-
 list(APPEND libobjc_CXX_SRCS ${libobjcxx_CXX_SRCS})
-target_sources(objc PRIVATE ${libobjc_CXX_SRCS})
-
 include(FindThreads)
-target_link_libraries(objc PUBLIC Threads::Threads)
-# Link against ntdll.dll for RtlRaiseException
-if (WIN32 AND NOT MINGW)
-	target_link_libraries(objc PUBLIC ntdll.dll)
-endif()
 
 if (NOT EMBEDDED_BLOCKS_RUNTIME)
 	# Check if the blocks runtime exports _Block_use_RR2 
@@ -283,27 +302,43 @@ if (NOT EMBEDDED_BLOCKS_RUNTIME)
 		message(FATAL_ERROR "The external blocks runtime is not supported. It does not export _Block_use_RR2().")
 	endif()
 
-	target_compile_definitions(objc PRIVATE HAVE_BLOCK_USE_RR2)
-	target_link_libraries(objc PUBLIC BlocksRuntime::BlocksRuntime)
 endif()
 
-target_link_libraries(objc PRIVATE tsl::robin_map)
+if (BUILD_SHARED_LIBOBJC)
+	add_library(objc SHARED ${libobjc_C_SRCS} ${libobjc_ASM_SRCS} ${libobjc_OBJC_SRCS} ${libobjc_OBJCXX_SRCS} ${libobjc_ASM_OBJS})
+	target_compile_options(objc PRIVATE "$<$<OR:$<COMPILE_LANGUAGE:OBJC>,$<COMPILE_LANGUAGE:OBJCXX>>:-Wno-gnu-folding-constant;-Wno-deprecated-objc-isa-usage;-Wno-objc-root-class;-fobjc-runtime=gnustep-2.0>$<$<COMPILE_LANGUAGE:C>:-Xclang;-fexceptions;-Wno-gnu-folding-constant>")
+	target_compile_features(objc PRIVATE cxx_std_20)
+	target_sources(objc PRIVATE ${libobjc_CXX_SRCS})
+	target_link_libraries(objc PUBLIC Threads::Threads)
+	# Link against ntdll.dll for RtlRaiseException
+	if (WIN32 AND NOT MINGW)
+		target_link_libraries(objc PUBLIC ntdll.dll)
+	endif()
+	if (NOT EMBEDDED_BLOCKS_RUNTIME)
+		target_compile_definitions(objc PRIVATE HAVE_BLOCK_USE_RR2)
+		target_link_libraries(objc PUBLIC BlocksRuntime::BlocksRuntime)
+	endif()
+	target_link_libraries(objc PRIVATE tsl::robin_map)
+	set_target_properties(objc PROPERTIES
+		LINKER_LANGUAGE C
+		SOVERSION ${libobjc_VERSION}
+		OUTPUT_NAME ${LIBOBJC_NAME}
+		LINK_FLAGS "${objc_LINK_FLAGS}"
+		)
+	set_property(TARGET objc PROPERTY NO_SONAME true)
+	list(APPEND INSTALL_TARGETS objc)
+endif ()
 
-set_target_properties(objc PROPERTIES
-	LINKER_LANGUAGE C
-	SOVERSION ${libobjc_VERSION}
-	OUTPUT_NAME ${LIBOBJC_NAME}
-	LINK_FLAGS "${objc_LINK_FLAGS}"
-	)
-
-set_property(TARGET PROPERTY NO_SONAME true)
-
-option(BUILD_STATIC_LIBOBJC "Build the static version of libobjc" OFF)
 if (BUILD_STATIC_LIBOBJC)
 	add_library(objc-static STATIC ${libobjc_C_SRCS} ${libobjc_ASM_SRCS} ${libobjc_OBJC_SRCS} ${libobjc_OBJCXX_SRCS} ${libobjc_CXX_SRCS})
 	target_compile_options(objc-static PRIVATE "$<$<OR:$<COMPILE_LANGUAGE:OBJC>,$<COMPILE_LANGUAGE:OBJCXX>>:-Wno-gnu-folding-constant;-Wno-deprecated-objc-isa-usage;-Wno-objc-root-class;-fobjc-runtime=gnustep-2.0>$<$<COMPILE_LANGUAGE:C>:-Xclang;-fexceptions;-Wno-gnu-folding-constant>")
 	target_compile_features(objc-static PRIVATE cxx_std_20)
-	target_link_libraries(objc-static PRIVATE tsl::robin_map)
+	target_link_libraries(objc-static PRIVATE "$<BUILD_INTERFACE:tsl::robin_map>")
+	target_include_directories(
+		objc-static
+		INTERFACE
+		$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+		$<INSTALL_INTERFACE:include>)
 	set_target_properties(objc-static PROPERTIES
 		POSITION_INDEPENDENT_CODE true
 		OUTPUT_NAME ${LIBOBJC_NAME})
@@ -312,7 +347,9 @@ endif ()
 
 # Explicitly link libm, as an implicit dependency of the C++ runtime
 if (M_LIBRARY)
-	target_link_libraries(objc PUBLIC ${M_LIBRARY})
+	if (BUILD_SHARED_LIBOBJC)
+		target_link_libraries(objc PUBLIC ${M_LIBRARY})
+	endif ()
 endif ()
 
 # Make weak symbols work on OS X
@@ -382,11 +419,13 @@ else ()
 endif ()
 message(STATUS "GNUstep install type set to ${GNUSTEP_INSTALL_TYPE}")
 
-target_include_directories(
-	objc
-	INTERFACE
-	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-	$<INSTALL_INTERFACE:include>)
+if (BUILD_SHARED_LIBOBJC)
+	target_include_directories(
+		objc
+		INTERFACE
+		$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+		$<INSTALL_INTERFACE:include>)
+endif ()
 install(TARGETS ${INSTALL_TARGETS}
 	EXPORT libobjcTargets
 	RUNTIME DESTINATION ${BIN_INSTALL_PATH}
