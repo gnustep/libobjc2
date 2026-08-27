@@ -95,6 +95,17 @@ struct TypeList : public std::forward_list<const char*>
  */
 std::vector<TypeList> *selector_list;
 
+#ifdef __wasm__
+/**
+ * WebAssembly's linear memory does not guarantee that static/heap alocated
+ * selector strings are outside a certain numeric interval.
+ * We can't reliably assume the pointer values are never smaller than 2^16.
+ * Therefore, we use an actual hash set to register selectors instead of just
+ * comparing the pointer value to determine whether the selector was registered. 
+ */
+tsl::robin_set<SEL> *registered_selector_addresses;
+#endif
+
 /**
  * Lock protecting the selector table.
  */
@@ -120,11 +131,17 @@ inline TypeList *selLookup(uint32_t idx)
 
 BOOL isSelRegistered(SEL sel)
 {
+#ifdef __wasm__
+	LockGuard g{selector_table_lock};
+	return registered_selector_addresses->find(sel) !=
+	       registered_selector_addresses->end();
+#else
 	if (sel->index < selector_list->size())
 	{
 		return YES;
 	}
 	return NO;
+#endif
 }
 
 /// Gets the name of a registered selector.
@@ -364,6 +381,9 @@ extern "C" PRIVATE void init_selector_tables()
 {
 	selector_list = new std::vector<TypeList>(1<<16);
 	selector_table = new SelectorTable(1024);
+#ifdef __wasm__
+	registered_selector_addresses = new tsl::robin_set<SEL>(1024);
+#endif
 	selector_table_lock.init();
 }
 
@@ -385,6 +405,9 @@ static inline void add_selector_to_table(SEL aSel)
 	selector_list->push_back({aSel->name});
 	// Set the selector's name to the uid.
 	aSel->index = selector_list->size() - 1;
+#ifdef __wasm__
+	registered_selector_addresses->insert(aSel);
+#endif
 	// Store the selector in the set.
 	selector_table->insert(aSel);
 }
@@ -444,6 +467,10 @@ extern "C" PRIVATE SEL objc_register_selector(SEL aSel)
 	if (nullptr != registered && eq(unregistered, registered))
 	{
 		aSel->name = registered->name;
+#ifdef __wasm__
+		LockGuard g{selector_table_lock};
+		registered_selector_addresses->insert(aSel);
+#endif
 		return registered;
 	}
 	assert(!(aSel->types && (strstr(aSel->types, "@\"") != nullptr)));
