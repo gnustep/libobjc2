@@ -215,7 +215,7 @@ if (WIN32 AND NOT MINGW)
 		COMMAND echo ${ASSEMBLER} ${ASM_TARGET} -c "${CMAKE_CURRENT_SOURCE_DIR}/objc_msgSend.S" -o "${CMAKE_CURRENT_BINARY_DIR}/objc_msgSend.obj"
 		COMMAND ${ASSEMBLER} ${ASM_TARGET} -c "${CMAKE_CURRENT_SOURCE_DIR}/objc_msgSend.S" -o "${CMAKE_CURRENT_BINARY_DIR}/objc_msgSend.obj"
 		MAIN_DEPENDENCY objc_msgSend.S
-		DEPENDS objc_msgSend.aarch64.S objc_msgSend.arm.S objc_msgSend.mips.S objc_msgSend.x86-32.S objc_msgSend.x86-64.S
+		DEPENDS objc_msgSend.aarch64.S objc_msgSend.arm.S objc_msgSend.loongarch64.S objc_msgSend.mips.S objc_msgSend.x86-32.S objc_msgSend.x86-64.S
 	)
 	set(libobjc_ASM_OBJS block_trampolines.obj objc_msgSend.obj)
 endif()
