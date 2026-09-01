@@ -846,4 +846,3 @@ void objc_registerClassPair(Class cls)
 	class_table_insert(cls);
 	objc_resolve_class(cls);
 }
-
