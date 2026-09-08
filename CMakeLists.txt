@@ -325,7 +325,6 @@ if (BUILD_SHARED_LIBOBJC)
 		OUTPUT_NAME ${LIBOBJC_NAME}
 		LINK_FLAGS "${objc_LINK_FLAGS}"
 		)
-	set_property(TARGET objc PROPERTY NO_SONAME true)
 	list(APPEND INSTALL_TARGETS objc)
 endif ()
 
