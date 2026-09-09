@@ -129,7 +129,11 @@ set(libobjc_CXX_SRCS
 if (WIN32 AND NOT MINGW)
 	list(APPEND libobjc_CXX_SRCS eh_win32_msvc.cc)
 elseif (NOT MINGW)
-	list(APPEND libobjc_C_SRCS eh_personality.c)
+	if (LIBOBJC_WASM)
+		list(APPEND libobjc_CXX_SRCS objc_wasm_eh.cc)
+	else ()
+		list(APPEND libobjc_C_SRCS eh_personality.c)
+	endif ()
 endif ()
 
 find_package(tsl-robin-map)
