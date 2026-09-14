@@ -10,6 +10,8 @@
 #include "objc_msgSend.aarch64.S"
 #elif defined(__riscv) && (__riscv_xlen == 64) && defined(__riscv_float_abi_double)
 #include "objc_msgSend.riscv64.S"
+#elif defined(__loongarch__) && defined(__loongarch_lp64) && defined(__loongarch_double_float)
+#include "objc_msgSend.loongarch64.S"
 #elif defined(__mips_n64) || defined(__mips_n32)
 #include "objc_msgSend.mips.S"
 #else
