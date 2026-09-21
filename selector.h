@@ -2,6 +2,7 @@
 #define OBJC_SELECTOR_H_INCLUDED
 #include <stdint.h>
 #include "objc/runtime.h"
+#include "visibility.h"
 
 /**
  * Structure used to store selectors in the list.
@@ -55,6 +56,13 @@ extern "C"
  * be freed.
  */
 SEL objc_register_selector(SEL aSel);
+
+/**
+ * The `.cxx_construct` and `.cxx_destruct` selectors, registered once during
+ * runtime initialisation by `init_cxx_selectors`.
+ */
+PRIVATE extern SEL cxx_construct_sel;
+PRIVATE extern SEL cxx_destruct_sel;
 
 #ifdef __cplusplus
 }

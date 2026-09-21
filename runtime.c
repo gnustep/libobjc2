@@ -25,16 +25,20 @@ static inline void safe_remove_from_subclass_list(Class cls);
 PRIVATE BOOL objc_resolve_class(Class);
 void objc_send_initialize(id object);
 
+PRIVATE SEL cxx_construct_sel;
+PRIVATE SEL cxx_destruct_sel;
+
+PRIVATE void init_cxx_selectors(void)
+{
+	cxx_construct_sel = sel_registerName(".cxx_construct");
+	cxx_destruct_sel = sel_registerName(".cxx_destruct");
+}
+
 /**
  * Calls C++ destructors in the correct order.
  */
 PRIVATE void call_cxx_destruct(id obj)
 {
-	static SEL cxx_destruct;
-	if (NULL == cxx_destruct)
-	{
-		cxx_destruct = sel_registerName(".cxx_destruct");
-	}
 	// Don't call object_getClass(), because we want to get hidden classes too
 	Class cls = classForObject(obj);
 
@@ -46,32 +50,33 @@ PRIVATE void call_cxx_destruct(id obj)
 		cls = cls->super_class;
 		if (currentClass->cxx_destruct)
 		{
-			currentClass->cxx_destruct(obj, cxx_destruct);
+			currentClass->cxx_destruct(obj, cxx_destruct_sel);
 		}
 	}
 }
 
 static void call_cxx_construct_for_class(Class cls, id obj)
 {
-	static SEL cxx_construct;
-	if (NULL == cxx_construct)
-	{
-		cxx_construct = sel_registerName(".cxx_construct");
-	}
-
-	if (cls->super_class)
+	if (cls->super_class &&
+	    !objc_test_class_flag(cls->super_class, objc_class_flag_no_cxx_construct))
 	{
 		call_cxx_construct_for_class(cls->super_class, obj);
 	}
 	if (cls->cxx_construct)
 	{
-		cls->cxx_construct(obj, cxx_construct);
+		cls->cxx_construct(obj, cxx_construct_sel);
 	}
 }
 
 PRIVATE void call_cxx_construct(id obj)
 {
-	call_cxx_construct_for_class(classForObject(obj), obj);
+	Class cls = classForObject(obj);
+
+	if (objc_test_class_flag(cls, objc_class_flag_no_cxx_construct))
+	{
+		return;
+	}
+	call_cxx_construct_for_class(cls, obj);
 }
 
 /**

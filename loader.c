@@ -62,6 +62,10 @@ static void init_runtime(void)
 #if defined(EMBEDDED_BLOCKS_RUNTIME)
 		init_trampolines();
 #endif
+		// Registering a selector resizes the dispatch tables, which walks the
+		// class table, so this follows the tables it needs and precedes the
+		// first class whose methods are installed.
+		init_cxx_selectors();
 		init_builtin_classes();
 		first_run = NO;
 		if (getenv("LIBOBJC_MEMORY_PROFILE"))

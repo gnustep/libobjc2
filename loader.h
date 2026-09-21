@@ -101,6 +101,11 @@ void init_protocol_table(void);
 void init_selector_tables(void);
 
 /**
+ * Register the `.cxx_construct` and `.cxx_destruct` selectors.
+ */
+void init_cxx_selectors(void);
+
+/**
  * Initialise the trampolines for using blocks as methods.
  */
 void init_trampolines(void);
