@@ -552,7 +552,11 @@ static inline void release(id obj)
 
 static inline void initAutorelease(void)
 {
-	if (Nil == AutoreleasePool)
+	// The pool implementation is chosen once.  A pool is pushed and popped
+	// through whichever one is in force, so a later switch would pop through
+	// the implementation that did not push.
+	static BOOL chosen;
+	if (!chosen)
 	{
 		AutoreleasePool = objc_getClass("NSAutoreleasePool");
 		if (Nil == AutoreleasePool)
@@ -574,6 +578,7 @@ static inline void initAutorelease(void)
 				                                               SELECTOR(addObject:));
 			}
 		}
+		chosen = YES;
 	}
 }
 
