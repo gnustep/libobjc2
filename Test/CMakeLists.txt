@@ -17,6 +17,7 @@ set(TESTS
 	AllocatePair.m
 	AssociatedObject.m
 	AssociatedObject2.m
+	AssociatedObjectCleanup.m
 	BlockTest_arc.m
 	ConstantString.m
 	Category.m
