@@ -87,6 +87,7 @@ endif ()
 if (ENABLE_ALL_OBJC_ARC_TESTS)
 	list(APPEND TESTS
 	ARCTest_arc.m
+	AutoreleasedReturnValue_arc.m
 	PropertyIntrospectionTest2_arc.m
 	)
 endif()

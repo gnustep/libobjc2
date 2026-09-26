@@ -127,6 +127,11 @@ struct arc_tls
 {
 	struct arc_autorelease_pool *pool;
 	id returnRetained;
+	/**
+	 * The pool slot filled by the last objc_autoreleaseReturnValue(), which
+	 * objc_retainAutoreleasedReturnValue() may take back.
+	 */
+	id *returnSlot;
 };
 
 /**
@@ -712,9 +717,9 @@ extern "C" OBJC_PUBLIC id objc_autorelease(id obj)
 
 extern "C" OBJC_PUBLIC id objc_autoreleaseReturnValue(id obj)
 {
+	struct arc_tls* tls = getARCThreadData();
 	if (!useARCAutoreleasePool) 
 	{
-		struct arc_tls* tls = getARCThreadData();
 		if (NULL != tls)
 		{
 			objc_autorelease(tls->returnRetained);
@@ -722,7 +727,14 @@ extern "C" OBJC_PUBLIC id objc_autoreleaseReturnValue(id obj)
 			return obj;
 		}
 	}
-	return objc_autorelease(obj);
+	obj = objc_autorelease(obj);
+	if ((NULL != tls) && useARCAutoreleasePool && (NULL != obj) &&
+	    (NULL != tls->pool) && (tls->pool->insert > tls->pool->pool) &&
+	    (*(tls->pool->insert-1) == obj))
+	{
+		tls->returnSlot = tls->pool->insert-1;
+	}
+	return obj;
 }
 
 extern "C" OBJC_PUBLIC id objc_retainAutoreleasedReturnValue(id obj)
@@ -738,11 +750,14 @@ extern "C" OBJC_PUBLIC id objc_retainAutoreleasedReturnValue(id obj)
 	struct arc_tls* tls = getARCThreadData();
 	if (NULL != tls)
 	{
-		// If we're using our own autorelease pool, just pop the object from the top
+		// If we're using our own autorelease pool, pop the object from the top,
+		// but only if objc_autoreleaseReturnValue() put it there.
 		if (useARCAutoreleasePool)
 		{
-			if ((NULL != tls->pool) &&
-			    (*(tls->pool->insert-1) == obj))
+			id *slot = tls->returnSlot;
+			tls->returnSlot = NULL;
+			if ((NULL != tls->pool) && (NULL != slot) &&
+			    (slot == tls->pool->insert-1) && (*slot == obj))
 			{
 				tls->pool->insert--;
 				return obj;
