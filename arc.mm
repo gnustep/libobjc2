@@ -496,6 +496,10 @@ static inline id retain(id obj, BOOL isWeak)
 	Class cls = obj->isa;
 	if (UNLIKELY(objc_test_class_flag(cls, objc_class_flag_is_block)))
 	{
+		if (cls == static_cast<void*>(&_NSConcreteStackBlock))
+		{
+			return obj;
+		}
 		return Block_copy(obj);
 	}
 	if (objc_test_class_flag(cls, objc_class_flag_fast_arc))

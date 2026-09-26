@@ -33,6 +33,7 @@ set(TESTS
 	ProtocolCreation.m
 	ResurrectInDealloc_arc.m
 	RuntimeTest.m
+	StackBlockRetain_arc.m
 	SuperMethodMissing.m
 	WeakBlock_arc.m
 	WeakRefLoad.m
