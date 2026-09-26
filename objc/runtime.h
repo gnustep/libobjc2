@@ -370,7 +370,7 @@ Ivar object_getInstanceVariable(id obj, const char *name, void **outValue);
 /**
  * Returns a pointer to the function used to handle the specified message.  If
  * the receiver does not have a method corresponding to this message then this
- * function may return a runtime function that performs forwarding.
+ * function returns the result of calling __objc_msg_forward2(nil, name).
  */
 OBJC_PUBLIC
 IMP class_getMethodImplementation(Class cls, SEL name);
