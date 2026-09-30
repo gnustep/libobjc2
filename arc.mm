@@ -496,6 +496,20 @@ static inline id retain(id obj, BOOL isWeak)
 	Class cls = obj->isa;
 	if (UNLIKELY(objc_test_class_flag(cls, objc_class_flag_is_block)))
 	{
+		// objc_retain is declared with the `returned` attribute, so callers
+		// (and the LLVM ARC optimizer) assume the return value equals the
+		// input.  Block_copy honours that for heap blocks (it just bumps the
+		// refcount) but violates it for stack blocks, where it allocates a
+		// new heap copy with a different address.  Under -O2 the optimizer
+		// then discards the returned heap pointer and later releases the
+		// original stack pointer — which is a no-op — leaking the heap copy
+		// and everything it captured.  Return the input for stack blocks;
+		// any real escape goes through _Block_object_assign / objc_retainBlock,
+		// which do the Block_copy correctly.
+		if (cls == static_cast<void*>(&_NSConcreteStackBlock))
+		{
+			return obj;
+		}
 		return Block_copy(obj);
 	}
 	if (objc_test_class_flag(cls, objc_class_flag_fast_arc))
