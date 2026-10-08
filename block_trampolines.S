@@ -60,10 +60,10 @@
 	call  1f                   # Store the instruction pointer on the stack
 1:
 	pop   %eax                 # Load the old instruction pointer
-	mov   \arg0(%esp), %ebx    # Load the self parameter
-	mov   %ebx, \arg1(%esp)    # Store self as the second argument
-	mov   -0x1005(%eax), %ebx  # Load the block pointer to %ebx
-	mov   %ebx, \arg0(%esp)    # Store the block pointer in the first argument
+	mov   \arg0(%esp), %ecx    # Load the self parameter
+	mov   %ecx, \arg1(%esp)    # Store self as the second argument
+	mov   -0x1005(%eax), %ecx  # Load the block pointer to %ecx
+	mov   %ecx, \arg0(%esp)    # Store the block pointer in the first argument
 	jmp   *-0x1001(%eax)       # Call the block function
 .endm
 // All arguments on i386 are passed on the stack.  These values are stack
