@@ -381,11 +381,11 @@ static BOOL installMethodInDtable(Class class,
 	}
 	if (selEqualUnTyped(method->selector, cxx_construct))
 	{
-		class->cxx_construct = method->imp;
+		class->cxx_construct = (CXXConstructIMP)method->imp;
 	}
 	else if (selEqualUnTyped(method->selector, cxx_destruct))
 	{
-		class->cxx_destruct = method->imp;
+		class->cxx_destruct = (CXXDestructIMP)method->imp;
 	}
 
 	for (struct objc_class *subclass=class->subclass_list ; 
@@ -673,6 +673,7 @@ LEGACY void update_dispatch_table_for_class(Class cls)
 }
 
 BOOL objc_resolve_class(Class);
+typedef void (*InitializeIMP)(id, SEL);
 
 __attribute__((unused)) static void objc_release_object_lock(id *x)
 {
@@ -851,6 +852,6 @@ OBJC_PUBLIC void objc_send_initialize(id object)
 	// Store the buffer in the temporary dtables list.  Note that it is safe to
 	// insert it into a global list, even though it's a temporary variable,
 	// because we will clean it up after this function.
-	initializeSlot->imp((id)class, initializeSel);
+	InitializeIMP initialize = (InitializeIMP)initializeSlot->imp;
+	initialize((id)class, initializeSel);
 }
-
