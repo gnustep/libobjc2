@@ -216,6 +216,11 @@ static Class allocateHiddenClass(Class superclass)
 	newClass->dtable = uninstalled_dtable;
 	newClass->instance_size = superclass->instance_size;
 
+	// Initialise the lock *before* this is globally reachable via any path.
+	// This would ideally belong in `initHiddenClassForObject`, but it's also
+	// possible to find the class after this point by traversing the class
+	// hierarchy and paths after that may attempt to acquire the lock.
+	INIT_LOCK(static_cast<struct reference_list*>(object_getIndexedIvars(reinterpret_cast<id>(newClass)))->lock);
 	LOCK_RUNTIME_FOR_SCOPE();
 	newClass->sibling_class = superclass->subclass_list;
 	superclass->subclass_list = (Class)newClass;
@@ -308,8 +313,6 @@ static struct reference_list* referenceListForObject(id object, BOOL create)
 		if (NULL == hiddenClass)
 		{
 			hiddenClass = initHiddenClassForObject(object);
-			struct reference_list *list = static_cast<struct reference_list *>(object_getIndexedIvars(hiddenClass));
-			INIT_LOCK(list->lock);
 		}
 	}
 	return hiddenClass ? static_cast<struct reference_list*>(object_getIndexedIvars(hiddenClass)) : nullptr;
@@ -419,8 +422,6 @@ static Class hiddenClassForObject(id object)
 		if (NULL == hiddenClass)
 		{
 			hiddenClass = initHiddenClassForObject(object);
-			struct reference_list *list = static_cast<struct reference_list*>(object_getIndexedIvars(hiddenClass));
-			INIT_LOCK(list->lock);
 		}
 	}
 	return hiddenClass;
@@ -445,8 +446,6 @@ id object_clone_np(id object)
 	referenceListForObject(object, YES);
 	id newInstance = class_createInstance(object->isa, 0);
 	Class hiddenClass = initHiddenClassForObject(newInstance);
-	struct reference_list *list = static_cast<struct reference_list*>(object_getIndexedIvars(hiddenClass));
-	INIT_LOCK(list->lock);
 	objc_setAssociatedObject(newInstance, &prototypeKey, object,
 			OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 	return newInstance;
