@@ -373,17 +373,12 @@ static BOOL installMethodInDtable(Class class,
 	SparseArrayInsert(dtable, untyped_idx, method);
 #endif
 
-	static SEL cxx_construct, cxx_destruct;
-	if (NULL == cxx_construct)
-	{
-		cxx_construct = sel_registerName(".cxx_construct");
-		cxx_destruct = sel_registerName(".cxx_destruct");
-	}
-	if (selEqualUnTyped(method->selector, cxx_construct))
+	if (selEqualUnTyped(method->selector, cxx_construct_sel))
 	{
 		class->cxx_construct = method->imp;
+		objc_clear_class_flag(class, objc_class_flag_no_cxx_construct);
 	}
-	else if (selEqualUnTyped(method->selector, cxx_destruct))
+	else if (selEqualUnTyped(method->selector, cxx_destruct_sel))
 	{
 		class->cxx_destruct = method->imp;
 	}
@@ -602,6 +597,18 @@ PRIVATE dtable_t create_dtable_for_class(Class class, dtable_t root_dtable)
 			installMethodInDtable(class, dtable, method_at_index(list, i), super_method, YES);
 		}
 		list = list->next;
+	}
+
+	// The superclass chain is fully initialised by this point, so a class
+	// whose superclass has nothing to construct and which has installed no
+	// `.cxx_construct` of its own has nothing to construct either.
+	if ((NULL == super) ||
+	    objc_test_class_flag(super, objc_class_flag_no_cxx_construct))
+	{
+		if (NULL == class->cxx_construct)
+		{
+			objc_set_class_flag(class, objc_class_flag_no_cxx_construct);
+		}
 	}
 
 	return dtable;
