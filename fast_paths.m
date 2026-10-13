@@ -25,7 +25,7 @@ objc_alloc(Class cls)
 	{
 		return class_createInstance(cls, 0);
 	}
-    return [cls alloc];
+	return [cls alloc];
 }
 
 /**
