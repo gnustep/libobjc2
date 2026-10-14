@@ -6,6 +6,14 @@ runtime.  Note that although this runtime should build with gcc, it is strongly
 recommended that you compile it with clang and clang++ as your [Objective-]C and
 [Objective-]C++ compilers.
 
+It is recommended that you use the LLVM runtime and unwinder or a recent version
+of GCC (>= 14) on GNU/Linux to avoid a
+[bug](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=114843) in GCC and the libgcc
+unwinder.
+
+If CompilerRT and libunwind are installed on your machine use
+`-DCMAKE_EXE_LINKER_FLAGS="-rtlib=compiler-rt -unwindlib=libunwind"`.
+
 Basic Building
 --------------
 
