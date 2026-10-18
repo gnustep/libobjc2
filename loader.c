@@ -13,6 +13,10 @@
 #include <stdio.h>
 #include <string.h>
 
+#if defined(__wasm__) && defined(OLDABI_COMPAT)
+#error WebAssembly does not support the legacy Objective-C ABI.
+#endif
+
 /**
  * Runtime lock.  This is exposed in 
  */
@@ -214,7 +218,7 @@ OBJC_PUBLIC void __objc_load(struct objc_init *init)
 		{
 			continue;
 		}
-		objc_register_selector(sel);
+		objc_register_selector_unchecked(sel);
 	}
 	for (struct objc_protocol *proto = init->proto_begin ; proto < init->proto_end ;
 	     proto++)

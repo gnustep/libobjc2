@@ -56,6 +56,12 @@ extern "C"
  */
 SEL objc_register_selector(SEL aSel);
 
+/**
+ * Registers a selector that the caller knows has not already been registered.
+ * The version 2 ABI provides each selector exactly once during __objc_load.
+ */
+SEL objc_register_selector_unchecked(SEL aSel);
+
 #ifdef __cplusplus
 }
 #endif

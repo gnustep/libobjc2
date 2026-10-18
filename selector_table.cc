@@ -437,6 +437,11 @@ extern "C" PRIVATE SEL objc_register_selector(SEL aSel)
 	{
 		return aSel;
 	}
+	return objc_register_selector_unchecked(aSel);
+}
+
+extern "C" PRIVATE SEL objc_register_selector_unchecked(SEL aSel)
+{
 	UnregisteredSelector unregistered{aSel->name, aSel->types};
 	// Check that this isn't already registered, before we try
 	SEL registered = selector_lookup(aSel->name, aSel->types);
