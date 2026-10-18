@@ -21,6 +21,8 @@ typedef struct _NSZone NSZone;
 @interface NoInit : Test @end
 @interface NoInit2 : NoInit @end
 
+@interface NilAlloc : NoInit @end
+
 @interface ShouldInitSubclassed : NoInit @end
 
 @implementation ShouldAlloc
@@ -100,6 +102,13 @@ typedef struct _NSZone NSZone;
 }
 @end
 
+@implementation NilAlloc
++ (instancetype)alloc
+{
+	return nil;
+}
+@end
+
 Class getClassNamed(char *name)
 {
 	return nil;
@@ -147,6 +156,11 @@ int main(void)
 	// implementations can handle receivers that are nil
 	[getClassNamed("flibble") alloc];
 	[[getClassNamed("flibble") alloc] init];
+
+	// Check that we can handle fast-path init if alloc returns nil.
+	assert([[NilAlloc alloc] init] == nil);
+
+	return 0;
 }
 
 #endif
