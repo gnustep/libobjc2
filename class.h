@@ -444,6 +444,23 @@ void freeMethodLists(Class aClass);
 
 void objc_load_class(struct objc_class *cls);
 
+/**
+ * Enumerator for a class table.  Must have the same layout as the internal
+ * version.
+ */
+struct class_table_enumerator
+{
+	void *table;
+	unsigned int seen;
+	unsigned int index;
+};
+
+/**
+ * Iterate over the class table returning the next class and then NULL after
+ * all classes have been enumerated.
+ */
+PRIVATE Class class_table_next(struct class_table_enumerator *e);
+
 #ifdef __cplusplus
 } // extern "C"
 #endif

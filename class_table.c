@@ -133,12 +133,6 @@ PRIVATE Class class_table_get_safe(const char *class_name)
 	return class_table_internal_table_get(class_table, class_name);
 }
 
-PRIVATE Class class_table_next(void **e)
-{
-	return class_table_internal_next(class_table,
-			(struct class_table_internal_table_enumerator**)e);
-}
-
 PRIVATE BOOL objc_resolve_class(Class cls);
 PRIVATE void init_class_tables(void)
 {
@@ -500,6 +494,11 @@ PRIVATE void class_table_remove(Class cls)
 	class_table_internal_remove(class_table, (void*)cls->name);
 }
 
+PRIVATE Class class_table_next(struct class_table_enumerator *e)
+{
+	return class_table_internal_next(class_table, (struct class_table_internal_table_enumerator*)e);
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // Public API
@@ -512,14 +511,13 @@ int objc_getClassList(Class *buffer, int bufferLen)
 		return class_table->table_used;
 	}
 	int count = 0;
-	struct class_table_internal_table_enumerator *e = NULL;
+	struct class_table_internal_table_enumerator e = MAP_TABLE_ENUMERATOR_INITIALISER;
 	Class next;
 	while (count < bufferLen &&
 		(next = class_table_internal_next(class_table, &e)))
 	{
 		buffer[count++] = next;
 	}
-	free(e);
 	return count;
 }
 Class *objc_copyClassList(unsigned int *outCount)
@@ -595,7 +593,18 @@ id objc_get_meta_class(const char *name)
 
 Class objc_next_class(void **enum_state)
 {
-  return class_table_next ( enum_state);
+	if (*enum_state == NULL)
+	{
+		*enum_state = calloc(1, sizeof(struct class_table_internal_table_enumerator));
+	}
+	Class next = class_table_internal_next(class_table,
+			*(struct class_table_internal_table_enumerator**)enum_state);
+	if (next == NULL)
+	{
+		free(*enum_state);
+		*enum_state = NULL;
+	}
+	return next;
 }
 
 Class class_pose_as(Class impostor, Class super_class)

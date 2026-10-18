@@ -508,17 +508,13 @@ Protocol*__unsafe_unretained* objc_copyProtocolList(unsigned int *outCount)
 	unsigned int total = known_protocol_table->table_used;
 	Protocol **p = calloc(known_protocol_table->table_used, sizeof(Protocol*));
 
-	struct protocol_table_enumerator *e = NULL;
+	struct protocol_table_enumerator e = MAP_TABLE_ENUMERATOR_INITIALISER;
 	Protocol *next;
 
 	unsigned int count = 0;
 	while ((count < total) && (next = protocol_next(known_protocol_table, &e)))
 	{
 		p[count++] = next;
-	}
-	if (NULL != e)
-	{
-		free(e);
 	}
 	if (NULL != outCount)
 	{

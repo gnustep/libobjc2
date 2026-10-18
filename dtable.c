@@ -608,8 +608,6 @@ PRIVATE dtable_t create_dtable_for_class(Class class, dtable_t root_dtable)
 }
 
 
-Class class_table_next(void **e);
-
 PRIVATE void objc_resize_dtables(uint32_t newSize)
 {
 	// If dtables already have enough space to store all registered selectors, do nothing
@@ -636,7 +634,7 @@ PRIVATE void objc_resize_dtables(uint32_t newSize)
 		}
 	}
 	// Resize all existing dtables
-	void *e = NULL;
+	struct class_table_enumerator e = {NULL, 0, 0};
 	struct objc_class *next;
 	while ((next = class_table_next(&e)))
 	{

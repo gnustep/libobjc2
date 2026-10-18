@@ -212,6 +212,12 @@ struct PREFIX(_table_enumerator)
 	unsigned int index;
 };
 
+/**
+ * Initialisation value for a new map enumerator.
+ */
+#define MAP_TABLE_ENUMERATOR_INITIALISER {NULL, 0, 0}
+
+
 static inline PREFIX(_table_cell) PREFIX(_table_lookup)(PREFIX(_table) *table, 
                                                         uint32_t hash)
 {
@@ -465,26 +471,25 @@ static MAP_TABLE_VALUE_TYPE*
 static MAP_TABLE_VALUE_TYPE 
 #endif
 PREFIX(_next)(PREFIX(_table) *table,
-                    struct PREFIX(_table_enumerator) **state)
+                    struct PREFIX(_table_enumerator) *state)
 {
-	if (NULL == *state)
+	if (NULL == state->table)
 	{
-		*state = CALLOC(1, sizeof(struct PREFIX(_table_enumerator)));
 		// Make sure that we are not reallocating the table when we start
 		// enumerating
 		MAP_LOCK();
-		(*state)->table = table;
-		(*state)->index = -1;
+		state->table = table;
+		state->index = -1;
 		IF_NO_GC(__sync_fetch_and_add(&table->enumerator_count, 1);)
 		MAP_UNLOCK();
 	}
-	if ((*state)->seen >= (*state)->table->table_used)
+	if (state->seen >= state->table->table_used)
 	{
 #ifndef ENABLE_GC
 		MAP_LOCK();
 		__sync_fetch_and_sub(&table->enumerator_count, 1);
 		MAP_UNLOCK();
-		free(*state);
+		state->table = NULL;
 #endif
 #ifdef MAP_TABLE_ACCESS_BY_REFERENCE
 		return NULL;
@@ -492,15 +497,15 @@ PREFIX(_next)(PREFIX(_table) *table,
 		return MAP_TABLE_VALUE_PLACEHOLDER;
 #endif
 	}
-	while ((++((*state)->index)) < TABLE_SIZE((*state)->table))
+	while ((++(state->index)) < TABLE_SIZE(state->table))
 	{
-		if (!MAP_TABLE_VALUE_NULL((*state)->table->table[(*state)->index].value))
+		if (!MAP_TABLE_VALUE_NULL(state->table->table[state->index].value))
 		{
-			(*state)->seen++;
+			state->seen++;
 #ifdef MAP_TABLE_ACCESS_BY_REFERENCE
-			return &(*state)->table->table[(*state)->index].value;
+			return &state->table->table[state->index].value;
 #else
-			return (*state)->table->table[(*state)->index].value;
+			return state->table->table[state->index].value;
 #endif
 		}
 	}
@@ -509,7 +514,7 @@ PREFIX(_next)(PREFIX(_table) *table,
 	MAP_LOCK();
 	table->enumerator_count--;
 	MAP_UNLOCK();
-	free(*state);
+	state->table = NULL;
 #endif
 #ifdef MAP_TABLE_ACCESS_BY_REFERENCE
 	return NULL;
@@ -529,12 +534,12 @@ static MAP_TABLE_VALUE_TYPE*
 static MAP_TABLE_VALUE_TYPE 
 #endif
 PREFIX(_current)(PREFIX(_table) *table,
-                    struct PREFIX(_table_enumerator) **state)
+                    struct PREFIX(_table_enumerator) *state)
 {
 #ifdef MAP_TABLE_ACCESS_BY_REFERENCE
-	return &(*state)->table->table[(*state)->index].value;
+	return &state->table->table[state->index].value;
 #else
-	return (*state)->table->table[(*state)->index].value;
+	return state->table->table[state->index].value;
 #endif
 }
 
