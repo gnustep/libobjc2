@@ -62,11 +62,23 @@ objc_alloc_init(Class cls)
 	{
 		return nil;
 	}
-	id instance = objc_alloc(cls);
-	// If +alloc was overwritten, it is not guaranteed that it returns
-	// an instance of cls.
-	cls = classForObject(instance);
-	if (objc_test_class_flag(cls, objc_class_flag_fast_alloc_init))
+	id instance;
+	if (LIKELY(objc_test_class_flag(cls->isa, objc_class_flag_fast_alloc_init)))
+	{
+		instance = class_createInstance(cls, 0);
+	}
+	else
+	{
+		instance = [cls alloc];
+		if (UNLIKELY(instance == nil))
+		{
+			return nil;
+		}
+		// If +alloc was overwritten, it is not guaranteed that it returns
+		// an instance of cls.
+		cls = classForObject(instance);
+	}
+	if (LIKELY(objc_test_class_flag(cls, objc_class_flag_fast_alloc_init)))
 	{
 		return instance;
 	}
