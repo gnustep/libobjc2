@@ -1,8 +1,6 @@
 #include <stdlib.h>
 #include <assert.h>
 #include "objc/runtime.h"
-#include "objc/objc-auto.h"
-#include "objc/objc-arc.h"
 #include "lock.h"
 #include "loader.h"
 #include "visibility.h"
@@ -32,12 +30,6 @@ static void log_memory_stats(void)
 
 /* Number of threads that are alive.  */
 int __objc_runtime_threads_alive = 1;			/* !T:MUTEX */
-
-// libdispatch hooks for registering threads
-__attribute__((weak)) void (*dispatch_begin_thread_4GC)(void);
-__attribute__((weak)) void (*dispatch_end_thread_4GC)(void);
-__attribute__((weak)) void *(*_dispatch_begin_NSAutoReleasePool)(void);
-__attribute__((weak)) void (*_dispatch_end_NSAutoReleasePool)(void *);
 
 static void init_runtime(void)
 {
@@ -71,18 +63,6 @@ static void init_runtime(void)
 		if (getenv("LIBOBJC_MEMORY_PROFILE"))
 		{
 			atexit(log_memory_stats);
-		}
-		if (dispatch_begin_thread_4GC != 0) {
-			dispatch_begin_thread_4GC = objc_registerThreadWithCollector;
-		}
-		if (dispatch_end_thread_4GC != 0) {
-			dispatch_end_thread_4GC = objc_unregisterThreadWithCollector;
-		}
-		if (_dispatch_begin_NSAutoReleasePool != 0) {
-			_dispatch_begin_NSAutoReleasePool = objc_autoreleasePoolPush;
-		}
-		if (_dispatch_end_NSAutoReleasePool != 0) {
-			_dispatch_end_NSAutoReleasePool = objc_autoreleasePoolPop;
 		}
 	}
 }
