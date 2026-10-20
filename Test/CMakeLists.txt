@@ -53,6 +53,7 @@ set(TESTS
 	hash_table_delete.c
 	hash_test.c
 	setSuperclass.m
+	TypedSelectorRegistration.m
 	UnexpectedException.m
 )
 
