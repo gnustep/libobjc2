@@ -118,8 +118,8 @@ struct block_header
 	void *block;
 	void(*fnptr)(void);
 	/*
-	 * On 64-bit platforms, we have 16 bytes for instructions, which ought to
-	 * be enough without padding.
+	 * On most 64-bit platforms, we have 16 bytes for instructions, which ought
+	 * to be enough without padding.
 	 * Note: If we add too much padding, then we waste space but have no other
 	 * ill effects.  If we get this too small, then the assert in
 	 * `init_trampolines` will fire on library load.
@@ -129,10 +129,13 @@ struct block_header
 	 * PAGE_SIZE, so we need to pad block_header to 32 bytes.
 	 * On PowerPC 64-bit where sizeof(void *) = 8 bytes, we
 	 * add 16 bytes of padding.
+	 *
+	 * LoongArch64 needs five 4-byte instructions, so it also requires a
+	 * 32-byte block_header.
 	 */
 #if defined(__i386__) || (defined(__mips__) && !defined(__mips_n64)) || (defined(__powerpc__) && !defined(__powerpc64__))
 	uint64_t padding[3];
-#elif defined(__mips__) || defined(__ARM_ARCH_ISA_A64) || defined(__powerpc64__)
+#elif defined(__mips__) || defined(__ARM_ARCH_ISA_A64) || defined(__powerpc64__) || (defined(__loongarch__) && defined(__loongarch_lp64) && defined(__loongarch_double_float))
 	uint64_t padding[2];
 #elif defined(__arm__)
 	uint64_t padding;
@@ -195,6 +198,15 @@ extern char __objc_block_trampoline_16;
 extern char __objc_block_trampoline_end_16;
 extern char __objc_block_trampoline_sret_16;
 extern char __objc_block_trampoline_end_sret_16;
+#elif defined(__loongarch__) && defined(__loongarch_lp64) && defined(__loongarch_double_float)
+extern char __objc_block_trampoline_16;
+extern char __objc_block_trampoline_end_16;
+extern char __objc_block_trampoline_sret_16;
+extern char __objc_block_trampoline_end_sret_16;
+extern char __objc_block_trampoline_64;
+extern char __objc_block_trampoline_end_64;
+extern char __objc_block_trampoline_sret_64;
+extern char __objc_block_trampoline_end_sret_64;
 #endif
 
 // Cache the correct trampoline region
@@ -223,12 +235,16 @@ PRIVATE void init_trampolines(void)
 	// Check that sizeof(struct block_header) is a divisor of the current page size
 	assert(trampoline_header_per_page * sizeof(struct block_header) == trampoline_page_size);
 
-    // Check that assumptions for all non-variable page size implementations
-	// (currently everything except AArch64) are met
+	// Check that assumptions for all non-variable page size implementations
+	// (currently everything except AArch64 and LoongArch64) are met
 #if defined(__powerpc64__)
 	assert(trampoline_page_size == 0x10000);
 #elif defined(__ARM_ARCH_ISA_A64)
 	assert(trampoline_page_size == 0x1000 || trampoline_page_size == 0x4000);
+#elif defined(__loongarch__) && defined(__loongarch_lp64) && defined(__loongarch_double_float)
+	assert(trampoline_page_size == 0x1000 ||
+	       trampoline_page_size == 0x4000 ||
+	       trampoline_page_size == 0x10000);
 #else
 	assert(trampoline_page_size == 0x1000);
 #endif
@@ -240,6 +256,18 @@ PRIVATE void init_trampolines(void)
 		trampoline_end = &__objc_block_trampoline_end_16;
 		trampoline_start_sret = &__objc_block_trampoline_sret_16;
 		trampoline_end_sret = &__objc_block_trampoline_end_sret_16;
+	} else {
+#elif defined(__loongarch__) && defined(__loongarch_lp64) && defined(__loongarch_double_float)
+	if (trampoline_page_size == 0x4000) {
+		trampoline_start = &__objc_block_trampoline_16;
+		trampoline_end = &__objc_block_trampoline_end_16;
+		trampoline_start_sret = &__objc_block_trampoline_sret_16;
+		trampoline_end_sret = &__objc_block_trampoline_end_sret_16;
+	} else if (trampoline_page_size == 0x10000) {
+		trampoline_start = &__objc_block_trampoline_64;
+		trampoline_end = &__objc_block_trampoline_end_64;
+		trampoline_start_sret = &__objc_block_trampoline_sret_64;
+		trampoline_end_sret = &__objc_block_trampoline_end_sret_64;
 	} else {
 #else
 	{

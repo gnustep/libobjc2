@@ -156,6 +156,37 @@
 #define SARG0 ARG1
 #define SARG1 ARG2
 
+#elif defined(__loongarch__) && defined(__loongarch_lp64) && defined(__loongarch_double_float)
+////////////////////////////////////////////////////////////////////////////////
+// LoongArch64 trampoline
+////////////////////////////////////////////////////////////////////////////////
+.macro trampoline arg0, arg1
+	pcaddi   $t0, -1024
+	move     \arg1, \arg0
+	ld.d     \arg0, $t0, 0
+	ld.d     $t0, $t0, 8
+	jr       $t0
+.endm
+.macro trampoline_16 arg0, arg1
+	pcaddi   $t0, -4096
+	move     \arg1, \arg0
+	ld.d     \arg0, $t0, 0
+	ld.d     $t0, $t0, 8
+	jr       $t0
+.endm
+.macro trampoline_64 arg0, arg1
+	pcaddi   $t0, -16384
+	move     \arg1, \arg0
+	ld.d     \arg0, $t0, 0
+	ld.d     $t0, $t0, 8
+	jr       $t0
+.endm
+#define ARG0 $a0
+#define ARG1 $a1
+#define ARG2 $a2
+#define SARG0 ARG1
+#define SARG1 ARG2
+
 #elif defined(__ARM_ARCH_ISA_A64)
 ////////////////////////////////////////////////////////////////////////////////
 // AArch64 (ARM64) trampoline
@@ -234,7 +265,7 @@ CDECL(__objc_block_trampoline_sret):
 CDECL(__objc_block_trampoline_end_sret):
 
 // Trampoline for 16 KiB page sizes
-#if defined(__ARM_ARCH_ISA_A64)
+#if defined(__ARM_ARCH_ISA_A64) || (defined(__loongarch__) && defined(__loongarch_lp64) && defined(__loongarch_double_float))
 .globl CDECL(__objc_block_trampoline_16)
 CDECL(__objc_block_trampoline_16):
 	trampoline_16 ARG0, ARG1
@@ -245,6 +276,20 @@ CDECL(__objc_block_trampoline_sret_16):
 	trampoline_16 SARG0, SARG1
 .globl CDECL(__objc_block_trampoline_end_sret_16)
 CDECL(__objc_block_trampoline_end_sret_16):
+#endif
+
+// Trampoline for 64 KiB page sizes
+#if defined(__loongarch__) && defined(__loongarch_lp64) && defined(__loongarch_double_float)
+.globl CDECL(__objc_block_trampoline_64)
+CDECL(__objc_block_trampoline_64):
+	trampoline_64 ARG0, ARG1
+.globl CDECL(__objc_block_trampoline_end_64)
+CDECL(__objc_block_trampoline_end_64):
+.globl CDECL(__objc_block_trampoline_sret_64)
+CDECL(__objc_block_trampoline_sret_64):
+	trampoline_64 SARG0, SARG1
+.globl CDECL(__objc_block_trampoline_end_sret_64)
+CDECL(__objc_block_trampoline_end_sret_64):
 #endif
 
 #ifdef __ELF__
