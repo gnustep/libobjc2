@@ -342,6 +342,11 @@ IMP imp_implementationWithBlock(id block)
 			// to 1 so that b[l]x instructions put the CPU in the correct mode.
 			addr |= 1;
 #endif
+                        if ( next->block == NULL ) {
+				//  we've run  out of trampolinesi
+                                //  trigger allocation of new ones next time around
+				*setptr = NULL;
+                        }
 			return (IMP)addr;
 		}
 	}
