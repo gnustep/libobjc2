@@ -267,11 +267,24 @@ static id invalid(id self, SEL _cmd)
 static struct trampoline_set *alloc_trampolines(char *start, char *end)
 {
 	struct trampoline_set *metadata = calloc(1, sizeof(struct trampoline_set));
+	if (metadata == NULL)
+	{
+		return NULL;
+	}
 #if _WIN32
 	metadata->region = VirtualAlloc(NULL, trampoline_region_size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 #else
 	metadata->region = mmap(NULL, trampoline_region_size, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
+	if (metadata->region == MAP_FAILED)
+	{
+		metadata->region = NULL;
+	}
 #endif
+	if (metadata->region == NULL)
+	{
+		free(metadata);
+		return NULL;
+	}
 	struct block_header *headers_start = REGION_HEADERS_START(metadata);
 	char *rx_buffer_start = REGION_RX_BUFFER_START(metadata);
 	for (int i=0 ; i<trampoline_header_per_page ; i++)
@@ -316,36 +329,49 @@ IMP imp_implementationWithBlock(id block)
 	// If we don't have a trampoline intrinsic for this architecture, return a
 	// null IMP.
 	if (0 >= trampolineSize) { return 0; }
-	block = Block_copy(block);
-	// Allocate some trampolines if this is the first time that we need to do this.
-	if (*setptr == NULL)
-	{
-		*setptr = alloc_trampolines(start, end);
-	}
-	for (struct trampoline_set *set=*setptr ; set!=NULL ; set=set->next)
+	struct trampoline_set *set;
+	for (set=*setptr ; set!=NULL ; set=set->next)
 	{
 		if (set->first_free != -1)
 		{
-			int i = set->first_free;
-			struct block_header *headers_start = REGION_HEADERS_START(set);
-			char *rx_buffer_start = REGION_RX_BUFFER_START(set);
-			struct block_header *h = &headers_start[i];
-			struct block_header *next = h->block;
-			set->first_free = next ? (next - headers_start) : -1;
-			assert(set->first_free < trampoline_header_per_page);
-			assert(set->first_free >= -1);
-			h->fnptr = (void(*)(void))b->invoke;
-			h->block = b;
-			uintptr_t addr = (uintptr_t)&rx_buffer_start[i*sizeof(struct block_header)];
-#if (__ARM_ARCH_ISA_THUMB == 2)
-			// If the trampoline is Thumb-2 code, then we must set the low bit
-			// to 1 so that b[l]x instructions put the CPU in the correct mode.
-			addr |= 1;
-#endif
-			return (IMP)addr;
+			break;
 		}
 	}
-	UNREACHABLE("Failed to allocate block");
+	// If this is the first time that we need trampolines, or all of the sets
+	// are full, then allocate a new set.  Put it at the start of the list, so
+	// that the next allocations find a free trampoline straight away, but keep
+	// the older sets in the list: imp_getBlock() and imp_removeBlock() must
+	// still find their IMPs, and trampolines freed in them must be reused.
+	if (set == NULL)
+	{
+		set = alloc_trampolines(start, end);
+		if (set == NULL)
+		{
+			return 0;
+		}
+		set->next = *setptr;
+		*setptr = set;
+	}
+	int i = set->first_free;
+	struct block_header *headers_start = REGION_HEADERS_START(set);
+	char *rx_buffer_start = REGION_RX_BUFFER_START(set);
+	struct block_header *h = &headers_start[i];
+	struct block_header *next = h->block;
+	set->first_free = next ? (next - headers_start) : -1;
+	assert(set->first_free < (int)trampoline_header_per_page);
+	assert(set->first_free >= -1);
+	// Store the copy, not the block that we were passed: if that one is on the
+	// stack, then it is gone once the caller returns.
+	b = Block_copy(b);
+	h->fnptr = (void(*)(void))b->invoke;
+	h->block = b;
+	uintptr_t addr = (uintptr_t)&rx_buffer_start[i*sizeof(struct block_header)];
+#if (__ARM_ARCH_ISA_THUMB == 2)
+	// If the trampoline is Thumb-2 code, then we must set the low bit
+	// to 1 so that b[l]x instructions put the CPU in the correct mode.
+	addr |= 1;
+#endif
+	return (IMP)addr;
 }
 
 static int indexForIMP(IMP anIMP, struct trampoline_set **setptr)
@@ -379,7 +405,13 @@ id imp_getBlock(IMP anImp)
 	{
 		return NULL;
 	}
-	return REGION_HEADERS_START(set)[idx].block;
+	struct block_header *h = &REGION_HEADERS_START(set)[idx];
+	// A free trampoline's block field is a free list link, not a block.
+	if (h->fnptr == (void(*)(void))invalid)
+	{
+		return NULL;
+	}
+	return h->block;
 }
 
 BOOL imp_removeBlock(IMP anImp)
@@ -398,6 +430,11 @@ BOOL imp_removeBlock(IMP anImp)
 	}
 	struct block_header *header_start = REGION_HEADERS_START(set);
 	struct block_header *h = &header_start[idx];
+	// Removing a free trampoline again would corrupt the free list.
+	if (h->fnptr == (void(*)(void))invalid)
+	{
+		return NO;
+	}
 	Block_release(h->block);
 	h->fnptr = (void(*)(void))invalid;
 	h->block = set->first_free == -1 ? NULL : &header_start[set->first_free];

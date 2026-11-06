@@ -57,7 +57,7 @@ set(TESTS
 )
 
 if (EMBEDDED_BLOCKS_RUNTIME)
-	list(APPEND TESTS BlockImpTest.m)
+	list(APPEND TESTS BlockImpTest.m ManyBlockImps.m)
 endif()
 
 set(ENABLE_ALL_OBJC_ARC_TESTS On)

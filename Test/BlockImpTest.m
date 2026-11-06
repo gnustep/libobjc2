@@ -21,6 +21,18 @@ __attribute__((objc_root_class))
 +(struct big)sret;
 @end
 
+// Makes an IMP from a block that is still on the stack.
+__attribute__((noinline))
+static IMP stackBlockIMP(int value)
+{
+	int (^blk)(id) = ^(id self) { return value; };
+	IMP imp = imp_implementationWithBlock(blk);
+	// The runtime must keep its own copy: this frame is gone by the time the
+	// IMP is called.
+	assert(imp_getBlock(imp) != NULL);
+	assert(imp_getBlock(imp) != blk);
+	return imp;
+}
 
 int main(void)
 {
@@ -67,5 +79,12 @@ int main(void)
 	assert(s.e == 5);
 	imp_removeBlock(imp);
 	assert(imp_getBlock(imp) != blk);
+
+	IMP stackImp = stackBlockIMP(7);
+	IMP stackImp2 = stackBlockIMP(42);
+	assert(7 == ((int(*)(id,SEL))stackImp)(cls, @selector(count:)));
+	assert(42 == ((int(*)(id,SEL))stackImp2)(cls, @selector(count:)));
+	assert(imp_removeBlock(stackImp));
+	assert(imp_removeBlock(stackImp2));
 	return 0;
 }
