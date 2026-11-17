@@ -84,7 +84,7 @@ jobs:
     strategy:
       matrix:
         build-type: [ Release, Debug ]
-        llvm-version: [16, 17, 18]
+        llvm-version: [20, 21, 22]
         arch:
           - name: armhf
             system-processor: arm
@@ -118,7 +118,7 @@ jobs:
       - name: Install cross-compile toolchain and QEMU
         run: |
           sudo apt update
-          sudo apt install libstdc++-9-dev-${{ matrix.arch.name }}-cross qemu-user ninja-build
+          sudo apt install libstdc++-11-dev-${{ matrix.arch.name }}-cross qemu-user ninja-build
       - name: Configure CMake
         run: |
           export LDFLAGS="-L/usr/lib/llvm-${{ matrix.llvm-version }}/lib/ -fuse-ld=lld-${{ matrix.llvm-version}} -Wl,--dynamic-linker=/usr/${{ matrix.arch.triple }}/lib/${{ matrix.arch.rtld }},-rpath,/usr/${{ matrix.arch.triple }}/lib"
