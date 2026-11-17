@@ -509,7 +509,6 @@ void class_setIvarLayout(Class cls, const uint8_t *layout)
 	memcpy(cls->ivars, list, listsize);
 }
 
-__attribute__((deprecated))
 Class class_setSuperclass(Class cls, Class newSuper)
 {
 	CHECK_ARG(cls);
@@ -540,17 +539,23 @@ Class class_setSuperclass(Class cls, Class newSuper)
 		}
 		else
 		{
-			Class meta = cls->isa, newSuperMeta = newSuper->isa;
-			// Update the metaclass's superclass.
-			safe_remove_from_subclass_list(meta);
-			objc_resolve_class(newSuperMeta);
+			Class meta = cls->isa;
+			Class newSuperMeta = newSuper->isa;
+			// The old and new metaclasses can be the same.  If we replace the 
+			if (meta != newSuperMeta)
+			{
+				// Update the metaclass's superclass.
+				safe_remove_from_subclass_list(meta);
+				objc_resolve_class(newSuperMeta);
 
-			meta->super_class = newSuperMeta;
-			meta->isa = newSuperMeta->isa;
+				meta->super_class = newSuperMeta;
+				assert(meta != newSuperMeta);
+				meta->isa = newSuperMeta->isa;
 
-			// The super class's subclass list is used in certain method resolution scenarios.
-			meta->sibling_class = newSuperMeta->subclass_list;
-			newSuperMeta->subclass_list = meta;
+				// The super class's subclass list is used in certain method resolution scenarios.
+				meta->sibling_class = newSuperMeta->subclass_list;
+				newSuperMeta->subclass_list = meta;
+			}
 		}
 
 		LOCK_FOR_SCOPE(&initialize_lock);
@@ -813,16 +818,6 @@ Class object_getClass(id obj)
 		isa = isa->super_class;
 	}
 	return isa;
-}
-
-Class object_setClass(id obj, Class cls)
-{
-	CHECK_ARG(obj);
-	// If this is a small object, then don't set its class.
-	if (isSmallObject(obj)) { return classForObject(obj); }
-	Class oldClass =  obj->isa;
-	obj->isa = cls;
-	return oldClass;
 }
 
 const char *object_getClassName(id obj)

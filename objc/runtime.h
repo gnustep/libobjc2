@@ -465,7 +465,10 @@ void class_setIvarLayout(Class cls, const uint8_t *layout);
  * because modifying the superclass of a class at run time is a very complex
  * operation and this function is almost always used incorrectly.
  */
-OBJC_PUBLIC __attribute__((deprecated))
+OBJC_PUBLIC
+#ifndef __OBJC_RUNTIME_INTERNAL__
+__attribute__((deprecated))
+#endif
 Class class_setSuperclass(Class cls, Class newSuper);
 
 OBJC_PUBLIC OBJC_GNUSTEP_RUNTIME_UNSUPPORTED("Weak instance variables")

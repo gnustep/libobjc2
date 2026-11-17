@@ -17,6 +17,7 @@ set(TESTS
 	AllocatePair.m
 	AssociatedObject.m
 	AssociatedObject2.m
+	AssociateSetClass.m
 	BlockCapture_arc.m
 	BlockTest_arc.m
 	ConstantString.m
