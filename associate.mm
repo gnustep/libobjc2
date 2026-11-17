@@ -455,3 +455,33 @@ id object_getPrototype_np(id object)
 {
 	return objc_getAssociatedObject(object, &prototypeKey);
 }
+
+Class object_setClass(id object, Class cls)
+{
+	if (object == nil)
+	{
+		return Nil;
+	}
+	// If this is a small object, then don't set its class.
+	if (isSmallObject(object))
+	{
+		return classForObject(object);
+	}
+	auto guard = acquire_locks_for_pointers(object);
+	LOCK_RUNTIME_FOR_SCOPE();
+	Class oldClass =  object->isa;
+	// If this object has a hidden class, then we are not going to change the
+	// isa pointer.  Instead, we are going to pivot the superclass of that
+	// hidden class to the new superclass.  This is more complex because it
+	// requires updating the list is subclasses of the parent and then
+	// recomputing our dtable.
+	if (Class hiddenClass = findHiddenClass(object))
+	{
+		oldClass = class_setSuperclass(hiddenClass, cls);
+	}
+	else
+	{
+		object->isa = cls;
+	}
+	return oldClass;
+}
